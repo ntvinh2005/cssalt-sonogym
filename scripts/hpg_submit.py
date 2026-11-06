@@ -44,10 +44,16 @@ def load_env(path: Path) -> dict[str, str]:
 def validate_budget(cfg: dict[str, str]) -> None:
     if cfg["SLURM_ACCOUNT"] != "anest-dept":
         raise ValueError("refusing to charge a Slurm account other than anest-dept")
-    if int(cfg["SLURM_CPUS"]) > 4 or int(cfg["SLURM_GPUS"]) > 1:
-        raise ValueError("initial jobs are limited to 4 CPUs and 1 GPU")
+    if int(cfg["SLURM_CPUS"]) != 4 or int(cfg["SLURM_GPUS"]) != 1:
+        raise ValueError("initial jobs must request exactly 4 CPUs and 1 GPU")
     if cfg["SLURM_PARTITION"] != "hpg-turin":
         raise ValueError("initial pinned stack is restricted to the L4 hpg-turin partition")
+
+
+def join_configured_path(base: str, *parts: str) -> str:
+    """Join a configured path without reinterpreting POSIX Blue paths on Windows."""
+    separator = "/" if base.startswith("/") else os.sep
+    return separator.join([base.rstrip("/\\"), *parts])
 
 
 def check_project_queue() -> None:
@@ -84,9 +90,10 @@ def main() -> int:
 
     walltime_key = "SMOKE_WALLTIME" if args.job == "smoke" else "PPO_WALLTIME"
     walltime = cfg.get(walltime_key, "00:30:00" if args.job == "smoke" else "02:00:00")
-    project_dir = Path(cfg["SONOGYM_PROJECT_DIR"])
-    batch_script = project_dir / "hpg" / "jobs" / f"{args.job}.sbatch"
-    log_dir = Path(cfg["SONOGYM_OUTPUT_DIR"]) / "slurm"
+    batch_script = join_configured_path(
+        cfg["SONOGYM_PROJECT_DIR"], "hpg", "jobs", f"{args.job}.sbatch"
+    )
+    log_dir = join_configured_path(cfg["SONOGYM_OUTPUT_DIR"], "slurm")
     job_name = f"cssalt-sonogym-{args.job}"
 
     command = [
@@ -101,9 +108,9 @@ def main() -> int:
         f"--mem={cfg['SLURM_MEMORY']}",
         f"--time={walltime}",
         f"--job-name={job_name}",
-        f"--output={log_dir}/%x-%j.out",
+        f"--output={join_configured_path(log_dir, '%x-%j.out')}",
         f"--export=ALL,SONOGYM_CONFIG_FILE={config_path}",
-        str(batch_script),
+        batch_script,
     ]
 
     print("Resolved resource request:")
@@ -121,7 +128,7 @@ def main() -> int:
     if os.name == "nt":
         raise RuntimeError("submission must run on HiPerGator, not Windows")
     check_project_queue()
-    log_dir.mkdir(parents=True, exist_ok=True)
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
     result = subprocess.run(command, check=True, text=True, capture_output=True)
     print(f"Submitted job {result.stdout.strip()}")
     print("This helper only serializes jobs named cssalt-sonogym-*; it cannot police unrelated jobs.")

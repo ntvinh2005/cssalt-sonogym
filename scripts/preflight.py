@@ -87,8 +87,8 @@ def main() -> int:
             check(f"config_{key.lower()}", bool(values.get(key)), values.get(key, "missing"))
         check("slurm_account", values.get("SLURM_ACCOUNT") == "anest-dept", values.get("SLURM_ACCOUNT", "missing"))
         check("slurm_partition", values.get("SLURM_PARTITION") == "hpg-turin", values.get("SLURM_PARTITION", "missing"))
-        check("cpu_budget", int(values.get("SLURM_CPUS", "999")) <= 4, values.get("SLURM_CPUS", "missing"))
-        check("gpu_budget", int(values.get("SLURM_GPUS", "999")) <= 1, values.get("SLURM_GPUS", "missing"))
+        check("cpu_budget", int(values.get("SLURM_CPUS", "999")) == 4, values.get("SLURM_CPUS", "missing"))
+        check("gpu_budget", int(values.get("SLURM_GPUS", "999")) == 1, values.get("SLURM_GPUS", "missing"))
 
         assets = Path(values.get("SONOGYM_ASSETS_DATA_DIR", "/missing"))
         required_assets = [

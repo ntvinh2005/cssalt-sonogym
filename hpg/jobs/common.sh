@@ -8,8 +8,8 @@ source "$SONOGYM_CONFIG_FILE"
 set +a
 
 [[ "$SLURM_JOB_ACCOUNT" == "anest-dept" ]] || { echo "Refusing unexpected account: $SLURM_JOB_ACCOUNT" >&2; exit 2; }
-[[ "${SLURM_CPUS_PER_TASK:-0}" -le 4 ]] || { echo "CPU budget exceeded" >&2; exit 2; }
-[[ "${SLURM_GPUS_ON_NODE:-0}" -le 1 ]] || { echo "GPU budget exceeded" >&2; exit 2; }
+[[ "${SLURM_CPUS_PER_TASK:-0}" -eq 4 ]] || { echo "Initial jobs require exactly four CPUs" >&2; exit 2; }
+[[ "${SLURM_GPUS_ON_NODE:-0}" -eq 1 ]] || { echo "Initial jobs require exactly one GPU" >&2; exit 2; }
 [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] || { echo "Slurm did not assign a visible GPU" >&2; exit 2; }
 [[ "$PWD" == /blue/* ]] || cd "$SONOGYM_PROJECT_DIR"
 [[ "$PWD" == /blue/* ]] || { echo "Workloads must execute from Blue storage; got $PWD" >&2; exit 2; }
