@@ -13,6 +13,7 @@ a more user-friendly way.
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+import os
 import sys
 
 from isaaclab.app import AppLauncher
@@ -30,6 +31,19 @@ parser.add_argument(
 )
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint to resume training.")
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument(
+    "--log_root",
+    type=str,
+    default=os.environ.get("SONOGYM_LOG_DIR", "logs/skrl"),
+    help="Root directory for local experiment logs and checkpoints.",
+)
+parser.add_argument(
+    "--wandb_mode",
+    type=str,
+    choices=["disabled", "offline", "online"],
+    default=os.environ.get("SONOGYM_WANDB_MODE", "disabled"),
+    help="Weights & Biases mode. Batch jobs default to disabled and never require login.",
+)
 parser.add_argument(
     "--ml_framework",
     type=str,
@@ -49,6 +63,8 @@ parser.add_argument(
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli, hydra_args = parser.parse_known_args()
+os.environ["WANDB_MODE"] = args_cli.wandb_mode
+os.environ.setdefault("WANDB_SILENT", "true")
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
@@ -63,7 +79,6 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
-import os
 import random
 from datetime import datetime
 
@@ -138,7 +153,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.seed = agent_cfg["seed"]
 
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "skrl", agent_cfg["agent"]["experiment"]["directory"])
+    log_root_path = os.path.join(args_cli.log_root, agent_cfg["agent"]["experiment"]["directory"])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
     # specify directory for logging runs: {time-stamp}_{run_name}
@@ -162,14 +177,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     resume_path = retrieve_file_path(args_cli.checkpoint) if args_cli.checkpoint else None
 
     # init wandb
-    wandb.init(project=args_cli.task, config=agent_cfg)
+    wandb.init(project=args_cli.task, config=agent_cfg, mode=args_cli.wandb_mode)
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
-    if args_cli.headless:
-        env.sim_cfg['vis_us'] = False
-        env.vertebra_viewer.if_vis = False
-
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
         env = multi_agent_to_single_agent(env)

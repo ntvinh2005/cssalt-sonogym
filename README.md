@@ -1,5 +1,58 @@
 # SonoGym: High Performance Simulation for Challenging Surgical Tasks with Robotic Ultrasound
 
+> CSSALT project note: this repository preserves the upstream SonoGym history and adds a
+> small, reproducible HiPerGator workflow for the published navigation baseline. The clinical
+> medial branch block environment is explicitly out of scope for this phase. See
+> [SETUP_STATUS.md](SETUP_STATUS.md) for evidence and blockers.
+
+## CSSALT HiPerGator quick start
+
+The prepared task is `Isaac-robot-US-guidance-v0` with model-based ultrasound (`conv`), seed
+`20261106`, headless execution, visualization disabled before environment construction, and
+W&B disabled by default. Large assets, environments, caches, logs, and checkpoints remain
+outside Git on Blue storage.
+
+```bash
+cp config/hpg.env.example .sonogym.env
+
+# On a HiPerGator login node: nonallocating inspection only
+bash scripts/setup_hpg.sh --config .sonogym.env --inspect-only
+
+# Start a CPU development shell, then perform the actual installation there
+srun --account=anest-dept --cpus-per-task=4 --mem=32gb --time=04:00:00 --pty bash -i
+bash scripts/setup_hpg.sh --config .sonogym.env --install
+
+# CPU-safe preflight and non-submitting previews
+python scripts/preflight.py --config .sonogym.env
+python scripts/hpg_submit.py smoke --dry-run
+python scripts/hpg_submit.py ppo --dry-run
+```
+
+Do not run the installer until `anest-dept` membership and the proposed Blue paths have been
+confirmed by `--inspect-only`. The installer refuses login-node installation, non-Blue runtime
+paths, and a Slurm development allocation charged to another account.
+
+After GPU access becomes available, submit the smoke test first and inspect its JSON summary
+and ultrasound samples. Training is a separate explicit action:
+
+```bash
+python scripts/hpg_submit.py smoke --submit
+# Only after the real smoke job passes:
+python scripts/hpg_submit.py ppo --submit
+```
+
+The PPO pilot uses four environments, 32 rollout vector steps per update, four minibatches,
+and ten updates: 320 vector steps and 1,280 collected transitions. It is only a pipeline check,
+not a reproduction result or evidence of a learned policy.
+
+Outputs are rooted at `SONOGYM_OUTPUT_DIR`: Slurm logs under `slurm/`, smoke summaries and
+samples under `smoke/<job-id>/`, and PPO logs/checkpoints/metrics under `ppo/<job-id>/`.
+
+Installation details: Python 3.10, CUDA-enabled PyTorch 2.5.1, Isaac Sim 4.5.0, Isaac Lab
+v2.1.0 at commit `21f7136`, and skrl 1.4.2. Isaac Sim's first GPU launch may still download
+extensions, compile shaders, and require NVIDIA EULA acceptance. These cannot be validated on
+a CPU-only setup and must not be described as passed.
+
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
 [![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)
 [![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
