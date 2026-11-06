@@ -24,6 +24,9 @@ Updated: 2026-11-06 (America/New_York)
   dry-runs. The full local package preflight correctly failed because the unrelated Windows
   Python 3.11 environment does not contain the pinned Isaac stack; this is an installation
   blocker, not a GPU-only check.
+- Published the independent project repository at
+  `https://github.com/ntvinh2005/cssalt-sonogym`; GitHub API verification reported private
+  visibility, default branch `main`, and a remote head matching the local branch.
 
 ## Blockers and unverified work
 
@@ -36,8 +39,7 @@ Updated: 2026-11-06 (America/New_York)
 - The downloaded local staging copy has not been transferred to Blue storage.
 - Isaac Sim extension downloads, NVIDIA EULA acceptance, shader compilation, L4/driver
   compatibility, simulator smoke, and PPO pilot are `NOT_RUN_NO_GPU`.
-- Repository publication is tracked separately and must not be reported complete until remote
-  privacy, branch, and pushed commit are verified.
+- Repository publication is complete; simulator readiness remains separate and partial.
 
 Because the cluster environment and Blue assets are incomplete, the project must not be labeled
 `PREPARED_GPU_UNTESTED` yet. No engineering claim that SonoGym runs and no scientific claim about
