@@ -53,9 +53,12 @@ import cProfile
 import wandb
 import os
 
-scene_cfg = YAML().load(
-    open(f"{PACKAGE_DIR}/tasks/robot_US_guidance/cfgs/robotic_US_guidance.yaml", "r")
+scene_cfg_path = os.environ.get(
+    "SONOGYM_GUIDANCE_CONFIG",
+    f"{PACKAGE_DIR}/tasks/robot_US_guidance/cfgs/robotic_US_guidance.yaml",
 )
+with open(scene_cfg_path, "r", encoding="utf-8") as scene_cfg_file:
+    scene_cfg = YAML().load(scene_cfg_file)
 # TODO: fix observation scale
 if scene_cfg["sim"]["us"] == "net":
     scene_cfg["observation"]["scale"] = scene_cfg["observation"]["scale_net"]

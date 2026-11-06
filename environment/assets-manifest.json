@@ -1,0 +1,14 @@
+{
+  "dataset": "yunkao/SonoGym_assets_models",
+  "revision": "b37b080a8673f856266a2306724e48d5e034521a",
+  "files": {
+    "assets.tar.gz": {
+      "bytes": 754262884,
+      "sha256": "0d5840da3af2eb97e1ca9ebc7c2a969d32b24eef3f3107bc0c9f7db41e4a8f77"
+    },
+    "models.tar.gz": {
+      "bytes": 754887112,
+      "sha256": "545113c94b641eda199c6edee1e3586f8cd3a844f0b600470a828fec6210b14f"
+    }
+  }
+}

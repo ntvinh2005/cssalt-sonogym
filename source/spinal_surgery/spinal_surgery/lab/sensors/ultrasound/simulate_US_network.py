@@ -4,7 +4,7 @@ from monai.networks.nets.unet import UNet
 import os
 from PIL import Image
 import torchvision.transforms as transforms
-from spinal_surgery import PACKAGE_DIR, PROJECT_DIR
+from spinal_surgery import MODELS_DIR
 import numpy as np
 
 
@@ -15,7 +15,7 @@ class USSimulatorNetwork:
         self.model_list = []
         for model_path in model_paths:
 
-            model_path = os.path.join(PROJECT_DIR, model_path)
+            model_path = os.path.join(MODELS_DIR, os.path.basename(model_path))
 
             self.model = UNet(
                 spatial_dims=us_model_cfg["model"]["spatial_dims"],
@@ -133,7 +133,7 @@ class USSimulatorNetwork:
         self.train_samples = self.train_samples.to(self.device)
 
     def construct_train_data_histogram(self):
-        source_path = os.path.join(PROJECT_DIR, self.cfg["train_data_sample_path"])
+        source_path = os.path.join(MODELS_DIR, os.path.basename(self.cfg["train_data_sample_path"]))
         self.num_bins = self.cfg["num_bins"]
         device = self.device
         self.read_img_folder(source_path)

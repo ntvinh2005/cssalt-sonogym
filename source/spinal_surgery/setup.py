@@ -18,7 +18,6 @@ INSTALL_REQUIRES = [
     "ruamel.yaml",
     "pydicom",
     "nibabel",
-    "imitation",
     "monai",
 ]
 
@@ -33,6 +32,7 @@ setup(
     description=EXTENSION_TOML_DATA["package"]["description"],
     keywords=EXTENSION_TOML_DATA["package"]["keywords"],
     install_requires=INSTALL_REQUIRES,
+    extras_require={"imitation": ["imitation"]},
     license="MIT",
     include_package_data=True,
     python_requires=">=3.10",

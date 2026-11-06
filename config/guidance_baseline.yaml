@@ -1,0 +1,50 @@
+robot:
+  type: 'kuka'
+  pos: [0.0, -0.75, 0.5]
+  joint_pos: [1.5, -0.1, 0.0, -1.6, 0.0, 1.6, 0.0]
+
+patient:
+  pos: [0.2, -0.45, 1.0]
+  euler_yxz: [-90.0, -90.0, 0.0]
+  id_list: ['s0010']
+  label_res: 0.0015
+  target_anatomy: 'vertebrae_L4'
+
+bed:
+  pos: [0.0, 0.0, 0.3]
+  euler_xyz: [90, 0.0, 90]
+  scale: 0.001
+
+motion_planning:
+  patient_xz_goal: [150, 170, 3.14]
+  use_vertebra_goal: true
+  vertebra_to_US_2d_pos: [0.0, 0.0]
+  scale: [[5, 5, 0.1]]
+
+observation:
+  3D: false
+  mode: 'US'
+  scale: 0.02
+  scale_net: 0.1
+
+action:
+  mode: 'continuous'
+  scale: [2, 2, 0.1]
+  max_action: [4, 4, 0.2]
+
+reward:
+  w_pos: 0.03
+
+sim:
+  episode_length: 10
+  patient_xz_range: [[100, 70, 1.0], [180, 200, 3.0]]
+  patient_xz_init_range: [[100, 70, 1.5], [180, 200, 3.5]]
+  if_use_ct: true
+  ct_range: [-300, 3000]
+  us: 'conv'
+  vis_us: false
+  vis_int: 5
+  vis_seg_map: false
+
+if_record_traj: false
+record_path: /recordings/robot_US_guidance/

@@ -9,6 +9,11 @@
 **/.pytest_cache/
 **/*.pyc
 **/*.pb
+.conda/
+.venv/
+venv/
+env/
+pip-wheel-metadata/
 
 # IDE
 **/.idea/
@@ -29,6 +34,13 @@
 docker/artifacts/
 *.tmp
 docker/cluster/exports/
+checkpoints/
+artifacts/
+slurm-*.out
+*.ckpt
+*.pth
+*.pt
+*.onnx
 
 # Isaac-Sim packman
 _isaac_sim*
@@ -43,3 +55,16 @@ source/spinal_surgery/spinal_surgery/assets/data/*
 models/*
 lerobot-dataset/*
 source/spinal_surgery/spinal_surgery/recordings/*
+
+# CSSALT local configuration and runtime data
+.sonogym.env
+.env
+runtime/
+downloads/
+assets.tar.gz
+models.tar.gz
+*.sif
+*.sqsh
+*.pem
+*.key
+credentials*
