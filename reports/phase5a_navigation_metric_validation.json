@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "phase": "5A",
+  "decision": "BLOCKED",
+  "metric_go": null,
+  "training_performed": false,
+  "reason": "Both the initial GPU evaluation and sole justified retry stalled while resetting the stepped environment before frozen starts 4-7; the 32-start paired evaluation is incomplete.",
+  "protocol": {
+    "commit": "d73c46739bab88f115ef57bb00aa8af596b9dfeb",
+    "retry_commit": "a31586640c9bfba1a53782728a9285ecce1b82a1",
+    "manifest_path": "experiments/navigation_metric_validation/initial_conditions.json",
+    "manifest_sha256": "f5ff5bd9f5e254bad0720d3e0f1a6f91b66a025c3bb725f1589e7d08e7bd83dc",
+    "num_starts": 32,
+    "max_action_steps": 300,
+    "primary_threshold": {"position_mm": 10.0, "orientation_deg": 10.0},
+    "secondary_threshold": {"position_mm": 5.0, "orientation_deg": 5.0}
+  },
+  "unit_tests": {
+    "status": "PASSED",
+    "tests_run": 11,
+    "preflight_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/phase5a-preflight.json"
+  },
+  "runtime": {
+    "task": "Isaac-robot-US-guidance-v0",
+    "patient": "s0010",
+    "target": "vertebrae_L4",
+    "ultrasound": "conv",
+    "python": "3.10.22",
+    "isaac_sim": "4.5.0.0",
+    "isaac_lab_commit": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e",
+    "torch": "2.5.1+cu121",
+    "skrl": "1.4.2",
+    "checkpoint_sha256": "72f342f61371d4dee3e9728babd7c3b84674e4c4a5bc51dc827d56eac204d01f"
+  },
+  "jobs": [
+    {
+      "job_id": 50641608,
+      "account": "anest-dept",
+      "partition": "hpg-turin",
+      "node": "c0603a-s13",
+      "state": "CANCELLED_AFTER_CONFIRMED_STALL",
+      "start": "2026-11-10T11:12:13-05:00",
+      "end": "2026-11-10T11:32:57-05:00",
+      "elapsed": "00:20:44",
+      "cpus": 4,
+      "requested_memory_gb": 30,
+      "gpu": "1 x NVIDIA L4",
+      "peak_host_rss_kib": 2513584,
+      "peak_sampled_gpu_memory_mib": 5081,
+      "peak_sampled_gpu_utilization_percent": 42,
+      "output_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50641608/"
+    },
+    {
+      "job_id": 50647528,
+      "account": "anest-dept",
+      "partition": "hpg-turin",
+      "node": "c1105a-s8",
+      "state": "CANCELLED_AFTER_REPEATED_STALL",
+      "start": "2026-11-10T11:41:51-05:00",
+      "end": "2026-11-10T12:14:12-05:00",
+      "elapsed": "00:32:21",
+      "cpus": 4,
+      "requested_memory_gb": 30,
+      "gpu": "1 x NVIDIA L4",
+      "peak_host_rss_kib": 2528996,
+      "peak_sampled_gpu_memory_mib": 5081,
+      "peak_sampled_gpu_utilization_percent": 55,
+      "output_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50647528/"
+    }
+  ],
+  "partial_diagnostic": {
+    "gate_eligible": false,
+    "controller": "oracle",
+    "completed_starts": 4,
+    "required_starts": 32,
+    "transitions": 1200,
+    "final_success_count": 4,
+    "final_success_rate_on_partial_subset": 1.0,
+    "median_position_error_mm": 0.031977568763521605,
+    "p90_position_error_mm": 0.07164990191785911,
+    "median_orientation_error_deg": 8.53800967008274,
+    "p90_orientation_error_deg": 8.610620045111311,
+    "mean_episode_return": 1.9000147879123688,
+    "median_episode_return": 1.8534375354647636,
+    "first_successful_steps": [41, 44, 45, 161],
+    "secondary_5mm_5deg_success_count": 0
+  },
+  "controllers": {
+    "oracle": "PARTIAL_4_OF_32",
+    "zero_action": "NOT_RUN",
+    "bounded_random": "NOT_RUN",
+    "ppo_pilot": "NOT_RUN"
+  },
+  "storage": {
+    "runtime_total_mib": 24315,
+    "growth_from_pre_phase5a_mib": 1,
+    "job_50641608_kib_approx": 292,
+    "job_50647528_kib_approx": 316
+  },
+  "next_approval_required": "Approve a protocol-v2 reset-isolation evaluation that runs each frozen four-start batch in a fresh Isaac Sim process; no training or metric/dynamics changes."
+}
