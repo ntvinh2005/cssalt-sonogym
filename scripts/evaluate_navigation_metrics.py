@@ -154,6 +154,7 @@ def main() -> int:
     pairing_deltas: list[dict] = []
     trajectory_path = output_dir / "per_step.jsonl.gz"
     started = time.monotonic()
+    reset_count = 0
 
     with gzip.open(trajectory_path, "wt", encoding="utf-8") as step_stream:
         for controller_name in controller_names:
@@ -162,9 +163,40 @@ def main() -> int:
             episodes: list[dict] = []
             controller_started = time.monotonic()
             for batch_start in range(0, 32, num_envs):
+                batch_number = batch_start // num_envs
                 batch_commands = requested[batch_start : batch_start + num_envs]
+                print(
+                    f"PHASE5A_BATCH_START controller={controller_name} "
+                    f"batch={batch_number} starts={batch_start}:{batch_start + num_envs}",
+                    flush=True,
+                )
                 unwrapped.set_evaluation_initial_commands(batch_commands)
-                observation, _ = env.reset()
+                if reset_count == 0:
+                    observation, _ = env.reset()
+                    reset_method = "explicit_initial_reset"
+                else:
+                    # A direct wrapper reset after a protocol-truncated episode hung
+                    # in failed job 50641608. Trigger the native time-limit auto-reset
+                    # path already validated by Phase 4 smoke testing, and discard this
+                    # inter-episode transition from all Phase 5A measurements.
+                    unwrapped.episode_length_buf[:] = unwrapped.max_episode_length - 2
+                    reset_actions = torch.zeros(
+                        (num_envs, action_low.size),
+                        dtype=torch.float32,
+                        device=unwrapped.sim.device,
+                    )
+                    observation, _, reset_terminated, reset_truncated, _ = env.step(
+                        reset_actions
+                    )
+                    if bool(reset_terminated.any()) or not bool(reset_truncated.all()):
+                        raise RuntimeError("native time-limit auto-reset did not fire synchronously")
+                    reset_method = "native_time_limit_auto_reset"
+                reset_count += 1
+                print(
+                    f"PHASE5A_RESET_DONE controller={controller_name} "
+                    f"batch={batch_number} method={reset_method}",
+                    flush=True,
+                )
                 if not bool(torch.isfinite(observation).all()):
                     raise RuntimeError("nonfinite initial ultrasound observation")
 
@@ -408,12 +440,23 @@ def main() -> int:
                         }
                     )
                     episodes.append(episode)
+                step_stream.flush()
+                print(
+                    f"PHASE5A_BATCH_DONE controller={controller_name} "
+                    f"batch={batch_number} episodes={len(episodes)}",
+                    flush=True,
+                )
 
             controller_reports[controller_name] = {
                 "seed": int(protocol["seeds"][controller_name]),
                 "elapsed_seconds": time.monotonic() - controller_started,
                 "episodes": episodes,
             }
+            print(
+                f"PHASE5A_CONTROLLER_DONE controller={controller_name} "
+                f"episodes={len(episodes)}",
+                flush=True,
+            )
 
     replay_tolerance = protocol["initial_conditions"]["realized_pairing_tolerance"]
     max_position_delta = max(
@@ -469,6 +512,8 @@ def main() -> int:
             "num_parallel_envs": num_envs,
             "max_action_steps": horizon,
             "controllers": controller_names,
+            "initial_reset_method": "explicit_initial_reset",
+            "inter_batch_reset_method": "discarded_native_time_limit_auto_reset",
             "transitions": sum(
                 episode["episode_length"] for episode in all_episodes
             ),
