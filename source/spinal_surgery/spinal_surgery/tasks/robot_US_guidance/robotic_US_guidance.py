@@ -356,6 +356,10 @@ class roboticUSEnv(DirectRLEnv):
         )
 
         self.termination_direct = True
+        # Evaluation-only replay hook. Normal training/runtime behavior is unchanged
+        # while this remains None. Phase 5A uses it to replay an externally frozen
+        # set of initial commands through the ordinary reset and IK path.
+        self._evaluation_initial_commands = None
         self.observation_mode = scene_cfg["observation"]["mode"]
         self.action_mode = scene_cfg["action"]["mode"]
         self.action_scale = (
@@ -755,6 +759,33 @@ class roboticUSEnv(DirectRLEnv):
             # update buffers at sim dt
             self.scene.update(dt=self.physics_dt)
 
+    def set_evaluation_initial_commands(self, commands: torch.Tensor | None) -> None:
+        """Set exact reset commands for evaluation, or restore stochastic resets.
+
+        Commands use the task's native ``[patient_x_index, patient_z_index,
+        angle_rad]`` representation. They are still passed through
+        ``USSlicer.update_cmd`` and therefore retain the original task clamps and
+        robot/IK dynamics. This method does not set robot state directly.
+        """
+
+        if commands is None:
+            self._evaluation_initial_commands = None
+            return
+        replay = torch.as_tensor(commands, dtype=torch.float32, device=self.sim.device)
+        expected_shape = (self.scene.num_envs, 3)
+        if tuple(replay.shape) != expected_shape:
+            raise ValueError(
+                f"evaluation initial commands must have shape {expected_shape}; "
+                f"received {tuple(replay.shape)}"
+            )
+        if not torch.isfinite(replay).all():
+            raise ValueError("evaluation initial commands must be finite")
+        if torch.any(replay < self.init_cmd_pose_min) or torch.any(
+            replay > self.init_cmd_pose_max
+        ):
+            raise ValueError("evaluation initial commands exceed configured reset range")
+        self._evaluation_initial_commands = replay.clone()
+
     def _reset_idx(self, env_ids: Sequence[int] | None):
         if env_ids is None:
             env_ids = self.robot._ALL_INDICES
@@ -804,10 +835,15 @@ class roboticUSEnv(DirectRLEnv):
         self.world_to_base_pose = self.robot.data.root_link_state_w[:, 0:7]
 
         # compute 2d target poses
-        cmd_target_poses = torch.rand((self.scene.num_envs, 3), device=self.sim.device)
-        min_init = self.init_cmd_pose_min
-        max_init = self.init_cmd_pose_max
-        cmd_target_poses = cmd_target_poses * (max_init - min_init) + min_init
+        if self._evaluation_initial_commands is None:
+            cmd_target_poses = torch.rand(
+                (self.scene.num_envs, 3), device=self.sim.device
+            )
+            min_init = self.init_cmd_pose_min
+            max_init = self.init_cmd_pose_max
+            cmd_target_poses = cmd_target_poses * (max_init - min_init) + min_init
+        else:
+            cmd_target_poses = self._evaluation_initial_commands.clone()
         # compute 3d target poses
         self.US_slicer.update_cmd(
             cmd_target_poses - self.US_slicer.current_x_z_x_angle_cmd

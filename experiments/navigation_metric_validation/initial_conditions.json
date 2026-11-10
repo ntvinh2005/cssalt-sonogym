@@ -1,0 +1,491 @@
+{
+  "anatomy": {
+    "goal_source": "mean x-z of the L4 STL via VertebraViewer; angle 3.14 rad",
+    "patient_id": "s0010",
+    "target": "vertebrae_L4"
+  },
+  "count": 32,
+  "generation": {
+    "algorithm": "numpy.random.Generator(numpy.random.PCG64(seed)).uniform",
+    "configured_initial_range": [
+      [
+        100.0,
+        70.0,
+        1.5
+      ],
+      [
+        180.0,
+        200.0,
+        3.5
+      ]
+    ],
+    "draw_order": "32 rows x [patient_x_index, patient_z_index, angle_rad]",
+    "label_resolution_m_per_index": 0.0015,
+    "native_operational_range": [
+      [
+        100.0,
+        70.0,
+        1.0
+      ],
+      [
+        180.0,
+        200.0,
+        3.0
+      ]
+    ],
+    "seed": 20261110
+  },
+  "immutable_after_commit": true,
+  "protocol_id": "sonogym-navigation-metric-validation-v1",
+  "schema_version": 1,
+  "starts": [
+    {
+      "expected_effective_command_after_native_clamp": [
+        150.08630770764483,
+        88.47534894876492,
+        2.7754729703173195
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        150.08630770764483,
+        88.47534894876492,
+        2.7754729703173195
+      ],
+      "start_id": "start_000"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        141.97108570607705,
+        162.02225920725635,
+        2.7231593028806884
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        141.97108570607705,
+        162.02225920725635,
+        2.7231593028806884
+      ],
+      "start_id": "start_001"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        170.5720553231049,
+        103.54284327157268,
+        2.865808263638568
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        170.5720553231049,
+        103.54284327157268,
+        2.865808263638568
+      ],
+      "start_id": "start_002"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        113.32525681784561,
+        98.18674383541608,
+        1.5671127153576148
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        113.32525681784561,
+        98.18674383541608,
+        1.5671127153576148
+      ],
+      "start_id": "start_003"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        121.66116923309487,
+        112.84304004578597,
+        2.7359122741454653
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        121.66116923309487,
+        112.84304004578597,
+        2.7359122741454653
+      ],
+      "start_id": "start_004"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        136.81689929362778,
+        186.95189532110254,
+        1.5374272056155072
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        136.81689929362778,
+        186.95189532110254,
+        1.5374272056155072
+      ],
+      "start_id": "start_005"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        165.21779880286488,
+        175.92586546682313,
+        1.7654068225265043
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        165.21779880286488,
+        175.92586546682313,
+        1.7654068225265043
+      ],
+      "start_id": "start_006"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        135.19898326774143,
+        79.37376279867647,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        135.19898326774143,
+        79.37376279867647,
+        3.142757776263417
+      ],
+      "start_id": "start_007"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        165.56951462709776,
+        129.0057335496794,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        165.56951462709776,
+        129.0057335496794,
+        3.148966395104598
+      ],
+      "start_id": "start_008"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        137.54191768710035,
+        84.38351263435963,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        137.54191768710035,
+        84.38351263435963,
+        3.4353244725850685
+      ],
+      "start_id": "start_009"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        111.0418176763657,
+        199.476246472392,
+        2.241826198877947
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        111.0418176763657,
+        199.476246472392,
+        2.241826198877947
+      ],
+      "start_id": "start_010"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        104.79705236664066,
+        163.70808071520764,
+        2.3659161304634413
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        104.79705236664066,
+        163.70808071520764,
+        2.3659161304634413
+      ],
+      "start_id": "start_011"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        153.37172744720291,
+        102.46822137701682,
+        2.533147754448218
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        153.37172744720291,
+        102.46822137701682,
+        2.533147754448218
+      ],
+      "start_id": "start_012"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        101.7998956375247,
+        73.50911927839716,
+        1.7005212662307883
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        101.7998956375247,
+        73.50911927839716,
+        1.7005212662307883
+      ],
+      "start_id": "start_013"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        105.6497546641811,
+        78.57667306393235,
+        2.369443696585014
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        105.6497546641811,
+        78.57667306393235,
+        2.369443696585014
+      ],
+      "start_id": "start_014"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        100.63156844639738,
+        164.15609993087742,
+        2.7184670854115893
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        100.63156844639738,
+        164.15609993087742,
+        2.7184670854115893
+      ],
+      "start_id": "start_015"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        112.50602830291628,
+        102.71786265631287,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        112.50602830291628,
+        102.71786265631287,
+        3.3619281955692517
+      ],
+      "start_id": "start_016"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        112.4826961101204,
+        159.27678257440238,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        112.4826961101204,
+        159.27678257440238,
+        3.48253198737192
+      ],
+      "start_id": "start_017"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        110.08165392837248,
+        99.02935367555503,
+        2.906560345593422
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        110.08165392837248,
+        99.02935367555503,
+        2.906560345593422
+      ],
+      "start_id": "start_018"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        153.70217247908178,
+        141.15461623620575,
+        2.430647076156573
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        153.70217247908178,
+        141.15461623620575,
+        2.430647076156573
+      ],
+      "start_id": "start_019"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        145.59111523672746,
+        195.893461419223,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        145.59111523672746,
+        195.893461419223,
+        3.390784010717998
+      ],
+      "start_id": "start_020"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        168.8959843135941,
+        103.3265201247159,
+        1.5480893424613449
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        168.8959843135941,
+        103.3265201247159,
+        1.5480893424613449
+      ],
+      "start_id": "start_021"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        107.24136669512002,
+        110.20211678125455,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        107.24136669512002,
+        110.20211678125455,
+        3.019351202546212
+      ],
+      "start_id": "start_022"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        104.20074628929308,
+        124.71883830099424,
+        2.63362725551284
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        104.20074628929308,
+        124.71883830099424,
+        2.63362725551284
+      ],
+      "start_id": "start_023"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        125.02981912104217,
+        110.36804580382577,
+        2.8643713277335268
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        125.02981912104217,
+        110.36804580382577,
+        2.8643713277335268
+      ],
+      "start_id": "start_024"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        106.83816859773712,
+        122.45618751281009,
+        1.8142132898601162
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        106.83816859773712,
+        122.45618751281009,
+        1.8142132898601162
+      ],
+      "start_id": "start_025"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        133.64343861676986,
+        181.11467307063714,
+        2.779758291633434
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        133.64343861676986,
+        181.11467307063714,
+        2.779758291633434
+      ],
+      "start_id": "start_026"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        177.8952593048379,
+        122.6852219362572,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        177.8952593048379,
+        122.6852219362572,
+        3.184616821783345
+      ],
+      "start_id": "start_027"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        105.16116255514268,
+        165.3701777340071,
+        1.728003019394315
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        105.16116255514268,
+        165.3701777340071,
+        1.728003019394315
+      ],
+      "start_id": "start_028"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        150.2903401069644,
+        96.44867684141559,
+        1.759921652760478
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        150.2903401069644,
+        96.44867684141559,
+        1.759921652760478
+      ],
+      "start_id": "start_029"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        167.82422428978325,
+        130.84296518723013,
+        3.0
+      ],
+      "native_clamp_expected": true,
+      "requested_command_x_index_z_index_angle_rad": [
+        167.82422428978325,
+        130.84296518723013,
+        3.191974441089524
+      ],
+      "start_id": "start_030"
+    },
+    {
+      "expected_effective_command_after_native_clamp": [
+        166.7432312027833,
+        108.69042496235672,
+        2.5254206310594594
+      ],
+      "native_clamp_expected": false,
+      "requested_command_x_index_z_index_angle_rad": [
+        166.7432312027833,
+        108.69042496235672,
+        2.5254206310594594
+      ],
+      "start_id": "start_031"
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+protocol_id: sonogym-navigation-metric-validation-v1
+phase: 5A
+frozen_before_gpu_execution: true
+scientific_question: >-
+  Can the original SonoGym navigation environment distinguish successful
+  anatomical target acquisition from stationary or random behavior using
+  physically meaningful navigation metrics?
+
+source_identity:
+  repository_commit_before_phase5a: 19e3976fa22d32cf4614319e84aaa0b6d8f21c57
+  upstream_sonogym_revision: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  isaac_lab_revision: 21f7136325136ca3f6ca4e0a8125edffe5c24f7e
+
+task:
+  gym_id: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  target_anatomy: vertebrae_L4
+  ultrasound: conv
+  headless: true
+  visualization: false
+  policy_observation: ultrasound_only
+  privileged_evaluation_state: [cur_cmd_pose, goal_cmd_pose]
+  guidance_config: config/guidance_baseline.yaml
+  guidance_config_sha256: 468ff865b17aa20ca685254f13ad00d300fed3b1932dd173f8d38a0a9eb834cb
+
+paper_metrics:
+  position: >-
+    Final 2-D probe-position error projected onto the patient frontal plane,
+    reported in millimetres.
+  orientation: >-
+    Final probe rotation error around the surface-normal/frontal-axis navigation
+    degree of freedom, reported in degrees.
+  source_notes: >-
+    The paper reports continuous errors over 100 trials; it does not publish the
+    10 mm / 10 degree engineering success threshold used by this protocol.
+
+metrics:
+  native_pose_representation: [patient_x_label_index, patient_z_label_index, angle_rad]
+  patient_frontal_plane_axes: [x, z]
+  label_resolution_m_per_index: 0.0015
+  position_error: norm((current_xz_index - goal_xz_index) * 0.0015) * 1000
+  orientation_error: abs(wrap_to_half_open_minus_pi_pi(current_angle - goal_angle)) * 180 / pi
+  primary_success:
+    position_mm: 10.0
+    orientation_deg: 10.0
+  secondary_success:
+    position_mm: 5.0
+    orientation_deg: 5.0
+  success_requires_both_components: true
+  code_reward_discrepancy: >-
+    The frozen evaluator wraps angular error; the original task reward and
+    built-in logging use an unwrapped absolute angular difference.
+
+initial_conditions:
+  path: experiments/navigation_metric_validation/initial_conditions.json
+  sha256: f5ff5bd9f5e254bad0720d3e0f1a6f91b66a025c3bb725f1589e7d08e7bd83dc
+  count: 32
+  generation_seed: 20261110
+  distribution: componentwise uniform over the configured patient_xz_init_range
+  replay_mechanism: >-
+    Evaluation-only reset commands are injected before the ordinary USSlicer
+    clamp, surface pose construction, robot IK settling, and environment reset
+    bookkeeping. Robot state is never teleported.
+  realized_pairing_tolerance:
+    position_mm: 1.0
+    orientation_deg: 1.0
+    goal_pose_abs: 1.0e-6
+
+execution:
+  num_parallel_envs: 4
+  batches: 8
+  max_action_steps: 300
+  physics_dt_seconds: 0.008333333333333333
+  decimation: 2
+  action_dt_seconds: 0.016666666666666666
+  protocol_horizon_seconds: 5.0
+  native_configured_episode_seconds: 10.0
+  expected_native_max_episode_length: 600
+  observed_native_done_step_semantics: 599
+  completion_accounting: >-
+    A run reaching 300 actions without a native done is protocol-truncated; it is
+    not a native timeout, a native termination, or a navigation success.
+  native_boundary_termination_enabled: false
+
+seeds:
+  simulator: 20261110
+  oracle: 20261111
+  zero_action: 20261112
+  bounded_random: 20261113
+  ppo: 20261114
+  ppo_pilot: 20261114
+
+controllers:
+  order: [oracle, zero_action, bounded_random, ppo_pilot]
+  oracle:
+    implementation: spinal_surgery.lab.controllers.expert_guidance.ExpertGuidance
+    ratio: [0.02, 0.02, 0.6]
+    privileged_inputs: [human_to_ee_pos, human_to_ee_quat, cur_cmd_pose, goal_cmd_pose]
+    interface: ordinary env.step action
+    limitations: diagnostic proportional expert supplied by the original repository
+  zero_action:
+    action: [0.0, 0.0, 0.0]
+  bounded_random:
+    algorithm: numpy.random.Generator(numpy.random.PCG64(seed)).uniform
+    bounds_source: environment single_action_space
+    record_every_action: true
+  ppo_pilot:
+    deterministic_inference: mean_actions
+    privileged_goal_access: false
+    retraining: false
+
+ppo_checkpoint:
+  phase4_job_id: 50525848
+  path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/logs/US_guidance/2026-11-09_20-21-39_ppo_torch_PPO_US/checkpoints/agent_320.pt
+  sha256: 72f342f61371d4dee3e9728babd7c3b84674e4c4a5bc51dc827d56eac204d01f
+  load_procedure: skrl Runner from task registry, agent.load, eval mode, deterministic mean_actions
+
+representative_trajectory_selection:
+  rules:
+    - start_000
+    - largest oracle initial position error
+    - largest oracle initial orientation error
+    - smallest oracle initial (position_mm / 10 + orientation_deg / 10)
+  selected_before_controller_outcomes: true
+
+metric_go_gate:
+  metric_correctness:
+    - all CPU metric unit tests pass
+    - coordinate frames and units verified
+    - realized paired resets verified within frozen tolerance
+    - termination and truncation accounting valid
+    - artifacts complete and finite
+  oracle_final_success_minimum: 26
+  oracle_success_advantage_minimum_count_over_each_control: 8
+  oracle_must_have_lower_median_position_error_than: [zero_action, bounded_random]
+  oracle_must_have_lower_median_orientation_error_than: [zero_action, bounded_random]
+  ppo_determines_gate: false
+
+resources:
+  account: anest-dept
+  partition: hpg-turin
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "02:00:00"
+  one_evaluation_job_at_a_time: true
+  maximum_justified_retries: 1
+  training_forbidden: true
+
+post_hoc_changes_forbidden: true
