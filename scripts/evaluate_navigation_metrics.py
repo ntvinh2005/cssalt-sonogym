@@ -19,6 +19,16 @@ parser.add_argument("--protocol", required=True)
 parser.add_argument("--manifest", required=True)
 parser.add_argument("--checkpoint", required=True)
 parser.add_argument("--output-dir", required=True)
+parser.add_argument(
+    "--controller",
+    choices=("oracle", "zero_action", "bounded_random", "ppo_pilot"),
+    help="Evaluate one controller in a fresh process (protocol-v2 mode).",
+)
+parser.add_argument(
+    "--batch-index",
+    type=int,
+    help="Evaluate one four-start batch in a fresh process (protocol-v2 mode).",
+)
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -98,6 +108,10 @@ def main() -> int:
     primary = SuccessThresholds(**protocol["metrics"]["primary_success"])
     secondary = SuccessThresholds(**protocol["metrics"]["secondary_success"])
     simulator_seed = int(protocol["seeds"]["simulator"])
+    if (args.controller is None) != (args.batch_index is None):
+        raise RuntimeError("--controller and --batch-index must be supplied together")
+    if args.batch_index is not None and not 0 <= args.batch_index < 8:
+        raise RuntimeError("--batch-index must be in [0, 7]")
 
     env_cfg = parse_env_cfg(
         task, device=args.device, num_envs=num_envs, use_fabric=True
@@ -111,24 +125,28 @@ def main() -> int:
         raise RuntimeError("evaluation replay hook is unavailable")
     env = SkrlVecEnvWrapper(raw_env, ml_framework="torch")
 
-    agent_cfg = load_cfg_from_registry(task, "skrl_cfg_entry_point")
-    agent_cfg["seed"] = int(protocol["seeds"]["ppo"])
-    agent_cfg["trainer"]["close_environment_at_exit"] = False
-    agent_cfg["agent"]["experiment"]["write_interval"] = 0
-    agent_cfg["agent"]["experiment"]["checkpoint_interval"] = 0
-    agent_cfg["agent"]["experiment"]["directory"] = str(output_dir / "runner")
-    agent_cfg["agent"]["experiment"]["experiment_name"] = "phase5a_eval"
-    runner = Runner(env, agent_cfg)
-    runner.agent.load(str(checkpoint_path))
-    runner.agent.set_running_mode("eval")
+    runner = None
+    if args.controller is None or args.controller == "ppo_pilot":
+        agent_cfg = load_cfg_from_registry(task, "skrl_cfg_entry_point")
+        agent_cfg["seed"] = int(protocol["seeds"]["ppo"])
+        agent_cfg["trainer"]["close_environment_at_exit"] = False
+        agent_cfg["agent"]["experiment"]["write_interval"] = 0
+        agent_cfg["agent"]["experiment"]["checkpoint_interval"] = 0
+        agent_cfg["agent"]["experiment"]["directory"] = str(output_dir / "runner")
+        agent_cfg["agent"]["experiment"]["experiment_name"] = "phase5a_eval"
+        runner = Runner(env, agent_cfg)
+        runner.agent.load(str(checkpoint_path))
+        runner.agent.set_running_mode("eval")
 
     oracle_cfg = protocol["controllers"]["oracle"]
-    oracle = ExpertGuidance(
-        unwrapped.max_action,
-        unwrapped.action_scale,
-        oracle_cfg["ratio"],
-        unwrapped.sim.device,
-    )
+    oracle = None
+    if args.controller is None or args.controller == "oracle":
+        oracle = ExpertGuidance(
+            unwrapped.max_action,
+            unwrapped.action_scale,
+            oracle_cfg["ratio"],
+            unwrapped.sim.device,
+        )
     random_seed = int(protocol["seeds"]["bounded_random"])
     random_rng = np.random.Generator(np.random.PCG64(random_seed))
     action_low = np.asarray(unwrapped.single_action_space.low, dtype=np.float32)
@@ -148,8 +166,16 @@ def main() -> int:
         [item["expected_effective_command_after_native_clamp"] for item in starts],
         dtype=np.float64,
     )
-    controller_names = protocol["controllers"]["order"]
+    controller_names = (
+        [args.controller] if args.controller else protocol["controllers"]["order"]
+    )
+    batch_starts = (
+        [args.batch_index * num_envs]
+        if args.batch_index is not None
+        else list(range(0, 32, num_envs))
+    )
     reference_initials: dict[str, dict[str, np.ndarray]] = {}
+    initial_states: dict[str, dict[str, list[float]]] = {}
     controller_reports: dict[str, dict] = {}
     pairing_deltas: list[dict] = []
     trajectory_path = output_dir / "per_step.jsonl.gz"
@@ -162,7 +188,7 @@ def main() -> int:
             torch.cuda.manual_seed_all(int(protocol["seeds"][controller_name]))
             episodes: list[dict] = []
             controller_started = time.monotonic()
-            for batch_start in range(0, 32, num_envs):
+            for batch_start in batch_starts:
                 batch_number = batch_start // num_envs
                 batch_commands = requested[batch_start : batch_start + num_envs]
                 print(
@@ -236,6 +262,10 @@ def main() -> int:
                         "realized_pose": initial_poses[local_index],
                         "goal_pose": goal_poses[local_index],
                     }
+                    initial_states[start_id] = {
+                        "realized_pose": current["realized_pose"].astype(float).tolist(),
+                        "goal_pose": current["goal_pose"].astype(float).tolist(),
+                    }
                     if controller_name == controller_names[0]:
                         reference_initials[start_id] = current
                     else:
@@ -273,6 +303,7 @@ def main() -> int:
                 for step in range(1, horizon + 1):
                     with torch.inference_mode():
                         if controller_name == "oracle":
+                            assert oracle is not None
                             actions = oracle.get_action(unwrapped.extras)
                         elif controller_name == "zero_action":
                             actions = torch.zeros(
@@ -289,6 +320,7 @@ def main() -> int:
                                 device=observation.device,
                             )
                         elif controller_name == "ppo_pilot":
+                            assert runner is not None
                             actions = deterministic_policy_action(runner, observation)
                         else:
                             raise RuntimeError(f"unknown controller {controller_name}")
@@ -485,8 +517,11 @@ def main() -> int:
         and episode["invalid_transitions"] == 0
         for episode in all_episodes
     )
+    process_isolated_batch = args.controller is not None
     report = {
-        "status": "PASSED" if replay_verified and finite_and_valid else "FAILED",
+        "status": "PASSED"
+        if finite_and_valid and (process_isolated_batch or replay_verified)
+        else "FAILED",
         "protocol_id": protocol["protocol_id"],
         "task": task,
         "manifest": {
@@ -508,25 +543,37 @@ def main() -> int:
             "native_out_of_bounds_termination_enabled": False,
         },
         "execution": {
-            "num_starts": 32,
+            "num_starts": len(all_episodes),
             "num_parallel_envs": num_envs,
             "max_action_steps": horizon,
             "controllers": controller_names,
+            "process_isolated_batch": process_isolated_batch,
+            "batch_index": args.batch_index,
             "initial_reset_method": "explicit_initial_reset",
-            "inter_batch_reset_method": "discarded_native_time_limit_auto_reset",
+            "inter_batch_reset_method": (
+                "none_fresh_process_per_batch"
+                if process_isolated_batch
+                else "discarded_native_time_limit_auto_reset"
+            ),
             "transitions": sum(
                 episode["episode_length"] for episode in all_episodes
             ),
             "elapsed_seconds": time.monotonic() - started,
         },
         "paired_replay": {
-            "verified": replay_verified,
+            "verified": replay_verified if not process_isolated_batch else None,
+            "verification_scope": (
+                "complete_in_process"
+                if not process_isolated_batch
+                else "deferred_to_protocol_v2_aggregator"
+            ),
             "max_realized_position_delta_mm": max_position_delta,
             "max_realized_orientation_delta_deg": max_angle_delta,
             "max_goal_pose_abs_delta": max_goal_delta,
             "per_start_deltas": pairing_deltas,
         },
         "all_observations_rewards_poses_finite": finite_and_valid,
+        "initial_states": initial_states,
         "controllers": controller_reports,
         "per_step_path": str(trajectory_path),
     }

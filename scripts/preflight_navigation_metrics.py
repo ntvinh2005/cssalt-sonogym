@@ -28,6 +28,10 @@ def main() -> int:
         "--protocol",
         default="experiments/navigation_metric_validation/protocol.yaml",
     )
+    parser.add_argument(
+        "--execution-protocol",
+        default="experiments/navigation_metric_validation/protocol_v2.yaml",
+    )
     parser.add_argument("--checkpoint")
     parser.add_argument("--json-output")
     args = parser.parse_args()
@@ -35,6 +39,10 @@ def main() -> int:
     sys.path.insert(0, str(project))
     protocol_path = (project / args.protocol).resolve()
     protocol = YAML(typ="safe").load(protocol_path.read_text(encoding="utf-8"))
+    execution_protocol_path = (project / args.execution_protocol).resolve()
+    execution_protocol = YAML(typ="safe").load(
+        execution_protocol_path.read_text(encoding="utf-8")
+    )
     checks: list[dict[str, object]] = []
 
     def check(name: str, condition: bool, detail: object) -> None:
@@ -52,6 +60,21 @@ def main() -> int:
         "manifest_sha256",
         sha256_file(manifest_path) == protocol["initial_conditions"]["sha256"],
         sha256_file(manifest_path),
+    )
+    check(
+        "protocol_v2_base_hash",
+        execution_protocol["base_protocol"]["sha256"] == sha256_file(protocol_path),
+        sha256_file(protocol_path),
+    )
+    execution_change = execution_protocol["execution_change_only"]
+    check(
+        "protocol_v2_process_isolation",
+        execution_change["batches_per_controller"] == 8
+        and execution_change["parallel_environments_per_process"] == 4
+        and execution_change["total_fresh_isaac_processes"] == 32
+        and execution_change["fresh_process_per_batch"] is True
+        and execution_change["reset_between_batches"] is False,
+        execution_change,
     )
     check(
         "exactly_32_starts",
@@ -83,6 +106,26 @@ def main() -> int:
         "def set_evaluation_initial_commands" in source
         and "cmd_target_poses = self._evaluation_initial_commands.clone()" in source,
         "evaluation-only reset injection before native USSlicer clamp/IK",
+    )
+    evaluator_source = (project / "scripts/evaluate_navigation_metrics.py").read_text(
+        encoding="utf-8"
+    )
+    aggregator_source = (project / "scripts/aggregate_navigation_batches.py").read_text(
+        encoding="utf-8"
+    )
+    check(
+        "process_isolated_evaluator_present",
+        "--controller" in evaluator_source
+        and "--batch-index" in evaluator_source
+        and "none_fresh_process_per_batch" in evaluator_source,
+        "single controller and four-start batch per Isaac process",
+    )
+    check(
+        "fail_closed_aggregator_present",
+        "cross_process_protocol_v2_aggregation" in aggregator_source
+        and "complete ordered replay" in aggregator_source
+        and "per-step records" in aggregator_source,
+        "aggregator checks completeness, pairing, and raw-step counts",
     )
     check(
         "frozen_horizon",
@@ -119,6 +162,7 @@ def main() -> int:
         "status": "PASSED" if all(item["status"] == "PASSED" for item in checks) else "FAILED",
         "gpu_used": False,
         "protocol": str(protocol_path),
+        "execution_protocol": str(execution_protocol_path),
         "checks": checks,
     }
     rendered = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"

@@ -1,0 +1,54 @@
+protocol_id: sonogym-navigation-metric-validation-v2-process-isolated
+phase: 5A
+approved_date: 2026-11-10
+purpose: >-
+  Complete the already frozen Phase 5A evaluation while avoiding the observed
+  in-process reset stall by launching a fresh Isaac Sim process for every
+  four-start batch.
+
+base_protocol:
+  path: experiments/navigation_metric_validation/protocol.yaml
+  sha256: 87c79847964e92f1e5ea5caf64678c7445d09dd462dba9879b10746aec850a64
+  frozen_protocol_commit: d73c46739bab88f115ef57bb00aa8af596b9dfeb
+
+preserved_without_change:
+  - 32-start manifest and ordering
+  - anatomy and target identity
+  - metric definitions and success thresholds
+  - 300-action-step horizon
+  - controller definitions, order, and seeds
+  - action, observation, reward, and dynamics
+  - PPO checkpoint identity and deterministic inference procedure
+  - METRIC_GO gate
+
+execution_change_only:
+  controllers: [oracle, zero_action, bounded_random, ppo_pilot]
+  batches_per_controller: 8
+  parallel_environments_per_process: 4
+  total_fresh_isaac_processes: 32
+  reset_between_batches: false
+  fresh_process_per_batch: true
+  aggregation: verify complete ordered starts and cross-controller realized-pose pairing
+  failure_policy: fail fast and preserve completed batch artifacts
+
+resources:
+  account: anest-dept
+  partition: hpg-turin
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "02:00:00"
+  one_job_at_a_time: true
+  training_forbidden: true
+
+motivating_failures:
+  - job_id: 50641608
+    symptom: stalled entering the second reset after one completed oracle batch
+  - job_id: 50647528
+    symptom: same stall using the native time-limit auto-reset path
+
+scientific_scope:
+  training: forbidden
+  phase5b: forbidden
+  threshold_or_start_selection_after_results: forbidden

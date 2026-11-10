@@ -83,7 +83,15 @@ def check_project_queue(allowed_predecessor: int | None = None) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "job", choices=["smoke", "ppo", "evaluation", "demo", "navigation_metrics"]
+        "job",
+        choices=[
+            "smoke",
+            "ppo",
+            "evaluation",
+            "demo",
+            "navigation_metrics",
+            "navigation_metrics_v2",
+        ],
     )
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--dry-run", action="store_true")
@@ -108,6 +116,7 @@ def main() -> int:
         "evaluation": ("EVAL_WALLTIME", "00:30:00"),
         "demo": ("DEMO_WALLTIME", "00:15:00"),
         "navigation_metrics": ("NAVIGATION_METRICS_WALLTIME", "02:00:00"),
+        "navigation_metrics_v2": ("NAVIGATION_METRICS_V2_WALLTIME", "02:00:00"),
     }
     walltime_key, default_walltime = walltime_keys[args.job]
     walltime = cfg.get(walltime_key, default_walltime)
