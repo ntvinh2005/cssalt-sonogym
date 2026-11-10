@@ -1,0 +1,78 @@
+{
+  "phase": 4,
+  "generated_at": "2026-11-09T19:05:00-05:00",
+  "readiness": "RUNTIME_BLOCKED",
+  "git": {
+    "execution_base_commit": "a34ebe3ceee18a8637f7d71ec0d4265260332742",
+    "upstream_sonogym_revision": "e67be58334d1a5274f0913af36f56e4b0b7ffe5a",
+    "isaaclab_revision": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e"
+  },
+  "software": {
+    "python": "3.10.22",
+    "isaacsim": "4.5.0.0",
+    "torch": "2.5.1+cu121",
+    "torchvision": "0.20.1+cu121",
+    "skrl": "1.4.2",
+    "numpy": "1.26.4",
+    "cpu_preflight": "PASS",
+    "python_user_site_enabled": false
+  },
+  "assets": {
+    "revision": "b37b080a8673f856266a2306724e48d5e034521a",
+    "assets_archive_bytes": 754262884,
+    "assets_sha256": "0d5840da3af2eb97e1ca9ebc7c2a969d32b24eef3f3107bc0c9f7db41e4a8f77",
+    "models_archive_bytes": 754887112,
+    "models_sha256": "545113c94b641eda199c6edee1e3586f8cd3a844f0b600470a828fec6210b14f",
+    "extracted_preflight": "PASS"
+  },
+  "resources": {
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "cpus": 4,
+    "memory_gb": 30,
+    "gpus": 1,
+    "allocated_gpu_type": "L4",
+    "gpu_driver": null,
+    "gpu_driver_note": "launcher stopped before nvidia-smi"
+  },
+  "setup_jobs": [
+    {"job_id": 50513837, "state": "FAILED", "elapsed_seconds": 1, "exit_code": "141:0"},
+    {"job_id": 50514025, "state": "FAILED", "elapsed_seconds": 354, "exit_code": "1:0"},
+    {"job_id": 50514743, "state": "FAILED", "elapsed_seconds": 277, "exit_code": "1:0", "installation_materialized": true}
+  ],
+  "smoke": {
+    "result": "FAIL",
+    "task": "Isaac-robot-US-guidance-v0",
+    "ultrasound_mode": "conv",
+    "seed": 20261106,
+    "planned_action_steps": 32,
+    "completed_action_steps": 0,
+    "environment_initialized": false,
+    "observation_shapes": null,
+    "robot_step_validated": false,
+    "clean_exit_validated": false,
+    "jobs": [
+      {"job_id": 50515488, "state": "FAILED", "node": "c1105a-s20", "elapsed_seconds": 3, "exit_code": "1:0", "batch_max_rss_kib": 3852, "failure": "spooled common.sh path"},
+      {"job_id": 50515705, "state": "FAILED", "node": "c1105a-s20", "elapsed_seconds": 4, "exit_code": "2:0", "batch_max_rss_kib": 3852, "failure": "Conda module unavailable"}
+    ]
+  },
+  "ppo": {
+    "result": "NOT_RUN",
+    "reason": "smoke acceptance gate did not pass",
+    "job_id": null,
+    "collected_transitions": 0,
+    "ppo_updates": 0,
+    "checkpoint": null,
+    "policy_usefulness": "NOT_EVALUATED"
+  },
+  "storage": {
+    "project_mib": 4,
+    "runtime_mib": 23499,
+    "runtime_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime"
+  },
+  "evidence": {
+    "preflight": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/preflight.json",
+    "slurm_logs": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/"
+  },
+  "next_experiment": "One corrected smoke-only job; PPO remains gated on SMOKE_PASS"
+}

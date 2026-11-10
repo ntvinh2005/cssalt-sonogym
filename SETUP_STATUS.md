@@ -1,8 +1,54 @@
 # Setup status
 
-Status: **PARTIAL**
+Status: **RUNTIME_BLOCKED**
 
-Updated: 2026-11-06 (America/New_York)
+Updated: 2026-11-09 (America/New_York)
+
+## Phase 4 runtime-validation outcome
+
+- GPU smoke test: **FAIL**.
+- PPO pilot: **NOT_RUN** because the smoke acceptance gate did not pass.
+- Readiness conclusion: **RUNTIME_BLOCKED**.
+
+The pinned environment and assets are installed on HiPerGator, but neither GPU attempt reached
+Isaac Sim initialization. Job `50515488` failed while resolving a Slurm-spooled helper path. The
+one permitted retry, job `50515705`, failed because the batch environment had not loaded Conda.
+Both failures occurred before the simulator, robot, anatomy, or ultrasound pipeline started. No
+observation, transition, reset-cycle, clean simulator exit, or PPO claim is available.
+
+Verified current state:
+
+- Project: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime` (23,499 MiB).
+- Execution base commit: `a34ebe3ceee18a8637f7d71ec0d4265260332742`.
+- Isaac Lab: `21f7136325136ca3f6ca4e0a8125edffe5c24f7e` (`v2.1.0`).
+- Python 3.10.22, Isaac Sim 4.5.0.0, PyTorch 2.5.1+cu121, and skrl 1.4.2.
+- Full isolated CPU preflight: **PASS** with `PYTHONNOUSERSITE=1`.
+- Asset and model archives match the pinned byte counts and SHA-256 values.
+- Both GPU jobs used account `anest-dept`, four CPUs, 30 GB, and one allocated L4 on
+  `c1105a-s20`. The driver was not captured because both launchers stopped before `nvidia-smi`.
+
+Infrastructure fixes include the GLIBC `pipefail` issue, pinned bootstrap tooling, Python
+user-site isolation, CUDA local-version validation, Slurm-spooled helper resolution, explicit
+`conda/25.7.0` module loading, 30 GB memory, 90-minute PPO walltime, 32-step smoke diagnostics,
+and per-job reproducibility/resource capture. The final launcher state passes shell syntax,
+Python compilation, static preflight, Git diff, and smoke/PPO dry-runs. It has not received
+another GPU run because Phase 4 allowed only one retry.
+
+Evidence:
+
+- Machine report: `reports/phase4_gpu_smoke_ppo.json`.
+- Preflight: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/preflight.json`.
+- Logs: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/`.
+
+Next exact experiment: after explicit authorization for a new execution phase, run exactly one
+corrected smoke-only job with one L4, four CPUs, 30 GB, seed `20261106`, 32 bounded actions,
+`conv` ultrasound, headless mode, and visualization disabled. PPO remains gated on a complete
+`SMOKE_PASS` with a zero Slurm exit code and clean simulator shutdown.
+
+No policy usefulness, generalization, clinical safety, or MBB performance conclusion is supported.
+
+## Phase 3 historical record
 
 ## Completed
 

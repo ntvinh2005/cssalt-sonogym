@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+: "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported by the submit helper}"
+# shellcheck disable=SC1090
+source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common.sh
-source "$SCRIPT_DIR/common.sh"
+source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 RUN_DIR="$SONOGYM_OUTPUT_DIR/ppo/$SLURM_JOB_ID"
 LOG_ROOT="$RUN_DIR/logs"
 mkdir -p "$LOG_ROOT" "$RUN_DIR/metrics"
+capture_run_context "$RUN_DIR"
 
 nvidia-smi --query-gpu=timestamp,name,utilization.gpu,memory.used,memory.total \
     --format=csv > "$RUN_DIR/metrics/gpu-before.csv"
@@ -45,3 +48,4 @@ printf '%s\n' \
     'total_vector_steps=320' \
     'total_collected_transitions=1280' \
     > "$RUN_DIR/pilot-summary.txt"
+capture_run_end "$RUN_DIR"

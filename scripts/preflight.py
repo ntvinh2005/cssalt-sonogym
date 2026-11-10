@@ -109,7 +109,12 @@ def main() -> int:
         for distribution, expected in EXPECTED_PACKAGES.items():
             try:
                 actual = importlib.metadata.version(distribution)
-                ok = actual == expected or (distribution == "isaacsim" and actual.startswith("4.5.0"))
+                base_actual = actual.split("+", 1)[0]
+                ok = (
+                    actual == expected
+                    or (distribution in {"torch", "torchvision"} and base_actual == expected)
+                    or (distribution == "isaacsim" and actual.startswith("4.5.0"))
+                )
                 check(f"package:{distribution}", ok, f"expected={expected} actual={actual}")
             except importlib.metadata.PackageNotFoundError:
                 check(f"package:{distribution}", False, "not installed")

@@ -27,13 +27,16 @@ set +a
 [[ "$SONOGYM_RUNTIME_DIR" == /blue/* ]] || { echo "Runtime must be on Blue storage" >&2; exit 2; }
 [[ "${SLURM_CPUS:-0}" -le 4 ]] || { echo "CPU budget exceeds four cores" >&2; exit 2; }
 
+LDD_VERSION_OUTPUT="$(ldd --version 2>&1)"
+LDD_FIRST_LINE="${LDD_VERSION_OUTPUT%%$'\n'*}"
+
 mkdir -p "$SONOGYM_RUNTIME_DIR/records"
 RECORD="$SONOGYM_RUNTIME_DIR/records/host-inspection.txt"
 {
     date --iso-8601=seconds
     hostname
     uname -a
-    ldd --version | head -n 1
+    echo "$LDD_FIRST_LINE"
     echo "node=$([[ -n ${SLURM_JOB_ID:-} ]] && echo compute/development || echo login)"
     echo "pwd=$(pwd)"
     df -h "$SONOGYM_PROJECT_DIR" "$SONOGYM_RUNTIME_DIR"
@@ -65,7 +68,7 @@ fi
 }
 [[ "${SLURM_JOB_ACCOUNT:-}" == "anest-dept" ]] || { echo "Unexpected Slurm account" >&2; exit 2; }
 
-glibc_version="$(ldd --version | head -n 1 | awk '{print $NF}')"
+glibc_version="${LDD_FIRST_LINE##* }"
 if [[ "$(printf '%s\n' 2.34 "$glibc_version" | sort -V | head -n 1)" != "2.34" ]]; then
     echo "GLIBC $glibc_version is below the Isaac Sim pip minimum 2.34; stop and select the Apptainer route." >&2
     exit 3
@@ -73,6 +76,7 @@ fi
 
 export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 NUMEXPR_NUM_THREADS=4
 export MAKEFLAGS=-j4 CMAKE_BUILD_PARALLEL_LEVEL=4
+export PYTHONNOUSERSITE=1
 export PIP_CACHE_DIR="$SONOGYM_CACHE_DIR/pip"
 mkdir -p "$SONOGYM_CACHE_DIR/pip" "$SONOGYM_RUNTIME_DIR/src" "$(dirname "$SONOGYM_ENV_PREFIX")"
 
@@ -86,7 +90,8 @@ if [[ ! -x "$SONOGYM_ENV_PREFIX/bin/python" ]]; then
     "$CONDA_EXE" create --yes --prefix "$SONOGYM_ENV_PREFIX" python=3.10 pip
 fi
 PYTHON="$SONOGYM_ENV_PREFIX/bin/python"
-"$PYTHON" -m pip install --upgrade pip setuptools wheel
+"$PYTHON" -m pip install --upgrade \
+    pip==25.0.1 setuptools==75.8.0 wheel==0.45.1
 "$PYTHON" -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
 "$PYTHON" -m pip install 'isaacsim[all,extscache]==4.5.0' --extra-index-url https://pypi.nvidia.com
 

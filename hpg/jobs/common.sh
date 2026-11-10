@@ -18,6 +18,7 @@ export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export MKL_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export OPENBLAS_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export NUMEXPR_NUM_THREADS="$SLURM_CPUS_PER_TASK"
+export PYTHONNOUSERSITE=1
 export WANDB_MODE="${SONOGYM_WANDB_MODE:-disabled}"
 export WANDB_SILENT=true
 export MPLBACKEND=Agg
@@ -32,6 +33,10 @@ mkdir -p "$SONOGYM_OUTPUT_DIR/slurm" "$SONOGYM_OUTPUT_DIR/smoke" \
     "$SONOGYM_CACHE_DIR/pip" "$SONOGYM_CACHE_DIR/omniverse"
 
 CONDA_EXE="${SONOGYM_CONDA_EXE:-$(command -v conda || true)}"
+if [[ -z "$CONDA_EXE" ]]; then
+    module load conda/25.7.0
+    CONDA_EXE="$(command -v conda)"
+fi
 [[ -n "$CONDA_EXE" ]] || { echo "conda is not available" >&2; exit 2; }
 eval "$("$CONDA_EXE" shell.bash hook)"
 conda activate "$SONOGYM_ENV_PREFIX"
@@ -44,4 +49,33 @@ mapfile -t GPU_NAMES < <(nvidia-smi --query-gpu=name --format=csv,noheader)
 [[ "${#GPU_NAMES[@]}" -eq 1 && "${GPU_NAMES[0]}" == *L4* ]] || {
     echo "The initial pinned workflow requires exactly one L4; saw: ${GPU_NAMES[*]}" >&2
     exit 2
+}
+
+capture_run_context() {
+    local run_dir="$1"
+    mkdir -p "$run_dir/context"
+    date --iso-8601=seconds > "$run_dir/context/start-time.txt"
+    git -C "$SONOGYM_PROJECT_DIR" rev-parse HEAD > "$run_dir/context/git-commit.txt"
+    git -C "$SONOGYM_PROJECT_DIR" status --short > "$run_dir/context/git-status.txt"
+    git -C "$SONOGYM_PROJECT_DIR" diff --binary > "$run_dir/context/uncommitted.patch"
+    git -C "$SONOGYM_RUNTIME_DIR/src/IsaacLab" rev-parse HEAD \
+        > "$run_dir/context/isaaclab-commit.txt"
+    cp "$SONOGYM_CONFIG_FILE" "$run_dir/context/machine-config.env"
+    cp "$SONOGYM_GUIDANCE_CONFIG" "$run_dir/context/guidance-config.yaml"
+    cp "$SONOGYM_RUNTIME_DIR/records/preflight.json" "$run_dir/context/preflight.json"
+    cp "$SONOGYM_RUNTIME_DIR/records/pip-freeze.txt" "$run_dir/context/pip-freeze.txt"
+    scontrol show job "$SLURM_JOB_ID" > "$run_dir/context/slurm-job.txt"
+    {
+        echo "job_id=$SLURM_JOB_ID"
+        echo "account=$SLURM_JOB_ACCOUNT"
+        echo "cpus=$SLURM_CPUS_PER_TASK"
+        echo "memory=$SLURM_MEM_PER_NODE"
+        echo "cuda_visible_devices=$CUDA_VISIBLE_DEVICES"
+        echo "python=$(python --version 2>&1)"
+    } > "$run_dir/context/run-context.env"
+}
+
+capture_run_end() {
+    local run_dir="$1"
+    date --iso-8601=seconds > "$run_dir/context/end-time.txt"
 }
