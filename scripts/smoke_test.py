@@ -115,11 +115,15 @@ def main() -> None:
         first_policy = dict(numeric_arrays(observation))
         if "policy" not in first_policy:
             raise AssertionError("policy ultrasound observation is missing")
-        if tuple(first_policy["policy"].shape) != (1, 1, 150, 200):
+        policy_space = env.unwrapped.single_observation_space["policy"]
+        expected_policy_shape = (args_cli.num_envs, *policy_space.shape)
+        if tuple(first_policy["policy"].shape) != expected_policy_shape:
             raise AssertionError(
                 f"unexpected policy ultrasound shape {first_policy['policy'].shape}; "
-                "expected (1, 1, 150, 200)"
+                f"declared space requires {expected_policy_shape}"
             )
+        if not policy_space.contains(first_policy["policy"][0]):
+            raise AssertionError("policy ultrasound is outside the declared observation space")
         samples["reset_0"] = first_policy["policy"][0]
 
         unwrapped = env.unwrapped

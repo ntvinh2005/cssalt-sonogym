@@ -32,18 +32,13 @@ mkdir -p "$SONOGYM_OUTPUT_DIR/slurm" "$SONOGYM_OUTPUT_DIR/smoke" \
     "$SONOGYM_OUTPUT_DIR/ppo" "$SONOGYM_CACHE_DIR/xdg" \
     "$SONOGYM_CACHE_DIR/pip" "$SONOGYM_CACHE_DIR/omniverse"
 
-CONDA_EXE="${SONOGYM_CONDA_EXE:-$(command -v conda || true)}"
-if [[ -z "$CONDA_EXE" ]]; then
-    module load conda/25.7.0
-    CONDA_EXE="$(command -v conda)"
-fi
-[[ -n "$CONDA_EXE" ]] || { echo "conda is not available" >&2; exit 2; }
-eval "$("$CONDA_EXE" shell.bash hook)"
-conda activate "$SONOGYM_ENV_PREFIX"
+PYTHON="$SONOGYM_ENV_PREFIX/bin/python"
+[[ -x "$PYTHON" ]] || { echo "Python environment is missing: $PYTHON" >&2; exit 2; }
+export PATH="$SONOGYM_ENV_PREFIX/bin:$PATH"
 
 echo "host=$(hostname) job_id=$SLURM_JOB_ID account=$SLURM_JOB_ACCOUNT pwd=$PWD"
 echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset}"
-python --version
+"$PYTHON" --version
 nvidia-smi --query-gpu=name,uuid,driver_version,memory.total --format=csv
 mapfile -t GPU_NAMES < <(nvidia-smi --query-gpu=name --format=csv,noheader)
 [[ "${#GPU_NAMES[@]}" -eq 1 && "${GPU_NAMES[0]}" == *L4* ]] || {
@@ -71,7 +66,7 @@ capture_run_context() {
         echo "cpus=$SLURM_CPUS_PER_TASK"
         echo "memory=$SLURM_MEM_PER_NODE"
         echo "cuda_visible_devices=$CUDA_VISIBLE_DEVICES"
-        echo "python=$(python --version 2>&1)"
+        echo "python=$("$PYTHON" --version 2>&1)"
     } > "$run_dir/context/run-context.env"
 }
 

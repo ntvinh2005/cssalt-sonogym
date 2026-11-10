@@ -1,11 +1,14 @@
 {
   "phase": 4,
-  "generated_at": "2026-11-09T19:05:00-05:00",
-  "readiness": "RUNTIME_BLOCKED",
+  "generated_at": "2026-11-09T22:16:15-05:00",
+  "readiness": "READY_FOR_REPRODUCTION",
   "git": {
-    "execution_base_commit": "a34ebe3ceee18a8637f7d71ec0d4265260332742",
+    "execution_commit": "5ab60675a685a0192fdcdfaf25fcf67050c4f1cf",
+    "execution_worktree_dirty": true,
     "upstream_sonogym_revision": "e67be58334d1a5274f0913af36f56e4b0b7ffe5a",
-    "isaaclab_revision": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e"
+    "isaaclab_revision": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e",
+    "smoke_execution_patch": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/context/uncommitted.patch",
+    "ppo_execution_patch": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/context/uncommitted.patch"
   },
   "software": {
     "python": "3.10.22",
@@ -29,50 +32,132 @@
     "account": "anest-dept",
     "partition": "hpg-turin",
     "cpus": 4,
-    "memory_gb": 30,
+    "requested_memory_gb": 30,
     "gpus": 1,
-    "allocated_gpu_type": "L4",
-    "gpu_driver": null,
-    "gpu_driver_note": "launcher stopped before nvidia-smi"
+    "gpu_type": "NVIDIA L4",
+    "gpu_memory_mib": 23034,
+    "gpu_driver": "580.178.04"
+  },
+  "task": {
+    "id": "Isaac-robot-US-guidance-v0",
+    "ultrasound_mode": "conv",
+    "num_envs_smoke": 1,
+    "num_envs_ppo": 4,
+    "headless": true,
+    "visualization": false,
+    "external_logging": false,
+    "seed": 20261106,
+    "resolved_config": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/context/guidance-config.yaml"
   },
   "setup_jobs": [
-    {"job_id": 50513837, "state": "FAILED", "elapsed_seconds": 1, "exit_code": "141:0"},
-    {"job_id": 50514025, "state": "FAILED", "elapsed_seconds": 354, "exit_code": "1:0"},
-    {"job_id": 50514743, "state": "FAILED", "elapsed_seconds": 277, "exit_code": "1:0", "installation_materialized": true}
+    {"job_id": 50513837, "state": "FAILED", "elapsed_seconds": 1, "exit_code": "141:0", "failure": "pipefail with ldd/head"},
+    {"job_id": 50514025, "state": "FAILED", "elapsed_seconds": 354, "exit_code": "1:0", "failure": "unbounded bootstrap tool versions"},
+    {"job_id": 50514743, "state": "FAILED", "elapsed_seconds": 277, "exit_code": "1:0", "failure": "preflight rejected valid CUDA local version suffix", "installation_materialized": true}
   ],
   "smoke": {
-    "result": "FAIL",
-    "task": "Isaac-robot-US-guidance-v0",
-    "ultrasound_mode": "conv",
-    "seed": 20261106,
-    "planned_action_steps": 32,
-    "completed_action_steps": 0,
-    "environment_initialized": false,
-    "observation_shapes": null,
-    "robot_step_validated": false,
-    "clean_exit_validated": false,
-    "jobs": [
-      {"job_id": 50515488, "state": "FAILED", "node": "c1105a-s20", "elapsed_seconds": 3, "exit_code": "1:0", "batch_max_rss_kib": 3852, "failure": "spooled common.sh path"},
-      {"job_id": 50515705, "state": "FAILED", "node": "c1105a-s20", "elapsed_seconds": 4, "exit_code": "2:0", "batch_max_rss_kib": 3852, "failure": "Conda module unavailable"}
+    "result": "PASS",
+    "accepted_job_id": 50523856,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "node": "c1105a-s4",
+    "slurm_start": "2026-11-09T20:06:58-05:00",
+    "slurm_end": "2026-11-09T20:07:38-05:00",
+    "timed_elapsed_seconds": 36.82,
+    "peak_rss_kib": 3329268,
+    "steps_requested": 32,
+    "steps_completed": 32,
+    "observation_keys": ["policy"],
+    "observation_shape": [1, 1, 200, 150],
+    "observation_dtype": "float32",
+    "observations_finite": true,
+    "second_reset_valid": true,
+    "simulation": {
+      "initial_counter": 200,
+      "final_counter": 264,
+      "elapsed_seconds": 0.5333333333333333,
+      "physics_dt_seconds": 0.008333333333333333,
+      "max_joint_position_delta": 0.4766894578933716,
+      "max_end_effector_pose_delta": 0.19963428378105164
+    },
+    "termination_probe": {
+      "method": "episode_length_buffer_advanced_to_time_limit",
+      "terminated": false,
+      "truncated": true
+    },
+    "clean_exit": true,
+    "artifacts": {
+      "summary": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/summary.json",
+      "raw_ultrasound": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/ultrasound_original_observations.npz",
+      "trajectory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/trajectory.json"
+    },
+    "failed_jobs": [
+      {"job_id": 50515488, "state": "FAILED", "elapsed": "00:00:03", "exit_code": "1:0", "failure": "Slurm-spooled common.sh path"},
+      {"job_id": 50515705, "state": "FAILED", "elapsed": "00:00:04", "exit_code": "2:0", "failure": "Conda unavailable in batch shell"},
+      {"job_id": 50519752, "state": "CANCELLED", "elapsed": "00:09:02", "exit_code": "0:0", "failure": "Conda activation exceeded requested RAM; related stuck job cancelled"},
+      {"job_id": 50520845, "state": "FAILED", "elapsed": "00:00:02", "exit_code": "1:0", "failure": "NVIDIA Omniverse EULA not yet accepted"},
+      {"job_id": 50521722, "state": "COMPLETED", "elapsed": "00:00:27", "exit_code": "0:0", "application_failure": "optional stable_baselines3 import; launcher did not propagate application exit"},
+      {"job_id": 50522471, "state": "FAILED", "elapsed": "00:00:52", "exit_code": "3:0", "failure": "declared observation dimensions reversed relative to USSlicer output"}
     ]
   },
   "ppo": {
-    "result": "NOT_RUN",
-    "reason": "smoke acceptance gate did not pass",
-    "job_id": null,
-    "collected_transitions": 0,
-    "ppo_updates": 0,
-    "checkpoint": null,
+    "result": "PASS",
+    "accepted_job_id": 50525848,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "node": "c0602a-s22",
+    "slurm_start": "2026-11-09T20:21:21-05:00",
+    "slurm_end": "2026-11-09T20:21:56-05:00",
+    "timed_elapsed_seconds": 29.24,
+    "configured_updates": 10,
+    "recorded_loss_points": 9,
+    "vector_steps": 320,
+    "collected_transitions": 1280,
+    "transitions_per_second": 43.775649794801645,
+    "nonfinite_scalar_values": false,
+    "instantaneous_reward_metrics_available": true,
+    "episode_return_summary_available": false,
+    "policy_loss_first": -0.027373328804969788,
+    "policy_loss_last": -0.009113335981965065,
+    "value_loss_first": 1.2028409242630005,
+    "value_loss_last": 1.3460088968276978,
+    "peak_gpu_memory_mib": 5297,
+    "peak_sampled_gpu_utilization_percent": 51,
+    "peak_rss_kib": 3717120,
+    "checkpoint": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/logs/US_guidance/2026-11-09_20-21-39_ppo_torch_PPO_US/checkpoints/agent_320.pt",
+      "bytes": 113760335,
+      "loaded_on_cpu": true,
+      "object_type": "dict",
+      "top_level_keys": ["optimizer", "policy", "value", "value_preprocessor"]
+    },
+    "summary": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/pilot-summary.json",
+    "failed_jobs": [
+      {"job_id": 50524765, "state": "FAILED", "elapsed": "00:00:30", "exit_code": "1:0", "collected_transitions": 0, "failure": "incorrect Hydra override path"}
+    ],
     "policy_usefulness": "NOT_EVALUATED"
   },
   "storage": {
-    "project_mib": 4,
-    "runtime_mib": 23499,
+    "project_mib": 5,
+    "runtime_before_gpu_validation_mib": 23499,
+    "runtime_after_gpu_validation_mib": 23740,
+    "runtime_growth_mib": 241,
     "runtime_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime"
   },
   "evidence": {
     "preflight": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/preflight.json",
-    "slurm_logs": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/"
+    "slurm_logs": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/",
+    "smoke_run": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/",
+    "ppo_run": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/"
   },
-  "next_experiment": "One corrected smoke-only job; PPO remains gated on SMOKE_PASS"
+  "scientific_scope": {
+    "simulator_initializes": true,
+    "robot_and_ultrasound_observations_work": true,
+    "ppo_training_executes": true,
+    "ppo_checkpoint_created": true,
+    "policy_learned_useful_behavior": "NOT_EVALUATED",
+    "generalization": "NOT_EVALUATED",
+    "clinical_safety": "NOT_EVALUATED",
+    "mbb_performance": "NOT_EVALUATED"
+  },
+  "next_experiment": "One preregistered single-seed navigation evaluation of agent_320.pt on a fixed held-out initial-condition list; report episode returns, success/termination rates, and trajectory safety diagnostics without further training."
 }

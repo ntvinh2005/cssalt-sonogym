@@ -9,4 +9,8 @@ Ant locomotion environment.
 
 import gymnasium as gym
 
-from . import sb3_cnn_extractor
+try:
+    from . import sb3_cnn_extractor
+except ModuleNotFoundError as exc:
+    if exc.name != "stable_baselines3":
+        raise

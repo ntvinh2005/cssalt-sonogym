@@ -3,7 +3,8 @@
 > CSSALT project note: this repository preserves the upstream SonoGym history and adds a
 > small, reproducible HiPerGator workflow for the published navigation baseline. The clinical
 > medial branch block environment is explicitly out of scope for this phase. See
-> [SETUP_STATUS.md](SETUP_STATUS.md) for evidence and blockers.
+> [SETUP_STATUS.md](SETUP_STATUS.md) for the validated Phase 4 evidence and remaining scientific
+> boundaries.
 
 ## CSSALT HiPerGator quick start
 
@@ -14,12 +15,14 @@ outside Git on Blue storage.
 
 ```bash
 cp config/hpg.env.example .sonogym.env
+# After the account holder accepts the NVIDIA Omniverse EULA, set
+# OMNI_KIT_ACCEPT_EULA=Y in the ignored, machine-local .sonogym.env only.
 
 # On a HiPerGator login node: nonallocating inspection only
 bash scripts/setup_hpg.sh --config .sonogym.env --inspect-only
 
 # Start a CPU development shell, then perform the actual installation there
-srun --account=anest-dept --cpus-per-task=4 --mem=32gb --time=04:00:00 --pty bash -i
+srun --account=anest-dept --cpus-per-task=4 --mem=30gb --time=04:00:00 --pty bash -i
 bash scripts/setup_hpg.sh --config .sonogym.env --install
 
 # CPU-safe preflight and non-submitting previews
@@ -49,9 +52,10 @@ Outputs are rooted at `SONOGYM_OUTPUT_DIR`: Slurm logs under `slurm/`, smoke sum
 samples under `smoke/<job-id>/`, and PPO logs/checkpoints/metrics under `ppo/<job-id>/`.
 
 Installation details: Python 3.10, CUDA-enabled PyTorch 2.5.1, Isaac Sim 4.5.0, Isaac Lab
-v2.1.0 at commit `21f7136`, and skrl 1.4.2. Isaac Sim's first GPU launch may still download
-extensions, compile shaders, and require NVIDIA EULA acceptance. These cannot be validated on
-a CPU-only setup and must not be described as passed.
+v2.1.0 at commit `21f7136`, and skrl 1.4.2. Isaac Sim's first GPU launch may download
+extensions, compile shaders, and requires account-holder NVIDIA EULA acceptance. The successful
+Phase 4 jobs and exact external artifacts are recorded in [SETUP_STATUS.md](SETUP_STATUS.md);
+do not transfer the machine-local EULA acceptance into version control.
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
 [![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)

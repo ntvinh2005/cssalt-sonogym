@@ -1,52 +1,81 @@
 # Setup status
 
-Status: **RUNTIME_BLOCKED**
+Status: **READY_FOR_REPRODUCTION**
 
 Updated: 2026-11-09 (America/New_York)
 
 ## Phase 4 runtime-validation outcome
 
-- GPU smoke test: **FAIL**.
-- PPO pilot: **NOT_RUN** because the smoke acceptance gate did not pass.
-- Readiness conclusion: **RUNTIME_BLOCKED**.
+- GPU smoke test: **PASS**, job `50523856` (`COMPLETED`, exit `0:0`).
+- PPO pilot: **PASS**, job `50525848` (`COMPLETED`, exit `0:0`).
+- Readiness conclusion: **READY_FOR_REPRODUCTION**.
 
-The pinned environment and assets are installed on HiPerGator, but neither GPU attempt reached
-Isaac Sim initialization. Job `50515488` failed while resolving a Slurm-spooled helper path. The
-one permitted retry, job `50515705`, failed because the batch environment had not loaded Conda.
-Both failures occurred before the simulator, robot, anatomy, or ultrasound pipeline started. No
-observation, transition, reset-cycle, clean simulator exit, or PPO claim is available.
+The successful jobs used account `anest-dept`, partition `hpg-turin`, one NVIDIA L4, four CPU
+cores, 30 GB requested RAM, and local Blue storage. The L4 reported 23,034 MiB and driver
+580.178.04. Both jobs used the real `Isaac-robot-US-guidance-v0` task, Isaac Sim 4.5.0.0,
+Isaac Lab `21f7136325136ca3f6ca4e0a8125edffe5c24f7e`, Python 3.10.22, PyTorch
+2.5.1+cu121, skrl 1.4.2, seed `20261106`, model-based `conv` ultrasound, headless mode, and
+disabled visualization/external logging. The execution HEAD was `5ab60675`; each run captured
+its dirty worktree patch under `context/uncommitted.patch` so the tested fixes remain auditable.
 
-Verified current state:
+### Smoke evidence
 
-- Project: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym`.
-- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime` (23,499 MiB).
-- Execution base commit: `a34ebe3ceee18a8637f7d71ec0d4265260332742`.
-- Isaac Lab: `21f7136325136ca3f6ca4e0a8125edffe5c24f7e` (`v2.1.0`).
-- Python 3.10.22, Isaac Sim 4.5.0.0, PyTorch 2.5.1+cu121, and skrl 1.4.2.
-- Full isolated CPU preflight: **PASS** with `PYTHONNOUSERSITE=1`.
-- Asset and model archives match the pinned byte counts and SHA-256 values.
-- Both GPU jobs used account `anest-dept`, four CPUs, 30 GB, and one allocated L4 on
-  `c1105a-s20`. The driver was not captured because both launchers stopped before `nvidia-smi`.
+Job `50523856` initialized Isaac Sim, loaded the KUKA and subject `s0010` assets, created and
+reset the task, and emitted finite `float32` policy observations with shape
+`[1, 1, 200, 150]`. It completed 32 bounded actions. The simulation counter advanced from 200
+to 264 (0.533333 simulated seconds at 1/120 s physics dt), maximum joint displacement was
+0.476689, and maximum end-effector pose displacement was 0.199634. Rewards were finite at the
+first and last recorded steps. The explicit real time-limit probe returned
+`terminated=false, truncated=true`; a second reset returned another finite observation of the
+same shape. The process exited cleanly after 36.82 wall-clock seconds with 3,329,268 KiB peak
+RSS. Nonzero pixels establish observation generation only, not anatomical correctness.
 
-Infrastructure fixes include the GLIBC `pipefail` issue, pinned bootstrap tooling, Python
-user-site isolation, CUDA local-version validation, Slurm-spooled helper resolution, explicit
-`conda/25.7.0` module loading, 30 GB memory, 90-minute PPO walltime, 32-step smoke diagnostics,
-and per-job reproducibility/resource capture. The final launcher state passes shell syntax,
-Python compilation, static preflight, Git diff, and smoke/PPO dry-runs. It has not received
-another GPU run because Phase 4 allowed only one retry.
+The raw simulated policy observation, distinct from a rendered visualization, is stored in
+`outputs/smoke/50523856/ultrasound_original_observations.npz`; the short state/action record is
+in `trajectory.json` in the same external run directory.
 
-Evidence:
+### PPO evidence
+
+Job `50525848` ran the published `workflows/skrl/train.py` PPO workflow with four environments,
+10 configured rollout/update intervals, 320 vector steps, and 1,280 collected transitions. It
+finished the timed command in 29.24 seconds (43.7756 transitions/s), recorded nine finite
+policy/value-loss points, and recorded finite instantaneous reward summaries. No episode-return
+summary was emitted in this short horizon. GPU telemetry peaked at 51% sampled utilization and
+5,297 MiB used; `/usr/bin/time` recorded 3,717,120 KiB peak RSS. The 113,760,335-byte
+`agent_320.pt` checkpoint loaded on CPU as a dictionary containing `optimizer`, `policy`,
+`value`, and `value_preprocessor`.
+
+The first PPO launcher job, `50524765`, failed before training with a Hydra override-path error
+and collected zero transitions. The corrected nested paths are
+`agent.agent.mini_batches` and `agent.agent.experiment.checkpoint_interval`; the failed log is
+preserved. The successful retry kept the same task, seed, and resource request.
+
+### Engineering fixes and evidence locations
+
+The validated fixes execute the environment Python directly instead of activating Conda inside
+the GPU job, propagate application failures through Slurm, make the optional Stable-Baselines3
+extractor genuinely optional, correct the declared ultrasound space from `[1, 150, 200]` to
+`[1, 200, 150]`, validate samples against the declared Gym space, use the correct nested Hydra
+paths, and capture GPU telemetry, TensorBoard scalars, and checkpoint structure. NVIDIA EULA
+acceptance remains machine-local; the tracked example defaults to `N`.
 
 - Machine report: `reports/phase4_gpu_smoke_ppo.json`.
-- Preflight: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/preflight.json`.
-- Logs: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/`.
+- Smoke: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/`.
+- PPO: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/`.
+- Failed-run logs: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/`.
+- CPU preflight: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/preflight.json`.
 
-Next exact experiment: after explicit authorization for a new execution phase, run exactly one
-corrected smoke-only job with one L4, four CPUs, 30 GB, seed `20261106`, 32 bounded actions,
-`conv` ultrasound, headless mode, and visualization disabled. PPO remains gated on a complete
-`SMOKE_PASS` with a zero Slurm exit code and clean simulator shutdown.
+Runtime storage increased from 23,499 MiB before GPU validation to 23,740 MiB after it; the
+repository uses 5 MiB. Generated logs, observations, and checkpoints remain outside Git.
 
-No policy usefulness, generalization, clinical safety, or MBB performance conclusion is supported.
+Next exact experiment: run one preregistered single-seed navigation evaluation using the saved
+pilot checkpoint and a fixed held-out initial-condition list, reporting episode returns,
+success/termination rates, and trajectory safety diagnostics. This is an evaluation step, not
+full reproduction, multi-seed training, anatomy generalization, or MBB procedure development.
+
+This phase establishes simulator initialization, robot/ultrasound transitions, PPO execution,
+and checkpoint creation. It does **not** establish useful learned behavior, generalization,
+clinical safety, anatomical fidelity, or MBB performance.
 
 ## Phase 3 historical record
 

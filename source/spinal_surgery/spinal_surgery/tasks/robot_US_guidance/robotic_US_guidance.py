@@ -180,7 +180,8 @@ class roboticUSEnvCfg(DirectRLEnvCfg):
     episode_length_s = scene_cfg["sim"]["episode_length"]  # 300
     action_scale = 1
     action_space = 3
-    observation_space = [1, 150, 200]
+    # USSlicer emits channel-first policy observations with (H, W) = (200, 150).
+    observation_space = [1, 200, 150]
     state_space = 0
     observation_scale = scene_cfg["observation"]["scale"]
 

@@ -14,9 +14,13 @@ capture_run_context "$RUN_DIR"
 
 nvidia-smi --query-gpu=timestamp,name,utilization.gpu,memory.used,memory.total \
     --format=csv > "$RUN_DIR/metrics/gpu-before.csv"
+nvidia-smi --query-gpu=timestamp,name,utilization.gpu,memory.used,memory.total \
+    --format=csv --loop=2 > "$RUN_DIR/metrics/gpu-telemetry.csv" &
+TELEMETRY_PID=$!
 
+set +e
 /usr/bin/time -v -o "$RUN_DIR/metrics/time.txt" \
-python workflows/skrl/train.py \
+"$PYTHON" workflows/skrl/train.py \
     --task Isaac-robot-US-guidance-v0 \
     --algorithm PPO \
     --num_envs 4 \
@@ -26,8 +30,12 @@ python workflows/skrl/train.py \
     --wandb_mode disabled \
     --headless \
     --device cuda:0 \
-    agent.mini_batches=4 \
-    agent.experiment.checkpoint_interval=160
+    agent.agent.mini_batches=4 \
+    agent.agent.experiment.checkpoint_interval=160
+TRAIN_RC=$?
+set -e
+kill "$TELEMETRY_PID" 2>/dev/null || true
+wait "$TELEMETRY_PID" 2>/dev/null || true
 
 nvidia-smi --query-gpu=timestamp,name,utilization.gpu,memory.used,memory.total \
     --format=csv > "$RUN_DIR/metrics/gpu-after.csv"
@@ -35,6 +43,10 @@ sstat --jobs="${SLURM_JOB_ID}.batch" --format=JobID,AveCPU,MaxRSS,MaxVMSize -P \
     > "$RUN_DIR/metrics/slurm.csv" || true
 
 find "$LOG_ROOT" -type f -print | sort > "$RUN_DIR/files.txt"
+if [[ "$TRAIN_RC" -ne 0 ]]; then
+    echo "PPO command failed with exit code $TRAIN_RC" >&2
+    exit "$TRAIN_RC"
+fi
 if ! find "$LOG_ROOT" -type f \( -name '*.pt' -o -name '*.pth' -o -name '*.ckpt' \) -print -quit | grep -q .; then
     echo "PPO pilot finished without a checkpoint" >&2
     exit 3
@@ -48,4 +60,9 @@ printf '%s\n' \
     'total_vector_steps=320' \
     'total_collected_transitions=1280' \
     > "$RUN_DIR/pilot-summary.txt"
+"$PYTHON" scripts/summarize_ppo.py \
+    --run-dir "$RUN_DIR" \
+    --updates 10 \
+    --vector-steps 320 \
+    --transitions 1280
 capture_run_end "$RUN_DIR"
