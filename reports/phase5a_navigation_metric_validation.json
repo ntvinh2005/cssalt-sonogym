@@ -1,24 +1,35 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "phase": "5A",
-  "decision": "BLOCKED",
-  "metric_go": null,
+  "decision": "METRIC_GO",
+  "metric_go": true,
   "training_performed": false,
-  "reason": "Both the initial GPU evaluation and sole justified retry stalled while resetting the stepped environment before frozen starts 4-7; the 32-start paired evaluation is incomplete.",
+  "scope_statement": "The navigation metric is achievable and discriminative on 32 frozen starts for patient s0010 and target vertebrae_L4. This does not establish useful PPO behavior, anatomy generalization, clinical safety, or MBB performance.",
   "protocol": {
-    "commit": "d73c46739bab88f115ef57bb00aa8af596b9dfeb",
-    "retry_commit": "a31586640c9bfba1a53782728a9285ecce1b82a1",
+    "base_commit": "d73c46739bab88f115ef57bb00aa8af596b9dfeb",
+    "execution_commit": "907d093afc6d984421eecefb5c50984fd6eeacd5",
+    "protocol_v2_path": "experiments/navigation_metric_validation/protocol_v2.yaml",
+    "protocol_v2_sha256": "d9d77e59d4893375d5b4695863c7a0afba9a160c27b7487cdbd475b4b2d70c81",
     "manifest_path": "experiments/navigation_metric_validation/initial_conditions.json",
     "manifest_sha256": "f5ff5bd9f5e254bad0720d3e0f1a6f91b66a025c3bb725f1589e7d08e7bd83dc",
     "num_starts": 32,
     "max_action_steps": 300,
-    "primary_threshold": {"position_mm": 10.0, "orientation_deg": 10.0},
-    "secondary_threshold": {"position_mm": 5.0, "orientation_deg": 5.0}
+    "primary_threshold": {
+      "position_mm": 10.0,
+      "orientation_deg": 10.0,
+      "conjunction": true
+    },
+    "secondary_threshold": {
+      "position_mm": 5.0,
+      "orientation_deg": 5.0,
+      "conjunction": true
+    },
+    "execution_change_only": "Fresh Isaac Sim process per frozen four-start batch; no inter-batch environment reset."
   },
   "unit_tests": {
     "status": "PASSED",
     "tests_run": 11,
-    "preflight_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/phase5a-preflight.json"
+    "preflight_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/phase5a-preflight-v2.json"
   },
   "runtime": {
     "task": "Isaac-robot-US-guidance-v0",
@@ -30,72 +41,135 @@
     "isaac_lab_commit": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e",
     "torch": "2.5.1+cu121",
     "skrl": "1.4.2",
-    "checkpoint_sha256": "72f342f61371d4dee3e9728babd7c3b84674e4c4a5bc51dc827d56eac204d01f"
+    "checkpoint_sha256": "72f342f61371d4dee3e9728babd7c3b84674e4c4a5bc51dc827d56eac204d01f",
+    "native_boundary_termination_enabled": false,
+    "native_max_episode_length": 600,
+    "action_dt_seconds": 0.016666666666666666
   },
-  "jobs": [
-    {
-      "job_id": 50641608,
-      "account": "anest-dept",
-      "partition": "hpg-turin",
-      "node": "c0603a-s13",
-      "state": "CANCELLED_AFTER_CONFIRMED_STALL",
-      "start": "2026-11-10T11:12:13-05:00",
-      "end": "2026-11-10T11:32:57-05:00",
-      "elapsed": "00:20:44",
-      "cpus": 4,
-      "requested_memory_gb": 30,
-      "gpu": "1 x NVIDIA L4",
-      "peak_host_rss_kib": 2513584,
-      "peak_sampled_gpu_memory_mib": 5081,
-      "peak_sampled_gpu_utilization_percent": 42,
-      "output_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50641608/"
-    },
-    {
-      "job_id": 50647528,
-      "account": "anest-dept",
-      "partition": "hpg-turin",
-      "node": "c1105a-s8",
-      "state": "CANCELLED_AFTER_REPEATED_STALL",
-      "start": "2026-11-10T11:41:51-05:00",
-      "end": "2026-11-10T12:14:12-05:00",
-      "elapsed": "00:32:21",
-      "cpus": 4,
-      "requested_memory_gb": 30,
-      "gpu": "1 x NVIDIA L4",
-      "peak_host_rss_kib": 2528996,
-      "peak_sampled_gpu_memory_mib": 5081,
-      "peak_sampled_gpu_utilization_percent": 55,
-      "output_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50647528/"
-    }
-  ],
-  "partial_diagnostic": {
-    "gate_eligible": false,
-    "controller": "oracle",
-    "completed_starts": 4,
-    "required_starts": 32,
-    "transitions": 1200,
-    "final_success_count": 4,
-    "final_success_rate_on_partial_subset": 1.0,
-    "median_position_error_mm": 0.031977568763521605,
-    "p90_position_error_mm": 0.07164990191785911,
-    "median_orientation_error_deg": 8.53800967008274,
-    "p90_orientation_error_deg": 8.610620045111311,
-    "mean_episode_return": 1.9000147879123688,
-    "median_episode_return": 1.8534375354647636,
-    "first_successful_steps": [41, 44, 45, 161],
-    "secondary_5mm_5deg_success_count": 0
+  "job": {
+    "job_id": 50656802,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c1105a-s6",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "start": "2026-11-10T12:52:15-05:00",
+    "end": "2026-11-10T13:02:53-05:00",
+    "elapsed": "00:10:38",
+    "total_cpu_time": "00:10:15.416",
+    "cpus": 4,
+    "requested_memory_gb": 30,
+    "peak_host_rss_kib": 3397904,
+    "gpu": "1 x NVIDIA L4",
+    "driver": "580.178.04",
+    "gpu_memory_total_mib": 23034,
+    "peak_sampled_gpu_memory_mib": 5081,
+    "peak_sampled_gpu_utilization_percent": 62,
+    "process_isolated_batches": 32,
+    "transitions": 38400,
+    "per_step_records": 38400,
+    "all_batch_exit_codes_zero": true,
+    "output_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation_v2/50656802/"
+  },
+  "pairing": {
+    "verified": true,
+    "max_realized_position_delta_mm": 0.0,
+    "max_realized_orientation_delta_deg": 0.0,
+    "max_goal_pose_abs_delta": 0.0,
+    "all_observations_rewards_poses_finite": true,
+    "invalid_transitions": 0
   },
   "controllers": {
-    "oracle": "PARTIAL_4_OF_32",
-    "zero_action": "NOT_RUN",
-    "bounded_random": "NOT_RUN",
-    "ppo_pilot": "NOT_RUN"
+    "oracle": {
+      "final_success_count": 32,
+      "final_success_rate": 1.0,
+      "secondary_success_count": 0,
+      "ever_success_count": 32,
+      "median_position_error_mm": 0.02459858706669364,
+      "p90_position_error_mm": 0.09280947066916607,
+      "median_orientation_error_deg": 8.537524726651668,
+      "p90_orientation_error_deg": 8.631453488117684,
+      "mean_return": 1.816777371801436,
+      "median_return": 1.7210661694407463,
+      "first_success_step_min": 41,
+      "first_success_step_median": 47,
+      "first_success_step_max": 167
+    },
+    "zero_action": {
+      "final_success_count": 0,
+      "final_success_rate": 0.0,
+      "secondary_success_count": 0,
+      "ever_success_count": 0,
+      "median_position_error_mm": 65.07510251965962,
+      "p90_position_error_mm": 90.15707952273392,
+      "median_orientation_error_deg": 26.30558566371201,
+      "p90_orientation_error_deg": 82.50011601842134,
+      "mean_return": -0.0012559983879327774,
+      "median_return": -0.0009804964065551758
+    },
+    "bounded_random": {
+      "final_success_count": 0,
+      "final_success_rate": 0.0,
+      "secondary_success_count": 0,
+      "ever_success_count": 0,
+      "median_position_error_mm": 68.3269168221355,
+      "p90_position_error_mm": 99.69834355215005,
+      "median_orientation_error_deg": 68.99984824084359,
+      "p90_orientation_error_deg": 113.38053028631879,
+      "mean_return": -0.5581444725394249,
+      "median_return": -0.445759654045105
+    },
+    "ppo_pilot": {
+      "final_success_count": 0,
+      "final_success_rate": 0.0,
+      "secondary_success_count": 0,
+      "ever_success_count": 5,
+      "median_position_error_mm": 120.7920025979966,
+      "p90_position_error_mm": 120.79712691128213,
+      "median_orientation_error_deg": 7.748753990731085,
+      "p90_orientation_error_deg": 7.749189756800133,
+      "mean_return": -0.5826824940741062,
+      "median_return": -0.6794974207878113,
+      "diagnostic_only": true,
+      "useful_behavior_established": false
+    }
+  },
+  "paired_oracle_advantage": {
+    "over_zero_action": {
+      "additional_successes": 32,
+      "median_position_error_reduction_mm": 65.05880843043083,
+      "median_orientation_error_reduction_deg": 17.753157464291373
+    },
+    "over_bounded_random": {
+      "additional_successes": 32,
+      "median_position_error_reduction_mm": 68.23957630767399,
+      "median_orientation_error_reduction_deg": 60.46247377835367
+    }
+  },
+  "gate": {
+    "metric_correctness": true,
+    "oracle_at_least_26_of_32": true,
+    "oracle_advantage_at_least_8_over_zero": true,
+    "oracle_advantage_at_least_8_over_random": true,
+    "oracle_lower_median_position_than_controls": true,
+    "oracle_lower_median_orientation_than_controls": true
+  },
+  "task_limitation": {
+    "target_angle_rad": 3.14,
+    "native_command_angle_max_rad": 3.0,
+    "effect": "Oracle settles near 8.54 degrees and cannot meet the 5-degree sensitivity threshold without a task/controller change."
+  },
+  "artifacts": {
+    "summary_json_sha256": "5d3fbb0f8c56611562e2efcd7d0f8a8d4673dc1267acbb325107403df2eedb07",
+    "evaluation_json_sha256": "0d72a1bb26ddde0a036c171e2b13b3a835f5f50ba0b55c6c8d255182e3228ac7",
+    "final_error_scatter_sha256": "6dd3226233a2053d77eada8a91358a8563425f41b38006c7f1d428213fafa8bd",
+    "paired_controls_plot_sha256": "71072753d81963fe2ab03ba29246f70630f8e205429d71c597bc900ec3507283"
   },
   "storage": {
-    "runtime_total_mib": 24315,
-    "growth_from_pre_phase5a_mib": 1,
-    "job_50641608_kib_approx": 292,
-    "job_50647528_kib_approx": 316
+    "run_directory_mib": 13,
+    "slurm_log_bytes": 359968,
+    "approximate_growth_mib": 14,
+    "full_runtime_scan": "TIMED_OUT_AFTER_60_SECONDS"
   },
-  "next_approval_required": "Approve a protocol-v2 reset-isolation evaluation that runs each frozen four-start batch in a fresh Isaac Sim process; no training or metric/dynamics changes."
+  "next_researcher_decision": "Decide whether to approve a separately preregistered Phase 5B learning experiment and whether the 3.0-rad command ceiling versus 3.14-rad target is intended. No Phase 5B execution is authorized by this report."
 }

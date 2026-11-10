@@ -1,159 +1,194 @@
 # Phase 5A — SonoGym navigation metric validation
 
 Date: 2026-11-10 (America/New_York)  
-Decision: **BLOCKED**  
+Decision: **METRIC_GO**
 Training performed: **No**
 
 ## Outcome
 
-Metric implementation and CPU validation passed, but the frozen 32-start,
-four-controller GPU evaluation could not be completed. Both the initial run and
-the sole justified retry completed the first four-start oracle batch, then
-stalled inside the environment reset that should load starts 4--7. Therefore
-the required paired controller table and METRIC_GO gate are not validly
-computable. This is `BLOCKED`, not `METRIC_NO_GO`: the available four-start
-oracle subset is diagnostic and cannot replace the preregistered 32 starts.
+The original SonoGym navigation task has an achievable and discriminative
+technical evaluation objective under the frozen Phase 5A engineering
+criterion. The privileged oracle reached final 10 mm / 10 degree success in
+32/32 frozen starts. Zero action and bounded random action each reached 0/32.
+The oracle also had lower median final position and orientation error than both
+controls. All frozen gate conditions passed.
 
-No PPO training, fine-tuning, reward change, observation/action change, task
-dynamics change, anatomy-generalization run, or Phase 5B work was performed.
+This result validates a navigation metric and the task's action pathway. It
+does not show that the Phase 4 PPO checkpoint learned useful navigation, that
+the result generalizes to another anatomy, or that SonoGym can perform an MBB
+procedure.
 
-## Audit findings
+## Source and objective audit
 
-`PAPER_METRICS` and source geometry are documented in
-`reports/phase5a_navigation_objective_audit.md`. The original paper evaluates
-final 2-D position error in the patient frontal plane and rotation error in
-degrees. The code represents the patient frontal plane as label-volume x-z
+PAPER_METRICS and code geometry are detailed in
+reports/phase5a_navigation_objective_audit.md. The paper evaluates final
+2-D probe-position error in the patient frontal plane and rotation error in
+degrees. The code represents the frontal plane with patient label-volume x-z
 indices at 0.0015 m/index; patient y is the surface-height/normal direction.
-The current/goal angle is recovered from the probe x axis and represented in
-`[0, 2*pi)`.
+The learned policy sees ultrasound only. Current pose and target pose are
+privileged state used only by evaluation and the oracle.
 
-Important paper-versus-code discrepancies retained without changing dynamics:
+Paper-versus-code discrepancies were preserved:
 
-- Paper initial region: 130 x 130 mm. Code range: 80 x 130 label indices, or
-  120 x 195 mm at 1.5 mm/index.
-- Reset samples angle 1.5--3.5 rad, while the native operational command range
-  clamps it to at most 3.0 rad. Nine frozen starts are expected to clamp.
-- Paper navigation horizon: 300 steps. Current native configuration: 10 seconds
-  at 60 action Hz, with observed native truncation at step 599.
-- Paper appendix states `w1=0.045` for position in millimetres. Current code uses
-  `w_pos=0.03` on label-index distance.
-- Current reward/logging use unwrapped angular difference. The frozen Phase 5A
-  metric applies the approved `[-pi, pi)` wrap.
-- Native out-of-bounds termination is disabled by replacing it with zeros;
-  `termination_direct=True` only enables the time limit. There is no native
-  goal-success termination.
-- The learned policy observes only ultrasound. `cur_cmd_pose` and
-  `goal_cmd_pose` are privileged evaluation/oracle state.
+- Paper initialization is 130 x 130 mm; code initialization is 120 x 195 mm.
+- Reset samples angle 1.5--3.5 rad, while the command range clamps at 3.0 rad.
+- Paper navigation horizon is 300 steps; native code is 600 action steps. Phase
+  5A applies a separate 300-step protocol truncation.
+- The appendix states position reward weight 0.045 with millimetres; code uses
+  0.03 on label-index distance.
+- Task reward/logging use unwrapped angular distance; the approved evaluator
+  uses the frozen half-open [-pi, pi) wrap.
+- Native boundary termination is disabled, and no native goal-success
+  termination exists. All 128 episodes therefore ended at the protocol horizon,
+  not by native success or timeout.
 
-The original `ExpertGuidance` controller with ratio `[0.02, 0.02, 0.6]` was
-used through the ordinary `env.step` action interface. It did not teleport the
-probe or bypass robot/IK dynamics.
+The target angle is 3.14 rad but the command maximum is 3.0 rad. Consequently,
+the oracle settles at approximately 8.54 degrees orientation error. It passes
+the primary 10-degree threshold but cannot reach the secondary 5-degree
+threshold with the current controller and native command bound. This was
+reported rather than changing task dynamics.
 
 ## Frozen metrics and protocol
 
 Position error:
 
-`norm((current_xz_index - goal_xz_index) * 0.0015) * 1000` millimetres.
+norm((current_xz_index - goal_xz_index) * 0.0015) * 1000 millimetres.
 
 Orientation error:
 
-`abs(wrap[-pi,pi)(current_angle - goal_angle)) * 180 / pi` degrees.
+abs(wrap[-pi,pi)(current_angle - goal_angle)) * 180 / pi degrees.
 
 Primary final success requires position <= 10 mm **and** orientation <= 10
 degrees. Secondary sensitivity requires <= 5 mm and <= 5 degrees. These are
 engineering thresholds, not published SonoGym or clinical thresholds.
 
-- Frozen-protocol commit: `d73c46739bab88f115ef57bb00aa8af596b9dfeb`
-- Retry-infrastructure commit: `a31586640c9bfba1a53782728a9285ecce1b82a1`
-- Manifest: `experiments/navigation_metric_validation/initial_conditions.json`
+- Base frozen-protocol commit: d73c46739bab88f115ef57bb00aa8af596b9dfeb
+- Protocol-v2 execution commit: 907d093afc6d984421eecefb5c50984fd6eeacd5
+- Protocol-v2 SHA-256:
+  d9d77e59d4893375d5b4695863c7a0afba9a160c27b7487cdbd475b4b2d70c81
 - Manifest SHA-256:
-  `f5ff5bd9f5e254bad0720d3e0f1a6f91b66a025c3bb725f1589e7d08e7bd83dc`
-- Checkpoint SHA-256:
-  `72f342f61371d4dee3e9728babd7c3b84674e4c4a5bc51dc827d56eac204d01f`
-- Fixed horizon: 300 action steps (5 seconds at 60 Hz).
-- Frozen controllers: oracle, zero action, bounded random, deterministic Phase 4
-  PPO checkpoint.
+  f5ff5bd9f5e254bad0720d3e0f1a6f91b66a025c3bb725f1589e7d08e7bd83dc
+- PPO checkpoint SHA-256:
+  72f342f61371d4dee3e9728babd7c3b84674e4c4a5bc51dc827d56eac204d01f
+- 32 PCG64 starts, generation seed 20261110; 300 actions/start.
+- Controller seeds and ordering remained frozen.
 
-## CPU metric validation
+Protocol-v2 changed only process lifetime: each four-start batch ran in a fresh
+Isaac Sim process. No reset occurred between batches in one process. The 32
+processes were sequential within one Slurm allocation, and aggregation failed
+closed unless all starts/controllers, raw step counts, artifact identities,
+and realized paired resets matched.
 
-CPU preflight passed without requesting a GPU. All 11 focused tests passed:
-metre-to-millimetre conversion, world-to-patient transform, frontal projection,
-angle wrap, success conjunction, reset/final extraction, termination versus
-truncation, time-limit non-success, and invalid/missing-state handling. The
-manifest regenerated byte-identically from NumPy PCG64 seed `20261110`.
+## Validation and execution
 
-Preflight evidence:
-`/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/phase5a-preflight.json`.
+CPU preflight passed before GPU submission. All 11 focused metric tests passed,
+including unit conversion, patient-frame transformation, frontal projection,
+angle wrap, success conjunction, final extraction, done classification, and
+invalid-state handling. The preflight artifact is:
 
-## GPU executions and failure diagnosis
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/phase5a-preflight-v2.json
 
-Both jobs used account `anest-dept`, partition `hpg-turin`, one NVIDIA L4, four
-CPUs, 30 GB requested RAM, Python 3.10.22, Isaac Sim 4.5.0.0, Isaac Lab
-`21f7136325136ca3f6ca4e0a8125edffe5c24f7e`, PyTorch 2.5.1+cu121, and skrl
-1.4.2.
+GPU job 50656802 completed 0:0 on account anest-dept, partition hpg-turin,
+node c1105a-s6, with four CPUs, 30 GB requested RAM, and one NVIDIA L4. It ran
+from 12:52:15 to 13:02:53 EST (10:38). Software was Python 3.10.22, Isaac Sim
+4.5.0.0, Isaac Lab 21f7136325136ca3f6ca4e0a8125edffe5c24f7e, PyTorch
+2.5.1+cu121, skrl 1.4.2, and driver 580.178.04.
 
-| Job | Commit | Node | Start–end | State | Peak host RSS | Peak sampled GPU memory/utilization |
-|---|---|---|---|---|---:|---:|
-| `50641608` | `d73c467` | `c0603a-s13` | 11:12:13–11:32:57 | CANCELLED after confirmed stall | 2,513,584 KiB | 5,081 MiB / 42% |
-| `50647528` | `a315866` | `c1105a-s8` | 11:41:51–12:14:12 | CANCELLED after repeated stall | 2,528,996 KiB | 5,081 MiB / 55% |
+All 32 batch processes exited zero. Aggregation found 38,400 raw step records
+and 38,400 episode transitions, with 0.0 maximum cross-controller difference
+in realized starting position, orientation, and goal pose. No nonfinite
+observation, reward, pose, or invalid transition was found.
 
-The initial run used a direct wrapper reset after the first 300-step batch. Its
-compressed step artifact stopped changing for more than 18 minutes while the
-main process remained runnable at approximately one CPU core. The retry used
-the Phase 4-validated native time-limit auto-reset path and discarded the reset
-transition. It reproduced the same stall inside the second environment reset
-for more than 29 minutes. Neither run showed an OOM, asset error, nonfinite
-transition, scheduler error, or GPU-allocation failure. The repeated blocker is
-localized to resetting/IK-settling the already-stepped environment before the
-second frozen batch.
+Peak host RSS was 3,397,904 KiB. Peak sampled GPU memory was 5,081 MiB and peak
+sampled utilization was 62%. Total CPU time was 10:15.416 over 10:38 wall time.
+The run directory is 13 MiB; its Slurm log is 359,968 bytes. This adds roughly
+14 MiB to runtime storage. A full runtime-tree du scan exceeded the bounded
+60-second metadata check, so the prior total was not replaced with an
+unverified number.
 
-The retry limit was exhausted. No third GPU execution was launched.
+## Controller comparison
 
-## Controller results
+| Controller | Final success | Median / p90 position (mm) | Median / p90 orientation (deg) | Ever success | Mean / median return |
+|---|---:|---:|---:|---:|---:|
+| Oracle | 32/32 (100%) | 0.0246 / 0.0928 | 8.5375 / 8.6315 | 32/32 | 1.8168 / 1.7211 |
+| Zero action | 0/32 (0%) | 65.0751 / 90.1571 | 26.3056 / 82.5001 | 0/32 | -0.00126 / -0.00098 |
+| Bounded random | 0/32 (0%) | 68.3269 / 99.6983 | 68.9998 / 113.3805 | 0/32 | -0.5581 / -0.4458 |
+| PPO pilot | 0/32 (0%) | 120.7920 / 120.7971 | 7.7488 / 7.7492 | 5/32 | -0.5827 / -0.6795 |
 
-The table is deliberately incomplete; only the first oracle batch is available
-and it is not used for the gate.
+Oracle first reached the primary success region between steps 41 and 167
+(median 47). Secondary 5 mm / 5 degree final success was 0/32 for every
+controller because of the orientation command-bound issue described above.
 
-| Controller | Coverage | Final success | Median / p90 position | Median / p90 orientation | Mean / median return | Gate use |
-|---|---:|---:|---:|---:|---:|---|
-| Oracle | 4/32 starts | 4/4 (diagnostic) | 0.032 / 0.072 mm | 8.538 / 8.611 deg | 1.900 / 1.853 | Excluded: incomplete |
-| Zero action | NOT_RUN | — | — | — | — | Unavailable |
-| Bounded random | NOT_RUN | — | — | — | — | Unavailable |
-| PPO pilot | NOT_RUN | — | — | — | — | Diagnostic arm unavailable |
+## Paired discrimination and gate
 
-For the four partial starts, first primary success occurred at steps 41, 44,
-45, and 161. All four were final 10 mm/10 degree successes but none met the
-5 mm/5 degree secondary threshold because final orientation errors were about
-8.54--8.64 degrees. This subset suggests the oracle/action/metric combination
-can reach the primary threshold, but it does not establish the required 26/32
-feasibility or discrimination over controls.
+Relative to zero action, the oracle had 32 additional final successes, a
+65.0588 mm median paired position-error reduction, and a 17.7532 degree median
+paired orientation-error reduction. Relative to bounded random actions, the
+corresponding values were 32 successes, 68.2396 mm, and 60.4625 degrees.
+Oracle final errors were lower on all 32 starts for both position controls and
+all 32 random-control orientations; oracle orientation was lower than zero
+action on 24/32 starts.
 
-## Artifacts and storage
+The frozen gate passed:
 
-- Initial failed run:
-  `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50641608/`
-- Sole retry:
-  `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50647528/`
-- Slurm logs:
-  `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/cssalt-sonogym-navigation_metrics-50641608.out`
-  and `...-50647528.out`.
-- Partial raw per-step records: `results/per_step.jsonl.gz` inside each run.
+- Metric correctness: PASS (tests, finite artifacts, exact cross-process
+  pairing, and termination accounting).
+- Task feasibility: PASS (oracle 32/32, required at least 26/32).
+- Discrimination versus zero: PASS (32-success advantage and lower medians).
+- Discrimination versus random: PASS (32-success advantage and lower medians).
 
-The two Phase 5A run directories occupy approximately 292 KiB and 316 KiB.
-Total runtime storage is 24,315 MiB, an increase of approximately 1 MiB from the
-pre-Phase-5A value. No generated log, checkpoint, video, or large artifact is
-committed to Git.
+Decision: **METRIC_GO**.
 
-## Decision and required next approval
+## PPO diagnostic
 
-**Decision: BLOCKED.** Metric formulas and unit tests are correct, but exact
-paired replay over all 32 starts and complete controller artifacts were not
-obtained. `METRIC_GO` and `METRIC_NO_GO` are therefore both unsupported.
+The existing agent_320.pt checkpoint was loaded without retraining and used
+deterministic mean actions. It had 0/32 final successes, although 5/32 episodes
+temporarily entered the primary success region. Its median final position error
+was 120.792 mm, while its median orientation error was 7.749 degrees. It spent
+9,441 of 9,600 episode-steps at a native command bound. The pilot therefore
+does not support a useful-policy claim and should not be scaled as-is.
 
-The exact recommended next experiment, requiring researcher approval, is a
-protocol-v2 execution that starts a fresh Isaac Sim process for each frozen
-four-start batch. It would preserve all 32 starts, controller seeds, metrics,
-thresholds, horizon, action/reward/dynamics, checkpoint, four environments at a
-time, and one-L4 resource limit while avoiding in-process episode reset. It is
-a new approved execution because the frozen protocol's retry allowance is
-exhausted. Do not train PPO or change rewards before this reset-isolation test.
+## Reset failure resolution
+
+Jobs 50641608 and 50647528 are retained as failed protocol-v1 executions.
+Both completed the first oracle batch and then stalled entering the next reset.
+The sole retry changed from direct wrapper reset to native time-limit
+auto-reset and reproduced the same stall. Protocol-v2 made no scientific
+change; it removed inter-batch reset by closing Isaac Sim after every batch.
+Job 50656802 completed all 32 process launches in 10:38, confirming that the
+blocker was process-lifetime/reset behavior rather than metric computation,
+asset loading, GPU allocation, or the first-batch controller pipeline.
+
+## Artifacts
+
+Run root:
+
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation_v2/50656802/
+
+Important files:
+
+- results/final/evaluation.json — complete merged machine-readable evaluation.
+- results/final/summary.json — gate and controller summaries.
+- results/final/episodes.csv — 128 per-episode records.
+- results/final/per_step.jsonl.gz — 38,400 raw step records.
+- results/final/final_error_scatter.png — final position/orientation plot.
+- results/final/paired_oracle_controls.png — paired oracle/control plot.
+- results/final/representative_trajectories.json — preregistered trajectory set.
+- results/batches/ — all 32 process-isolated raw batch results.
+- metrics/gpu-telemetry.csv and context/ — resources and provenance.
+
+The final summary SHA-256 is
+5d3fbb0f8c56611562e2efcd7d0f8a8d4673dc1267acbb325107403df2eedb07.
+The merged evaluation SHA-256 is
+0d72a1bb26ddde0a036c171e2b13b3a835f5f50ba0b55c6c8d255182e3228ac7.
+Large logs and raw outputs remain on Blue Storage and are not committed.
+
+## Next researcher decision
+
+Stop after Phase 5A. The next proposed scientific decision is whether to
+approve a separately preregistered Phase 5B learning experiment that trains a
+new policy and evaluates it against the now-validated oracle/zero/random
+protocol. Before approval, resolve whether the 3.0 rad command ceiling versus
+3.14 rad target is an intended task property; changing it would alter task
+dynamics and requires explicit review. Do not infer from METRIC_GO that the
+existing PPO checkpoint is useful.

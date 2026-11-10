@@ -1,6 +1,6 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_BLOCKED**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO**
 
 Updated: 2026-11-10 (America/New_York)
 
@@ -121,38 +121,46 @@ this result alone.
 
 ## Phase 5A navigation-metric validation
 
-Phase 5A is **BLOCKED**, not `METRIC_NO_GO`. The frozen protocol, 32-start manifest, evaluation
-metrics, and controller instrumentation were committed before GPU use at `d73c467`. All 11 CPU
-metric tests and the fail-closed preflight passed. The manifest SHA-256 is
-`f5ff5bd9f5e254bad0720d3e0f1a6f91b66a025c3bb725f1589e7d08e7bd83dc`.
+Phase 5A is complete with **METRIC_GO**. The base frozen protocol and manifest remained
+unchanged. Approved protocol-v2 commit `907d093` changed only execution lifetime: each frozen
+four-start batch ran in a new Isaac Sim process, avoiding the reset stall observed in jobs
+`50641608` and `50647528`. No policy training, reward/observation/action/dynamics change, or
+threshold adjustment occurred.
 
-GPU job `50641608` and its sole justified retry `50647528` both used `anest-dept`, one L4, four
-CPUs, and 30 GB RAM. Each completed the first four-start oracle batch (1,200 transitions) and
-then stalled inside environment reset before starts 4--7. The retry replaced direct wrapper
-reset with the native time-limit auto-reset path and reproduced the same blocker. Both jobs were
-cancelled after confirmed lack of progress; failed logs and partial artifacts are preserved.
-Peak host RSS was about 2.4 GiB and sampled GPU memory peaked at 5,081 MiB, so the repeated
-failure is not attributable to RAM, VRAM, assets, or scheduler allocation.
+Job `50656802` completed `0:0` on `anest-dept` in 10:38 using four CPUs, 30 GB requested
+RAM, and one NVIDIA L4. All 32 process-isolated batches exited zero. The merged evaluation
+contains 38,400 transitions; paired starts matched exactly across controllers, and no
+nonfinite observation/reward/pose or invalid transition was found.
 
-The partial oracle subset achieved 4/4 final successes at the engineering 10 mm/10 degree
-threshold, with median final position error 0.032 mm and median final orientation error 8.538
-degrees. This subset is diagnostic only. Zero-action, bounded-random, and PPO arms were not run;
-the required 26/32 oracle feasibility and paired discrimination conditions are not computable.
-Neither `METRIC_GO` nor `METRIC_NO_GO` is supported.
+At the primary 10 mm / 10 degree threshold, oracle success was 32/32, while zero action and
+bounded random action were both 0/32. Oracle median final error was 0.0246 mm and 8.5375
+degrees, versus 65.0751 mm / 26.3056 degrees for zero and 68.3269 mm / 68.9998 degrees for
+random. The oracle exceeded each control by 32 successes and had lower median position and
+orientation error, satisfying every frozen gate.
+
+The existing Phase 4 PPO checkpoint was diagnostic only: 0/32 final success, 5/32 ever success,
+120.7920 mm median final position error, and 7.7488 degrees median final orientation error. It
+does not establish useful learned navigation. The target angle is 3.14 rad while the native
+command maximum is 3.0 rad, which explains the oracle's approximately 8.54-degree floor and
+0/32 success at the secondary 5 mm / 5 degree sensitivity threshold. The native boundary
+termination remains disabled, and every episode ended at the 300-step protocol horizon.
 
 Evidence:
 
 - Audit: `reports/phase5a_navigation_objective_audit.md`.
 - Human report: `reports/phase5a_navigation_metric_validation.md`.
 - Machine report: `reports/phase5a_navigation_metric_validation.json`.
+- Completed run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation_v2/50656802/`.
 - Failed initial run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50641608/`.
 - Failed sole retry: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/navigation_metric_validation/50647528/`.
 
-Runtime storage is 24,315 MiB, approximately 1 MiB above the pre-Phase-5A value. No generated
-logs or checkpoints were committed. The next experiment requires explicit researcher approval:
-a protocol-v2 reset-isolation evaluation that launches a fresh Isaac Sim process for each
-frozen four-start batch while preserving every metric, threshold, controller, seed, horizon,
-action/reward/dynamics setting, and the one-L4 resource limit. Do not train PPO first.
+The completed run adds approximately 14 MiB (13 MiB run directory plus a 359,968-byte Slurm
+log). Peak host RSS was 3,397,904 KiB; sampled GPU memory/utilization peaked at 5,081 MiB/62%.
+No raw outputs, logs, plots, videos, or checkpoints were committed.
+
+Next decision: before any separately preregistered Phase 5B learning experiment, the researcher
+must decide whether the 3.0-rad command ceiling versus 3.14-rad target is intentional. No
+Phase 5B training is authorized by the Phase 5A result.
 
 ## Phase 3 historical record
 
