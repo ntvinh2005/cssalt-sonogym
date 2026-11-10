@@ -73,6 +73,16 @@ def main() -> int:
 
     check("smoke_script", (project / "scripts" / "smoke_test.py").is_file(), "real environment smoke script")
     check("ppo_job", (project / "hpg" / "jobs" / "ppo.sbatch").is_file(), "bounded PPO pilot")
+    check(
+        "evaluation_job",
+        (project / "hpg" / "jobs" / "evaluation.sbatch").is_file(),
+        "paired checkpoint and zero-action evaluation",
+    )
+    check(
+        "demo_job",
+        (project / "hpg" / "jobs" / "demo.sbatch").is_file(),
+        "bounded rendered checkpoint demo",
+    )
     check("upstream_license", (project / "LICENCE").is_file(), "LICENCE retained")
 
     if not args.static:

@@ -56,7 +56,7 @@ def join_configured_path(base: str, *parts: str) -> str:
     return separator.join([base.rstrip("/\\"), *parts])
 
 
-def check_project_queue() -> None:
+def check_project_queue(allowed_predecessor: int | None = None) -> None:
     if not shutil.which("squeue"):
         raise RuntimeError("squeue is unavailable; submission must run on HiPerGator")
     result = subprocess.run(
@@ -68,28 +68,46 @@ def check_project_queue() -> None:
     project_jobs = [
         line for line in result.stdout.splitlines() if line.split("|")[-1].startswith("cssalt-sonogym-")
     ]
-    if project_jobs:
+    unexpected_jobs = [
+        line
+        for line in project_jobs
+        if allowed_predecessor is None or line.split("|", 1)[0] != str(allowed_predecessor)
+    ]
+    if unexpected_jobs:
         raise RuntimeError(
             "another CSSALT SonoGym job is pending/running; the initial workflow is serial:\n"
-            + "\n".join(project_jobs)
+            + "\n".join(unexpected_jobs)
         )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("job", choices=["smoke", "ppo"])
+    parser.add_argument("job", choices=["smoke", "ppo", "evaluation", "demo"])
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--dry-run", action="store_true")
     action.add_argument("--submit", action="store_true")
     parser.add_argument("--config", default=".sonogym.env")
+    parser.add_argument(
+        "--afterany",
+        type=int,
+        help="Submit after the specified Slurm job finishes, preserving serial GPU use.",
+    )
     args = parser.parse_args()
+    if args.afterany is not None and args.afterany <= 0:
+        parser.error("--afterany must be a positive Slurm job ID")
 
     config_path = Path(args.config).resolve()
     cfg = load_env(config_path)
     validate_budget(cfg)
 
-    walltime_key = "SMOKE_WALLTIME" if args.job == "smoke" else "PPO_WALLTIME"
-    walltime = cfg.get(walltime_key, "00:30:00" if args.job == "smoke" else "02:00:00")
+    walltime_keys = {
+        "smoke": ("SMOKE_WALLTIME", "00:30:00"),
+        "ppo": ("PPO_WALLTIME", "01:30:00"),
+        "evaluation": ("EVAL_WALLTIME", "00:30:00"),
+        "demo": ("DEMO_WALLTIME", "00:15:00"),
+    }
+    walltime_key, default_walltime = walltime_keys[args.job]
+    walltime = cfg.get(walltime_key, default_walltime)
     batch_script = join_configured_path(
         cfg["SONOGYM_PROJECT_DIR"], "hpg", "jobs", f"{args.job}.sbatch"
     )
@@ -107,6 +125,7 @@ def main() -> int:
         f"--gpus={cfg['SLURM_GPUS']}",
         f"--mem={cfg['SLURM_MEMORY']}",
         f"--time={walltime}",
+        *([f"--dependency=afterany:{args.afterany}"] if args.afterany else []),
         f"--job-name={job_name}",
         f"--output={join_configured_path(log_dir, '%x-%j.out')}",
         f"--export=ALL,SONOGYM_CONFIG_FILE={config_path}",
@@ -127,7 +146,7 @@ def main() -> int:
 
     if os.name == "nt":
         raise RuntimeError("submission must run on HiPerGator, not Windows")
-    check_project_queue()
+    check_project_queue(args.afterany)
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     result = subprocess.run(command, check=True, text=True, capture_output=True)
     print(f"Submitted job {result.stdout.strip()}")

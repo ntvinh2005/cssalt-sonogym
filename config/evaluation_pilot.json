@@ -1,0 +1,42 @@
+{
+  "protocol_version": 1,
+  "task": "Isaac-robot-US-guidance-v0",
+  "checkpoint_source_job": 50525848,
+  "checkpoint_name": "agent_320.pt",
+  "training_seed": 20261106,
+  "evaluation_seed": 20261110,
+  "parallel_environments": 4,
+  "episodes_per_environment": 5,
+  "episodes_per_arm": 20,
+  "arms": ["checkpoint", "zero_action"],
+  "paired_initial_conditions": "Each arm starts a fresh simulator with evaluation_seed; requested initial commands must match within 1e-6.",
+  "anatomy": {
+    "patient_id": "s0010",
+    "target": "vertebrae_L4",
+    "patient_level_holdout": false
+  },
+  "policy_observation": "model-based conv ultrasound only",
+  "privileged_evaluation_metrics": [
+    "initial and final composite goal distance",
+    "action saturation",
+    "native terminated and truncated signals"
+  ],
+  "primary_metrics": [
+    "episode return",
+    "paired return difference versus zero action",
+    "composite goal-distance improvement rate"
+  ],
+  "engineering_acceptance": [
+    "both arms complete 20 episodes",
+    "paired requested initial commands match",
+    "observations, actions, and rewards remain finite",
+    "checkpoint loads and both simulators exit cleanly"
+  ],
+  "scientific_boundary": {
+    "native_success_criterion": false,
+    "native_out_of_bounds_termination_enabled": false,
+    "policy_usefulness_claim": "NOT_ESTABLISHED without a preregistered task success criterion",
+    "clinical_safety_claim": "NOT_EVALUATED"
+  },
+  "training_permitted": false
+}

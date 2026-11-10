@@ -29,7 +29,8 @@ export PIP_CACHE_DIR="$SONOGYM_CACHE_DIR/pip"
 export OMNI_USER_DIR="$SONOGYM_CACHE_DIR/omniverse"
 
 mkdir -p "$SONOGYM_OUTPUT_DIR/slurm" "$SONOGYM_OUTPUT_DIR/smoke" \
-    "$SONOGYM_OUTPUT_DIR/ppo" "$SONOGYM_CACHE_DIR/xdg" \
+    "$SONOGYM_OUTPUT_DIR/ppo" "$SONOGYM_OUTPUT_DIR/evaluation" "$SONOGYM_OUTPUT_DIR/demo" \
+    "$SONOGYM_CACHE_DIR/xdg" \
     "$SONOGYM_CACHE_DIR/pip" "$SONOGYM_CACHE_DIR/omniverse"
 
 PYTHON="$SONOGYM_ENV_PREFIX/bin/python"
