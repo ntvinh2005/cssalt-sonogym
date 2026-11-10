@@ -131,7 +131,14 @@ def main() -> int:
     while min(episode_counts) < args.episodes_per_env:
         with torch.inference_mode():
             if runner is not None:
+                cpu_rng_state = torch.get_rng_state()
+                cuda_rng_states = torch.cuda.get_rng_state_all()
                 outputs = runner.agent.act(obs, timestep=0, timesteps=0)
+                # GaussianMixin samples before exposing mean_actions. Evaluation uses
+                # the deterministic mean, so restore RNG state to keep subsequent
+                # environment resets paired with the zero-action arm.
+                torch.set_rng_state(cpu_rng_state)
+                torch.cuda.set_rng_state_all(cuda_rng_states)
                 actions = outputs[-1].get("mean_actions", outputs[0])
             else:
                 actions = torch.zeros(
