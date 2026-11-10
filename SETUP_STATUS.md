@@ -2,7 +2,7 @@
 
 Status: **READY_FOR_REPRODUCTION**
 
-Updated: 2026-11-09 (America/New_York)
+Updated: 2026-11-10 (America/New_York)
 
 ## Phase 4 runtime-validation outcome
 
@@ -68,14 +68,56 @@ acceptance remains machine-local; the tracked example defaults to `N`.
 Runtime storage increased from 23,499 MiB before GPU validation to 23,740 MiB after it; the
 repository uses 5 MiB. Generated logs, observations, and checkpoints remain outside Git.
 
-Next exact experiment: run one preregistered single-seed navigation evaluation using the saved
-pilot checkpoint and a fixed held-out initial-condition list, reporting episode returns,
-success/termination rates, and trajectory safety diagnostics. This is an evaluation step, not
-full reproduction, multi-seed training, anatomy generalization, or MBB procedure development.
-
 This phase establishes simulator initialization, robot/ultrasound transitions, PPO execution,
 and checkpoint creation. It does **not** establish useful learned behavior, generalization,
 clinical safety, anatomical fidelity, or MBB performance.
+
+## Follow-up paired evaluation and rendered demo
+
+The preregistered no-training follow-up is complete. Job `50553529` (`anest-dept`, one L4,
+four CPUs, 30 GB) evaluated `agent_320.pt` and a zero-action control sequentially with seed
+`20261110`. Each arm completed 20 episodes on patient `s0010`/`vertebrae_L4`; all observations,
+actions, and rewards remained finite. The 20 requested initial commands matched exactly between
+arms (`max_abs_difference=0`). Both arms produced 11,980 transitions and all episodes ended by
+the native time-limit truncation, with no native task termination.
+
+The checkpoint did not outperform the paired control at this pilot budget. Mean episode return
+was -0.654744 for the checkpoint and -0.001471 for zero action. The paired checkpoint-minus-zero
+difference averaged -0.653274, and the checkpoint was higher in only 20% of pairs. Composite
+distance improved in 20% of checkpoint episodes versus 30% of zero-action episodes. The task
+defines neither a native success criterion nor an enabled out-of-bounds termination, so this
+result does not support a useful-policy or safety claim. It is evidence against promoting the
+10-update pilot checkpoint as a learned navigation result.
+
+Evaluation jobs `50550192` and `50551253` are preserved as protocol failures. The first seeded
+before Runner construction; the second re-seeded before reset but allowed Gaussian action
+sampling to advance CUDA RNG before later resets. The accepted evaluator restores RNG around
+deterministic `mean_actions`, which produced exact pairing in `50553529`.
+
+Rendered demo job `50551365` completed with exit `0:0` on `anest-dept`. It produced a 2.98 s,
+179-frame, H.264, 1280x720, 60 fps MP4. The file was decoded successfully and the first/middle
+frames were visually checked as nonblank. It is a rendered simulator demonstration, not the raw
+ultrasound policy observation and not evidence of policy quality. First camera launch spent about
+12 minutes compiling RTX shaders; the completed job used 14:43 wall time.
+
+- Follow-up machine report: `reports/checkpoint_evaluation_demo.json`.
+- Accepted evaluation: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/evaluation/50553529/`.
+- Video manifest: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/50551365/video/demo-manifest.json`.
+- Downloadable MP4: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/50551365/video/sonogym-checkpoint-demo-step-0.mp4`.
+
+From a local terminal, download the MP4 with:
+
+```bash
+scp vinhnguyen1@hpg.rc.ufl.edu:/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/50551365/video/sonogym-checkpoint-demo-step-0.mp4 .
+```
+
+Runtime storage is now 24,314 MiB, up 574 MiB from the post-Phase-4 value; most follow-up growth
+is renderer/shader cache rather than the 390,986-byte MP4.
+
+Next exact action: do not scale this checkpoint. First define and review a native navigation
+success criterion and enabled failure/constraint metrics, then preregister a matched-budget
+learning-curve protocol with zero/random controls. No additional GPU training is authorized by
+this result alone.
 
 ## Phase 3 historical record
 

@@ -1,6 +1,6 @@
 {
   "phase": 4,
-  "generated_at": "2026-11-09T22:16:15-05:00",
+  "generated_at": "2026-11-10T07:07:23-05:00",
   "readiness": "READY_FOR_REPRODUCTION",
   "git": {
     "execution_commit": "5ab60675a685a0192fdcdfaf25fcf67050c4f1cf",
@@ -134,7 +134,8 @@
     "failed_jobs": [
       {"job_id": 50524765, "state": "FAILED", "elapsed": "00:00:30", "exit_code": "1:0", "collected_transitions": 0, "failure": "incorrect Hydra override path"}
     ],
-    "policy_usefulness": "NOT_EVALUATED"
+    "policy_usefulness": "NOT_ESTABLISHED_NO_NATIVE_SUCCESS_CRITERION",
+    "follow_up_report": "reports/checkpoint_evaluation_demo.json"
   },
   "storage": {
     "project_mib": 5,
@@ -147,17 +148,19 @@
     "preflight": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/records/preflight.json",
     "slurm_logs": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/",
     "smoke_run": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/smoke/50523856/",
-    "ppo_run": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/"
+    "ppo_run": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/ppo/50525848/",
+    "evaluation_run": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/evaluation/50553529/",
+    "demo_video": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/50551365/video/sonogym-checkpoint-demo-step-0.mp4"
   },
   "scientific_scope": {
     "simulator_initializes": true,
     "robot_and_ultrasound_observations_work": true,
     "ppo_training_executes": true,
     "ppo_checkpoint_created": true,
-    "policy_learned_useful_behavior": "NOT_EVALUATED",
+    "policy_learned_useful_behavior": "NOT_ESTABLISHED_NO_NATIVE_SUCCESS_CRITERION",
     "generalization": "NOT_EVALUATED",
     "clinical_safety": "NOT_EVALUATED",
     "mbb_performance": "NOT_EVALUATED"
   },
-  "next_experiment": "One preregistered single-seed navigation evaluation of agent_320.pt on a fixed held-out initial-condition list; report episode returns, success/termination rates, and trajectory safety diagnostics without further training."
+  "next_experiment": "Define and review a native success criterion and failure/constraint metrics, then preregister a matched-budget learning-curve protocol before any further GPU training."
 }

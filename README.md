@@ -49,7 +49,11 @@ and ten updates: 320 vector steps and 1,280 collected transitions. It is only a 
 not a reproduction result or evidence of a learned policy.
 
 Outputs are rooted at `SONOGYM_OUTPUT_DIR`: Slurm logs under `slurm/`, smoke summaries and
-samples under `smoke/<job-id>/`, and PPO logs/checkpoints/metrics under `ppo/<job-id>/`.
+samples under `smoke/<job-id>/`, PPO logs/checkpoints/metrics under `ppo/<job-id>/`, paired
+evaluations under `evaluation/<job-id>/`, and rendered demos under `demo/<job-id>/`.
+Set `SONOGYM_EVAL_CHECKPOINT` only in the ignored `.sonogym.env`; `evaluation` and `demo` jobs
+never update policy weights. See [SETUP_STATUS.md](SETUP_STATUS.md) for the accepted job IDs,
+scientific limitations, and the current downloadable demo.
 
 Installation details: Python 3.10, CUDA-enabled PyTorch 2.5.1, Isaac Sim 4.5.0, Isaac Lab
 v2.1.0 at commit `21f7136`, and skrl 1.4.2. Isaac Sim's first GPU launch may download

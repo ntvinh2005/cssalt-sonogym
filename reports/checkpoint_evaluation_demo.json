@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-11-10T07:07:23-05:00",
+  "status": "ENGINEERING_EVALUATION_PASS",
+  "policy_usefulness": "NOT_ESTABLISHED_NO_NATIVE_SUCCESS_CRITERION",
+  "git": {
+    "evaluation_commit": "4d49ee361c331e2cd36f66e34e06be87ea494e50",
+    "demo_commit": "5b4fddad787f843b5ef07543eebb579d3c002606",
+    "protocol": "config/evaluation_pilot.json"
+  },
+  "resources": {
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_driver": "580.178.04",
+    "cpus": 4,
+    "requested_memory_gb": 30,
+    "external_logging": false
+  },
+  "evaluation": {
+    "job_id": 50553529,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "node": "c0602a-s22",
+    "start": "2026-11-09T23:38:01-05:00",
+    "end": "2026-11-09T23:39:57-05:00",
+    "seed": 20261110,
+    "task": "Isaac-robot-US-guidance-v0",
+    "patient_id": "s0010",
+    "target_anatomy": "vertebrae_L4",
+    "training_performed": false,
+    "paired_episodes": 20,
+    "paired_initial_commands": true,
+    "paired_initial_command_max_abs_difference": 0.0,
+    "all_values_finite": true,
+    "checkpoint_arm": {
+      "episodes": 20,
+      "vector_steps": 2995,
+      "transitions": 11980,
+      "loop_seconds": 30.356471279999823,
+      "transitions_per_second": 394.6440246463346,
+      "mean_episode_return": -0.6547444105148316,
+      "median_episode_return": -0.5168993473052979,
+      "minimum_episode_return": -1.8907470107078552,
+      "maximum_episode_return": 0.4018404483795166,
+      "composite_distance_improvement_rate": 0.2,
+      "native_termination_rate": 0.0,
+      "time_limit_truncation_rate": 1.0,
+      "action_saturation_rate": 0.0,
+      "process_elapsed_seconds": 67.16,
+      "peak_rss_kib": 3460632
+    },
+    "zero_action_arm": {
+      "episodes": 20,
+      "vector_steps": 2995,
+      "transitions": 11980,
+      "loop_seconds": 29.1826154449991,
+      "transitions_per_second": 410.5183794296601,
+      "mean_episode_return": -0.0014706909656524657,
+      "median_episode_return": -0.0015485286712646484,
+      "minimum_episode_return": -0.004663944244384766,
+      "maximum_episode_return": 0.0009818077087402344,
+      "composite_distance_improvement_rate": 0.3,
+      "native_termination_rate": 0.0,
+      "time_limit_truncation_rate": 1.0,
+      "action_saturation_rate": 0.0,
+      "process_elapsed_seconds": 45.52,
+      "peak_rss_kib": 3370404
+    },
+    "paired_checkpoint_minus_zero_return": {
+      "mean": -0.6532737195491791,
+      "median": -0.5155209302902222,
+      "minimum": -1.8904231190681458,
+      "maximum": 0.4017918109893799,
+      "fraction_checkpoint_higher": 0.2
+    },
+    "peak_sampled_gpu_utilization_percent": 62,
+    "peak_sampled_gpu_memory_mib": 5079,
+    "native_success_criterion_available": false,
+    "native_out_of_bounds_termination_enabled": false,
+    "summary": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/evaluation/50553529/summary.json",
+    "failed_protocol_jobs": [
+      {
+        "job_id": 50550192,
+        "state": "FAILED",
+        "exit_code": "1:0",
+        "failure": "Runner construction advanced RNG after the initial seed"
+      },
+      {
+        "job_id": 50551253,
+        "state": "FAILED",
+        "exit_code": "1:0",
+        "failure": "Gaussian action sampling advanced CUDA RNG before later resets"
+      }
+    ]
+  },
+  "demo": {
+    "job_id": 50551365,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "node": "c1105a-s20",
+    "start": "2026-11-09T23:22:08-05:00",
+    "end": "2026-11-09T23:36:51-05:00",
+    "slurm_elapsed_seconds": 883,
+    "process_elapsed_seconds": 879.38,
+    "peak_rss_kib": 16318412,
+    "peak_sampled_gpu_utilization_percent": 44,
+    "peak_sampled_gpu_memory_mib": 7495,
+    "seed": 20261110,
+    "frames_requested": 180,
+    "decoded_frames": 179,
+    "duration_seconds": 2.98,
+    "codec": "H.264 High",
+    "pixel_format": "yuv420p",
+    "resolution": [1280, 720],
+    "frames_per_second": 60,
+    "bytes": 390986,
+    "sha256": "8b68dcdd8d461a1dfad124d54395038b7b5a30f70fabb6b32535995835f91f6d",
+    "decode_check": "PASS",
+    "manual_first_middle_frame_check": "PASS_NONBLANK",
+    "semantics": "rendered simulator visualization; not the raw ultrasound policy observation",
+    "scientific_scope": "demonstration artifact only; not a policy-quality evaluation",
+    "video": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/50551365/video/sonogym-checkpoint-demo-step-0.mp4",
+    "manifest": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/50551365/video/demo-manifest.json"
+  },
+  "storage": {
+    "runtime_after_phase4_mib": 23740,
+    "runtime_after_followup_mib": 24314,
+    "followup_growth_mib": 574
+  },
+  "scientific_conclusion": {
+    "checkpoint_higher_return_than_zero_action": false,
+    "policy_usefulness": "NOT_ESTABLISHED_NO_NATIVE_SUCCESS_CRITERION",
+    "generalization": "NOT_EVALUATED",
+    "clinical_safety": "NOT_EVALUATED",
+    "mbb_performance": "NOT_EVALUATED"
+  },
+  "next_action": "Define and review a native success criterion and failure/constraint metrics, then preregister a matched-budget learning-curve protocol before any further GPU training."
+}
