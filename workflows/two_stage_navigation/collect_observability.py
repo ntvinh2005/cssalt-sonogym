@@ -227,19 +227,26 @@ def move_to_home(
 ) -> list[dict[str, object]]:
     if trajectory is None:
         trajectory = []
+    command_range = (
+        env.unwrapped.US_slicer.x_z_range.detach()
+        .cpu()
+        .to(torch.float64)
+        .numpy()
+    )
     for step in range(maximum_steps):
-        command = current_command(env.unwrapped)
-        command_position_error = float(np.linalg.norm(command[:2] - target[:2]))
-        command_angle_error = abs(float(wrap_to_pi(command[2] - target[2])))
         position_tracking_mm, angle_tracking_deg = tracking_errors(env.unwrapped, target)
         if (
-            command_position_error <= COMMAND_POSITION_TOLERANCE_INDEX
-            and command_angle_error <= COMMAND_ANGLE_TOLERANCE_RAD
-            and position_tracking_mm <= 3.0
+            position_tracking_mm <= 3.0
             and angle_tracking_deg <= 3.0
         ):
             return trajectory
-        _, status = take_step(env, target)
+        command_target = command_target_from_realized_error(
+            current_realized_pose(env.unwrapped),
+            target,
+            position_multiplier=POSITION_CORRECTION_MULTIPLIER,
+        )
+        command_target = np.clip(command_target, command_range[0], command_range[1])
+        _, status = take_step(env, command_target)
         status["home_return_step"] = step + 1
         trajectory.append(status)
         if (
@@ -387,13 +394,11 @@ def main() -> int:
         move_to_home(env, target, trajectory=home_trajectory)
         home_pose = current_realized_pose(unwrapped).copy()
         home_command = current_command(unwrapped).copy()
-        if (
-            np.max(np.abs(home_command[:2] - target[:2]))
-            > COMMAND_POSITION_TOLERANCE_INDEX
-            or abs(float(wrap_to_pi(home_command[2] - target[2])))
-            > COMMAND_ANGLE_TOLERANCE_RAD
-        ):
-            raise RuntimeError("physical Home return ended at the wrong command")
+        home_position_error_mm, home_orientation_error_deg = tracking_errors(
+            unwrapped, target
+        )
+        if home_position_error_mm > 3.0 or home_orientation_error_deg > 3.0:
+            raise RuntimeError("physical Home return ended outside its realized-pose tolerance")
 
         freshness = FrameFreshnessGuard()
         odometry = HomeRelativeOdometry()
