@@ -170,7 +170,12 @@ def take_step(env, target: np.ndarray) -> tuple[dict, dict[str, object]]:
     observation, reward, terminated, truncated, info = env.step(action)
     after_command = current_command(unwrapped)
     after_realized = current_realized_pose(unwrapped)
-    command_range = np.asarray(unwrapped.US_slicer.x_z_range, dtype=np.float64)
+    command_range = (
+        unwrapped.US_slicer.x_z_range.detach()
+        .cpu()
+        .to(torch.float64)
+        .numpy()
+    )
     assessment = assess_native_command(
         before_command,
         after_command,
