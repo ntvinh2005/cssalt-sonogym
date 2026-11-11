@@ -50,10 +50,20 @@ for session_id in "${SESSION_IDS[@]}"; do
         --device cuda:0 \
         >> "$session_dir/launcher.log" 2>&1
     session_rc=$?
+    session_status="MISSING"
+    if [[ -f "$session_dir/summary.json" ]]; then
+        session_status=$("$PYTHON" -c \
+            'import json,sys; print(json.load(open(sys.argv[1]))["status"])' \
+            "$session_dir/summary.json")
+    fi
+    if [[ "$session_rc" -eq 0 && "$session_status" != "PASSED" ]]; then
+        session_rc=2
+    fi
     echo "$session_rc" > "$session_dir/application-exit-code.txt"
     if [[ "$session_rc" -ne 0 ]]; then
         CAPTURE_RC=$session_rc
-        echo "G0_G1_SESSION_FAIL session=$session_id rc=$session_rc" | tee -a "$session_dir/launcher.log"
+        echo "G0_G1_SESSION_FAIL session=$session_id rc=$session_rc status=$session_status" \
+            | tee -a "$session_dir/launcher.log"
         break
     fi
     echo "G0_G1_SESSION_DONE session=$session_id" | tee -a "$session_dir/launcher.log"

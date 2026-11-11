@@ -104,6 +104,82 @@ class PlannedNativeAction:
     predicted_angle_delta_rad: float
 
 
+@dataclass(frozen=True)
+class NativeCommandAssessment:
+    """Execution check for one native command update.
+
+    ``native_clamped`` records only a workspace-boundary clamp. Small differences between the
+    predicted and observed command are reported separately because the task recomputes the
+    probe basis from the physically realized end-effector pose on every action step.
+    """
+
+    expected_command: np.ndarray
+    position_mapping_error_index: float
+    angle_mapping_error_rad: float
+    mapping_valid: bool
+    native_clamped: bool
+    progressed_toward_target: bool
+
+
+def assess_native_command(
+    before_command: object,
+    after_command: object,
+    planned: PlannedNativeAction,
+    target_command: object,
+    command_minimum: object,
+    command_maximum: object,
+    *,
+    position_mapping_tolerance_index: float = 0.1,
+    angle_mapping_tolerance_rad: float = 1e-4,
+) -> NativeCommandAssessment:
+    """Distinguish native workspace clamping from bounded command-mapping error."""
+    before = _finite_array(before_command, (3,), "before_command")
+    after = _finite_array(after_command, (3,), "after_command")
+    target = _finite_array(target_command, (3,), "target_command")
+    minimum = _finite_array(command_minimum, (3,), "command_minimum")
+    maximum = _finite_array(command_maximum, (3,), "command_maximum")
+    if np.any(minimum > maximum):
+        raise ValueError("command_minimum must not exceed command_maximum")
+    if (
+        not math.isfinite(position_mapping_tolerance_index)
+        or position_mapping_tolerance_index < 0.0
+        or not math.isfinite(angle_mapping_tolerance_rad)
+        or angle_mapping_tolerance_rad < 0.0
+    ):
+        raise ValueError("mapping tolerances must be finite and non-negative")
+
+    expected_unclamped = before.copy()
+    expected_unclamped[:2] += planned.predicted_patient_delta_index
+    expected_unclamped[2] += planned.predicted_angle_delta_rad
+    expected = np.clip(expected_unclamped, minimum, maximum)
+    native_clamped = not bool(
+        np.allclose(expected_unclamped, expected, atol=1e-9, rtol=0.0)
+    )
+    position_error = float(np.max(np.abs(after[:2] - expected[:2])))
+    angle_error = abs(float(wrap_to_pi(after[2] - expected[2])))
+    mapping_valid = bool(
+        position_error <= position_mapping_tolerance_index
+        and angle_error <= angle_mapping_tolerance_rad
+    )
+
+    before_position_error = float(np.linalg.norm(before[:2] - target[:2]))
+    after_position_error = float(np.linalg.norm(after[:2] - target[:2]))
+    before_angle_error = abs(float(wrap_to_pi(before[2] - target[2])))
+    after_angle_error = abs(float(wrap_to_pi(after[2] - target[2])))
+    progressed = bool(
+        after_position_error <= before_position_error + position_mapping_tolerance_index
+        and after_angle_error <= before_angle_error + angle_mapping_tolerance_rad
+    )
+    return NativeCommandAssessment(
+        expected_command=expected,
+        position_mapping_error_index=position_error,
+        angle_mapping_error_rad=angle_error,
+        mapping_valid=mapping_valid,
+        native_clamped=native_clamped,
+        progressed_toward_target=progressed,
+    )
+
+
 def plan_native_action(
     patient_delta_index: object,
     angle_delta_rad: float,

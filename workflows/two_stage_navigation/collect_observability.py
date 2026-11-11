@@ -49,6 +49,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa: E402
     ExecutedMotion,
     HomeRelativeOdometry,
+    assess_native_command,
     plan_native_action,
     wrap_to_pi,
 )
@@ -65,6 +66,8 @@ RAW_LABEL_NAMES = {
 }
 LUMBAR_LABELS = frozenset(RAW_LABEL_NAMES)
 ADJACENT_NEGATIVE_LABELS = frozenset({26, 27, 29, 30, 31})
+COMMAND_POSITION_TOLERANCE_INDEX = 0.1
+COMMAND_ANGLE_TOLERANCE_RAD = 1e-4
 
 
 def file_sha256(path: Path) -> str:
@@ -167,12 +170,17 @@ def take_step(env, target: np.ndarray) -> tuple[dict, dict[str, object]]:
     observation, reward, terminated, truncated, info = env.step(action)
     after_command = current_command(unwrapped)
     after_realized = current_realized_pose(unwrapped)
-    predicted_command = before_command.copy()
-    predicted_command[:2] += planned.predicted_patient_delta_index
-    predicted_command[2] += planned.predicted_angle_delta_rad
-    predicted_command[2] = float(np.clip(predicted_command[2], 1.0, 3.0))
-    command_match = bool(np.allclose(after_command, predicted_command, atol=2e-4, rtol=0.0))
-    command_clamped = not command_match
+    command_range = np.asarray(unwrapped.US_slicer.x_z_range, dtype=np.float64)
+    assessment = assess_native_command(
+        before_command,
+        after_command,
+        planned,
+        target,
+        command_range[0],
+        command_range[1],
+        position_mapping_tolerance_index=COMMAND_POSITION_TOLERANCE_INDEX,
+        angle_mapping_tolerance_rad=COMMAND_ANGLE_TOLERANCE_RAD,
+    )
     finite = bool(
         np.all(np.isfinite(after_command))
         and np.all(np.isfinite(after_realized))
@@ -184,10 +192,14 @@ def take_step(env, target: np.ndarray) -> tuple[dict, dict[str, object]]:
         "normalized_action": planned.normalized_action.tolist(),
         "before_command": before_command.tolist(),
         "after_command": after_command.tolist(),
-        "predicted_command": predicted_command.tolist(),
+        "predicted_command": assessment.expected_command.tolist(),
         "before_realized_pose": before_realized.tolist(),
         "after_realized_pose": after_realized.tolist(),
-        "command_clamped": command_clamped,
+        "command_clamped": assessment.native_clamped,
+        "command_mapping_valid": assessment.mapping_valid,
+        "command_progressed": assessment.progressed_toward_target,
+        "command_position_mapping_error_index": assessment.position_mapping_error_index,
+        "command_angle_mapping_error_rad": assessment.angle_mapping_error_rad,
         "finite": finite,
         "surface_proxy_ok": surface_proxy_ok(unwrapped),
         "native_no_collide": bool(unwrapped.US_slicer.no_collide[0].item()),
@@ -208,8 +220,8 @@ def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[
         command_angle_error = abs(float(wrap_to_pi(command[2] - target[2])))
         position_tracking_mm, angle_tracking_deg = tracking_errors(env.unwrapped, target)
         if (
-            command_position_error <= 1e-4
-            and command_angle_error <= 1e-4
+            command_position_error <= COMMAND_POSITION_TOLERANCE_INDEX
+            and command_angle_error <= COMMAND_ANGLE_TOLERANCE_RAD
             and position_tracking_mm <= 3.0
             and angle_tracking_deg <= 3.0
         ):
@@ -217,7 +229,12 @@ def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[
         _, status = take_step(env, target)
         status["home_return_step"] = step + 1
         trajectory.append(status)
-        if not status["finite"] or status["command_clamped"]:
+        if (
+            not status["finite"]
+            or status["command_clamped"]
+            or not status["command_mapping_valid"]
+            or not status["command_progressed"]
+        ):
             raise RuntimeError(f"home return failed at step {step + 1}: {status}")
         if status["terminated"] or status["truncated"]:
             raise RuntimeError("environment ended during physical Home return")
@@ -293,7 +310,12 @@ def main() -> int:
         home_trajectory = move_to_home(env, target)
         home_pose = current_realized_pose(unwrapped).copy()
         home_command = current_command(unwrapped).copy()
-        if not np.allclose(home_command, target, atol=2e-4, rtol=0.0):
+        if (
+            np.max(np.abs(home_command[:2] - target[:2]))
+            > COMMAND_POSITION_TOLERANCE_INDEX
+            or abs(float(wrap_to_pi(home_command[2] - target[2])))
+            > COMMAND_ANGLE_TOLERANCE_RAD
+        ):
             raise RuntimeError("physical Home return ended at the wrong command")
 
         freshness = FrameFreshnessGuard()
@@ -316,6 +338,8 @@ def main() -> int:
             transition_valid = bool(
                 status["finite"]
                 and not status["command_clamped"]
+                and status["command_mapping_valid"]
+                and status["command_progressed"]
                 and status["surface_proxy_ok"]
                 and not status["terminated"]
                 and not status["truncated"]
@@ -422,6 +446,8 @@ def main() -> int:
         baseline_status: dict[str, object] = {
             "finite": True,
             "command_clamped": False,
+            "command_mapping_valid": True,
+            "command_progressed": True,
             "surface_proxy_ok": surface_proxy_ok(unwrapped),
             "native_no_collide": bool(unwrapped.US_slicer.no_collide[0].item()),
             "terminated": False,
@@ -446,6 +472,8 @@ def main() -> int:
                 if (
                     not status["finite"]
                     or status["command_clamped"]
+                    or not status["command_mapping_valid"]
+                    or not status["command_progressed"]
                     or status["terminated"]
                     or status["truncated"]
                     or float(status["position_tracking_error_mm"]) > 5.0
@@ -462,6 +490,12 @@ def main() -> int:
 
         if frame_sequence != int(scan["expected_frames_per_complete_session"]):
             raise RuntimeError(f"captured {frame_sequence} frames, expected {scan['expected_frames_per_complete_session']}")
+        total_action_steps = len(home_trajectory) + frame_sequence - 1
+        if total_action_steps > int(scan["maximum_action_steps_per_session"]):
+            raise RuntimeError(
+                f"used {total_action_steps} action steps, exceeds frozen maximum "
+                f"{scan['maximum_action_steps_per_session']}"
+            )
         if raw_conversion_mismatches != 0:
             raise RuntimeError(f"raw/acoustic vertebral projection mismatch: {raw_conversion_mismatches}")
 
@@ -483,6 +517,7 @@ def main() -> int:
             status="PASSED",
             frame_count=len(public_rows),
             home_return_steps=len(home_trajectory),
+            total_action_steps=total_action_steps,
             direction_frame_counts=dict(direction_counts),
             level_visible_frame_counts=dict(level_visible_frames),
             l4_positive_frames=sum(
@@ -502,7 +537,7 @@ def main() -> int:
     except Exception as error:
         summary["error"] = f"{type(error).__name__}: {error}"
         summary["traceback"] = traceback.format_exc()
-        raise
+        return 1
     finally:
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
         write_json(summary_path, summary)
@@ -511,7 +546,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    finally:
-        simulation_app.close()
+    exit_code = main()
+    simulation_app.close()
+    raise SystemExit(exit_code)
