@@ -36,7 +36,20 @@ class ProtocolTests(unittest.TestCase):
         cls.protocol = yaml.safe_load(PROTOCOL_PATH.read_text(encoding="utf-8"))
 
     def test_protocol_is_bounded_and_does_not_authorize_gpu(self) -> None:
+        self.assertEqual(
+            self.protocol["protocol_id"], "sonogym-unity-two-stage-g0-g1-v2"
+        )
         self.assertEqual(self.protocol["status"], "PRE_GPU_FROZEN")
+        self.assertEqual(
+            self.protocol["geometry"]["longitudinal_scan"][
+                "maximum_action_steps_per_session"
+            ],
+            360,
+        )
+        self.assertEqual(
+            self.protocol["amendment"]["prior_sha256"],
+            "dc240b5bb333312f6bf85a9ff509f1beafd81e18f1ed458e75b498b5a017017a",
+        )
         resources = self.protocol["resource_bound_if_later_approved"]
         self.assertEqual(resources["account"], "anest-dept")
         self.assertLessEqual(resources["cpu_cores"], 4)

@@ -102,7 +102,7 @@ def write_jsonl(path: Path, rows: list[dict[str, object]]) -> None:
 def load_protocol() -> tuple[dict, dict, Path]:
     protocol_path = Path(args.protocol).resolve()
     protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-unity-two-stage-g0-g1-v1":
+    if protocol["protocol_id"] != "sonogym-unity-two-stage-g0-g1-v2":
         raise RuntimeError("unexpected protocol identity")
     if protocol["resource_bound_if_later_approved"]["current_protocol_authorizes_submission"]:
         raise RuntimeError("protocol must not self-authorize scheduler execution")

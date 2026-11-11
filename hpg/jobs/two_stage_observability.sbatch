@@ -9,7 +9,7 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/protocol.yaml"
 PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/protocol.sha256"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/g0_g1_v1/$SLURM_JOB_ID"
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/g0_g1_v2/$SLURM_JOB_ID"
 mkdir -p "$RUN_DIR/sessions" "$RUN_DIR/results" "$RUN_DIR/metrics"
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "$RUN_DIR/context/protocol.yaml"
