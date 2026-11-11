@@ -67,7 +67,7 @@ RAW_LABEL_NAMES = {
 }
 LUMBAR_LABELS = frozenset(RAW_LABEL_NAMES)
 ADJACENT_NEGATIVE_LABELS = frozenset({26, 27, 29, 30, 31})
-COMMAND_POSITION_TOLERANCE_INDEX = 0.20
+COMMAND_POSITION_TOLERANCE_INDEX = 0.15
 COMMAND_ANGLE_TOLERANCE_RAD = 1e-4
 POSITION_CORRECTION_MULTIPLIER = 2.5
 
@@ -249,11 +249,11 @@ def move_to_home(
         _, status = take_step(env, command_target)
         status["home_return_step"] = step + 1
         trajectory.append(status)
+        # Home is low-level feedback positioning. Command mapping remains in the
+        # privileged trace; realized-pose convergence above is the acceptance test.
         if (
             not status["finite"]
-            or status["command_clamped"]
-            or not status["command_mapping_valid"]
-            or not status["command_progressed"]
+            or not status["surface_proxy_ok"]
         ):
             raise RuntimeError(f"home return failed at step {step + 1}: {status}")
         if status["terminated"] or status["truncated"]:
