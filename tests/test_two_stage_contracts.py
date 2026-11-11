@@ -33,6 +33,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     PixelGeometry,
     indices_to_mm,
     mm_to_indices,
+    plan_native_action,
     validate_planar_rotation,
     wrap_to_pi,
 )
@@ -176,6 +177,24 @@ class CoordinateTests(unittest.TestCase):
         delta_position, delta_angle = odometry.delta_to([2.0, 3.0], -0.1)
         np.testing.assert_allclose(delta_position, [-3.0, -5.0])
         self.assertAlmostEqual(delta_angle, -0.3)
+
+    def test_native_action_inverse_mapping_and_bounds(self) -> None:
+        angle = math.radians(35.0)
+        rotation = np.asarray(
+            [
+                [math.cos(angle), -math.sin(angle), 0.0],
+                [0.0, 0.0, 1.0],
+                [math.sin(angle), math.cos(angle), 0.0],
+            ]
+        )
+        small = plan_native_action([0.0, -1.0], 0.05, rotation)
+        np.testing.assert_allclose(
+            small.predicted_patient_delta_index, [0.0, -1.0], atol=1e-12
+        )
+        self.assertAlmostEqual(small.predicted_angle_delta_rad, 0.05)
+        bounded = plan_native_action([20.0, -20.0], 1.0, rotation)
+        applied = bounded.normalized_action * np.asarray([2.0, 2.0, 0.1])
+        self.assertTrue(np.all(np.abs(applied) <= np.asarray([4.0, 4.0, 0.2]) + 1e-12))
 
 
 if __name__ == "__main__":

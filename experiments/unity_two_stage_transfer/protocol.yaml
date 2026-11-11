@@ -88,7 +88,10 @@ geometry:
     physically_move_from_native_reset_to_home: true
     exclude_reset_to_home_frames_from_anatomical_inference: true
     rejected_or_clamped_action_advances_actor_odometry: false
-    abort_session_on_contact_workspace_nonfinite_or_incomplete_motion: true
+    maximum_tracking_position_error_mm: 5.0
+    maximum_tracking_orientation_error_deg: 5.0
+    abort_session_on_workspace_nonfinite_or_incomplete_motion: true
+    native_no_collide_semantics: image_validity_proxy_not_force_contact
 
 feature_reference_not_frozen_hyperparameters:
   source: verified_unity_stage1
@@ -103,6 +106,15 @@ feature_reference_not_frozen_hyperparameters:
     selected or changed after opening the untouched audit split.
 
 labels:
+  verified_s0010_raw_label_map:
+    25: sacrum
+    26: S1
+    27: L5
+    28: L4
+    29: L3
+    30: L2
+    31: L1
+    verification: raw-volume centroids matched against individual STL centroids
   generic_lumbar_interface:
     source: individual S1 and L1-L5 meshes projected offline into the acquisition plane
     meaning: patch intersects a posterior osseous interface from the declared lumbar set

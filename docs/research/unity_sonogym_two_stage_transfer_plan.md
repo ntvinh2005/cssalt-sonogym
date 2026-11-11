@@ -673,8 +673,9 @@ patient/Home/pixel transforms, fail-closed executed-motion odometry, configurabl
 interface and patch features, bidirectional spatial evidence aggregation with abstention, a
 separate annotation-manifest validator, and the pre-GPU G0/G1 protocol.
 
-Frozen protocol SHA-256:
-`901a7693c86b3eb0f50935586118e874c78fd91a96750c1457dc574aa6742bbd`.
+Frozen protocol SHA-256 after adding the verified `s0010` raw-label mapping and explicit
+tracking/image-validity semantics:
+`dc240b5bb333312f6bf85a9ff509f1beafd81e18f1ed458e75b498b5a017017a`.
 
 Verification from the project worktree:
 
@@ -683,7 +684,9 @@ Verification from the project worktree:
 - Python syntax compilation passed;
 - the annotation-builder CLI import and help path passed without initializing Isaac Sim;
 - Ruff was not installed and was therefore not run;
-- GPU capture, Isaac Sim integration, model fitting, and Stage 2 remain `NOT_RUN`.
+- the bounded one-session-per-process Isaac collector, capture summarizer, and Slurm launch
+  path passed CPU syntax, protocol-seal, and launch dry-run checks;
+- GPU capture, model fitting, and Stage 2 remain `NOT_RUN` at this revision.
 
 The existing `spinal_surgery` package imports Isaac modules at package import time. CPU tests
 and the annotation workflow therefore import the isolated `two_stage_navigation` evaluation

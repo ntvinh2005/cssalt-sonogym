@@ -96,6 +96,57 @@ def validate_planar_rotation(matrix: object, atol: float = 1e-6) -> np.ndarray:
 
 
 @dataclass(frozen=True)
+class PlannedNativeAction:
+    """Normalized environment action and its predicted patient-command displacement."""
+
+    normalized_action: np.ndarray
+    predicted_patient_delta_index: np.ndarray
+    predicted_angle_delta_rad: float
+
+
+def plan_native_action(
+    patient_delta_index: object,
+    angle_delta_rad: float,
+    human_to_probe_rotation: object,
+    *,
+    action_scale: object = (2.0, 2.0, 0.1),
+    maximum_applied_action: object = (4.0, 4.0, 0.2),
+) -> PlannedNativeAction:
+    """Invert SonoGym's probe-plane translation into one bounded native action.
+
+    The task multiplies normalized actions by ``action_scale`` and projects the first two
+    applied components through columns 0 and 1 of the human-to-probe rotation. This function
+    performs the inverse mapping and scales the translational request uniformly if either
+    probe-plane component would exceed the native bound.
+    """
+    delta = _finite_array(patient_delta_index, (2,), "patient_delta_index")
+    rotation = _finite_array(human_to_probe_rotation, (3, 3), "human_to_probe_rotation")
+    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-5):
+        raise ValueError("human_to_probe_rotation must be orthonormal")
+    scale = _finite_array(action_scale, (3,), "action_scale")
+    maximum = _finite_array(maximum_applied_action, (3,), "maximum_applied_action")
+    if np.any(scale <= 0.0) or np.any(maximum <= 0.0):
+        raise ValueError("action scales and bounds must be positive")
+    basis = rotation[np.ix_([0, 2], [0, 1])]
+    if abs(float(np.linalg.det(basis))) < 1e-6:
+        raise ValueError("probe translation basis is singular in patient x-z")
+    probe_delta = np.linalg.solve(basis, delta)
+    translation_ratio = float(np.max(np.abs(probe_delta) / maximum[:2], initial=0.0))
+    if translation_ratio > 1.0:
+        probe_delta = probe_delta / translation_ratio
+    applied_angle = float(np.clip(angle_delta_rad, -maximum[2], maximum[2]))
+    normalized = np.asarray(
+        [probe_delta[0] / scale[0], probe_delta[1] / scale[1], applied_angle / scale[2]],
+        dtype=np.float64,
+    )
+    return PlannedNativeAction(
+        normalized_action=normalized,
+        predicted_patient_delta_index=basis @ probe_delta,
+        predicted_angle_delta_rad=applied_angle,
+    )
+
+
+@dataclass(frozen=True)
 class PixelGeometry:
     """SonoGym ultrasound pixel geometry in the local probe plane."""
 
