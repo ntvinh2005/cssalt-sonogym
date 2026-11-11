@@ -250,10 +250,13 @@ def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[
 def move_to_waypoint(
     env,
     target: np.ndarray,
+    command_offset: np.ndarray,
     maximum_steps: int,
-) -> list[dict[str, object]]:
+) -> tuple[list[dict[str, object]], np.ndarray]:
     trajectory: list[dict[str, object]] = []
     command_target = target.copy()
+    command_target[:2] += command_offset[:2]
+    command_target[2] += command_offset[2]
     for step in range(maximum_steps):
         _, status = take_step(env, command_target)
         status["waypoint_action_step"] = step + 1
@@ -263,6 +266,10 @@ def move_to_waypoint(
         status["waypoint_position_error_mm"] = waypoint_position_error_mm
         status["waypoint_orientation_error_deg"] = waypoint_angle_error_deg
         trajectory.append(status)
+        realized = current_realized_pose(env.unwrapped)
+        next_offset = np.empty(3, dtype=np.float64)
+        next_offset[:2] = target[:2] - realized[:2]
+        next_offset[2] = float(wrap_to_pi(target[2] - realized[2]))
         if (
             not status["finite"]
             or status["command_clamped"]
@@ -276,9 +283,9 @@ def move_to_waypoint(
             waypoint_position_error_mm <= 5.0
             and waypoint_angle_error_deg <= 5.0
         ):
-            return trajectory
+            return trajectory, next_offset
         command_target = command_target_from_realized_error(
-            current_realized_pose(env.unwrapped),
+            realized,
             target,
         )
     raise RuntimeError(
@@ -521,6 +528,7 @@ def main() -> int:
         scan_action_steps = 0
         maximum_action_steps = int(scan["maximum_action_steps_per_session"])
         for phase, z_values in paths:
+            command_offset = np.zeros(3, dtype=np.float64)
             for z_index in z_values:
                 waypoint = np.asarray(
                     [session["patient_x_index"], float(z_index), session["angle_rad"]],
@@ -529,9 +537,10 @@ def main() -> int:
                 remaining_actions = maximum_action_steps - len(home_trajectory) - scan_action_steps
                 if remaining_actions <= 0:
                     raise RuntimeError("frozen action-step budget exhausted before scan completion")
-                waypoint_trajectory = move_to_waypoint(
+                waypoint_trajectory, command_offset = move_to_waypoint(
                     env,
                     waypoint,
+                    command_offset,
                     maximum_steps=min(8, remaining_actions),
                 )
                 scan_action_steps += len(waypoint_trajectory)
