@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""CPU tests for leakage, freshness, coordinate, and odometry contracts."""
+
+from __future__ import annotations
+
+import math
+import sys
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+EVALUATION_ROOT = (
+    REPOSITORY_ROOT / "source" / "spinal_surgery" / "spinal_surgery" / "evaluation"
+)
+sys.path.insert(0, str(EVALUATION_ROOT))
+
+from two_stage_navigation.contracts import (  # noqa: E402
+    ACTOR_SCHEMA,
+    ActorFrame,
+    FrameFreshnessGuard,
+    PrivilegedAnnotation,
+    assert_no_privileged_fields,
+    ultrasound_sha256,
+    validate_actor_mapping,
+)
+from two_stage_navigation.coordinates import (  # noqa: E402
+    ExecutedMotion,
+    HomeRelativeOdometry,
+    PatientFrameConvention,
+    PixelGeometry,
+    indices_to_mm,
+    mm_to_indices,
+    validate_planar_rotation,
+    wrap_to_pi,
+)
+
+
+def make_frame(sequence: int, producer_sequence: int | None = None) -> ActorFrame:
+    image = np.full((200, 150), 0.25, dtype=np.float32)
+    return ActorFrame(
+        session_id="td_00",
+        frame_sequence=sequence,
+        producer_sequence=sequence if producer_sequence is None else producer_sequence,
+        frame_sha256=ultrasound_sha256(image),
+        ultrasound=image,
+        requested_action=np.asarray([0.0, -0.5, 0.0]),
+        executed_delta_home_mm=np.asarray([0.0, -1.5]),
+        executed_delta_angle_rad=0.0,
+        action_accepted=True,
+        action_completed=True,
+        action_clamped=False,
+        contact_ok=True,
+        workspace_ok=True,
+        image_valid=True,
+        home_prior_id="workspace-grid-v1-x132",
+    )
+
+
+class ActorContractTests(unittest.TestCase):
+    def test_canonical_hash_and_actor_frame(self) -> None:
+        frame = make_frame(0)
+        self.assertEqual(len(frame.frame_sha256), 64)
+        self.assertTrue(frame.transition_valid)
+        self.assertNotIn("patient_id", frame.public_metadata())
+
+    def test_hash_mismatch_and_nonfinite_image_fail(self) -> None:
+        frame = make_frame(0)
+        with self.assertRaises(ValueError):
+            ActorFrame(**{**frame.__dict__, "frame_sha256": "0" * 64})
+        image = frame.ultrasound.copy()
+        image[0, 0] = np.nan
+        with self.assertRaises(ValueError):
+            ultrasound_sha256(image)
+
+    def test_forbidden_fields_fail_at_any_nesting_depth(self) -> None:
+        with self.assertRaisesRegex(ValueError, "target_position"):
+            assert_no_privileged_fields({"history": [{"target_position": [1, 2]}]})
+        with self.assertRaisesRegex(ValueError, "reward"):
+            assert_no_privileged_fields({"state": {"reward": 1.0}})
+
+    def test_declared_actor_mapping_is_closed(self) -> None:
+        frame = make_frame(0)
+        payload = {
+            "schema": ACTOR_SCHEMA,
+            "session_id": frame.session_id,
+            "frame_sequence": frame.frame_sequence,
+            "producer_sequence": frame.producer_sequence,
+            "frame_sha256": frame.frame_sha256,
+            "ultrasound": frame.ultrasound,
+            "requested_action": frame.requested_action,
+            "executed_delta_home_mm": frame.executed_delta_home_mm,
+            "executed_delta_angle_rad": frame.executed_delta_angle_rad,
+            "action_accepted": frame.action_accepted,
+            "action_completed": frame.action_completed,
+            "action_clamped": frame.action_clamped,
+            "contact_ok": frame.contact_ok,
+            "workspace_ok": frame.workspace_ok,
+            "image_valid": frame.image_valid,
+            "home_prior_id": frame.home_prior_id,
+        }
+        validate_actor_mapping(payload)
+        with self.assertRaisesRegex(ValueError, "extra"):
+            validate_actor_mapping({**payload, "debug_value": 1})
+
+    def test_freshness_uses_sequences_not_pixel_difference(self) -> None:
+        guard = FrameFreshnessGuard()
+        guard.accept(make_frame(0))
+        # Deterministic pixels can hash identically while a producer sequence proves recapture.
+        guard.accept(make_frame(1))
+        with self.assertRaisesRegex(ValueError, "frame_sequence"):
+            guard.accept(make_frame(1, 2))
+
+    def test_privileged_annotation_is_separate(self) -> None:
+        frame = make_frame(2)
+        annotation = PrivilegedAnnotation(
+            session_id=frame.session_id,
+            frame_sequence=frame.frame_sequence,
+            frame_sha256=frame.frame_sha256,
+            patient_id="s0010",
+            anatomy_id="vertebrae_L4",
+            command_pose_index=np.asarray([132.0, 150.0, 3.0]),
+            l4_visible_fraction=0.3,
+            lumbar_interface_visible=True,
+            adjacent_level="L3",
+            position_error_mm=12.0,
+            orientation_error_deg=4.0,
+        )
+        self.assertEqual(annotation.join_key, ("td_00", 2, frame.frame_sha256))
+
+
+class CoordinateTests(unittest.TestCase):
+    def test_index_millimetre_round_trip(self) -> None:
+        indices = np.asarray([132.0, 195.0])
+        np.testing.assert_allclose(mm_to_indices(indices_to_mm(indices)), indices)
+
+    def test_patient_home_round_trip_and_signs(self) -> None:
+        convention = PatientFrameConvention(right_sign=1, cranial_sign=1)
+        home = np.asarray([140.0, 195.0])
+        current = np.asarray([132.0, 190.0])
+        relative = convention.patient_xz_to_home_mm(current, home)
+        np.testing.assert_allclose(relative, [-12.0, -7.5])
+        np.testing.assert_allclose(convention.home_mm_to_patient_xz(relative, home), current)
+
+    def test_pixel_projection_round_trip(self) -> None:
+        geometry = PixelGeometry()
+        rotation = np.asarray([[0.0, -1.0], [1.0, 0.0]])
+        origin = np.asarray([12.0, -4.0])
+        point = geometry.pixel_to_home_mm(40.0, 80.0, origin, rotation)
+        pixel = geometry.home_mm_to_pixel(point, origin, rotation)
+        np.testing.assert_allclose(pixel, [40.0, 80.0], atol=1e-9)
+
+    def test_nonrigid_pixel_rotation_fails(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_planar_rotation([[1.0, 0.0], [0.0, 2.0]])
+
+    def test_angle_wrap(self) -> None:
+        self.assertAlmostEqual(float(wrap_to_pi(math.pi)), -math.pi)
+        self.assertAlmostEqual(float(wrap_to_pi(3 * math.pi)), -math.pi)
+
+    def test_rejected_and_clamped_motion_do_not_advance(self) -> None:
+        odometry = HomeRelativeOdometry()
+        accepted = ExecutedMotion(np.asarray([1.5, -3.0]), 0.1, True, True, False, True, True)
+        rejected = ExecutedMotion(np.asarray([10.0, 10.0]), 0.3, False, False, False, True, True)
+        clamped = ExecutedMotion(np.asarray([2.0, 2.0]), 0.2, True, True, True, True, True)
+        self.assertTrue(odometry.apply(accepted))
+        self.assertFalse(odometry.apply(rejected))
+        self.assertFalse(odometry.apply(clamped))
+        np.testing.assert_allclose(odometry.position_mm, [1.5, -3.0])
+        self.assertAlmostEqual(odometry.angle_rad, 0.1)
+
+    def test_return_to_best_delta(self) -> None:
+        odometry = HomeRelativeOdometry(position_mm=np.asarray([5.0, 8.0]), angle_rad=0.2)
+        delta_position, delta_angle = odometry.delta_to([2.0, 3.0], -0.1)
+        np.testing.assert_allclose(delta_position, [-3.0, -5.0])
+        self.assertAlmostEqual(delta_angle, -0.3)
+
+
+if __name__ == "__main__":
+    unittest.main()

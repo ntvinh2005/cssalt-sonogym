@@ -1,0 +1,187 @@
+protocol_id: sonogym-unity-two-stage-g0-g1-v1
+phase: 5C
+status: PRE_GPU_FROZEN
+approved_implementation_date: 2026-11-11
+purpose: >-
+  Test whether s0010 SonoGym conv ultrasound contains repeatable lumbar-interface evidence
+  suitable for leakage-free Home-relative Stage 1 mapping. This protocol does not authorize
+  GPU execution and does not fit or evaluate Stage 2.
+
+source_revisions:
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+  cssalt_sonogym_base: 5ed04d117bb0e425b7abbb1f2feca3bef26b726f
+  sonogym_upstream: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  isaac_lab: 21f7136325136ca3f6ca4e0a8125edffe5c24f7e
+
+scope:
+  task: Isaac-robot-US-guidance-v0
+  ultrasound_mode: conv
+  patient_ids: [s0010]
+  simulator_environments: 1
+  training: forbidden_during_capture
+  ppo_changes: forbidden
+  task_reward_action_dynamics_changes: forbidden
+  phase5a_protocol_changes: forbidden
+  stage2_execution: forbidden
+
+information_boundaries:
+  actor_allowed:
+    - clean_ultrasound_pixels
+    - prior_clean_ultrasound_pixels_if_declared
+    - requested_action
+    - actually_executed_home_relative_motion
+    - action_acceptance_completion_clamp_status
+    - contact_workspace_image_validity_booleans
+    - actor_owned_evidence_history
+    - calibrated_probe_image_footprint
+    - declared_home_prior
+  actor_forbidden:
+    - patient_id
+    - raw_or_converted_segmentation
+    - vertebra_mesh_identity
+    - absolute_patient_pose
+    - true_l4_target_pose
+    - target_distance
+    - reward
+    - evaluator_score
+  low_level_motion_only:
+    - robot_joint_and_end_effector_state
+    - surface_normal_and_ik_state
+    - collision_contact_workspace_state
+    - absolute_pose_used_only_to_compute_executed_relative_delta
+  privileged_offline_only:
+    - patient_id
+    - original_unconverted_label_volume
+    - individual_vertebra_meshes
+    - raw_l4_label_28
+    - command_and_goal_pose
+    - phase5a_geometric_errors
+
+geometry:
+  patient_label_resolution_mm: 1.5
+  ultrasound_shape_h_w: [200, 150]
+  ultrasound_resolution_mm_per_pixel: 0.5
+  ultrasound_footprint_width_depth_mm: [75.0, 100.0]
+  s0010_axis_hypotheses_pending_gpu_preflight:
+    patient_positive_x: right_lateral
+    patient_positive_z: cranial
+  axis_hypothesis_failure_policy: BLOCK_BEFORE_CAPTURE
+  mechanical_home_definition:
+    type: workspace_derived_not_anatomy_selected
+    patient_x_index_by_session: see_sessions
+    patient_z_index: 195.0
+    angle_rad: 3.0
+    rationale: >-
+      z is five command indices below the native upper bound; x values form a symmetric
+      workspace-centred grid. Home is not derived from the L4 target coordinate.
+  longitudinal_scan:
+    start_z_index: 195.0
+    end_z_index: 90.0
+    step_indices: 1.0
+    physical_step_mm: 1.5
+    phases: [OUTBOUND_CAUDAL, RETURN_CRANIAL]
+    capture_fresh_home_baseline: true
+    expected_frames_per_complete_session: 211
+    maximum_action_steps_per_session: 300
+  movement_policy:
+    native_environment_step_interface_only: true
+    physically_move_from_native_reset_to_home: true
+    exclude_reset_to_home_frames_from_anatomical_inference: true
+    rejected_or_clamped_action_advances_actor_odometry: false
+    abort_session_on_contact_workspace_nonfinite_or_incomplete_motion: true
+
+feature_reference_not_frozen_hyperparameters:
+  source: verified_unity_stage1
+  patch_width_pixels: 48
+  patch_depth_pixels: 80
+  interface_offset_pixels: 34
+  feature_size_pixels: 16
+  components: [normalized_intensity, gradient_x, gradient_y, six_morphology_summaries]
+  feature_width: 774
+  note: >-
+    G0 must verify suitable SonoGym interface depth and patch support. These values cannot be
+    selected or changed after opening the untouched audit split.
+
+labels:
+  generic_lumbar_interface:
+    source: individual S1 and L1-L5 meshes projected offline into the acquisition plane
+    meaning: patch intersects a posterior osseous interface from the declared lumbar set
+  l4_verifier:
+    source: raw unconverted L4 label 28 projected offline
+    hard_negatives: [S1, L1, L2, L3, L5, nonvertebral_bone]
+    use_policy: >-
+      Exploratory until disjoint-trajectory evidence shows L4-specific information. Failure
+      must produce ABSTAIN, never replacement with the true L4 coordinate.
+  physical_transition_valid:
+    source: execution metadata
+    learned_image_label: false
+  annotation_join_key: [session_id, frame_sequence, frame_sha256]
+  public_and_privileged_manifests_separate: true
+
+split_policy:
+  unit: complete_acquisition_session
+  adjacent_frame_random_split: forbidden
+  patient_held_out_claim: forbidden_with_s0010_only
+  untouched_audit_open_policy: once_after_development_protocol_and_model_are_frozen
+
+sessions:
+  - {session_id: td_00, split: train_dev, seed: 2026111100, patient_x_index: 132.0, angle_rad: 2.7}
+  - {session_id: td_01, split: train_dev, seed: 2026111101, patient_x_index: 136.0, angle_rad: 2.8}
+  - {session_id: td_02, split: train_dev, seed: 2026111102, patient_x_index: 140.0, angle_rad: 2.9}
+  - {session_id: td_03, split: train_dev, seed: 2026111103, patient_x_index: 144.0, angle_rad: 3.0}
+  - {session_id: td_04, split: train_dev, seed: 2026111104, patient_x_index: 132.0, angle_rad: 2.9}
+  - {session_id: td_05, split: train_dev, seed: 2026111105, patient_x_index: 136.0, angle_rad: 3.0}
+  - {session_id: td_06, split: train_dev, seed: 2026111106, patient_x_index: 140.0, angle_rad: 2.7}
+  - {session_id: td_07, split: train_dev, seed: 2026111107, patient_x_index: 144.0, angle_rad: 2.8}
+  - {session_id: cd_00, split: calibration_dev, seed: 2026111108, patient_x_index: 132.0, angle_rad: 2.8}
+  - {session_id: cd_01, split: calibration_dev, seed: 2026111109, patient_x_index: 136.0, angle_rad: 2.7}
+  - {session_id: cd_02, split: calibration_dev, seed: 2026111110, patient_x_index: 140.0, angle_rad: 3.0}
+  - {session_id: cd_03, split: calibration_dev, seed: 2026111111, patient_x_index: 144.0, angle_rad: 2.9}
+  - {session_id: ua_00, split: untouched_audit, seed: 2026111112, patient_x_index: 132.0, angle_rad: 3.0}
+  - {session_id: ua_01, split: untouched_audit, seed: 2026111113, patient_x_index: 136.0, angle_rad: 2.9}
+  - {session_id: ua_02, split: untouched_audit, seed: 2026111114, patient_x_index: 140.0, angle_rad: 2.8}
+  - {session_id: ua_03, split: untouched_audit, seed: 2026111115, patient_x_index: 144.0, angle_rad: 2.7}
+
+gates:
+  G0_anatomical_observability:
+    pass_requires:
+      - projected_lumbar_positive_and_adjacent_negative_support_in_every_split
+      - support_from_multiple_sessions_and_both_scan_directions
+      - nonconstant_finite_ultrasound_images
+      - morphology_not_identified_only_by_session_or_frame_index
+    blocked_if:
+      - lumbar_interfaces_never_enter_the_acquisition_plane
+      - l4_identity_requires_forbidden_target_coordinates
+    inconclusive_if:
+      - capped_capture_has_insufficient_positive_or_hard_negative_support
+  G1_data_coordinate_integrity:
+    pass_requires:
+      - exact_public_privileged_one_to_one_join
+      - zero_actor_privileged_fields
+      - finite_images_and_executed_deltas
+      - monotonic_frame_and_producer_sequences
+      - verified_axis_signs_and_pixel_transform_round_trips
+      - whole_session_split_independence
+      - rejected_or_clamped_actions_do_not_advance_actor_odometry
+    failure_policy: stop_before_model_fitting
+  G2_supervised_recognition: deferred
+  G3_relative_landmark_localization: deferred
+  G4_closed_loop_acquisition: deferred
+  G5_patient_held_out_generalization: impossible_with_s0010_only
+
+resource_bound_if_later_approved:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  one_job_at_a_time: true
+  current_protocol_authorizes_submission: false
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v1
+  maximum_storage_growth_gb: 1.5
+
+change_policy:
+  - Any geometry, session, split, label, gate, or resource change requires a new protocol version.
+  - Do not remove or reorder sessions after observing controller or classifier performance.
+  - Record this file's SHA-256 before any GPU request.
