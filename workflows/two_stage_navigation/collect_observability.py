@@ -278,7 +278,6 @@ def move_to_waypoint(
         ):
             return trajectory
         command_target = command_target_from_realized_error(
-            current_command(env.unwrapped),
             current_realized_pose(env.unwrapped),
             target,
         )

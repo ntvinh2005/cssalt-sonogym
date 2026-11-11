@@ -234,7 +234,6 @@ class CoordinateTests(unittest.TestCase):
 
     def test_command_target_uses_realized_pose_error(self) -> None:
         corrected = command_target_from_realized_error(
-            current_command=[132.0, 139.0, 2.7],
             realized_pose=[131.688, 142.354, 2.7063],
             target_pose=[132.0, 139.0, 2.7],
         )
