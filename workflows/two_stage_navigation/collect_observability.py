@@ -50,6 +50,7 @@ from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa
     ExecutedMotion,
     HomeRelativeOdometry,
     assess_native_command,
+    command_target_from_realized_error,
     plan_native_action,
     wrap_to_pi,
 )
@@ -252,9 +253,15 @@ def move_to_waypoint(
     maximum_steps: int,
 ) -> list[dict[str, object]]:
     trajectory: list[dict[str, object]] = []
+    command_target = target.copy()
     for step in range(maximum_steps):
-        _, status = take_step(env, target)
+        _, status = take_step(env, command_target)
         status["waypoint_action_step"] = step + 1
+        waypoint_position_error_mm, waypoint_angle_error_deg = tracking_errors(
+            env.unwrapped, target
+        )
+        status["waypoint_position_error_mm"] = waypoint_position_error_mm
+        status["waypoint_orientation_error_deg"] = waypoint_angle_error_deg
         trajectory.append(status)
         if (
             not status["finite"]
@@ -266,10 +273,15 @@ def move_to_waypoint(
         if status["terminated"] or status["truncated"]:
             raise RuntimeError("environment ended while moving to a scan waypoint")
         if (
-            float(status["position_tracking_error_mm"]) <= 5.0
-            and float(status["orientation_tracking_error_deg"]) <= 5.0
+            waypoint_position_error_mm <= 5.0
+            and waypoint_angle_error_deg <= 5.0
         ):
             return trajectory
+        command_target = command_target_from_realized_error(
+            current_command(env.unwrapped),
+            current_realized_pose(env.unwrapped),
+            target,
+        )
     raise RuntimeError(
         f"scan waypoint did not converge after {maximum_steps} actions: {trajectory[-1]}"
     )

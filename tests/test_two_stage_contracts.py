@@ -33,6 +33,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     PatientFrameConvention,
     PixelGeometry,
     assess_native_command,
+    command_target_from_realized_error,
     indices_to_mm,
     mm_to_indices,
     plan_native_action,
@@ -230,6 +231,14 @@ class CoordinateTests(unittest.TestCase):
         )
         self.assertTrue(clamped.native_clamped)
         self.assertTrue(clamped.mapping_valid)
+
+    def test_command_target_uses_realized_pose_error(self) -> None:
+        corrected = command_target_from_realized_error(
+            current_command=[132.0, 139.0, 2.7],
+            realized_pose=[131.688, 142.354, 2.7063],
+            target_pose=[132.0, 139.0, 2.7],
+        )
+        np.testing.assert_allclose(corrected, [132.312, 135.646, 2.6937], atol=1e-12)
 
 
 if __name__ == "__main__":

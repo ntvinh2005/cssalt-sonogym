@@ -180,6 +180,21 @@ def assess_native_command(
     )
 
 
+def command_target_from_realized_error(
+    current_command: object,
+    realized_pose: object,
+    target_pose: object,
+) -> np.ndarray:
+    """Return the current command plus the target-minus-realized pose error."""
+    current = _finite_array(current_command, (3,), "current_command")
+    realized = _finite_array(realized_pose, (3,), "realized_pose")
+    target = _finite_array(target_pose, (3,), "target_pose")
+    corrected = current.copy()
+    corrected[:2] += target[:2] - realized[:2]
+    corrected[2] += float(wrap_to_pi(target[2] - realized[2]))
+    return corrected
+
+
 def plan_native_action(
     patient_delta_index: object,
     angle_delta_rad: float,
