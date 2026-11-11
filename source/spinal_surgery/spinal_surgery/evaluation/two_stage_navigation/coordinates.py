@@ -183,12 +183,15 @@ def assess_native_command(
 def command_target_from_realized_error(
     realized_pose: object,
     target_pose: object,
+    position_multiplier: float = 2.0,
 ) -> np.ndarray:
     """Return the target pose plus its current realized-pose error."""
     realized = _finite_array(realized_pose, (3,), "realized_pose")
     target = _finite_array(target_pose, (3,), "target_pose")
+    if not math.isfinite(position_multiplier) or position_multiplier <= 0.0:
+        raise ValueError("position_multiplier must be finite and positive")
     corrected = target.copy()
-    corrected[:2] += target[:2] - realized[:2]
+    corrected[:2] += position_multiplier * (target[:2] - realized[:2])
     corrected[2] += float(wrap_to_pi(target[2] - realized[2]))
     return corrected
 

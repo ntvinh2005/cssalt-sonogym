@@ -256,10 +256,17 @@ def move_to_waypoint(
     frame_sequence: int,
 ) -> list[dict[str, object]]:
     trajectory: list[dict[str, object]] = []
+    command_range = (
+        env.unwrapped.US_slicer.x_z_range.detach()
+        .cpu()
+        .to(torch.float64)
+        .numpy()
+    )
     command_target = command_target_from_realized_error(
         current_realized_pose(env.unwrapped),
         target,
     )
+    command_target = np.clip(command_target, command_range[0], command_range[1])
     for step in range(maximum_steps):
         _, status = take_step(env, command_target)
         status["waypoint_action_step"] = step + 1
@@ -292,6 +299,7 @@ def move_to_waypoint(
             realized,
             target,
         )
+        command_target = np.clip(command_target, command_range[0], command_range[1])
     raise RuntimeError(
         f"scan waypoint did not converge after {maximum_steps} actions: {trajectory[-1]}"
     )

@@ -237,7 +237,13 @@ class CoordinateTests(unittest.TestCase):
             realized_pose=[131.688, 142.354, 2.7063],
             target_pose=[132.0, 139.0, 2.7],
         )
-        np.testing.assert_allclose(corrected, [132.312, 135.646, 2.6937], atol=1e-12)
+        np.testing.assert_allclose(corrected, [132.624, 132.292, 2.6937], atol=1e-12)
+        with self.assertRaises(ValueError):
+            command_target_from_realized_error(
+                realized_pose=[132.0, 139.0, 2.7],
+                target_pose=[132.0, 139.0, 2.7],
+                position_multiplier=0.0,
+            )
 
 
 if __name__ == "__main__":
