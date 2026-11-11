@@ -246,6 +246,35 @@ def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[
     raise RuntimeError(f"Home return did not converge after {maximum_steps} steps")
 
 
+def move_to_waypoint(
+    env,
+    target: np.ndarray,
+    maximum_steps: int,
+) -> list[dict[str, object]]:
+    trajectory: list[dict[str, object]] = []
+    for step in range(maximum_steps):
+        _, status = take_step(env, target)
+        status["waypoint_action_step"] = step + 1
+        trajectory.append(status)
+        if (
+            not status["finite"]
+            or status["command_clamped"]
+            or not status["command_mapping_valid"]
+            or not status["command_progressed"]
+        ):
+            raise RuntimeError(f"waypoint command failed at action {step + 1}: {status}")
+        if status["terminated"] or status["truncated"]:
+            raise RuntimeError("environment ended while moving to a scan waypoint")
+        if (
+            float(status["position_tracking_error_mm"]) <= 5.0
+            and float(status["orientation_tracking_error_deg"]) <= 5.0
+        ):
+            return trajectory
+    raise RuntimeError(
+        f"scan waypoint did not converge after {maximum_steps} actions: {trajectory[-1]}"
+    )
+
+
 def raw_label_slice(unwrapped, raw_volume: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     coordinates = (
         unwrapped.US_slicer.human_img_coords[0].detach().cpu().to(torch.int64).numpy()
@@ -411,6 +440,12 @@ def main() -> int:
                     "relative_position_home_mm": odometry.position_mm.tolist(),
                     "relative_angle_home_rad": odometry.angle_rad,
                     "native_no_collide": bool(status["native_no_collide"]),
+                    "action_steps_since_previous_frame": int(
+                        status.get("action_steps_since_previous_frame", 0)
+                    ),
+                    "requested_action_sequence": status.get(
+                        "requested_action_sequence", []
+                    ),
                 }
             )
             goal = tensor_row(unwrapped.goal_cmd_pose)
@@ -460,6 +495,8 @@ def main() -> int:
             "native_no_collide": bool(unwrapped.US_slicer.no_collide[0].item()),
             "terminated": False,
             "truncated": False,
+            "action_steps_since_previous_frame": 0,
+            "requested_action_sequence": [],
         }
         capture(0, "HOME_BASELINE", np.zeros(3, dtype=np.float64), baseline_status)
         frame_sequence = 1
@@ -470,39 +507,45 @@ def main() -> int:
             ("OUTBOUND_CAUDAL", range(z_start - 1, z_end - 1, -1)),
             ("RETURN_CRANIAL", range(z_end + 1, z_start + 1)),
         )
+        scan_action_steps = 0
+        maximum_action_steps = int(scan["maximum_action_steps_per_session"])
         for phase, z_values in paths:
             for z_index in z_values:
                 waypoint = np.asarray(
                     [session["patient_x_index"], float(z_index), session["angle_rad"]],
                     dtype=np.float64,
                 )
-                _, status = take_step(env, waypoint)
-                if (
-                    not status["finite"]
-                    or status["command_clamped"]
-                    or not status["command_mapping_valid"]
-                    or not status["command_progressed"]
-                    or status["terminated"]
-                    or status["truncated"]
-                    or float(status["position_tracking_error_mm"]) > 5.0
-                    or float(status["orientation_tracking_error_deg"]) > 5.0
-                ):
-                    raise RuntimeError(f"invalid scan transition at frame {frame_sequence}: {status}")
+                remaining_actions = maximum_action_steps - len(home_trajectory) - scan_action_steps
+                if remaining_actions <= 0:
+                    raise RuntimeError("frozen action-step budget exhausted before scan completion")
+                waypoint_trajectory = move_to_waypoint(
+                    env,
+                    waypoint,
+                    maximum_steps=min(8, remaining_actions),
+                )
+                scan_action_steps += len(waypoint_trajectory)
+                status = dict(waypoint_trajectory[-1])
+                status["action_steps_since_previous_frame"] = len(waypoint_trajectory)
+                status["requested_action_sequence"] = [
+                    item["normalized_action"] for item in waypoint_trajectory
+                ]
                 capture(
                     frame_sequence,
                     phase,
-                    np.asarray(status["normalized_action"], dtype=np.float64),
+                    np.asarray(
+                        waypoint_trajectory[0]["normalized_action"], dtype=np.float64
+                    ),
                     status,
                 )
                 frame_sequence += 1
 
         if frame_sequence != int(scan["expected_frames_per_complete_session"]):
             raise RuntimeError(f"captured {frame_sequence} frames, expected {scan['expected_frames_per_complete_session']}")
-        total_action_steps = len(home_trajectory) + frame_sequence - 1
-        if total_action_steps > int(scan["maximum_action_steps_per_session"]):
+        total_action_steps = len(home_trajectory) + scan_action_steps
+        if total_action_steps > maximum_action_steps:
             raise RuntimeError(
                 f"used {total_action_steps} action steps, exceeds frozen maximum "
-                f"{scan['maximum_action_steps_per_session']}"
+                f"{maximum_action_steps}"
             )
         if raw_conversion_mismatches != 0:
             raise RuntimeError(f"raw/acoustic vertebral projection mismatch: {raw_conversion_mismatches}")
@@ -525,6 +568,7 @@ def main() -> int:
             status="PASSED",
             frame_count=len(public_rows),
             home_return_steps=len(home_trajectory),
+            scan_action_steps=scan_action_steps,
             total_action_steps=total_action_steps,
             direction_frame_counts=dict(direction_counts),
             level_visible_frame_counts=dict(level_visible_frames),
