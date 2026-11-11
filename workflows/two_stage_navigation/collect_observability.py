@@ -250,26 +250,30 @@ def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[
 def move_to_waypoint(
     env,
     target: np.ndarray,
-    command_offset: np.ndarray,
     maximum_steps: int,
-) -> tuple[list[dict[str, object]], np.ndarray]:
+    action_rows: list[dict[str, object]],
+    phase: str,
+    frame_sequence: int,
+) -> list[dict[str, object]]:
     trajectory: list[dict[str, object]] = []
-    command_target = target.copy()
-    command_target[:2] += command_offset[:2]
-    command_target[2] += command_offset[2]
+    command_target = command_target_from_realized_error(
+        current_realized_pose(env.unwrapped),
+        target,
+    )
     for step in range(maximum_steps):
         _, status = take_step(env, command_target)
         status["waypoint_action_step"] = step + 1
+        status["phase"] = phase
+        status["frame_sequence"] = frame_sequence
+        status["waypoint_target"] = target.tolist()
         waypoint_position_error_mm, waypoint_angle_error_deg = tracking_errors(
             env.unwrapped, target
         )
         status["waypoint_position_error_mm"] = waypoint_position_error_mm
         status["waypoint_orientation_error_deg"] = waypoint_angle_error_deg
         trajectory.append(status)
+        action_rows.append(dict(status))
         realized = current_realized_pose(env.unwrapped)
-        next_offset = np.empty(3, dtype=np.float64)
-        next_offset[:2] = target[:2] - realized[:2]
-        next_offset[2] = float(wrap_to_pi(target[2] - realized[2]))
         if (
             not status["finite"]
             or status["command_clamped"]
@@ -283,7 +287,7 @@ def move_to_waypoint(
             waypoint_position_error_mm <= 5.0
             and waypoint_angle_error_deg <= 5.0
         ):
-            return trajectory, next_offset
+            return trajectory
         command_target = command_target_from_realized_error(
             realized,
             target,
@@ -334,6 +338,7 @@ def main() -> int:
     ultrasound_frames: list[np.ndarray] = []
     raw_label_frames: list[np.ndarray] = []
     home_trajectory: list[dict[str, object]] = []
+    scan_action_rows: list[dict[str, object]] = []
     try:
         task = protocol["scope"]["task"]
         env_cfg = parse_env_cfg(task, device=args.device or "cuda:0", num_envs=1)
@@ -528,7 +533,6 @@ def main() -> int:
         scan_action_steps = 0
         maximum_action_steps = int(scan["maximum_action_steps_per_session"])
         for phase, z_values in paths:
-            command_offset = np.zeros(3, dtype=np.float64)
             for z_index in z_values:
                 waypoint = np.asarray(
                     [session["patient_x_index"], float(z_index), session["angle_rad"]],
@@ -537,11 +541,13 @@ def main() -> int:
                 remaining_actions = maximum_action_steps - len(home_trajectory) - scan_action_steps
                 if remaining_actions <= 0:
                     raise RuntimeError("frozen action-step budget exhausted before scan completion")
-                waypoint_trajectory, command_offset = move_to_waypoint(
+                waypoint_trajectory = move_to_waypoint(
                     env,
                     waypoint,
-                    command_offset,
                     maximum_steps=min(8, remaining_actions),
+                    action_rows=scan_action_rows,
+                    phase=phase,
+                    frame_sequence=frame_sequence,
                 )
                 scan_action_steps += len(waypoint_trajectory)
                 status = dict(waypoint_trajectory[-1])
@@ -589,6 +595,7 @@ def main() -> int:
             frame_count=len(public_rows),
             home_return_steps=len(home_trajectory),
             scan_action_steps=scan_action_steps,
+            scan_action_manifest="privileged/scan_actions.jsonl",
             total_action_steps=total_action_steps,
             direction_frame_counts=dict(direction_counts),
             level_visible_frame_counts=dict(level_visible_frames),
@@ -612,6 +619,9 @@ def main() -> int:
         return 1
     finally:
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        summary["scan_action_count"] = len(scan_action_rows)
+        if scan_action_rows:
+            write_jsonl(privileged_dir / "scan_actions.jsonl", scan_action_rows)
         write_json(summary_path, summary)
         if env is not None:
             env.close()
