@@ -360,11 +360,14 @@ def main() -> int:
                     workspace_ok=not bool(status["command_clamped"]),
                 )
             )
-            ultrasound = (
+            ultrasound_hwt = (
                 unwrapped.US_slicer.us_img_tensor[0].detach().cpu().to(torch.float32).numpy()
             )
-            if ultrasound.shape != (200, 150):
-                raise RuntimeError(f"unexpected clean ultrasound shape {ultrasound.shape}")
+            if ultrasound_hwt.shape != (200, 150, 1):
+                raise RuntimeError(
+                    f"unexpected clean ultrasound tensor shape {ultrasound_hwt.shape}"
+                )
+            ultrasound = ultrasound_hwt[:, :, 0]
             raw_labels, converted_labels = raw_label_slice(unwrapped, raw_volume)
             lumbar_mask = np.isin(raw_labels, list(LUMBAR_LABELS))
             mismatch = int(np.count_nonzero(lumbar_mask & (converted_labels != 13)))
