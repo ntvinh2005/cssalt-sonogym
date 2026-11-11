@@ -216,6 +216,26 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(assessment.mapping_valid)
         self.assertFalse(assessment.native_clamped)
         self.assertTrue(assessment.progressed_toward_target)
+        wider = assess_native_command(
+            before_command=[165.0, 179.0, 2.8],
+            after_command=[161.12, 181.0, 2.7],
+            planned=planned,
+            target_command=[132.0, 195.0, 2.7],
+            command_minimum=[100.0, 70.0, 1.0],
+            command_maximum=[180.0, 200.0, 3.0],
+            position_mapping_tolerance_index=0.15,
+        )
+        self.assertTrue(wider.mapping_valid)
+        narrow = assess_native_command(
+            before_command=[165.0, 179.0, 2.8],
+            after_command=[161.12, 181.0, 2.7],
+            planned=planned,
+            target_command=[132.0, 195.0, 2.7],
+            command_minimum=[100.0, 70.0, 1.0],
+            command_maximum=[180.0, 200.0, 3.0],
+            position_mapping_tolerance_index=0.10,
+        )
+        self.assertFalse(narrow.mapping_valid)
 
         clamped = assess_native_command(
             before_command=[101.0, 100.0, 2.0],
