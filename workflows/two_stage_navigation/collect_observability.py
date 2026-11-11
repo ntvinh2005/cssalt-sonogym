@@ -69,6 +69,7 @@ LUMBAR_LABELS = frozenset(RAW_LABEL_NAMES)
 ADJACENT_NEGATIVE_LABELS = frozenset({26, 27, 29, 30, 31})
 COMMAND_POSITION_TOLERANCE_INDEX = 0.1
 COMMAND_ANGLE_TOLERANCE_RAD = 1e-4
+POSITION_CORRECTION_MULTIPLIER = 2.5
 
 
 def file_sha256(path: Path) -> str:
@@ -265,6 +266,7 @@ def move_to_waypoint(
     command_target = command_target_from_realized_error(
         current_realized_pose(env.unwrapped),
         target,
+        position_multiplier=POSITION_CORRECTION_MULTIPLIER,
     )
     command_target = np.clip(command_target, command_range[0], command_range[1])
     for step in range(maximum_steps):
@@ -273,6 +275,7 @@ def move_to_waypoint(
         status["phase"] = phase
         status["frame_sequence"] = frame_sequence
         status["waypoint_target"] = target.tolist()
+        status["position_correction_multiplier"] = POSITION_CORRECTION_MULTIPLIER
         waypoint_position_error_mm, waypoint_angle_error_deg = tracking_errors(
             env.unwrapped, target
         )
@@ -298,6 +301,7 @@ def move_to_waypoint(
         command_target = command_target_from_realized_error(
             realized,
             target,
+            position_multiplier=POSITION_CORRECTION_MULTIPLIER,
         )
         command_target = np.clip(command_target, command_range[0], command_range[1])
     raise RuntimeError(
