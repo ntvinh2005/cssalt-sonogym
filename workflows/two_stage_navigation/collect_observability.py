@@ -219,8 +219,14 @@ def take_step(env, target: np.ndarray) -> tuple[dict, dict[str, object]]:
     return observation, status
 
 
-def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[str, object]]:
-    trajectory: list[dict[str, object]] = []
+def move_to_home(
+    env,
+    target: np.ndarray,
+    maximum_steps: int = 80,
+    trajectory: list[dict[str, object]] | None = None,
+) -> list[dict[str, object]]:
+    if trajectory is None:
+        trajectory = []
     for step in range(maximum_steps):
         command = current_command(env.unwrapped)
         command_position_error = float(np.linalg.norm(command[:2] - target[:2]))
@@ -245,7 +251,9 @@ def move_to_home(env, target: np.ndarray, maximum_steps: int = 80) -> list[dict[
             raise RuntimeError(f"home return failed at step {step + 1}: {status}")
         if status["terminated"] or status["truncated"]:
             raise RuntimeError("environment ended during physical Home return")
-    raise RuntimeError(f"Home return did not converge after {maximum_steps} steps")
+    raise RuntimeError(
+        f"Home return did not converge after {maximum_steps} steps: {trajectory[-1]}"
+    )
 
 
 def move_to_waypoint(
@@ -376,7 +384,7 @@ def main() -> int:
         )
         reset_command = current_command(unwrapped).copy()
         reset_realized = current_realized_pose(unwrapped).copy()
-        home_trajectory = move_to_home(env, target)
+        move_to_home(env, target, trajectory=home_trajectory)
         home_pose = current_realized_pose(unwrapped).copy()
         home_command = current_command(unwrapped).copy()
         if (
@@ -631,6 +639,9 @@ def main() -> int:
         return 1
     finally:
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        summary["home_return_action_count"] = len(home_trajectory)
+        if home_trajectory:
+            write_jsonl(privileged_dir / "home_actions.jsonl", home_trajectory)
         summary["scan_action_count"] = len(scan_action_rows)
         if scan_action_rows:
             write_jsonl(privileged_dir / "scan_actions.jsonl", scan_action_rows)
