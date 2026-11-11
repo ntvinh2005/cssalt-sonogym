@@ -1,8 +1,8 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_G0_G1_RUNTIME_BLOCKED**
 
-Updated: 2026-11-10 (America/New_York)
+Updated: 2026-11-11 (America/New_York)
 
 ## Phase 4 runtime-validation outcome
 
@@ -161,6 +161,44 @@ No raw outputs, logs, plots, videos, or checkpoints were committed.
 Next decision: before any separately preregistered Phase 5B learning experiment, the researcher
 must decide whether the 3.0-rad command ceiling versus 3.14-rad target is intentional. No
 Phase 5B training is authorized by the Phase 5A result.
+
+## Phase 5C G0/G1 observability-capture status
+
+Phase 5C anatomical observability and coordinate-integrity gates are **BLOCKED**, not failed on
+scientific evidence. No complete scan and no ultrasound dataset were produced, so neither L4
+observability nor Stage 1 recognition has been evaluated.
+
+Job `50853505` (`anest-dept`, one L4, four CPUs, 30 GB) failed after 4:04. All 16 sessions
+stopped during physical Home return at action step 2 because the collector incorrectly treated a
+small probe-basis command-mapping difference as a native workspace clamp. The maximum observed
+difference was 0.068359 command index (approximately 0.103 mm), while the incorrect tolerance
+was 0.0002 index. A second launcher defect accepted the simulator process's zero exit status even
+though every per-session `summary.json` said `FAILED`, so the job unnecessarily initialized all
+16 sessions before the summarizer returned exit 2. No frames were saved.
+
+Commit `eea68bcb8a07506abf96dd9754fbeea078a4b28f` separated true workspace clamping from bounded
+command-mapping error and made the launcher fail closed on `summary.status`. The sole justified
+retry, job `50889771`, then failed fast on the first train/development session after 0:59 because
+the new check attempted to convert a CUDA-resident command-bounds tensor directly to NumPy. Its
+application exit code was correctly propagated as 2, demonstrating that the launcher repair
+worked. Commit `af543204ed5db3709e62f830c2a9a36a0fccde1c` now explicitly transfers this tensor to CPU.
+The current code passes 31 Phase 5C unit tests and all 11 Phase 5A regression tests, plus Python
+compilation, Bash syntax, and diff-whitespace checks. The frozen protocol and SHA-256
+`dc240b5bb333312f6bf85a9ff509f1beafd81e18f1ed458e75b498b5a017017a` were not changed.
+
+Both jobs used NVIDIA L4 GPUs with driver 580.178.04. Sampled GPU memory peaked at 5,011 MiB and
+5,009 MiB. The two external run directories occupy 521,934 and 70,850 bytes; the complete G0/G1
+output namespace is 972 KiB, well below the 1.5 GB protocol cap. Evidence is preserved at:
+
+- `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v1/50853505/`
+- `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v1/50889771/`
+- `reports/phase5c_g0_g1_capture_status.json`
+
+No third GPU attempt was submitted. The next scientific action requires researcher approval: run
+one bounded single-session engineering smoke on `td_00` with the reviewed `af54320` fix. Only if
+that produces a complete 211-frame scan with valid motion and manifests should the frozen
+16-session G0/G1 capture be resubmitted. Do not fit Stage 1 or begin Stage 2 while G0/G1 remain
+blocked.
 
 ## Phase 3 historical record
 

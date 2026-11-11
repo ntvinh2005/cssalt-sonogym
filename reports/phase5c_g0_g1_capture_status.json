@@ -1,0 +1,76 @@
+{
+  "schema": "cssalt-sonogym-phase5c-g0-g1-capture-status-v1",
+  "generated_at": "2026-11-11T16:29:00-05:00",
+  "status": "PHASE_5C_G0_G1_RUNTIME_BLOCKED",
+  "scientific_gate_status": {
+    "G0_anatomical_observability": "BLOCKED_NO_CAPTURE",
+    "G1_data_coordinate_integrity": "BLOCKED_NO_COMPLETE_SESSION",
+    "G2_supervised_recognition": "NOT_RUN",
+    "G3_relative_landmark_localization": "NOT_RUN",
+    "G4_closed_loop_acquisition": "NOT_RUN",
+    "G5_patient_held_out_generalization": "NOT_RUN"
+  },
+  "protocol": {
+    "id": "sonogym-unity-two-stage-g0-g1-v1",
+    "sha256": "dc240b5bb333312f6bf85a9ff509f1beafd81e18f1ed458e75b498b5a017017a",
+    "changed_during_diagnosis": false
+  },
+  "jobs": [
+    {
+      "job_id": 50853505,
+      "account": "anest-dept",
+      "git_commit": "7a7a88c157132a93341b3f412a3da60373cf8b7b",
+      "state": "FAILED",
+      "exit_code": "2:0",
+      "elapsed": "00:04:04",
+      "start": "2026-11-11T13:34:30-05:00",
+      "end": "2026-11-11T13:38:34-05:00",
+      "node": "c1105a-s21",
+      "resources": {"cpus": 4, "memory_requested_gb": 30, "gpus": 1, "gpu_model": "NVIDIA L4"},
+      "driver_version": "580.178.04",
+      "sampled_peak_gpu_memory_mib": 5011,
+      "max_rss_kib": 3354596,
+      "captured_frames": 0,
+      "failure": "Command-mapping difference was misclassified as a native workspace clamp; launcher did not fail closed on FAILED session summaries.",
+      "output": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v1/50853505",
+      "output_bytes": 521934
+    },
+    {
+      "job_id": 50889771,
+      "account": "anest-dept",
+      "git_commit": "eea68bcb8a07506abf96dd9754fbeea078a4b28f",
+      "state": "FAILED",
+      "exit_code": "2:0",
+      "elapsed": "00:00:59",
+      "start": "2026-11-11T16:22:04-05:00",
+      "end": "2026-11-11T16:23:03-05:00",
+      "node": "c0605a-s10",
+      "resources": {"cpus": 4, "memory_requested_gb": 30, "gpus": 1, "gpu_model": "NVIDIA L4"},
+      "driver_version": "580.178.04",
+      "sampled_peak_gpu_memory_mib": 5009,
+      "captured_frames": 0,
+      "failure": "CUDA command-bounds tensor was passed directly to NumPy; corrected launcher failed fast on the first session and propagated exit code 2.",
+      "output": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v1/50889771",
+      "output_bytes": 70850
+    }
+  ],
+  "repairs": [
+    {
+      "commit": "eea68bcb8a07506abf96dd9754fbeea078a4b28f",
+      "summary": "Separate workspace clamping from command-mapping tolerance and fail closed on session summary status."
+    },
+    {
+      "commit": "af543204ed5db3709e62f830c2a9a36a0fccde1c",
+      "summary": "Detach and copy CUDA command bounds to CPU before NumPy assessment."
+    }
+  ],
+  "verification_after_latest_repair": {
+    "phase5c_unit_tests": {"passed": 31, "failed": 0},
+    "phase5a_regression_tests": {"passed": 11, "failed": 0},
+    "python_compile": "PASS",
+    "bash_syntax": "PASS",
+    "git_diff_check": "PASS",
+    "gpu_validation": "NOT_RUN_AFTER_LATEST_REPAIR"
+  },
+  "next_step_requiring_approval": "Run one bounded td_00 engineering smoke at af54320; only after it passes, resubmit the frozen 16-session G0/G1 capture."
+}
