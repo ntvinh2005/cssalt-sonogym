@@ -1,0 +1,71 @@
+{
+  "schema": "sonogym-stage1-result-manifest-v1",
+  "decision": "PASS",
+  "scope": "fixed_anatomy_l4_relative_landmark_reconstruction",
+  "code_commit": "01c943c5f728993cc63593dd88f812807449e0b1",
+  "protocol_id": "sonogym-unity-two-stage-stage1-v2",
+  "protocol_sha256": "a83d84ffab5d69ffec00a7b37424092953c90555f4b156652f80992644757916",
+  "capture_job_id": 50908807,
+  "stage1_job": {
+    "job_id": 50920450,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "qos": "anest-dept",
+    "cpu_cores": 4,
+    "memory_requested_gb": 16,
+    "gpu_count": 0,
+    "elapsed_seconds": 252,
+    "exit_code": "0:0",
+    "maximum_resident_memory_kib": 695180
+  },
+  "frozen_actor": {
+    "primary_model": "ExtraTreesClassifier",
+    "verifier_model": "ExtraTreesClassifier",
+    "acceptance_threshold": 0.7,
+    "coordinate_offset_mm": -9.227684499999981,
+    "minimum_top_event_score_margin": 0.1,
+    "bundle_sha256_before_audit": "9c35dae2a325cf2483b81f98c02364bea87c63e7ad207d01872ad8b271261e4c"
+  },
+  "development": {
+    "session_count": 4,
+    "success_count": 4,
+    "event_precision": 1.0,
+    "event_recall": 1.0,
+    "median_localization_error_mm": 2.0
+  },
+  "locked_audit": {
+    "session_count": 4,
+    "success_count": 4,
+    "event_precision": 1.0,
+    "event_recall": 1.0,
+    "median_localization_error_mm": 2.25,
+    "wrong_actor_stop_count": 0,
+    "abstention_count": 0,
+    "per_session_localization_error_mm": {
+      "ua_00": 4.25,
+      "ua_01": 1.75,
+      "ua_02": 1.25,
+      "ua_03": 2.75
+    }
+  },
+  "software": {
+    "python": "3.10.22",
+    "numpy": "1.26.4",
+    "scipy": "1.15.2",
+    "scikit_learn": "1.5.2",
+    "joblib": "1.4.2"
+  },
+  "external_artifacts": {
+    "root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_v2/50920450",
+    "audit_report": "results/audit_report.json",
+    "development_report": "results/development_report.json",
+    "bundle_manifest": "results/bundle_manifest.json",
+    "bundle": "results/stage1_primary_verifier.joblib",
+    "run_size_mib_rounded": 32
+  },
+  "limitations": {
+    "fixed_anatomy_only": true,
+    "patient_generalization_established": false,
+    "stage2_closed_loop_acquisition_established": false
+  }
+}
