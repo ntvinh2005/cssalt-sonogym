@@ -202,7 +202,13 @@ def reconstruct_landmark(
     verifier_probabilities: np.ndarray,
     *,
     map_config: SpatialMapConfig,
+    coordinate_offset_mm: float = 0.0,
+    minimum_top_score_margin: float = 0.0,
 ) -> tuple[LandmarkInference, list[LandmarkEvent]]:
+    if not math.isfinite(coordinate_offset_mm):
+        raise ValueError("coordinate_offset_mm must be finite")
+    if not math.isfinite(minimum_top_score_margin) or minimum_top_score_margin < 0.0:
+        raise ValueError("minimum_top_score_margin must be finite and nonnegative")
     if len(candidates) == 0:
         return LandmarkInference("ABSTAIN", None, None, 0, "NO_PATCH_CANDIDATES"), []
     primary = np.asarray(primary_probabilities, dtype=np.float64)
@@ -234,24 +240,41 @@ def reconstruct_landmark(
         )
     events = spatial_map.events()
     accepted = [event for event in events if event.accepted]
-    if len(accepted) != 1:
+    if not accepted:
+        return (
+            LandmarkInference(
+                "ABSTAIN",
+                None,
+                None,
+                0,
+                "NO_ACCEPTED_EVENT",
+            ),
+            events,
+        )
+    ranked = sorted(accepted, key=lambda event: (-event.score, event.coordinate_mm))
+    if len(ranked) > 1 and ranked[0].score - ranked[1].score < minimum_top_score_margin:
         return (
             LandmarkInference(
                 "ABSTAIN",
                 None,
                 None,
                 len(accepted),
-                "NO_ACCEPTED_EVENT" if not accepted else "AMBIGUOUS_ACCEPTED_EVENTS",
+                "AMBIGUOUS_TOP_EVENT_SCORE",
             ),
             events,
         )
-    target = accepted[0]
+    target = ranked[0]
+    coordinate = target.coordinate_mm + coordinate_offset_mm
+    uncertainty = (
+        target.support_interval_mm[0] + coordinate_offset_mm,
+        target.support_interval_mm[1] + coordinate_offset_mm,
+    )
     return (
         LandmarkInference(
             "SUCCESS",
-            target.coordinate_mm,
-            target.support_interval_mm,
-            1,
+            coordinate,
+            uncertainty,
+            len(accepted),
             None,
         ),
         events,

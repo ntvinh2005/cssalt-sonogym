@@ -38,6 +38,7 @@ from two_stage_navigation.stage1_pipeline import (  # noqa: E402
     annotate_patch_candidate,
     binary_metrics,
     project_column_to_home_longitudinal_mm,
+    reconstruct_landmark,
 )
 
 
@@ -223,6 +224,60 @@ class Stage1PipelineTests(unittest.TestCase):
         self.assertEqual(metrics["fp"], 0)
         self.assertEqual(metrics["precision"], 1.0)
         self.assertEqual(metrics["recall"], 1.0)
+
+    def test_landmark_selector_uses_top_score_margin_and_frozen_offset(self) -> None:
+        candidates = []
+        primary = []
+        verifier = []
+        for coordinate, probability, base in ((-84.0, 0.7, 0), (-72.0, 0.9, 20)):
+            for offset, direction in enumerate(("FORWARD", "FORWARD", "REVERSE", "REVERSE")):
+                candidates.append(
+                    ActorPatchCandidate(
+                        feature=np.ones(774),
+                        coordinate_mm=coordinate,
+                        frame_sequence=base + offset,
+                        direction=direction,
+                        track_id="H0",
+                        interface_row=120.0,
+                        column=75.0,
+                    )
+                )
+                primary.append(probability)
+                verifier.append(probability)
+        # Low-score corridor endpoints keep the two supported peaks away from map edges.
+        for coordinate, sequence in ((-90.0, 40), (-60.0, 41)):
+            candidates.append(
+                ActorPatchCandidate(
+                    feature=np.ones(774),
+                    coordinate_mm=coordinate,
+                    frame_sequence=sequence,
+                    direction="FORWARD",
+                    track_id="H0",
+                    interface_row=120.0,
+                    column=75.0,
+                )
+            )
+            primary.append(0.1)
+            verifier.append(0.1)
+        inference, _ = reconstruct_landmark(
+            candidates,
+            np.asarray(primary),
+            np.asarray(verifier),
+            map_config=map_config(),
+            coordinate_offset_mm=-10.0,
+            minimum_top_score_margin=0.1,
+        )
+        self.assertEqual(inference.status, "SUCCESS")
+        self.assertEqual(inference.coordinate_mm, -82.0)
+        ambiguous, _ = reconstruct_landmark(
+            candidates,
+            np.asarray([0.82] * 4 + [0.9] * 4 + [0.1] * 2),
+            np.asarray([0.82] * 4 + [0.9] * 4 + [0.1] * 2),
+            map_config=map_config(),
+            minimum_top_score_margin=0.1,
+        )
+        self.assertEqual(ambiguous.status, "ABSTAIN")
+        self.assertEqual(ambiguous.reason, "AMBIGUOUS_TOP_EVENT_SCORE")
 
 
 if __name__ == "__main__":

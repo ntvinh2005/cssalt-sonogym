@@ -263,6 +263,7 @@ def session_prediction(
     verifier_model: ExtraTreesClassifier,
     spatial_protocol: dict[str, Any],
     acceptance_threshold: float,
+    coordinate_offset_mm: float,
 ) -> dict[str, Any]:
     features = session.features
     primary = positive_probability(primary_model, features)
@@ -276,7 +277,14 @@ def session_prediction(
         minimum_reverse_frames=int(spatial_protocol["minimum_reverse_frames"]),
     )
     inference, events = reconstruct_landmark(
-        session.candidates, primary, verifier, map_config=config
+        session.candidates,
+        primary,
+        verifier,
+        map_config=config,
+        coordinate_offset_mm=coordinate_offset_mm,
+        minimum_top_score_margin=float(
+            spatial_protocol["minimum_top_event_score_margin"]
+        ),
     )
     accepted = [event for event in events if event.accepted]
     error = (
@@ -306,22 +314,20 @@ def evaluate_events(
     successful_errors: list[float] = []
     wrong_actor_stops = 0
     for result in results:
-        target = float(result["target_coordinate_mm_evaluation_only"])
-        accepted = [item for item in result["events"] if item["accepted"]]
-        distances = [abs(float(item["coordinate_mm"]) - target) for item in accepted]
-        matched = [index for index, distance in enumerate(distances) if distance <= tolerance_mm]
-        if matched:
+        error = result["localization_error_mm_evaluation_only"]
+        if (
+            result["actor_status"] == "SUCCESS"
+            and error is not None
+            and float(error) <= tolerance_mm
+        ):
             tp += 1
-            fp += len(accepted) - 1
+            successful_errors.append(float(error))
+        elif result["actor_status"] == "SUCCESS":
+            fp += 1
+            fn += 1
+            wrong_actor_stops += 1
         else:
             fn += 1
-            fp += len(accepted)
-        error = result["localization_error_mm_evaluation_only"]
-        if result["actor_status"] == "SUCCESS":
-            if error is not None and float(error) <= tolerance_mm:
-                successful_errors.append(float(error))
-            else:
-                wrong_actor_stops += 1
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
     success_rate = len(successful_errors) / len(results) if results else 0.0
@@ -366,7 +372,7 @@ def main() -> None:
     started = time.monotonic()
     protocol_hash = validate_protocol_seal(args.stage1_protocol)
     protocol = yaml.safe_load(args.stage1_protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-unity-two-stage-stage1-v1":
+    if protocol["protocol_id"] != "sonogym-unity-two-stage-stage1-v2":
         raise RuntimeError("unexpected Stage 1 protocol identity")
     capture_summary = validate_capture(protocol, args.capture_root)
     capture_protocol = yaml.safe_load(
@@ -427,6 +433,27 @@ def main() -> None:
     tolerance = float(protocol["evaluation"]["event_match_tolerance_mm"])
     threshold_rows: list[dict[str, Any]] = []
     for threshold in protocol["spatial_map"]["calibration_acceptance_thresholds"]:
+        raw_results = [
+            session_prediction(
+                session,
+                primary_model,
+                verifier_model,
+                protocol["spatial_map"],
+                float(threshold),
+                0.0,
+            )
+            for session in calibration
+        ]
+        offset_samples = [
+            float(result["target_coordinate_mm_evaluation_only"])
+            - float(result["actor_coordinate_mm"])
+            for result in raw_results
+            if result["actor_status"] == "SUCCESS"
+            and result["actor_coordinate_mm"] is not None
+        ]
+        coordinate_offset_mm = (
+            float(np.median(offset_samples)) if offset_samples else 0.0
+        )
         results = [
             session_prediction(
                 session,
@@ -434,6 +461,7 @@ def main() -> None:
                 verifier_model,
                 protocol["spatial_map"],
                 float(threshold),
+                coordinate_offset_mm,
             )
             for session in calibration
         ]
@@ -441,6 +469,8 @@ def main() -> None:
         threshold_rows.append(
             {
                 "acceptance_threshold": float(threshold),
+                "coordinate_offset_mm": coordinate_offset_mm,
+                "coordinate_offset_sample_count": len(offset_samples),
                 "gate_pass": gate_pass(metrics, protocol),
                 "metrics": metrics,
                 "results": results,
@@ -496,6 +526,10 @@ def main() -> None:
         "column_stride_pixels": int(patch_values["column_stride_pixels"]),
         "pixel_resolution_mm": float(patch_values["pixel_resolution_mm"]),
         "acceptance_threshold": float(selected["acceptance_threshold"]),
+        "coordinate_offset_mm": float(selected["coordinate_offset_mm"]),
+        "minimum_top_event_score_margin": float(
+            protocol["spatial_map"]["minimum_top_event_score_margin"]
+        ),
         "spatial_map": protocol["spatial_map"],
         "actor_forbidden": protocol["information_boundary"]["actor_forbidden"],
     }
@@ -508,6 +542,7 @@ def main() -> None:
             "bundle": str(bundle_path.resolve()),
             "sha256": bundle_hash,
             "acceptance_threshold": bundle["acceptance_threshold"],
+            "coordinate_offset_mm": bundle["coordinate_offset_mm"],
             "protocol_sha256": protocol_hash,
             "audit_opened": False,
         },
@@ -537,6 +572,7 @@ def main() -> None:
             verifier_model,
             protocol["spatial_map"],
             float(bundle["acceptance_threshold"]),
+            float(bundle["coordinate_offset_mm"]),
         )
         for session in audit
     ]
@@ -549,6 +585,7 @@ def main() -> None:
         "capture_job_id": int(protocol["capture"]["job_id"]),
         "bundle_sha256_before_audit": bundle_hash,
         "acceptance_threshold": bundle["acceptance_threshold"],
+        "coordinate_offset_mm": bundle["coordinate_offset_mm"],
         "audit_session_ids": [item.session_id for item in audit],
         "audit_patch_metrics": audit_patch_metrics,
         "audit_event_metrics": audit_metrics,
@@ -567,6 +604,7 @@ def main() -> None:
             "bundle": str(bundle_path.resolve()),
             "sha256": bundle_hash,
             "acceptance_threshold": bundle["acceptance_threshold"],
+            "coordinate_offset_mm": bundle["coordinate_offset_mm"],
             "protocol_sha256": protocol_hash,
             "audit_opened": True,
             "audit_report": str((args.output_dir / "audit_report.json").resolve()),

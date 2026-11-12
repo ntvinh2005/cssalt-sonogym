@@ -1,6 +1,15 @@
-protocol_id: sonogym-unity-two-stage-stage1-v1
+protocol_id: sonogym-unity-two-stage-stage1-v2
 phase: 5C
 status: PRE_FIT_FROZEN
+amendment:
+  prior_protocol_sha256: dc1fa613c4d640859edc58d7b476bbf219a4961fb9cd2940cf23a7f33c518569
+  development_job_id: 50915512
+  audit_opened: false
+  reason: calibration_exposed_duplicate_raw_peaks_and_systematic_coordinate_bias
+  changes:
+    - select_highest_scoring_event_with_frozen_minimum_margin
+    - calibrate_one_global_longitudinal_coordinate_offset_before_audit
+    - evaluate_the_actor_selected_landmark_while_preserving_raw_events_as_diagnostics
 capture:
   job_id: 50908807
   protocol_id: sonogym-unity-two-stage-g0-g1-v2
@@ -57,9 +66,11 @@ spatial_map:
   minimum_forward_frames: 2
   minimum_reverse_frames: 2
   actor_score: min_primary_and_l4_verifier_probability
-  ambiguous_multiple_accepted_events: ABSTAIN
+  minimum_top_event_score_margin: 0.10
+  ambiguous_top_event_score: ABSTAIN
 evaluation:
   target_coordinate: privileged_goal_z_relative_to_mechanical_home_evaluation_only
+  coordinate_calibration: median_target_minus_selected_raw_coordinate_on_calibration_dev
   event_match_tolerance_mm: 10.0
   g2_minimum_event_precision: 0.90
   g2_minimum_event_recall: 0.90

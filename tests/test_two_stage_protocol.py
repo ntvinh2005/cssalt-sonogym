@@ -85,7 +85,12 @@ class ProtocolTests(unittest.TestCase):
         ).split()[0]
         actual_hash = hashlib.sha256(STAGE1_PROTOCOL_PATH.read_bytes()).hexdigest()
         self.assertEqual(actual_hash, expected_hash)
+        self.assertEqual(
+            stage1["protocol_id"], "sonogym-unity-two-stage-stage1-v2"
+        )
         self.assertEqual(stage1["status"], "PRE_FIT_FROZEN")
+        self.assertEqual(stage1["amendment"]["development_job_id"], 50915512)
+        self.assertFalse(stage1["amendment"]["audit_opened"])
         self.assertEqual(stage1["split_policy"]["training"], "train_dev")
         self.assertEqual(
             stage1["split_policy"]["locked_evaluation"], "untouched_audit"
