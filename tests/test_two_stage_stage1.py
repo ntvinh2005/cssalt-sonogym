@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 import unittest
 from pathlib import Path
@@ -31,13 +32,20 @@ from two_stage_navigation.stage1_map import (  # noqa: E402
     SpatialEvidenceMap,
     SpatialMapConfig,
 )
+from two_stage_navigation.stage1_pipeline import (  # noqa: E402
+    ActorPatchCandidate,
+    PatchLabelConfig,
+    annotate_patch_candidate,
+    binary_metrics,
+    project_column_to_home_longitudinal_mm,
+)
 
 
 def synthetic_interface_image() -> np.ndarray:
     height, width = 200, 150
     image = np.zeros((height, width), dtype=np.float64)
     columns = np.arange(width)
-    rows = np.rint(72.0 + 3.0 * np.sin(columns / 18.0)).astype(int)
+    rows = np.rint(130.0 + 3.0 * np.sin(columns / 18.0)).astype(int)
     for column, row in enumerate(rows):
         image[max(0, row - 2) : min(height, row + 3), column] = 1.0
         image[min(height, row + 3) : min(height, row + 30), column] = 0.05
@@ -49,7 +57,7 @@ def synthetic_interface_image() -> np.ndarray:
 class FeatureTests(unittest.TestCase):
     def test_reference_feature_shape_and_numeric_validity(self) -> None:
         image = synthetic_interface_image()
-        feature = extract_patch_feature(image, 72.0, 75.0, UNITY_REFERENCE_PATCH_SPEC)
+        feature = extract_patch_feature(image, 130.0, 75.0, UNITY_REFERENCE_PATCH_SPEC)
         self.assertIsNotNone(feature)
         assert feature is not None
         self.assertEqual(feature.shape, (774,))
@@ -83,7 +91,7 @@ class InterfaceTrackerTests(unittest.TestCase):
         baseline = tracks[0]
         self.assertTrue(baseline.valid)
         center_row = baseline.row_at(75.0)
-        self.assertLess(abs(center_row - (72.0 + 3.0 * np.sin(75.0 / 18.0))), 5.0)
+        self.assertLess(abs(center_row - (130.0 + 3.0 * np.sin(75.0 / 18.0))), 5.0)
 
     def test_nonfinite_image_fails(self) -> None:
         image = synthetic_interface_image()
@@ -160,6 +168,61 @@ class SpatialMapTests(unittest.TestCase):
         record = next(item for item in spatial_map.records() if item.coordinate_mm == 0.0)
         self.assertEqual(record.forward_count, 1)
         self.assertAlmostEqual(record.score_q75, 0.9)
+
+
+class Stage1PipelineTests(unittest.TestCase):
+    def test_column_projection_uses_declared_probe_angle(self) -> None:
+        center = project_column_to_home_longitudinal_mm(
+            probe_longitudinal_home_mm=-50.0,
+            column=74.5,
+            width_pixels=150,
+            pixel_resolution_mm=0.5,
+            declared_home_angle_rad=math.pi / 2,
+            relative_angle_rad=0.0,
+        )
+        self.assertAlmostEqual(center, -50.0)
+        offset = project_column_to_home_longitudinal_mm(
+            probe_longitudinal_home_mm=-50.0,
+            column=84.5,
+            width_pixels=150,
+            pixel_resolution_mm=0.5,
+            declared_home_angle_rad=math.pi / 2,
+            relative_angle_rad=0.0,
+        )
+        self.assertAlmostEqual(offset, -45.0)
+
+    def test_patch_annotation_separates_primary_and_l4_verifier(self) -> None:
+        candidate = ActorPatchCandidate(
+            feature=np.ones(774),
+            coordinate_mm=-80.0,
+            frame_sequence=1,
+            direction="FORWARD",
+            track_id="H0",
+            interface_row=100.0,
+            column=75.0,
+        )
+        labels = np.zeros((200, 150), dtype=np.uint8)
+        labels[80:120, 60:90] = 28
+        annotation = annotate_patch_candidate(
+            labels, candidate, UNITY_REFERENCE_PATCH_SPEC, PatchLabelConfig()
+        )
+        self.assertEqual(annotation.primary_label, 1)
+        self.assertEqual(annotation.verifier_label, 1)
+        labels[80:120, 60:90] = 29
+        annotation = annotate_patch_candidate(
+            labels, candidate, UNITY_REFERENCE_PATCH_SPEC, PatchLabelConfig()
+        )
+        self.assertEqual(annotation.primary_label, 1)
+        self.assertEqual(annotation.verifier_label, 0)
+
+    def test_binary_metrics_require_precision_and_recall_conjunction(self) -> None:
+        metrics = binary_metrics(
+            np.asarray([1, 1, 0, 0]), np.asarray([0.9, 0.8, 0.7, 0.1]), 0.75
+        )
+        self.assertEqual(metrics["tp"], 2)
+        self.assertEqual(metrics["fp"], 0)
+        self.assertEqual(metrics["precision"], 1.0)
+        self.assertEqual(metrics["recall"], 1.0)
 
 
 if __name__ == "__main__":

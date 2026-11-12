@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import unittest
 from collections import Counter
@@ -28,6 +29,9 @@ from two_stage_navigation.contracts import FORBIDDEN_ACTOR_FIELDS  # noqa: E402
 
 
 PROTOCOL_PATH = REPOSITORY_ROOT / "experiments" / "unity_two_stage_transfer" / "protocol.yaml"
+STAGE1_PROTOCOL_PATH = (
+    REPOSITORY_ROOT / "experiments" / "unity_two_stage_transfer" / "stage1_protocol.yaml"
+)
 
 
 class ProtocolTests(unittest.TestCase):
@@ -73,6 +77,21 @@ class ProtocolTests(unittest.TestCase):
         }
         self.assertEqual(len(combinations), 16)
         validate_split_assignments(sessions)
+
+    def test_stage1_protocol_is_sealed_and_preserves_locked_split(self) -> None:
+        stage1 = yaml.safe_load(STAGE1_PROTOCOL_PATH.read_text(encoding="utf-8"))
+        expected_hash = STAGE1_PROTOCOL_PATH.with_suffix(".sha256").read_text(
+            encoding="utf-8"
+        ).split()[0]
+        actual_hash = hashlib.sha256(STAGE1_PROTOCOL_PATH.read_bytes()).hexdigest()
+        self.assertEqual(actual_hash, expected_hash)
+        self.assertEqual(stage1["status"], "PRE_FIT_FROZEN")
+        self.assertEqual(stage1["split_policy"]["training"], "train_dev")
+        self.assertEqual(
+            stage1["split_policy"]["locked_evaluation"], "untouched_audit"
+        )
+        self.assertTrue(stage1["split_policy"]["open_audit_only_after_bundle_hash"])
+        self.assertEqual(stage1["resource_bound"]["gpu_count"], 0)
 
     def test_protocol_preserves_information_boundary(self) -> None:
         forbidden = set(self.protocol["information_boundaries"]["actor_forbidden"])

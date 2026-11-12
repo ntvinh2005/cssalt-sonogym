@@ -41,9 +41,11 @@ def load_env(path: Path) -> dict[str, str]:
     return values
 
 
-def validate_budget(cfg: dict[str, str]) -> None:
+def validate_budget(cfg: dict[str, str], job: str) -> None:
     if cfg["SLURM_ACCOUNT"] != "anest-dept":
         raise ValueError("refusing to charge a Slurm account other than anest-dept")
+    if job == "two_stage_stage1":
+        return
     if int(cfg["SLURM_CPUS"]) != 4 or int(cfg["SLURM_GPUS"]) != 1:
         raise ValueError("initial jobs must request exactly 4 CPUs and 1 GPU")
     if cfg["SLURM_PARTITION"] != "hpg-turin":
@@ -92,6 +94,7 @@ def main() -> int:
             "navigation_metrics",
             "navigation_metrics_v2",
             "two_stage_observability",
+            "two_stage_stage1",
         ],
     )
     action = parser.add_mutually_exclusive_group(required=True)
@@ -109,7 +112,7 @@ def main() -> int:
 
     config_path = Path(args.config).resolve()
     cfg = load_env(config_path)
-    validate_budget(cfg)
+    validate_budget(cfg, args.job)
 
     walltime_keys = {
         "smoke": ("SMOKE_WALLTIME", "00:30:00"),
@@ -119,9 +122,17 @@ def main() -> int:
         "navigation_metrics": ("NAVIGATION_METRICS_WALLTIME", "02:00:00"),
         "navigation_metrics_v2": ("NAVIGATION_METRICS_V2_WALLTIME", "02:00:00"),
         "two_stage_observability": ("TWO_STAGE_OBSERVABILITY_WALLTIME", "00:30:00"),
+        "two_stage_stage1": ("TWO_STAGE_STAGE1_WALLTIME", "00:30:00"),
     }
     walltime_key, default_walltime = walltime_keys[args.job]
     walltime = cfg.get(walltime_key, default_walltime)
+    if args.job == "two_stage_stage1":
+        partition, cpus, gpus, memory = "hpg-default", "4", "0", "16G"
+    else:
+        partition = cfg["SLURM_PARTITION"]
+        cpus = cfg["SLURM_CPUS"]
+        gpus = cfg["SLURM_GPUS"]
+        memory = cfg["SLURM_MEMORY"]
     batch_script = join_configured_path(
         cfg["SONOGYM_PROJECT_DIR"], "hpg", "jobs", f"{args.job}.sbatch"
     )
@@ -132,12 +143,12 @@ def main() -> int:
         "sbatch",
         "--parsable",
         f"--account={cfg['SLURM_ACCOUNT']}",
-        f"--partition={cfg['SLURM_PARTITION']}",
+        f"--partition={partition}",
         "--nodes=1",
         "--ntasks=1",
-        f"--cpus-per-task={cfg['SLURM_CPUS']}",
-        f"--gpus={cfg['SLURM_GPUS']}",
-        f"--mem={cfg['SLURM_MEMORY']}",
+        f"--cpus-per-task={cpus}",
+        *([f"--gpus={gpus}"] if int(gpus) else []),
+        f"--mem={memory}",
         f"--time={walltime}",
         *([f"--dependency=afterany:{args.afterany}"] if args.afterany else []),
         f"--job-name={job_name}",
@@ -148,9 +159,9 @@ def main() -> int:
 
     print("Resolved resource request:")
     print(
-        f"  account={cfg['SLURM_ACCOUNT']} partition={cfg['SLURM_PARTITION']} "
-        f"nodes=1 tasks=1 cpus={cfg['SLURM_CPUS']} gpus={cfg['SLURM_GPUS']} "
-        f"memory={cfg['SLURM_MEMORY']} walltime={walltime}"
+        f"  account={cfg['SLURM_ACCOUNT']} partition={partition} "
+        f"nodes=1 tasks=1 cpus={cpus} gpus={gpus} "
+        f"memory={memory} walltime={walltime}"
     )
     print("Resolved command:")
     print("  " + shlex.join(command))

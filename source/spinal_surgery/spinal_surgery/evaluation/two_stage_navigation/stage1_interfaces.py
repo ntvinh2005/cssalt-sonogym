@@ -14,11 +14,12 @@ import numpy as np
 
 @dataclass(frozen=True)
 class InterfaceTrackerConfig:
-    x_margin_pixels: int = 8
-    y_min_fraction: float = 0.10
-    y_max_fraction: float = 0.85
-    maximum_path_step_pixels: int = 3
-    path_smoothness_penalty: float = 0.08
+    x_margin_pixels: int = 18
+    y_min_fraction: float = 0.50
+    y_max_fraction: float = 0.96
+    maximum_path_step_pixels: int = 6
+    maximum_smoothed_path_jump_pixels: float = 4.0
+    path_smoothness_penalty: float = 0.014
     minimum_mean_ridge_score: float = 0.18
     maximum_hypotheses: int = 3
     minimum_median_separation_pixels: float = 2.0
@@ -27,6 +28,8 @@ class InterfaceTrackerConfig:
     def __post_init__(self) -> None:
         if self.x_margin_pixels < 0 or self.maximum_path_step_pixels < 0:
             raise ValueError("pixel margins and steps must be nonnegative")
+        if self.maximum_smoothed_path_jump_pixels < 0.0:
+            raise ValueError("smoothed path jump must be nonnegative")
         if not 0.0 <= self.y_min_fraction < self.y_max_fraction <= 1.0:
             raise ValueError("invalid depth fractions")
         if self.maximum_hypotheses < 1:
@@ -92,7 +95,9 @@ def _solve_path(
     for column_index in range(len(columns) - 1, 0, -1):
         path[column_index - 1] = path[column_index] - int(back[column_index, path[column_index]])
     path = np.clip(path, 0, row_count - 1)
-    rows = path.astype(np.float64) + y_offset
+    raw_rows = path.astype(np.float64) + y_offset
+    padded = np.pad(raw_rows, (3, 3), mode="edge")
+    rows = np.convolve(padded, np.ones(7, dtype=np.float64) / 7.0, mode="valid")
     samples = ridge[path, columns]
     jumps = np.abs(np.diff(rows))
     mean_score = float(np.mean(samples))
@@ -105,7 +110,7 @@ def _solve_path(
         maximum_jump_pixels=maximum_jump,
         valid=bool(
             mean_score >= config.minimum_mean_ridge_score
-            and maximum_jump <= config.maximum_path_step_pixels
+            and maximum_jump <= config.maximum_smoothed_path_jump_pixels
         ),
     )
 

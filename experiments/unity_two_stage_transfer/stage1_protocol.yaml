@@ -1,0 +1,77 @@
+protocol_id: sonogym-unity-two-stage-stage1-v1
+phase: 5C
+status: PRE_FIT_FROZEN
+capture:
+  job_id: 50908807
+  protocol_id: sonogym-unity-two-stage-g0-g1-v2
+  protocol_sha256: a08fefa87e8f4b0cfb54d1ab0194ebe4e78bcbb05bda68d5071c33f27cba4322
+  public_manifest_sha256: 38a5ff6844e6895a07a5d74d9ccbe27100fb5818dc0c51824964188e2ab0e14b
+  privileged_manifest_sha256: 3d6e53bc22360e281277862e190711f4865bff2666cc1701de1984d162cbf9a1
+  frame_count: 3376
+split_policy:
+  training: train_dev
+  threshold_selection: calibration_dev
+  locked_evaluation: untouched_audit
+  open_audit_only_after_bundle_hash: true
+tracker:
+  x_margin_pixels: 18
+  y_min_fraction: 0.50
+  y_max_fraction: 0.96
+  maximum_path_step_pixels: 6
+  maximum_smoothed_path_jump_pixels: 4.0
+  path_smoothness_penalty: 0.014
+  minimum_mean_ridge_score: 0.18
+  maximum_hypotheses: 3
+  minimum_median_separation_pixels: 2.0
+  minimum_separated_column_fraction: 0.15
+patch:
+  width_pixels: 48
+  depth_pixels: 80
+  interface_offset_pixels: 34
+  feature_size_pixels: 16
+  low_quantile: 0.05
+  high_quantile: 0.95
+  column_stride_pixels: 8
+  pixel_resolution_mm: 0.5
+offline_labels:
+  lumbar_labels: [26, 27, 28, 29, 30, 31]
+  l4_label: 28
+  minimum_lumbar_fraction: 0.01
+  primary: lumbar_interface_patch_vs_other_tracked_patch
+  verifier: dominant_l4_patch_vs_other_dominant_lumbar_patch
+  inference_access: forbidden
+models:
+  family: ExtraTreesClassifier
+  primary_and_verifier_are_separate: true
+  n_estimators: 240
+  max_depth: 18
+  min_samples_leaf: 3
+  class_weight: balanced
+  n_jobs: 4
+  random_seed: 20261103
+spatial_map:
+  grid_step_mm: 0.5
+  minimum_event_separation_mm: 10.0
+  raw_peak_minimum_score: 0.20
+  calibration_acceptance_thresholds: [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
+  minimum_forward_frames: 2
+  minimum_reverse_frames: 2
+  actor_score: min_primary_and_l4_verifier_probability
+  ambiguous_multiple_accepted_events: ABSTAIN
+evaluation:
+  target_coordinate: privileged_goal_z_relative_to_mechanical_home_evaluation_only
+  event_match_tolerance_mm: 10.0
+  g2_minimum_event_precision: 0.90
+  g2_minimum_event_recall: 0.90
+  g3_minimum_session_success_rate: 0.80
+  g3_maximum_median_localization_error_mm: 10.0
+  patient_generalization_claim: forbidden
+information_boundary:
+  actor_inputs: [clean_ultrasound, executed_home_relative_motion, relative_angle, declared_home_angle, calibrated_pixel_geometry]
+  actor_forbidden: [raw_labels, vertebra_identity, goal_pose, target_distance, evaluator_score]
+resource_bound:
+  account: anest-dept
+  cpu_cores: 4
+  memory_gb: 16
+  gpu_count: 0
+  walltime: "00:30:00"
