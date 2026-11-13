@@ -18,6 +18,7 @@ sys.path.insert(0, str(EVALUATION_ROOT))
 
 from two_stage_navigation.anatomical_ground_truth import (  # noqa: E402
     apply_affine,
+    count_exact_shared_points,
     index_to_patient_local_m,
     patient_local_to_world_m,
     quantile_region,
@@ -78,6 +79,13 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(np.all(points[:, 0] <= 0.75))
         self.assertTrue(np.all(points[:, 2] >= 2.25))
 
+    def test_exact_shared_point_count_detects_duplicate_boundaries(self) -> None:
+        first = np.asarray(
+            [[0.0, 0.0, 0.0], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]]
+        )
+        second = np.asarray([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        self.assertEqual(count_exact_shared_points(first, second), 1)
+
 
 class SchemaTests(unittest.TestCase):
     def test_provisional_annotation_requires_geometry(self) -> None:
@@ -89,6 +97,24 @@ class SchemaTests(unittest.TestCase):
     def test_unresolved_annotation_may_omit_geometry(self) -> None:
         unresolved = {
             **valid_annotation(),
+            "status": "UNRESOLVED",
+            "confidence": "UNRESOLVED",
+            "geometry": None,
+            "positional_uncertainty_mm": None,
+        }
+        validate_annotation(unresolved)
+
+    def test_closest_mesh_pair_cannot_be_provisional_facet_joint(self) -> None:
+        invalid = {
+            **valid_annotation(),
+            "landmark_name": "facet_joint_region",
+            "generation_method": "closest_candidate_articular_regions",
+        }
+        with self.assertRaisesRegex(ValueError, "cannot support"):
+            validate_annotation(invalid)
+
+        unresolved = {
+            **invalid,
             "status": "UNRESOLVED",
             "confidence": "UNRESOLVED",
             "geometry": None,

@@ -113,7 +113,11 @@ def plot_mpr(
         ),
     ]
     status = str(record["status"])
-    color = "#00c8ff" if status == "PROVISIONAL" else "#ff3faf"
+    color = {
+        "PROVISIONAL": "#00c8ff",
+        "UNRESOLVED": "#ff3faf",
+        "REJECTED": "#ff3030",
+    }[status]
     figure, axes = plt.subplots(1, 3, figsize=(16, 5.4), constrained_layout=True)
     for axis, (title, image, label_mask, marker, bounds, xlabel, ylabel) in zip(
         axes, views
@@ -160,6 +164,7 @@ def plot_mpr(
 def plot_geometry_overview(
     group_a: list[dict[str, Any]],
     group_b: list[dict[str, Any]],
+    rejected_candidates: list[dict[str, Any]],
     output: Path,
 ) -> None:
     figure = plt.figure(figsize=(15, 11))
@@ -210,11 +215,23 @@ def plot_geometry_overview(
             ),
             fontsize=5,
         )
+    for candidate in rejected_candidates:
+        summary = candidate["candidate_surface_points"]["mesh_index"]
+        centroid = np.asarray(summary["centroid"], dtype=np.float64)
+        axis.scatter(
+            [centroid[0]],
+            [centroid[2]],
+            [centroid[1]],
+            s=70,
+            marker="x",
+            color="#ff3030",
+        )
     axis.set_xlabel("Right (+x), mesh index")
     axis.set_ylabel("Superior (+z), mesh index")
     axis.set_zlabel("Anterior (+y), mesh index")
     axis.set_title(
-        "Evaluator-only 3D review | cyan=PROVISIONAL | magenta=UNRESOLVED candidate"
+        "Evaluator-only 3D review | cyan=PROVISIONAL | "
+        "magenta=UNRESOLVED | red=REJECTED"
     )
     axis.view_init(elev=15, azim=-90)
     axis.legend(loc="upper left", fontsize=7, ncol=2)
@@ -272,6 +289,9 @@ def main() -> None:
     )
     group_a = manifest["annotations"]["group_A_unity_method_reproduction"]
     group_b = manifest["annotations"]["group_B_future_MBB_bony_geometry"]
+    rejected_candidates = manifest["validation"].get(
+        "rejected_facet_candidates", []
+    )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     generated: list[Path] = []
 
@@ -320,8 +340,41 @@ def main() -> None:
         )
         generated.append(output)
 
+    for index, candidate in enumerate(rejected_candidates):
+        summary = candidate["candidate_surface_points"]["mesh_index"]
+        review_record = {
+            "raw_source_label": candidate["raw_source_label"],
+            "status": "REJECTED",
+            "anatomy_level": candidate["anatomy_level"],
+            "landmark_name": candidate["candidate_name"],
+            "laterality": candidate["laterality"],
+            "confidence": "REJECTED",
+            "positional_uncertainty_mm": None,
+        }
+        output = args.output_dir / "rejected_facet_candidates" / (
+            f"{index:02d}_"
+            + safe_name(
+                "{}_{}_{}".format(
+                    candidate["anatomy_level"],
+                    candidate["candidate_name"],
+                    candidate["laterality"],
+                )
+            )
+            + ".png"
+        )
+        plot_mpr(
+            ct=ct,
+            segmentation=segmentation,
+            record=review_record,
+            centroid=np.asarray(summary["centroid"], dtype=np.float64),
+            lower=np.asarray(summary["bounds"][0], dtype=np.float64),
+            upper=np.asarray(summary["bounds"][1], dtype=np.float64),
+            output=output,
+        )
+        generated.append(output)
+
     overview = args.output_dir / "three_dimensional_overview.png"
-    plot_geometry_overview(group_a, group_b, overview)
+    plot_geometry_overview(group_a, group_b, rejected_candidates, overview)
     generated.append(overview)
     unresolved = args.output_dir / "unresolved_records.png"
     plot_unresolved_summary(group_b, unresolved)
@@ -345,16 +398,22 @@ def main() -> None:
                     ]
                 )
 
+    visualization_paths = {
+        Path(item["path"]).name: Path(item["path"])
+        for item in manifest["provenance"]["visualizations"]
+    }
     copied = {
         "annotations.json": args.manifest,
         "annotations.sha256": args.manifest.with_suffix(".sha256"),
         "readiness_report.md": REPOSITORY_ROOT
         / "docs/research/sonogym_s0010_anatomical_ground_truth_readiness.md",
         "notation.md": REPOSITORY_ROOT / "docs/notation.md",
-        "ultrasound_correspondence.png": REPOSITORY_ROOT
-        / "docs/research/figures/s0010_anatomical_ground_truth/ultrasound_correspondence.png",
-        "original_three_dimensional_overview.png": REPOSITORY_ROOT
-        / "docs/research/figures/s0010_anatomical_ground_truth/lumbar_mesh_regions.png",
+        "ultrasound_correspondence.png": visualization_paths[
+            "ultrasound_correspondence.png"
+        ],
+        "original_three_dimensional_overview.png": visualization_paths[
+            "lumbar_mesh_regions.png"
+        ],
     }
     for name, source in copied.items():
         shutil.copy2(source, args.output_dir / name)
@@ -369,7 +428,7 @@ def main() -> None:
         for path in sorted(generated)
     ]
     index = {
-        "schema": "sonogym-s0010-annotation-review-v1",
+        "schema": "sonogym-s0010-annotation-review-v2",
         "patient_id": "s0010",
         "source_manifest_sha256": sha256(args.manifest),
         "group_a_image_count": len(group_a),
@@ -379,10 +438,12 @@ def main() -> None:
         "group_b_unresolved_without_geometry_count": len(
             unresolved_without_geometry
         ),
+        "rejected_facet_candidate_count": len(rejected_candidates),
         "interpretation": {
             "yellow_contour": "privileged raw source label",
             "cyan": "PROVISIONAL review candidate",
             "magenta": "UNRESOLVED geometry candidate",
+            "red": "REJECTED nearest-surface facet candidate",
             "actor_input": False,
             "clinical_validation": False,
         },
@@ -398,6 +459,7 @@ All overlays are evaluator-only and must not be used as actor inference input.
 
 - group_a/: seven major sacral/lumbar raw-label annotations.
 - group_b/: every provisional or unresolved record with available candidate geometry.
+- rejected_facet_candidates/: six invalid nearest-surface candidates retained as negative evidence.
 - three_dimensional_overview.png: all major meshes and candidate centroids.
 - unresolved_records.png/csv: structures for which no precise annotation was supported.
 - ultrasound_correspondence.png: clean ultrasound beside privileged raw-label overlays.
@@ -407,6 +469,7 @@ Color key:
 - yellow contour: source raw segmentation label;
 - cyan marker/box: PROVISIONAL candidate;
 - magenta marker/box: UNRESOLVED candidate geometry.
+- red marker/box: REJECTED candidate; never use as anatomical ground truth.
 
 These are simulator engineering annotations for reviewer inspection, not clinician-validated anatomy.
 """

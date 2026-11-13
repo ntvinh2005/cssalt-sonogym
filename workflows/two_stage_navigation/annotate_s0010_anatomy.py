@@ -34,6 +34,7 @@ sys.path.insert(0, str(EVALUATION_ROOT))
 from two_stage_navigation.anatomical_ground_truth import (  # noqa: E402
     S0010_STRUCTURES,
     apply_affine,
+    count_exact_shared_points,
     file_sha256,
     index_to_patient_local_m,
     patient_local_to_world_m,
@@ -301,9 +302,10 @@ def group_b_annotations(
     affine: np.ndarray,
     mesh_root: Path,
     figure_root: Path,
-) -> tuple[list[dict[str, Any]], dict[str, np.ndarray]]:
+) -> tuple[list[dict[str, Any]], dict[str, np.ndarray], list[dict[str, Any]]]:
     records = []
     plot_regions = {}
+    rejected_facet_candidates = []
     label_by_level = {level: label for label, (level, _) in S0010_STRUCTURES.items()}
     file_by_level = {
         level: filename for _, (level, filename) in S0010_STRUCTURES.items()
@@ -430,6 +432,10 @@ def group_b_annotations(
             )
         )
     for superior, inferior in (("L3", "L4"), ("L4", "L5"), ("L5", "S1")):
+        full_mesh_shared_vertex_count = count_exact_shared_points(
+            np.asarray(meshes[superior].vertices),
+            np.asarray(meshes[inferior].vertices),
+        )
         for side, x_range in (("LEFT", (0.18, 0.48)), ("RIGHT", (0.52, 0.82))):
             upper_points, _ = selected_region(
                 meshes[superior], affine, (x_range, (0.0, 0.55), (0.0, 0.30))
@@ -445,8 +451,40 @@ def group_b_annotations(
             separation_mm = float(
                 np.linalg.norm(upper_point - lower_point) * LABEL_SPACING_M * 1000
             )
-            key = f"{superior}_{inferior}_facet_joint_{side}"
-            plot_regions[key] = points
+            shared_vertex_count = count_exact_shared_points(
+                upper_points, lower_points
+            )
+            rejected_facet_candidates.append(
+                {
+                    "anatomy_level": f"{superior}-{inferior}",
+                    "laterality": side,
+                    "candidate_name": "facet_joint_region",
+                    "raw_source_label": [
+                        label_by_level[superior],
+                        label_by_level[inferior],
+                    ],
+                    "candidate_surface_points": geometry_in_frames(points, affine),
+                    "surface_separation_mm": separation_mm,
+                    "shared_vertex_count_in_selected_regions": shared_vertex_count,
+                    "shared_vertex_count_in_full_meshes": (
+                        full_mesh_shared_vertex_count
+                    ),
+                    "selected_vertex_counts": {
+                        "superior": int(len(upper_points)),
+                        "inferior": int(len(lower_points)),
+                    },
+                    "generation_method": "closest_candidate_articular_regions",
+                    "outcome": "REJECTED",
+                    "reason": (
+                        "The selected adjacent meshes share exact boundary vertices; "
+                        "a nearest-point midpoint does not identify a facet joint."
+                    ),
+                    "source_files": [
+                        source_record(mesh_root / file_by_level[superior]),
+                        source_record(mesh_root / file_by_level[inferior]),
+                    ],
+                }
+            )
             records.append(
                 annotation(
                     level=f"{superior}-{inferior}",
@@ -457,29 +495,27 @@ def group_b_annotations(
                     name="facet_joint_region",
                     laterality=side,
                     annotation_type="region",
-                    geometry={
-                        "candidate_surface_points": geometry_in_frames(points, affine),
-                        "surface_separation_mm": separation_mm,
-                        "radius_mm": float(max(4.5, separation_mm / 2.0 + 1.5)),
-                    },
+                    geometry=None,
                     sources=[
                         source_record(mesh_root / file_by_level[superior]),
                         source_record(mesh_root / file_by_level[inferior]),
                     ],
-                    method="closest_candidate_articular_regions",
-                    confidence="LOW",
-                    uncertainty_mm=float(max(6.0, separation_mm / 2.0 + 3.0)),
+                    method="shared_boundary_candidate_rejected_facet_unresolved",
+                    confidence="UNRESOLVED",
+                    uncertainty_mm=None,
                     figures=[
                         artifact_path(figure_root / "lumbar_mesh_regions.png")
                     ],
                     limitations=[
+                        "the previous nearest-point candidate was rejected because adjacent meshes share exact boundary vertices",
+                        "the available labels do not isolate the facet articular surfaces",
                         "cartilage and joint capsule are not separately segmented",
-                        "candidate is not a validated procedural target",
+                        "the true facet joint remains unresolved and is not a procedural target",
                     ],
-                    status="PROVISIONAL",
+                    status="UNRESOLVED",
                 )
             )
-    return records, plot_regions
+    return records, plot_regions, rejected_facet_candidates
 
 
 def plot_mpr(
@@ -729,7 +765,7 @@ def main() -> None:
         segmentation_source,
         args.figure_dir,
     )
-    group_b, regions = group_b_annotations(
+    group_b, regions, rejected_facet_candidates = group_b_annotations(
         meshes, ct_image.affine, mesh_root, args.figure_dir
     )
     for raw_label, (level, _) in S0010_STRUCTURES.items():
@@ -783,7 +819,7 @@ def main() -> None:
         validate_annotation(record)
 
     result = {
-        "schema": "sonogym-s0010-anatomical-annotations-v1",
+        "schema": "sonogym-s0010-anatomical-annotations-v2",
         "status": "PROVISIONAL",
         "patient_id": PATIENT_ID,
         "provenance": {
@@ -854,6 +890,7 @@ def main() -> None:
             "maximum_bidirectional_mesh_segmentation_p95_mm": alignment_p95,
             "mesh_segmentation_p95_limit_mm": alignment_limit_mm,
             "major_structure_measurements": measurements,
+            "rejected_facet_candidates": rejected_facet_candidates,
         },
         "annotations": {
             "group_A_unity_method_reproduction": group_a,

@@ -109,6 +109,21 @@ def quantile_region(
     return np.flatnonzero(mask), array[mask]
 
 
+def count_exact_shared_points(first: np.ndarray, second: np.ndarray) -> int:
+    """Count unique 3-D points that occur exactly in both point clouds."""
+
+    first_array = np.asarray(first, dtype=np.float64)
+    second_array = np.asarray(second, dtype=np.float64)
+    for name, array in (("first", first_array), ("second", second_array)):
+        if array.ndim != 2 or array.shape[1] != 3:
+            raise ValueError(f"{name} points must have shape (N, 3)")
+        if not np.all(np.isfinite(array)):
+            raise ValueError(f"{name} points must be finite")
+    first_points = {tuple(point) for point in first_array.tolist()}
+    second_points = {tuple(point) for point in second_array.tolist()}
+    return len(first_points & second_points)
+
+
 def validate_annotation(annotation: dict[str, Any]) -> None:
     required = {
         "patient_id",
@@ -144,6 +159,14 @@ def validate_annotation(annotation: dict[str, Any]) -> None:
         raise ValueError("invalid positional uncertainty")
     if annotation["status"] == "PROVISIONAL" and not annotation["geometry"]:
         raise ValueError("provisional annotations require geometry")
+    if (
+        annotation["landmark_name"] == "facet_joint_region"
+        and annotation["status"] == "PROVISIONAL"
+        and annotation["generation_method"] == "closest_candidate_articular_regions"
+    ):
+        raise ValueError(
+            "closest mesh regions alone cannot support a provisional facet joint"
+        )
 
 
 def reject_privileged_actor_payload(payload: dict[str, Any]) -> None:
