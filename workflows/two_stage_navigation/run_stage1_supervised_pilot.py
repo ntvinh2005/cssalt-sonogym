@@ -334,6 +334,7 @@ def classification_arms(
     train_combined = np.concatenate([train_image, train_position], axis=1)
     dev_combined = np.concatenate([dev_image, dev_position], axis=1)
     shuffled_combined = np.concatenate([shuffled, dev_position], axis=1)
+    fit_started = time.monotonic()
     models = {
         "image_only": fit_model(
             train_image, train_labels, protocol["models"], seed_base
@@ -345,6 +346,8 @@ def classification_arms(
             train_combined, train_labels, protocol["models"], seed_base + 2
         ),
     }
+    fit_seconds = time.monotonic() - fit_started
+    inference_started = time.monotonic()
     predictions = {
         "image_only": models["image_only"].predict(dev_image),
         "position_history_only": models["position_history_only"].predict(dev_position),
@@ -410,7 +413,14 @@ def classification_arms(
             for value in np.unique(dev_labels)
         },
     }
-    return models, {"metrics": metrics, "sample_counts": sample_counts}
+    return models, {
+        "metrics": metrics,
+        "sample_counts": sample_counts,
+        "fit_seconds": round(fit_seconds, 6),
+        "development_inference_seconds": round(
+            time.monotonic() - inference_started, 6
+        ),
+    }
 
 
 def directional_peak(
@@ -636,6 +646,7 @@ def main() -> int:
     forbidden = set(protocol["information_boundary"]["actor_forbidden"])
     sessions: dict[str, PilotSession] = {}
     audits = []
+    data_started = time.monotonic()
     for session_id in training_ids + development_ids + unused_ids:
         session, audit = audit_and_load_session(
             by_id[session_id],
@@ -653,6 +664,7 @@ def main() -> int:
         if session is not None:
             sessions[session_id] = session
         audits.append(audit)
+    data_seconds = time.monotonic() - data_started
     training = [sessions[value] for value in training_ids]
     development = [sessions[value] for value in development_ids]
     shared_models, shared_results = classification_arms(
@@ -695,6 +707,7 @@ def main() -> int:
             gate["minimum_combined_minus_position_macro_recall_for_meaningful_increment"]
         )
     )
+    spatial_started = time.monotonic()
     spatial = (
         run_spatial_development(
             development,
@@ -710,23 +723,25 @@ def main() -> int:
             "coordinate_calibration_applied": False,
         }
     )
+    spatial_seconds = time.monotonic() - spatial_started
     overall = "PASS" if image_evidence_pass and spatial["status"] == "PASS" else "FAIL"
-    model_path = args.output_dir / "development_models.joblib"
+    model_path = args.output_dir / "stage1_l4_development.joblib"
+    checkpoint_started = time.monotonic()
     joblib.dump(
         {
-            "schema": "sonogym-stage1-supervised-development-models-v1",
+            "schema": "sonogym-stage1-l4-development-models-v1",
             "protocol_sha256": protocol_hash,
             "deployment_authorized": False,
-            "shared_models": shared_models,
-            "anatomy_models": anatomy_models,
+            "shared_image_model": shared_models["image_only"],
+            "anatomy_image_model": anatomy_models["image_only"],
             "class_order": protocol["offline_labels"]["class_order"],
             "patch_spec": patch_spec,
             "tracker_config": tracker_config,
-            "position_history_fields": protocol["position_history_control"]["fields"],
         },
         model_path,
         compress=3,
     )
+    checkpoint_seconds = time.monotonic() - checkpoint_started
     report = {
         "schema": "sonogym-stage1-supervised-pilot-report-v1",
         "protocol_id": protocol["protocol_id"],
@@ -779,6 +794,19 @@ def main() -> int:
             "patient_generalization_established": False,
             "phase2_started": False,
             "gpu_used": False,
+        },
+        "timing_seconds": {
+            "data_audit_and_feature_extraction": round(data_seconds, 6),
+            "shared_model_fit": shared_results["fit_seconds"],
+            "shared_development_inference": shared_results[
+                "development_inference_seconds"
+            ],
+            "anatomical_level_model_fit": anatomy_results["fit_seconds"],
+            "anatomical_level_development_inference": anatomy_results[
+                "development_inference_seconds"
+            ],
+            "spatial_development_inference": round(spatial_seconds, 6),
+            "checkpoint_serialization": round(checkpoint_seconds, 6),
         },
         "elapsed_seconds": round(time.monotonic() - started, 3),
     }

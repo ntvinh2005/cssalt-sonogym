@@ -14,6 +14,36 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It acquires the best acceptable view near an inferred anatomical target while keeping learned perception separate from physical search.
 - **Source:** Thoracic-US-Coach-Standalone commit f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0, approved by user, 2026-11-12.
 
+### Shared anatomical-structure detector
+- **Kind:** method
+- **Definition:** A binary ExtraTrees classifier fitted on normalized intensity and gradient features from tracked-interface-centred ultrasound patches, with positive offline labels requiring Group A raw-identity overlap in the corresponding patch.
+- **Intuition:** It tests recurrent vertebral morphology without assuming that each vertebral level has a unique appearance.
+- **Source:** approved by user, 2026-11-13.
+
+### Position-only control
+- **Kind:** method
+- **Definition:** An ExtraTrees classifier whose inputs are executed Home-relative x/z displacement, relative angle, acquisition direction, and normalized frame sequence; raw anatomical identity and ultrasound intensity features are excluded, although candidate rows originate from the common tracked-interface extractor.
+- **Intuition:** It measures how much fixed-anatomy location and scan history predict the offline label without patch morphology.
+- **Source:** approved by user, 2026-11-13.
+
+### Shuffled-image control
+- **Kind:** method
+- **Definition:** Evaluation after deterministically permuting ultrasound morphology features within each development session while preserving labels and position/history rows.
+- **Intuition:** It destroys the image-label association without changing the session-level image distribution.
+- **Source:** approved by user, 2026-11-13.
+
+### Image evidence gate
+- **Kind:** metric
+- **Definition:** Passes when the shared anatomical-structure detector has precision and recall at least 0.90, image-only seven-level macro recall is at least 0.70, and image-only macro recall exceeds the shuffled-image control by at least 0.20 on session-separated development data.
+- **Intuition:** It permits spatial reconstruction only when actor-visible pixels carry reproducible anatomical development signal.
+- **Source:** experiments/unity_two_stage_transfer/stage1_supervised_pilot_protocol.yaml, approved by user, 2026-11-13.
+
+### L4 localization error
+- **Kind:** metric
+- **Definition:** The absolute difference in millimetres between the actor-emitted Home-relative L4 coordinate and the evaluator-only L4 reference coordinate.
+- **Intuition:** It scores localization without exposing the reference coordinate to actor inference.
+- **Source:** experiments/unity_two_stage_transfer/stage1_supervised_pilot_protocol.yaml, approved by user, 2026-11-13.
+
 ### Group A annotation
 - **Kind:** object
 - **Definition:** A privileged, geometry-supported annotation for sacrum, S1, or L1--L5 that is required to supervise or evaluate reproduction of Unity Stage 1 and Unity Stage 2 in patient s0010.
