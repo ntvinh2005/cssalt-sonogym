@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import sys
 import unittest
+import hashlib
 from pathlib import Path
 
 import numpy as np
+import yaml
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +17,12 @@ EVALUATION_ROOT = (
     REPOSITORY_ROOT / "source" / "spinal_surgery" / "spinal_surgery" / "evaluation"
 )
 sys.path.insert(0, str(EVALUATION_ROOT))
+PROTOCOL = (
+    REPOSITORY_ROOT
+    / "experiments"
+    / "unity_two_stage_transfer"
+    / "stage2_dataset_protocol_v1.yaml"
+)
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -72,6 +80,31 @@ class Stage2FeatureTests(unittest.TestCase):
             extract_stage2_feature(np.ones((200, 150), dtype=np.float32))
         with self.assertRaises(ValueError):
             extract_stage2_feature(np.ones((20, 15), dtype=np.float32))
+
+
+class Stage2ProtocolTests(unittest.TestCase):
+    def test_protocol_is_sealed_and_session_separated(self) -> None:
+        expected = PROTOCOL.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        observed = hashlib.sha256(PROTOCOL.read_bytes()).hexdigest()
+        self.assertEqual(observed, expected)
+        protocol = yaml.safe_load(PROTOCOL.read_text(encoding="utf-8"))
+        splits = [row["split"] for row in protocol["sessions"]]
+        self.assertEqual(splits.count("train"), 4)
+        self.assertEqual(splits.count("calibration"), 1)
+        self.assertEqual(splits.count("development_evaluation"), 1)
+        self.assertEqual(len({row["session_id"] for row in protocol["sessions"]}), 6)
+
+    def test_protocol_preserves_resource_and_information_bounds(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL.read_text(encoding="utf-8"))
+        resources = protocol["resource_bound"]
+        self.assertEqual(resources["account"], "anest-dept")
+        self.assertEqual(resources["gpu_count"], 1)
+        self.assertEqual(resources["cpu_cores"], 4)
+        self.assertEqual(resources["memory"], "30gb")
+        forbidden = set(protocol["information_boundaries"]["actor_record_forbidden"])
+        self.assertIn("goal_cmd_pose", forbidden)
+        self.assertIn("command_pose_index", forbidden)
+        self.assertIn("raw_labels", forbidden)
 
 
 class Stage2LabelTests(unittest.TestCase):
