@@ -614,9 +614,18 @@ def main() -> None:
     }
     tolerance = float(protocol["evaluation"]["event_match_tolerance_mm"])
     zero_offsets = {name: 0.0 for name in class_order}
-    threshold_rows: list[dict[str, Any]] = []
-    for threshold in protocol["spatial_map"]["calibration_acceptance_thresholds"]:
-        unstructured_raw_results = [
+    calibration_thresholds = [
+        float(value)
+        for value in protocol["spatial_map"]["calibration_acceptance_thresholds"]
+    ]
+    separation_penalty_per_mm = float(
+        protocol["ordered_map"].get("separation_penalty_per_mm", 0.0)
+    )
+    separation_estimation_threshold = (
+        min(calibration_thresholds) if separation_penalty_per_mm > 0.0 else None
+    )
+    separation_calibration_results = (
+        [
             session_prediction(
                 session,
                 primary_model,
@@ -625,22 +634,24 @@ def main() -> None:
                 reference_coordinates,
                 protocol["spatial_map"],
                 protocol["ordered_map"],
-                float(threshold),
+                float(separation_estimation_threshold),
                 zero_offsets,
             )
             for session in calibration
         ]
-        separation_penalty_per_mm = float(
-            protocol["ordered_map"].get("separation_penalty_per_mm", 0.0)
+        if separation_estimation_threshold is not None
+        else []
+    )
+    expected_adjacent_separations_mm = (
+        calibrate_adjacent_separations(
+            separation_calibration_results,
+            class_order,
         )
-        expected_adjacent_separations_mm = (
-            calibrate_adjacent_separations(
-                unstructured_raw_results,
-                class_order,
-            )
-            if separation_penalty_per_mm > 0.0
-            else None
-        )
+        if separation_estimation_threshold is not None
+        else None
+    )
+    threshold_rows: list[dict[str, Any]] = []
+    for threshold in calibration_thresholds:
         structured_raw_results = [
             session_prediction(
                 session,
@@ -682,6 +693,7 @@ def main() -> None:
                 "acceptance_threshold": float(threshold),
                 "coordinate_offsets_mm": coordinate_offsets_mm,
                 "expected_adjacent_separations_mm": expected_adjacent_separations_mm,
+                "separation_estimation_threshold": separation_estimation_threshold,
                 "coordinate_offset_sample_count_by_class": {
                     name: sum(
                         prediction["actor_status"] == "SUCCESS"
@@ -764,6 +776,9 @@ def main() -> None:
         "expected_adjacent_separations_mm": selected[
             "expected_adjacent_separations_mm"
         ],
+        "separation_estimation_threshold": selected[
+            "separation_estimation_threshold"
+        ],
         "minimum_top_event_score_margin": float(
             protocol["spatial_map"]["minimum_top_event_score_margin"]
         ),
@@ -825,6 +840,9 @@ def main() -> None:
         "coordinate_offsets_mm": bundle["coordinate_offsets_mm"],
         "expected_adjacent_separations_mm": bundle[
             "expected_adjacent_separations_mm"
+        ],
+        "separation_estimation_threshold": bundle[
+            "separation_estimation_threshold"
         ],
         "evaluation_session_ids": [
             item.session_id for item in evaluation_sessions
