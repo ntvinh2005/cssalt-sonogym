@@ -269,6 +269,30 @@ The L4-specific PASS does not override the seven-structure NO-GO. The next scien
 a separately approved frozen confirmation capture with new session-held-out starts; Stage 2
 has not started.
 
+That next capture is now complete and supersedes the preceding next-action sentence. Job
+51213110 ran four preregistered new `s0010` sessions under `anest-dept` with one NVIDIA L4,
+four CPUs, 30 GB requested RAM, and a 30-minute bound. Slurm reported `COMPLETED`, exit `0:0`,
+after 2:06. The four scans produced 844 fresh frames and the frozen actor emitted 28 / 28
+landmarks in 4 / 4 complete maps, with zero wrong stops and zero abstentions. Median
+localization error was 3.0 mm, p90 was 6.375000000000001 mm, and the maximum was exactly the
+inclusive 10.0 mm limit for L5 in session `cf7_01`.
+
+Actor output SHA-256
+`0d62f3c50007a14f1d3d54758e7d359eee4f3a8827ef10d844aa60348d4f5b` was written before the
+evaluator opened privileged annotations. Evaluation output SHA-256 is
+`6546cfe396cccebee1dd76e988b920db70cb4697a68ebcae8a54ae7bd5199a2a`. Peak sampled GPU
+memory was 5,009 MiB, peak sampled utilization was 56%, maximum resident memory was
+3,625,692 KiB, and the run produced 94,251,998 bytes. The result and report are:
+
+- experiments/unity_two_stage_transfer/stage1_group_a_confirmation_result.json
+- docs/research/sonogym_s0010_seven_landmark_confirmation.md
+
+Canonical evidence is under
+`/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a_confirmation/51213110/`.
+This establishes fixed-anatomy seven-landmark confirmation within the tested scan corridor. It
+does not establish patient-held-out generalization, Stage 2 best-view acquisition, or clinical
+MBB performance. Phase 2 has not started.
+
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
 by successful capture job 50908807.
 

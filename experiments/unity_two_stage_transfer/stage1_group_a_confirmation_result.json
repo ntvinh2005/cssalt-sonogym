@@ -1,0 +1,112 @@
+{
+  "schema": "sonogym-stage1-group-a-confirmation-result-v1",
+  "decision": "PASS",
+  "code_commit": "2a4b31e17455593a6fec79e97afd87e9d34b0aa1",
+  "patient": {
+    "patient_id": "s0010",
+    "patient_count": 1,
+    "anatomy_claim": "fixed_anatomy_only"
+  },
+  "protocols": {
+    "actor_id": "sonogym-stage1-group-a-confirmation-v1",
+    "actor_sha256": "d3723417bc56f39c7d99ffb39ac3df5d2541e2126f90fa728cd4cf0c787aa4f2",
+    "evaluation_id": "sonogym-stage1-group-a-confirmation-evaluation-v1",
+    "evaluation_sha256": "f4619d12c2c246af9a5a0d27ffa982f123682c835ef5cc8532ad0806c204791c"
+  },
+  "frozen_bundle": {
+    "development_job_id": 51209243,
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a_v7/51209243/results/stage1_group_a.joblib",
+    "sha256": "474c02174b7d8cd47ac448e2fab1d50da559514e3fb6aa62c2640f2b7f2933d4"
+  },
+  "job": {
+    "job_id": 51213110,
+    "account": "anest-dept",
+    "qos": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c0605a-s10",
+    "slurm_state": "COMPLETED",
+    "exit_code": "0:0",
+    "cpu_cores": 4,
+    "memory_requested_gb": 30,
+    "maximum_resident_memory_kib": 3625692,
+    "gpu_count": 1,
+    "gpu_model": "NVIDIA L4",
+    "gpu_memory_total_mib": 23034,
+    "gpu_memory_peak_mib": 5009,
+    "gpu_utilization_peak_percent": 56,
+    "driver_version": "580.178.04",
+    "start": "2026-11-13T15:35:31-05:00",
+    "end": "2026-11-13T15:37:37-05:00",
+    "elapsed_seconds": 126,
+    "run_size_bytes": 94251998
+  },
+  "software": {
+    "upstream_sonogym_commit": "e67be58334d1a5274f0913af36f56e4b0b7ffe5a",
+    "isaac_lab_commit": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e",
+    "isaac_sim": "4.5.0.0",
+    "python": "3.10.22",
+    "pytorch": "2.5.1+cu121",
+    "numpy": "1.26.4",
+    "scipy": "1.15.2"
+  },
+  "capture": {
+    "session_count": 4,
+    "frame_count": 844,
+    "expected_frames_per_session": 211,
+    "sessions": [
+      {"session_id": "cf7_00", "seed": 2026111400, "patient_x_index": 133.0, "angle_rad": 2.75, "frame_count": 211, "action_steps": 297, "capture_elapsed_seconds": 18.564},
+      {"session_id": "cf7_01", "seed": 2026111401, "patient_x_index": 137.0, "angle_rad": 2.85, "frame_count": 211, "action_steps": 278, "capture_elapsed_seconds": 11.357},
+      {"session_id": "cf7_02", "seed": 2026111402, "patient_x_index": 141.0, "angle_rad": 2.95, "frame_count": 211, "action_steps": 279, "capture_elapsed_seconds": 11.984},
+      {"session_id": "cf7_03", "seed": 2026111403, "patient_x_index": 143.0, "angle_rad": 2.75, "frame_count": 211, "action_steps": 259, "capture_elapsed_seconds": 11.199}
+    ]
+  },
+  "metrics": {
+    "complete_maps": 4,
+    "expected_complete_maps": 4,
+    "correct_events": 28,
+    "expected_events": 28,
+    "event_precision": 1.0,
+    "event_recall": 1.0,
+    "wrong_actor_stops": 0,
+    "abstentions": 0,
+    "median_localization_error_mm": 3.0,
+    "p90_localization_error_mm": 6.375000000000001,
+    "maximum_localization_error_mm": 10.0,
+    "per_class_median_error_mm": {
+      "sacrum": 3.75,
+      "S1": 2.5,
+      "L5": 5.75,
+      "L4": 2.0,
+      "L3": 2.0,
+      "L2": 3.75,
+      "L1": 2.0
+    }
+  },
+  "boundary_case": {
+    "session_id": "cf7_01",
+    "anatomy": "L5",
+    "localization_error_mm": 10.0,
+    "criterion": "localization_error_mm <= 10.0",
+    "interpretation": "passes_inclusively_with_zero_margin"
+  },
+  "information_boundary": {
+    "actor_result_written_and_hashed_before_evaluation": true,
+    "actor_uses_raw_labels": false,
+    "actor_uses_reference_coordinates": false,
+    "actor_result_sha256": "0d62f3c50007a14f1d3d54758e7d359eee4f3a8827ef10d844aa60348d4f5b",
+    "evaluation_result_sha256": "6546cfe396cccebee1dd76e988b920db70cb4697a68ebcae8a54ae7bd5199a2a"
+  },
+  "external_artifacts": {
+    "root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a_confirmation/51213110",
+    "actor_result": "results/actor_results.json",
+    "evaluation_result": "results/evaluation_report.json",
+    "gpu_telemetry": "metrics/gpu-telemetry.csv",
+    "slurm_metrics": "metrics/slurm.csv"
+  },
+  "limitations": {
+    "patient_generalization_established": false,
+    "stage2_established": false,
+    "clinical_mbb_validity_established": false,
+    "locked_test_set_reusable_as_unseen": false
+  }
+}
