@@ -1,0 +1,29 @@
+{
+  "schema": "sonogym-phase1-demo-manifest-v1",
+  "scientific_confirmation_decision": "FAIL",
+  "artifact_result": "PASS",
+  "job_id": 51196094,
+  "session_id": "cf_00",
+  "actor_coordinate_mm": -75.5,
+  "reference_coordinate_mm_evaluator_only": -83.36209568080575,
+  "localization_error_mm_evaluator_only": 7.862095680805751,
+  "video": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/video/sonogym-phase1-confirmation.mp4",
+    "sha256": "d411bd364a2e955d2bc48ad60678c7d7997be8a614ce8260523d346318956b34",
+    "bytes": 3852895,
+    "frame_count": 211,
+    "frames_per_second": 15.0,
+    "duration_seconds": 14.066666666666666,
+    "width": 1050,
+    "height": 600
+  },
+  "preview": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/video/sonogym-phase1-confirmation-preview.png",
+    "sha256": "02b1df5fe1a24120a88aea181cbaae21b676277fc51e84a8f1a198b2dcb479a2"
+  },
+  "review_zip": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/sonogym_phase1_demo_20261113.zip",
+    "sha256": "60886a38599ad44b374cc1ea0e4c97ab31475bfaa8e9ec93e9b3522d34ed74d5",
+    "bytes": 4322416
+  }
+}

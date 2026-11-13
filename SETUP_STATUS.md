@@ -1,8 +1,39 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_FAIL**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_CONFIRMATION_FAIL**
 
 Updated: 2026-11-13 (America/New_York)
+
+## Phase 5C Stage 1 confirmation outcome
+
+The s0010 L4 development result remains PASS, but independent confirmation is **FAIL** under
+the frozen four-session criterion. Job `51196094` completed four physical scans and produced
+three correct localizations plus one wrong stop at 10.362 mm error. The development-selected
+v2 interval-midpoint rule did not resolve the reliability gap: after the Home-tolerance fix,
+job `51197643` completed all four scans but produced two correct localizations and two
+abstentions. No score threshold, evaluator tolerance, checkpoint, or target reference was
+changed after either evaluation.
+
+The v2 engineering attempt `51197194` is preserved separately. It stopped before actor
+inference because the collector used a hard-coded 3 degree Home tolerance instead of the
+protocol's 5 degree limit. Commit `1f9302036e5a0df9f44040d2bcde97e56e5a5c65` corrected that
+protocol-compliance defect; it did not alter the scientific gate.
+
+An auditable engineering demo is available from preregistered v1 session `cf_00`, which
+localized L4 with 7.862 mm evaluator-only error. The 211-frame, 15 fps, 14.067 s MP4 uses the
+real clean SonoGym ultrasound observations and shows actor evidence separately from the
+evaluator-only reference. The artifact PASS does not override the four-session confirmation
+FAIL.
+
+- Detailed report: `docs/research/sonogym_s0010_stage1_confirmation.md`.
+- V1 run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/`.
+- V2 evaluated run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51197643/`.
+- Demo MP4: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/video/sonogym-phase1-confirmation.mp4`.
+- Review ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/sonogym_phase1_demo_20261113.zip`.
+
+The next scientific action is a new development cycle focused on start-dependent image-evidence
+support, followed by a new preregistered confirmation set. Phase 2 must not start from the
+current result.
 
 ## Phase 4 runtime-validation outcome
 
