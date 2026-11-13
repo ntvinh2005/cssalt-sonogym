@@ -1,0 +1,137 @@
+protocol_id: sonogym-unity-two-stage-stage1-group-a-v3
+phase: 5C
+status: DEVELOPMENT_ONLY
+amendment:
+  supersedes_protocol_id: sonogym-unity-two-stage-stage1-group-a-v2
+  prior_development_job_id: 51116088
+  prior_decision: FAIL
+  reason: >-
+    Independent per-class peak selection produced no complete seven-structure map.
+    This development revision selects one complete class-labelled path under the
+    declared anatomical order and calibrates the visible-event-to-centroid bias
+    separately for each class on calibration sessions.
+  changed_fields:
+    - ordered_map.selection_mode
+    - spatial_map.coordinate_calibration
+    - evaluation complete-map requirements
+  unchanged_design:
+    - capture and session splits
+    - patch features and ExtraTrees models
+    - actor information boundary
+    - 10 mm event tolerance
+purpose: >-
+  Test whether actor-visible s0010 ultrasound patches and executed Home-relative
+  motion can reconstruct one ordered sacrum, S1, and L1-L5 map per session. This
+  is fixed-anatomy development evidence, not patient-held-out validation.
+source:
+  cssalt_sonogym_base: 12d567149282be54164e620accfd298ba8726b73
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+capture:
+  job_id: 50908807
+  protocol_id: sonogym-unity-two-stage-g0-g1-v2
+  protocol_sha256: a08fefa87e8f4b0cfb54d1ab0194ebe4e78bcbb05bda68d5071c33f27cba4322
+  public_manifest_sha256: 38a5ff6844e6895a07a5d74d9ccbe27100fb5818dc0c51824964188e2ab0e14b
+  privileged_manifest_sha256: 3d6e53bc22360e281277862e190711f4865bff2666cc1701de1984d162cbf9a1
+  frame_count: 3376
+annotations:
+  path: experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json
+  sha256: 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3
+split_policy:
+  training: train_dev
+  threshold_and_offset_selection: calibration_dev
+  evaluation: untouched_audit
+  evaluation_status: DEVELOPMENT_REUSED_AFTER_PRIOR_INSPECTION
+  locked_test_claim: forbidden
+  adjacent_frame_random_split: forbidden
+  patient_held_out_claim: forbidden
+tracker:
+  x_margin_pixels: 18
+  y_min_fraction: 0.50
+  y_max_fraction: 0.96
+  maximum_path_step_pixels: 6
+  maximum_smoothed_path_jump_pixels: 4.0
+  path_smoothness_penalty: 0.014
+  minimum_mean_ridge_score: 0.18
+  maximum_hypotheses: 3
+  minimum_median_separation_pixels: 2.0
+  minimum_separated_column_fraction: 0.15
+patch:
+  width_pixels: 48
+  depth_pixels: 80
+  interface_offset_pixels: 34
+  feature_size_pixels: 16
+  low_quantile: 0.05
+  high_quantile: 0.95
+  column_stride_pixels: 8
+  pixel_resolution_mm: 0.5
+offline_labels:
+  minimum_group_a_fraction: 0.01
+  class_order: [sacrum, S1, L5, L4, L3, L2, L1]
+  raw_label_to_class: {25: 0, 26: 1, 27: 2, 28: 3, 29: 4, 30: 5, 31: 6}
+  inference_access: forbidden
+models:
+  primary_family: ExtraTreesClassifier
+  anatomy_family: ExtraTreesClassifier
+  n_estimators: 240
+  max_depth: 18
+  min_samples_leaf: 3
+  class_weight: balanced
+  n_jobs: 4
+  random_seed: 20261112
+spatial_map:
+  grid_step_mm: 0.5
+  minimum_event_separation_mm: 10.0
+  raw_peak_minimum_score: 0.20
+  calibration_acceptance_thresholds: [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
+  minimum_forward_frames: 2
+  minimum_reverse_frames: 2
+  score: min_primary_and_anatomy_class_probability
+  minimum_top_event_score_margin: 0.10
+  coordinate_calibration: per_class_midrange_minimax_offset
+ordered_map:
+  expected_class_order: [sacrum, S1, L5, L4, L3, L2, L1]
+  selection_mode: joint_ordered_path
+  path_score: sum_log_event_score
+  minimum_adjacent_separation_mm: 10.0
+  incomplete_or_misordered_map: ABSTAIN
+evaluation:
+  reference_coordinate_source: annotation_segmentation_centroid_home_relative_mm
+  event_match_tolerance_mm: 10.0
+  minimum_event_precision: 1.0
+  minimum_event_recall: 1.0
+  minimum_complete_map_session_rate: 1.0
+  maximum_median_localization_error_mm: 10.0
+  require_every_class_session_success_rate: 1.0
+  maximum_wrong_actor_stops: 0
+  reference_coordinates_mm:
+    sacrum: -161.02143207454634
+    S1: -136.62881495738247
+    L5: -112.2541873241324
+    L4: -83.36209568080575
+    L3: -51.71611401977894
+    L2: -20.52177494448823
+    L1: 11.429855715871255
+information_boundary:
+  actor_inputs:
+    - clean_ultrasound
+    - executed_home_relative_motion
+    - relative_angle
+    - declared_home_angle
+    - calibrated_pixel_geometry
+    - calibration_session_derived_per_class_coordinate_offsets
+  actor_forbidden:
+    - raw_labels
+    - segmentation
+    - patient_id
+    - vertebra_mesh_identity
+    - reference_coordinates
+    - goal_pose
+    - target_distance
+    - evaluator_score
+resource_bound:
+  account: anest-dept
+  cpu_cores: 4
+  memory_gb: 16
+  gpu_count: 0
+  walltime: "00:30:00"

@@ -83,6 +83,70 @@ class TargetEstimate:
     reason: str | None
 
 
+@dataclass(frozen=True)
+class OrderedEventPath:
+    events: tuple[LandmarkEvent, ...]
+    log_score: float
+    score_margin: float | None
+
+
+def select_ordered_event_path(
+    event_sets: list[list[LandmarkEvent]],
+    minimum_adjacent_separation_mm: float,
+) -> OrderedEventPath | None:
+    """Select the highest-scoring complete path under the declared anatomy order."""
+    if not math.isfinite(minimum_adjacent_separation_mm) or minimum_adjacent_separation_mm <= 0:
+        raise ValueError("minimum_adjacent_separation_mm must be finite and positive")
+    if not event_sets:
+        raise ValueError("event_sets must be nonempty")
+    accepted = [
+        sorted(
+            (event for event in events if event.accepted),
+            key=lambda event: event.coordinate_mm,
+        )
+        for events in event_sets
+    ]
+    if any(not events for events in accepted):
+        return None
+
+    # Retaining the best two partial paths per terminal event is sufficient for the
+    # final best-path margin because all later transitions depend only on that event.
+    states: list[list[tuple[tuple[LandmarkEvent, ...], float]]] = [
+        [((event,), math.log(event.score))] for event in accepted[0]
+    ]
+    for events in accepted[1:]:
+        next_states: list[list[tuple[tuple[LandmarkEvent, ...], float]]] = []
+        for event in events:
+            candidates = [
+                (path + (event,), score + math.log(event.score))
+                for terminal_states in states
+                for path, score in terminal_states
+                if event.coordinate_mm - path[-1].coordinate_mm
+                >= minimum_adjacent_separation_mm
+            ]
+            candidates.sort(
+                key=lambda item: (
+                    -item[1],
+                    tuple(event.coordinate_mm for event in item[0]),
+                )
+            )
+            next_states.append(candidates[:2])
+        states = next_states
+        if not any(states):
+            return None
+
+    complete = [item for terminal_states in states for item in terminal_states]
+    complete.sort(
+        key=lambda item: (
+            -item[1],
+            tuple(event.coordinate_mm for event in item[0]),
+        )
+    )
+    best_path, best_score = complete[0]
+    margin = best_score - complete[1][1] if len(complete) > 1 else None
+    return OrderedEventPath(best_path, float(best_score), margin)
+
+
 class SpatialEvidenceMap:
     """Aggregate per-frame image likelihoods on an explicit Home-relative grid."""
 

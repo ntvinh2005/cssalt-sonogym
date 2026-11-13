@@ -43,7 +43,10 @@ from train_stage1 import (  # noqa: E402
 from two_stage_navigation.contracts import ultrasound_sha256  # noqa: E402
 from two_stage_navigation.stage1_features import PatchSpec  # noqa: E402
 from two_stage_navigation.stage1_interfaces import InterfaceTrackerConfig  # noqa: E402
-from two_stage_navigation.stage1_map import SpatialMapConfig  # noqa: E402
+from two_stage_navigation.stage1_map import (  # noqa: E402
+    SpatialMapConfig,
+    select_ordered_event_path,
+)
 from two_stage_navigation.stage1_pipeline import (  # noqa: E402
     ActorPatchCandidate,
     annotate_group_a_patch_candidate,
@@ -242,7 +245,7 @@ def session_prediction(
     spatial_protocol: dict[str, Any],
     ordered_protocol: dict[str, Any],
     acceptance_threshold: float,
-    coordinate_offset_mm: float,
+    coordinate_offsets_mm: dict[str, float],
 ) -> dict[str, Any]:
     features = session.features
     primary = positive_probability(primary_model, features)
@@ -258,34 +261,93 @@ def session_prediction(
         minimum_forward_frames=int(spatial_protocol["minimum_forward_frames"]),
         minimum_reverse_frames=int(spatial_protocol["minimum_reverse_frames"]),
     )
-    predictions: list[dict[str, Any]] = []
+    class_events: list[list[Any]] = []
+    independent_inferences: list[Any] = []
     for class_index, name in enumerate(class_order):
         inference, events = reconstruct_landmark(
             session.candidates,
             primary,
             anatomy[:, class_columns[class_index]],
             map_config=config,
-            coordinate_offset_mm=coordinate_offset_mm,
+            coordinate_offset_mm=0.0,
             minimum_top_score_margin=float(
                 spatial_protocol["minimum_top_event_score_margin"]
             ),
         )
+        independent_inferences.append(inference)
+        class_events.append(events)
+
+    selection_mode = str(
+        ordered_protocol.get("selection_mode", "independent_top_event")
+    )
+    selected_events: list[Any | None]
+    path_log_score = None
+    path_score_margin = None
+    if selection_mode == "independent_top_event":
+        selected_events = []
+        for inference, events in zip(independent_inferences, class_events):
+            if inference.status != "SUCCESS" or inference.coordinate_mm is None:
+                selected_events.append(None)
+                continue
+            selected_events.append(
+                min(
+                    (event for event in events if event.accepted),
+                    key=lambda event: abs(
+                        event.coordinate_mm - float(inference.coordinate_mm)
+                    ),
+                )
+            )
+    elif selection_mode == "joint_ordered_path":
+        path = select_ordered_event_path(
+            class_events,
+            float(ordered_protocol["minimum_adjacent_separation_mm"]),
+        )
+        selected_events = (
+            list(path.events) if path is not None else [None] * len(class_order)
+        )
+        if path is not None:
+            path_log_score = path.log_score
+            path_score_margin = path.score_margin
+    else:
+        raise RuntimeError(f"unsupported ordered-map selection mode: {selection_mode}")
+
+    predictions: list[dict[str, Any]] = []
+    for name, selected, events in zip(class_order, selected_events, class_events):
+        offset = float(coordinate_offsets_mm[name])
+        coordinate = (
+            float(selected.coordinate_mm) + offset if selected is not None else None
+        )
+        uncertainty = (
+            [
+                float(selected.support_interval_mm[0]) + offset,
+                float(selected.support_interval_mm[1]) + offset,
+            ]
+            if selected is not None
+            else None
+        )
         reference = float(reference_coordinates[name])
         error = (
-            abs(float(inference.coordinate_mm) - reference)
-            if inference.coordinate_mm is not None
+            abs(float(coordinate) - reference)
+            if coordinate is not None
             else None
         )
         predictions.append(
             {
                 "anatomy": name,
-                "actor_status": inference.status,
-                "actor_coordinate_mm": inference.coordinate_mm,
-                "actor_uncertainty_interval_mm": inference.uncertainty_interval_mm,
-                "actor_reason": inference.reason,
+                "actor_status": "SUCCESS" if selected is not None else "ABSTAIN",
+                "actor_coordinate_mm": coordinate,
+                "actor_uncertainty_interval_mm": uncertainty,
+                "actor_reason": None if selected is not None else "NO_COMPLETE_ORDERED_PATH",
+                "coordinate_offset_mm": offset,
                 "reference_coordinate_mm_evaluation_only": reference,
                 "localization_error_mm_evaluation_only": error,
                 "accepted_event_count": sum(event.accepted for event in events),
+                "selected_event_coordinate_mm": (
+                    float(selected.coordinate_mm) if selected is not None else None
+                ),
+                "selected_event_score": (
+                    float(selected.score) if selected is not None else None
+                ),
                 "events": [asdict(event) for event in events],
             }
         )
@@ -307,8 +369,42 @@ def session_prediction(
         "map_actor_status": "SUCCESS" if ordered else "ABSTAIN",
         "map_actor_reason": None if ordered else "INCOMPLETE_OR_MISORDERED_MAP",
         "ordered_map": bool(ordered),
+        "ordered_path_log_score": path_log_score,
+        "ordered_path_score_margin": path_score_margin,
         "predictions": predictions,
     }
+
+
+def calibrate_coordinate_offsets(
+    results: list[dict[str, Any]],
+    class_order: list[str],
+    method: str,
+) -> dict[str, float]:
+    samples = {
+        name: [
+            float(prediction["reference_coordinate_mm_evaluation_only"])
+            - float(prediction["actor_coordinate_mm"])
+            for result in results
+            for prediction in result["predictions"]
+            if prediction["anatomy"] == name
+            and prediction["actor_status"] == "SUCCESS"
+            and prediction["actor_coordinate_mm"] is not None
+        ]
+        for name in class_order
+    }
+    if any(not values for values in samples.values()):
+        return {name: 0.0 for name in class_order}
+    if method == "one_global_median_offset_across_all_classes":
+        offset = float(
+            np.median([value for values in samples.values() for value in values])
+        )
+        return {name: offset for name in class_order}
+    if method == "per_class_midrange_minimax_offset":
+        return {
+            name: 0.5 * (float(min(values)) + float(max(values)))
+            for name, values in samples.items()
+        }
+    raise RuntimeError(f"unsupported coordinate calibration: {method}")
 
 
 def evaluate_results(
@@ -403,7 +499,10 @@ def main() -> None:
     started = time.monotonic()
     protocol_hash = validate_protocol_seal(args.stage1_protocol)
     protocol = yaml.safe_load(args.stage1_protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-unity-two-stage-stage1-group-a-v2":
+    if protocol["protocol_id"] not in {
+        "sonogym-unity-two-stage-stage1-group-a-v2",
+        "sonogym-unity-two-stage-stage1-group-a-v3",
+    }:
         raise RuntimeError("unexpected Group A Stage 1 protocol identity")
     capture_summary = validate_capture(protocol, args.capture_root)
     reference_coordinates = validate_annotations(protocol)
@@ -460,6 +559,7 @@ def main() -> None:
         ),
     }
     tolerance = float(protocol["evaluation"]["event_match_tolerance_mm"])
+    zero_offsets = {name: 0.0 for name in class_order}
     threshold_rows: list[dict[str, Any]] = []
     for threshold in protocol["spatial_map"]["calibration_acceptance_thresholds"]:
         raw_results = [
@@ -472,20 +572,14 @@ def main() -> None:
                 protocol["spatial_map"],
                 protocol["ordered_map"],
                 float(threshold),
-                0.0,
+                zero_offsets,
             )
             for session in calibration
         ]
-        offset_samples = [
-            float(prediction["reference_coordinate_mm_evaluation_only"])
-            - float(prediction["actor_coordinate_mm"])
-            for result in raw_results
-            for prediction in result["predictions"]
-            if prediction["actor_status"] == "SUCCESS"
-            and prediction["actor_coordinate_mm"] is not None
-        ]
-        coordinate_offset_mm = (
-            float(np.median(offset_samples)) if offset_samples else 0.0
+        coordinate_offsets_mm = calibrate_coordinate_offsets(
+            raw_results,
+            class_order,
+            str(protocol["spatial_map"]["coordinate_calibration"]),
         )
         results = [
             session_prediction(
@@ -497,7 +591,7 @@ def main() -> None:
                 protocol["spatial_map"],
                 protocol["ordered_map"],
                 float(threshold),
-                coordinate_offset_mm,
+                coordinate_offsets_mm,
             )
             for session in calibration
         ]
@@ -505,8 +599,16 @@ def main() -> None:
         threshold_rows.append(
             {
                 "acceptance_threshold": float(threshold),
-                "coordinate_offset_mm": coordinate_offset_mm,
-                "coordinate_offset_sample_count": len(offset_samples),
+                "coordinate_offsets_mm": coordinate_offsets_mm,
+                "coordinate_offset_sample_count_by_class": {
+                    name: sum(
+                        prediction["actor_status"] == "SUCCESS"
+                        for result in raw_results
+                        for prediction in result["predictions"]
+                        if prediction["anatomy"] == name
+                    )
+                    for name in class_order
+                },
                 "gate_pass": gate_pass(metrics, protocol),
                 "metrics": metrics,
                 "results": results,
@@ -555,7 +657,7 @@ def main() -> None:
         raise SystemExit(3)
 
     bundle = {
-        "schema": "sonogym-stage1-group-a-bundle-v1",
+        "schema": "sonogym-stage1-group-a-bundle-v2",
         "protocol_id": protocol["protocol_id"],
         "protocol_sha256": protocol_hash,
         "capture_job_id": int(protocol["capture"]["job_id"]),
@@ -567,7 +669,7 @@ def main() -> None:
         "column_stride_pixels": int(patch_values["column_stride_pixels"]),
         "pixel_resolution_mm": float(patch_values["pixel_resolution_mm"]),
         "acceptance_threshold": float(selected["acceptance_threshold"]),
-        "coordinate_offset_mm": float(selected["coordinate_offset_mm"]),
+        "coordinate_offsets_mm": selected["coordinate_offsets_mm"],
         "minimum_top_event_score_margin": float(
             protocol["spatial_map"]["minimum_top_event_score_margin"]
         ),
@@ -605,7 +707,10 @@ def main() -> None:
             protocol["spatial_map"],
             protocol["ordered_map"],
             float(bundle["acceptance_threshold"]),
-            float(bundle["coordinate_offset_mm"]),
+            {
+                name: float(bundle["coordinate_offsets_mm"][name])
+                for name in class_order
+            },
         )
         for session in evaluation_sessions
     ]
@@ -614,7 +719,7 @@ def main() -> None:
     )
     evaluation_gate = gate_pass(evaluation_metrics, protocol)
     final_report = {
-        "schema": "sonogym-stage1-group-a-report-v1",
+        "schema": "sonogym-stage1-group-a-report-v2",
         "protocol_id": protocol["protocol_id"],
         "protocol_sha256": protocol_hash,
         "capture_job_id": int(protocol["capture"]["job_id"]),
@@ -622,7 +727,7 @@ def main() -> None:
         "evaluation_status": protocol["split_policy"]["evaluation_status"],
         "locked_test_claim": False,
         "acceptance_threshold": bundle["acceptance_threshold"],
-        "coordinate_offset_mm": bundle["coordinate_offset_mm"],
+        "coordinate_offsets_mm": bundle["coordinate_offsets_mm"],
         "evaluation_session_ids": [
             item.session_id for item in evaluation_sessions
         ],

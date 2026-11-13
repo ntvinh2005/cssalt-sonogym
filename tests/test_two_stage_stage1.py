@@ -29,8 +29,10 @@ from two_stage_navigation.stage1_interfaces import (  # noqa: E402
 )
 from two_stage_navigation.stage1_map import (  # noqa: E402
     EvidenceObservation,
+    LandmarkEvent,
     SpatialEvidenceMap,
     SpatialMapConfig,
+    select_ordered_event_path,
 )
 from two_stage_navigation.stage1_pipeline import (  # noqa: E402
     ActorPatchCandidate,
@@ -170,6 +172,55 @@ class SpatialMapTests(unittest.TestCase):
         record = next(item for item in spatial_map.records() if item.coordinate_mm == 0.0)
         self.assertEqual(record.forward_count, 1)
         self.assertAlmostEqual(record.score_q75, 0.9)
+
+    def test_complete_order_selects_joint_path_over_local_maxima(self) -> None:
+        def event(coordinate: float, score: float) -> LandmarkEvent:
+            return LandmarkEvent(
+                coordinate_mm=coordinate,
+                score=score,
+                forward_count=2,
+                reverse_count=2,
+                support_interval_mm=(coordinate, coordinate),
+                accepted=True,
+                edge_clipped=False,
+                rejection_reasons=(),
+            )
+
+        path = select_ordered_event_path(
+            [
+                [event(-30.0, 0.8)],
+                [event(-25.0, 0.95), event(-15.0, 0.7)],
+                [event(0.0, 0.8)],
+            ],
+            10.0,
+        )
+        self.assertIsNotNone(path)
+        assert path is not None
+        self.assertEqual(
+            [item.coordinate_mm for item in path.events],
+            [-30.0, -15.0, 0.0],
+        )
+
+    def test_missing_class_prevents_complete_ordered_path(self) -> None:
+        path = select_ordered_event_path(
+            [
+                [
+                    LandmarkEvent(
+                        -20.0,
+                        0.8,
+                        2,
+                        2,
+                        (-20.0, -20.0),
+                        True,
+                        False,
+                        (),
+                    )
+                ],
+                [],
+            ],
+            10.0,
+        )
+        self.assertIsNone(path)
 
 
 class Stage1PipelineTests(unittest.TestCase):
