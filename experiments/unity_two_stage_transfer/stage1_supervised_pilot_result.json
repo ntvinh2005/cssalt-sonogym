@@ -1,0 +1,157 @@
+{
+  "artifacts": {
+    "checkpoint_bytes": 71695094,
+    "checkpoint_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_supervised_pilot/51192890/results/stage1_l4_development.joblib",
+    "checkpoint_sha256": "bc6df0a1d9e520ac8340789fa751f35e63e0cdcfe4072c130bd70749f22ceb79",
+    "checkpoint_deployment_authorized": false,
+    "raw_report_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_supervised_pilot/51192890/results/pilot_report.json",
+    "raw_report_sha256": "ffb8c5a0eb8ed9192c971cb26727f317e643a8acb88b0dbe1c02a555703f7e12"
+  },
+  "classification": {
+    "anatomical_level_development": {
+      "image_only": {
+        "accuracy": 0.8756873057614153,
+        "macro_precision": 0.854726384119912,
+        "macro_recall": 0.8436211976118309
+      },
+      "image_plus_position_history": {
+        "accuracy": 0.918120965814009,
+        "macro_precision": 0.910480638687584,
+        "macro_recall": 0.9020318608674135
+      },
+      "position_history_only": {
+        "accuracy": 0.7290222328472388,
+        "macro_precision": 0.7671510249314198,
+        "macro_recall": 0.8099123664099527
+      },
+      "shuffled_image": {
+        "accuracy": 0.17296198900310783,
+        "macro_precision": 0.14536945699512008,
+        "macro_recall": 0.14703589574812487
+      },
+      "shuffled_image_plus_position_history": {
+        "accuracy": 0.23332536457088215,
+        "macro_precision": 0.20563917764846135,
+        "macro_recall": 0.21009445700265242
+      }
+    },
+    "control_differences": {
+      "image_only_minus_shuffled_macro_recall": 0.696585301863706,
+      "image_plus_position_minus_position_macro_recall": 0.09211949445746082,
+      "meaningful_increment_beyond_position": true
+    },
+    "difficult_negative_diagnostics": {
+      "L3_patches_predicted_as_L4": 63,
+      "L3_support": 1163,
+      "L5_patches_predicted_as_L4": 27,
+      "L5_support": 1190,
+      "L4_precision": 0.8660714285714286,
+      "L4_recall": 0.8403465346534653,
+      "L4_support": 808
+    },
+    "image_evidence_gate": "PASS",
+    "shared_structure_development": {
+      "image_only": {
+        "accuracy": 0.9588896697118763,
+        "false_negatives": 387,
+        "false_positives": 81,
+        "precision": 0.9899503722084367,
+        "recall": 0.9537413339708344
+      },
+      "position_history_only": {
+        "accuracy": 0.6944834855938159,
+        "false_negatives": 2997,
+        "false_positives": 481,
+        "precision": 0.9177777777777778,
+        "recall": 0.6417642840066937
+      },
+      "shuffled_image": {
+        "accuracy": 0.6298313422347154,
+        "false_negatives": 2260,
+        "false_positives": 1954,
+        "precision": 0.7575682382133995,
+        "recall": 0.7298589529046139
+      }
+    }
+  },
+  "data": {
+    "ambiguous_positive_patch_count": 2,
+    "audited_frame_count": 3376,
+    "audited_session_count": 16,
+    "development_session_count": 4,
+    "development_unique_anatomy_patch_count": 8366,
+    "maximum_odometry_angle_reconstruction_error_rad": 0.0,
+    "maximum_odometry_position_reconstruction_error_mm": 0.0,
+    "modeled_candidate_patch_count": 33945,
+    "modeled_session_count": 12,
+    "patient_count": 1,
+    "patient_id": "s0010",
+    "training_session_count": 8,
+    "training_unique_anatomy_patch_count": 16645,
+    "unique_frame_hash_count": 3376,
+    "unused_session_count": 4
+  },
+  "decision": "PASS_DEVELOPMENT_ONLY",
+  "job": {
+    "account": "anest-dept",
+    "allocated_cpus": 4,
+    "application_exit_code": 0,
+    "elapsed_seconds_application": 175.659,
+    "elapsed_seconds_slurm": 184,
+    "end": "2026-11-13T12:02:50-05:00",
+    "gpu_count": 0,
+    "job_id": 51192890,
+    "maximum_resident_set_kib_time": 1117384,
+    "numeric_results_match_predecessor_job": true,
+    "output_bytes": 72034539,
+    "predecessor_job_id": 51192265,
+    "requested_memory_gb": 16,
+    "slurm_batch_max_rss_kb": 351576,
+    "start": "2026-11-13T11:59:46-05:00",
+    "state": "COMPLETED",
+    "walltime_limit": "00:30:00"
+  },
+  "limitations": [
+    "All model results use one fixed anatomy, s0010.",
+    "The 16 capture sessions were previously inspected and are development evidence, not a locked test.",
+    "Offline raw-label overlap supplies patch labels but does not prove unique vertebral acoustic morphology.",
+    "The position-only control shares the image-derived candidate extractor but receives no intensity or gradient features.",
+    "The spatial threshold was selected on the same four development sessions reported here.",
+    "The checkpoint is not authorized for deployment or Phase 2."
+  ],
+  "protocol": {
+    "capture_job_id": 50908807,
+    "code_commit": "91886a49f3099f8c23874507041a34c40b22fe4d",
+    "protocol_id": "sonogym-stage1-supervised-anatomical-discovery-v1",
+    "protocol_sha256": "4f0b7df56d58b791b938b426144ae74c99c0d49e1ca9ee7f2a544898749474a7"
+  },
+  "schema": "sonogym-stage1-supervised-pilot-result-v1",
+  "spatial_l4_development": {
+    "abstention_count": 0,
+    "coordinate_calibration_applied": false,
+    "correct_count": 4,
+    "median_forward_reverse_peak_difference_mm": 3.5,
+    "median_localization_error_mm": 6.362095680805751,
+    "p90_localization_error_mm": 6.712095680805751,
+    "precision": 1.0,
+    "recall": 1.0,
+    "selected_acceptance_threshold": 0.5,
+    "session_coordinates_mm": {
+      "cd_00": -77.0,
+      "cd_01": -77.0,
+      "cd_02": -76.5,
+      "cd_03": -77.5
+    },
+    "status": "PASS",
+    "wrong_stop_count": 0
+  },
+  "timing_seconds": {
+    "anatomical_level_development_inference": 2.155126,
+    "anatomical_level_model_fit": 9.828326,
+    "checkpoint_serialization": 3.709921,
+    "data_audit_and_feature_extraction": 137.880762,
+    "shared_development_inference": 0.917527,
+    "shared_model_fit": 12.108817,
+    "spatial_development_inference": 8.629153
+  }
+}

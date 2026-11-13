@@ -165,8 +165,28 @@ Phase 5B training is authorized by the Phase 5A result.
 ## Phase 5C current Stage 1 status
 
 G0/G1 capture job 50908807 completed 16 sessions and 3,376 frames. The fixed-anatomy L4
-pilot passed in CPU job 50920450; this did not establish reconstruction of every major
-lumbar/sacral structure.
+supervised discovery pilot now has a canonical development PASS in CPU job 51192890. The job
+used anest-dept, four CPUs, 16 GB requested RAM, zero GPUs, and completed in 3:04 with exit 0.
+Image-only seven-level macro recall was 0.844 versus 0.147 after within-session image shuffling;
+image plus position/history exceeded position/history-only macro recall by 0.092. Bidirectional
+image-derived evidence localized L4 in 4/4 development sessions with median 6.36 mm error, zero
+wrong stops, and median 3.5 mm forward/reverse peak difference.
+
+This is fixed-anatomy, prior-inspected development evidence. The acceptance threshold was
+selected on the same four development sessions, so independent confirmation and patient
+generalization remain unestablished. The checkpoint is marked non-deployment and Phase 2 has
+not started. The concise result and report are:
+
+- experiments/unity_two_stage_transfer/stage1_supervised_pilot_result.json
+- docs/research/sonogym_s0010_stage1_supervised_pilot.md
+
+Canonical external evidence is under
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_supervised_pilot/51192890/.
+The development checkpoint SHA-256 is
+bc6df0a1d9e520ac8340789fa751f35e63e0cdcfe4072c130bd70749f22ceb79.
+Application timing was 175.659 seconds, maximum measured RSS was 1,117,384 KiB, and the output
+directory grew by 72,034,539 bytes. Predecessor job 51192265 is preserved; its scientific
+numbers are identical, while job 51192890 adds stage timing and a compact checkpoint.
 
 The frozen Group A development job 51116088 used anest-dept, four CPUs, 16 GB requested
 RAM, zero GPUs, and completed in 4:37. It failed the development gate: no threshold produced
@@ -188,7 +208,9 @@ The 24,564,576-byte ZIP SHA-256 is
 2cab0d5ad220e4d5685e4f8c9cda94d11cdd5e1fa4d2fbd4583a1fb6cd290083.
 Its 37 PNG files decode successfully, all internal SHA-256 checks pass, and `unzip -t` reports
 no errors. The prior v4 archive is retained as superseded review history.
-Stage 2 has not started.
+The L4-specific PASS does not override the seven-structure NO-GO. The next scientific action is
+a separately approved frozen confirmation capture with new session-held-out starts; Stage 2
+has not started.
 
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
 by successful capture job 50908807.
