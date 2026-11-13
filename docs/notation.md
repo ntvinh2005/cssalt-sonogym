@@ -44,6 +44,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It scores localization without exposing the reference coordinate to actor inference.
 - **Source:** experiments/unity_two_stage_transfer/stage1_supervised_pilot_protocol.yaml, approved by user, 2026-11-13.
 
+### Phase 1 confirmation
+- **Kind:** method
+- **Definition:** Four preregistered physical forward/reverse SonoGym scans from new session starts, evaluated with the frozen Stage 1 checkpoint, spatial threshold, and actor inputs; actor output is written and hashed before evaluator-only L4 reference data are opened.
+- **Intuition:** It tests the selected s0010 L4 method on new acquisition sessions without further fitting or threshold selection.
+- **Source:** approved by user, 2026-11-13.
+
+### Phase 1 demo
+- **Kind:** object
+- **Definition:** A short visualization generated from one preregistered Phase 1 confirmation session, showing real ultrasound observations, executed Home-relative scan progress, accumulated actor evidence, the frozen actor result, and an explicitly separated evaluator-only comparison.
+- **Intuition:** It makes the completed Phase 1 scan and inference auditable without creating a separate scientific run.
+- **Source:** approved by user, 2026-11-13.
+
 ### Group A annotation
 - **Kind:** object
 - **Definition:** A privileged, geometry-supported annotation for sacrum, S1, or L1--L5 that is required to supervise or evaluate reproduction of Unity Stage 1 and Unity Stage 2 in patient s0010.

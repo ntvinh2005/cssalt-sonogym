@@ -188,6 +188,15 @@ Application timing was 175.659 seconds, maximum measured RSS was 1,117,384 KiB, 
 directory grew by 72,034,539 bytes. Predecessor job 51192265 is preserved; its scientific
 numbers are identical, while job 51192890 adds stage timing and a compact checkpoint.
 
+The user approved a four-session Phase 1 confirmation and short demo on 2026-11-13. The actor
+protocol SHA-256 is 965e5cfefd09eace010841f9f720485e48967484ee8df508af48aebfaa5bcce8;
+the separately sealed evaluator protocol SHA-256 is
+b7fdb067a2b90ac2ae3bcfb5e62c78a62c046b593cd2ee3b9bee6ef7eeafa6cd. The selected checkpoint,
+0.50 spatial threshold, four starts, four-session success requirement, and 10 mm localization
+tolerance are frozen before GPU capture. The approved bound is one L4, four CPUs, 30 GB, and
+15 minutes on anest-dept. Actor output must be written and hashed before evaluator-only L4 data
+are opened.
+
 The frozen Group A development job 51116088 used anest-dept, four CPUs, 16 GB requested
 RAM, zero GPUs, and completed in 4:37. It failed the development gate: no threshold produced
 a complete seven-structure map, so the reused evaluation split remained unopened and no actor

@@ -1,0 +1,35 @@
+protocol_id: sonogym-stage1-l4-confirmation-evaluation-v1
+status: PRE_GPU_FROZEN
+actor_protocol:
+  path: experiments/unity_two_stage_transfer/stage1_confirmation_actor_protocol.yaml
+  sha256: 965e5cfefd09eace010841f9f720485e48967484ee8df508af48aebfaa5bcce8
+actor_output_policy:
+  write_before_evaluation: true
+  sha256_required: true
+  modification_after_hash: forbidden
+expected_session_ids: [cf_00, cf_01, cf_02, cf_03]
+privileged_evaluation:
+  patient_id: s0010
+  annotation_path: experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json
+  annotation_sha256: 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3
+  anatomy_level: L4
+  raw_label: 28
+  reference_coordinate_home_relative_mm: -83.36209568080575
+  capture_raw_labels_may_be_read_only_after_actor_hash: true
+criteria:
+  localization_tolerance_mm: 10.0
+  required_correct_sessions: 4
+  maximum_wrong_stops: 0
+  maximum_abstentions: 0
+  maximum_median_localization_error_mm: 10.0
+  maximum_median_forward_reverse_peak_difference_mm: 10.0
+  required_complete_capture_sessions: 4
+claims:
+  permits_if_passed:
+    - fixed_anatomy_s0010_phase1_demo
+    - new_session_confirmation_within_tested_scan_corridor
+  forbidden:
+    - patient_generalization
+    - complete_seven_landmark_reconstruction
+    - phase2_success
+    - clinical_mbb_validity
