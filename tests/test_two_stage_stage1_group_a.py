@@ -72,8 +72,30 @@ class GroupAEvaluationTests(unittest.TestCase):
             "joint_ordered_path",
         )
         self.assertEqual(
+            specification["spatial_map"].get(
+                "passing_threshold_tie_break", "highest"
+            ),
+            "highest",
+        )
+        self.assertEqual(
             specification["evaluation"]["minimum_complete_map_session_rate"],
             1.0,
+        )
+
+    def test_v4_protocol_uses_lowest_passing_threshold_tie_break(self) -> None:
+        path = (
+            REPOSITORY_ROOT
+            / "experiments"
+            / "unity_two_stage_transfer"
+            / "stage1_group_a_protocol_v4.yaml"
+        )
+        expected = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        observed = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.assertEqual(observed, expected)
+        specification = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            specification["spatial_map"]["passing_threshold_tie_break"],
+            "lowest",
         )
 
     def test_complete_ordered_maps_pass(self) -> None:

@@ -502,6 +502,8 @@ def main() -> None:
     if protocol["protocol_id"] not in {
         "sonogym-unity-two-stage-stage1-group-a-v2",
         "sonogym-unity-two-stage-stage1-group-a-v3",
+        "sonogym-unity-two-stage-stage1-group-a-v4",
+        "sonogym-unity-two-stage-stage1-group-a-v4",
     }:
         raise RuntimeError("unexpected Group A Stage 1 protocol identity")
     capture_summary = validate_capture(protocol, args.capture_root)
@@ -615,6 +617,11 @@ def main() -> None:
             }
         )
     passing = [item for item in threshold_rows if item["gate_pass"]]
+    threshold_tie_break = str(
+        protocol["spatial_map"].get("passing_threshold_tie_break", "highest")
+    )
+    if threshold_tie_break not in {"highest", "lowest"}:
+        raise RuntimeError("passing_threshold_tie_break must be highest or lowest")
     selected = max(
         passing if passing else threshold_rows,
         key=lambda item: (
@@ -626,7 +633,11 @@ def main() -> None:
                 if item["metrics"]["median_localization_error_mm"] is not None
                 else math.inf
             ),
-            item["acceptance_threshold"],
+            (
+                item["acceptance_threshold"]
+                if threshold_tie_break == "highest"
+                else -item["acceptance_threshold"]
+            ),
         ),
     )
     args.output_dir.mkdir(parents=True, exist_ok=True)
