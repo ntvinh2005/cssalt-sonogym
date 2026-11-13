@@ -98,6 +98,32 @@ class GroupAEvaluationTests(unittest.TestCase):
             "lowest",
         )
 
+    def test_v5_protocol_uses_event_support_and_anatomical_end_anchors(self) -> None:
+        path = (
+            REPOSITORY_ROOT
+            / "experiments"
+            / "unity_two_stage_transfer"
+            / "stage1_group_a_protocol_v5.yaml"
+        )
+        expected = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        observed = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.assertEqual(observed, expected)
+        specification = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            specification["spatial_map"]["direction_support_radius_mm"],
+            5.0,
+        )
+        self.assertTrue(
+            specification["ordered_map"][
+                "first_event_must_be_minimum_coordinate"
+            ]
+        )
+        self.assertTrue(
+            specification["ordered_map"][
+                "last_event_must_be_maximum_coordinate"
+            ]
+        )
+
     def test_complete_ordered_maps_pass(self) -> None:
         results = [successful_session(f"session_{index}") for index in range(4)]
         metrics = evaluate_results(results, CLASS_ORDER, 10.0)

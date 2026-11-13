@@ -39,6 +39,7 @@ class SpatialMapConfig:
     acceptance_score: float
     minimum_forward_frames: int
     minimum_reverse_frames: int
+    direction_support_radius_mm: float = 0.0
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.grid_step_mm) or self.grid_step_mm <= 0:
@@ -49,6 +50,11 @@ class SpatialMapConfig:
             raise ValueError("invalid score thresholds")
         if min(self.minimum_forward_frames, self.minimum_reverse_frames) < 1:
             raise ValueError("direction support must be positive")
+        if (
+            not math.isfinite(self.direction_support_radius_mm)
+            or self.direction_support_radius_mm < 0.0
+        ):
+            raise ValueError("direction_support_radius_mm must be finite and nonnegative")
 
 
 @dataclass(frozen=True)
@@ -93,6 +99,9 @@ class OrderedEventPath:
 def select_ordered_event_path(
     event_sets: list[list[LandmarkEvent]],
     minimum_adjacent_separation_mm: float,
+    *,
+    first_event_must_be_minimum_coordinate: bool = False,
+    last_event_must_be_maximum_coordinate: bool = False,
 ) -> OrderedEventPath | None:
     """Select the highest-scoring complete path under the declared anatomy order."""
     if not math.isfinite(minimum_adjacent_separation_mm) or minimum_adjacent_separation_mm <= 0:
@@ -108,6 +117,10 @@ def select_ordered_event_path(
     ]
     if any(not events for events in accepted):
         return None
+    if first_event_must_be_minimum_coordinate:
+        accepted[0] = accepted[0][:1]
+    if last_event_must_be_maximum_coordinate:
+        accepted[-1] = accepted[-1][-1:]
 
     # Retaining the best two partial paths per terminal event is sufficient for the
     # final best-path margin because all later transitions depend only on that event.
@@ -226,12 +239,42 @@ class SpatialEvidenceMap:
         events: list[LandmarkEvent] = []
         for index in selected:
             record = records[index]
+            if self.config.direction_support_radius_mm > 0.0:
+                support_minimum = (
+                    record.coordinate_mm - self.config.direction_support_radius_mm
+                )
+                support_maximum = (
+                    record.coordinate_mm + self.config.direction_support_radius_mm
+                )
+                forward_count = len(
+                    {
+                        evidence.frame_sequence
+                        for evidence in self._evidence
+                        if evidence.direction == "FORWARD"
+                        and support_minimum
+                        <= evidence.coordinate_mm
+                        <= support_maximum
+                    }
+                )
+                reverse_count = len(
+                    {
+                        evidence.frame_sequence
+                        for evidence in self._evidence
+                        if evidence.direction == "REVERSE"
+                        and support_minimum
+                        <= evidence.coordinate_mm
+                        <= support_maximum
+                    }
+                )
+            else:
+                forward_count = record.forward_count
+                reverse_count = record.reverse_count
             reasons: list[str] = []
             if record.score_q75 < self.config.acceptance_score:
                 reasons.append("SCORE_BELOW_ACCEPTANCE")
-            if record.forward_count < self.config.minimum_forward_frames:
+            if forward_count < self.config.minimum_forward_frames:
                 reasons.append("INSUFFICIENT_FORWARD_SUPPORT")
-            if record.reverse_count < self.config.minimum_reverse_frames:
+            if reverse_count < self.config.minimum_reverse_frames:
                 reasons.append("INSUFFICIENT_REVERSE_SUPPORT")
             support_level = max(self.config.raw_peak_minimum_score, 0.8 * record.score_q75)
             left = index
@@ -247,8 +290,8 @@ class SpatialEvidenceMap:
                 LandmarkEvent(
                     coordinate_mm=record.coordinate_mm,
                     score=record.score_q75,
-                    forward_count=record.forward_count,
-                    reverse_count=record.reverse_count,
+                    forward_count=forward_count,
+                    reverse_count=reverse_count,
                     support_interval_mm=(records[left].coordinate_mm, records[right].coordinate_mm),
                     accepted=not reasons,
                     edge_clipped=edge_clipped,

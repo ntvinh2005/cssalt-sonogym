@@ -222,6 +222,69 @@ class SpatialMapTests(unittest.TestCase):
         )
         self.assertIsNone(path)
 
+    def test_ordered_path_can_require_anatomical_end_anchors(self) -> None:
+        def event(coordinate: float, score: float) -> LandmarkEvent:
+            return LandmarkEvent(
+                coordinate,
+                score,
+                2,
+                2,
+                (coordinate, coordinate),
+                True,
+                False,
+                (),
+            )
+
+        path = select_ordered_event_path(
+            [
+                [event(-40.0, 0.7), event(-30.0, 0.95)],
+                [event(-15.0, 0.8)],
+                [event(0.0, 0.95), event(10.0, 0.7)],
+            ],
+            10.0,
+            first_event_must_be_minimum_coordinate=True,
+            last_event_must_be_maximum_coordinate=True,
+        )
+        self.assertIsNotNone(path)
+        assert path is not None
+        self.assertEqual(
+            [item.coordinate_mm for item in path.events],
+            [-40.0, -15.0, 10.0],
+        )
+
+    def test_direction_support_radius_combines_neighboring_scan_bins(self) -> None:
+        config = map_config()
+        spatial_map = SpatialEvidenceMap(
+            -10.0,
+            10.0,
+            SpatialMapConfig(
+                **{
+                    **config.__dict__,
+                    "direction_support_radius_mm": 4.0,
+                }
+            ),
+        )
+        observations = (
+            (-1.0, "FORWARD", 1),
+            (0.0, "FORWARD", 2),
+            (1.0, "REVERSE", 3),
+            (2.0, "REVERSE", 4),
+        )
+        for coordinate, direction, sequence in observations:
+            spatial_map.add(
+                EvidenceObservation(
+                    coordinate,
+                    0.9,
+                    direction,  # type: ignore[arg-type]
+                    sequence,
+                    "H0",
+                )
+            )
+        event = max(spatial_map.events(), key=lambda item: item.score)
+        self.assertEqual(event.forward_count, 2)
+        self.assertEqual(event.reverse_count, 2)
+        self.assertTrue(event.accepted)
+
 
 class Stage1PipelineTests(unittest.TestCase):
     def test_column_projection_uses_declared_probe_angle(self) -> None:

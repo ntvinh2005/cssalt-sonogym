@@ -260,6 +260,9 @@ def session_prediction(
         acceptance_score=float(acceptance_threshold),
         minimum_forward_frames=int(spatial_protocol["minimum_forward_frames"]),
         minimum_reverse_frames=int(spatial_protocol["minimum_reverse_frames"]),
+        direction_support_radius_mm=float(
+            spatial_protocol.get("direction_support_radius_mm", 0.0)
+        ),
     )
     class_events: list[list[Any]] = []
     independent_inferences: list[Any] = []
@@ -301,6 +304,16 @@ def session_prediction(
         path = select_ordered_event_path(
             class_events,
             float(ordered_protocol["minimum_adjacent_separation_mm"]),
+            first_event_must_be_minimum_coordinate=bool(
+                ordered_protocol.get(
+                    "first_event_must_be_minimum_coordinate", False
+                )
+            ),
+            last_event_must_be_maximum_coordinate=bool(
+                ordered_protocol.get(
+                    "last_event_must_be_maximum_coordinate", False
+                )
+            ),
         )
         selected_events = (
             list(path.events) if path is not None else [None] * len(class_order)
@@ -503,6 +516,7 @@ def main() -> None:
         "sonogym-unity-two-stage-stage1-group-a-v2",
         "sonogym-unity-two-stage-stage1-group-a-v3",
         "sonogym-unity-two-stage-stage1-group-a-v4",
+        "sonogym-unity-two-stage-stage1-group-a-v5",
         "sonogym-unity-two-stage-stage1-group-a-v4",
     }:
         raise RuntimeError("unexpected Group A Stage 1 protocol identity")
