@@ -44,6 +44,18 @@ EVALUATION_PROTOCOL = (
     / "unity_two_stage_transfer"
     / "stage1_confirmation_evaluation_protocol_v2.yaml"
 )
+GROUP_A_ACTOR_PROTOCOL = (
+    REPOSITORY_ROOT
+    / "experiments"
+    / "unity_two_stage_transfer"
+    / "stage1_group_a_confirmation_actor_protocol_v1.yaml"
+)
+GROUP_A_EVALUATION_PROTOCOL = (
+    REPOSITORY_ROOT
+    / "experiments"
+    / "unity_two_stage_transfer"
+    / "stage1_group_a_confirmation_evaluation_protocol_v1.yaml"
+)
 
 
 def candidate(coordinate: float, sequence: int, direction: str) -> ActorPatchCandidate:
@@ -208,6 +220,70 @@ class ConfirmationActorTests(unittest.TestCase):
             path.write_text('{"changed": true}\n', encoding="utf-8")
             with self.assertRaises(RuntimeError):
                 validate_seal(path)
+
+
+class GroupAConfirmationProtocolTests(unittest.TestCase):
+    def test_group_a_protocols_are_sealed_and_privilege_separated(self) -> None:
+        actor_hash = validate_seal(GROUP_A_ACTOR_PROTOCOL)
+        validate_seal(GROUP_A_EVALUATION_PROTOCOL)
+        actor = yaml.safe_load(GROUP_A_ACTOR_PROTOCOL.read_text(encoding="utf-8"))
+        evaluator = yaml.safe_load(
+            GROUP_A_EVALUATION_PROTOCOL.read_text(encoding="utf-8")
+        )
+        self.assertEqual(evaluator["actor_protocol"]["sha256"], actor_hash)
+        self.assertNotIn("annotation_path", recursive_keys(actor))
+        self.assertIn("annotation_path", recursive_keys(evaluator))
+        self.assertEqual(
+            actor["inference"]["class_order"],
+            ["sacrum", "S1", "L5", "L4", "L3", "L2", "L1"],
+        )
+
+    def test_group_a_confirmation_starts_are_new_and_bounded(self) -> None:
+        actor = yaml.safe_load(GROUP_A_ACTOR_PROTOCOL.read_text(encoding="utf-8"))
+        development = yaml.safe_load(
+            (
+                REPOSITORY_ROOT
+                / "experiments"
+                / "unity_two_stage_transfer"
+                / "protocol.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        earlier_confirmation = yaml.safe_load(
+            ACTOR_PROTOCOL.read_text(encoding="utf-8")
+        )
+        sessions = actor["sessions"]
+        self.assertEqual(
+            [row["session_id"] for row in sessions],
+            ["cf7_00", "cf7_01", "cf7_02", "cf7_03"],
+        )
+        old_pairs = {
+            (float(row["patient_x_index"]), float(row["angle_rad"]))
+            for row in development["sessions"] + earlier_confirmation["sessions"]
+        }
+        new_pairs = {
+            (float(row["patient_x_index"]), float(row["angle_rad"]))
+            for row in sessions
+        }
+        self.assertEqual(len(new_pairs), 4)
+        self.assertTrue(old_pairs.isdisjoint(new_pairs))
+        self.assertTrue(all(132.0 <= x <= 144.0 for x, _ in new_pairs))
+        self.assertTrue(all(2.7 <= angle <= 3.0 for _, angle in new_pairs))
+
+    def test_group_a_confirmation_gates_and_resources_are_strict(self) -> None:
+        actor = yaml.safe_load(GROUP_A_ACTOR_PROTOCOL.read_text(encoding="utf-8"))
+        evaluator = yaml.safe_load(
+            GROUP_A_EVALUATION_PROTOCOL.read_text(encoding="utf-8")
+        )
+        resources = actor["resource_bound_if_later_approved"]
+        self.assertEqual(resources["account"], "anest-dept")
+        self.assertEqual(resources["cpu_cores"], 4)
+        self.assertEqual(resources["gpu_count"], 1)
+        self.assertEqual(resources["memory"], "30gb")
+        self.assertEqual(resources["walltime"], "00:30:00")
+        self.assertEqual(evaluator["criteria"]["required_complete_map_sessions"], 4)
+        self.assertEqual(evaluator["criteria"]["required_correct_events"], 28)
+        self.assertEqual(evaluator["criteria"]["maximum_wrong_stops"], 0)
+        self.assertEqual(evaluator["criteria"]["maximum_abstentions"], 0)
 
 
 class ConfirmationRenderTests(unittest.TestCase):

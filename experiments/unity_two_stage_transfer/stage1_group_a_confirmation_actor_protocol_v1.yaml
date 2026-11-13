@@ -1,0 +1,95 @@
+protocol_id: sonogym-stage1-group-a-confirmation-v1
+status: PRE_GPU_FROZEN
+purpose: >-
+  Run four new s0010 physical forward/reverse scans and apply the frozen v7
+  seven-landmark actor without fitting, threshold selection, or evaluator access.
+source:
+  actor_implementation_commit: 9717ce82e488752c93e363074b9106f1f7cf437a
+  development_result_job: 51209243
+  development_protocol_id: sonogym-unity-two-stage-stage1-group-a-v7
+  development_protocol_sha256: f2c5498f8909e914ffe08565ad3693760d9c5b3bb9fd0b1eafbe56cd4c473fcb
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+scope:
+  task: Isaac-robot-US-guidance-v0
+  ultrasound_mode: conv
+  simulator_environments: 1
+  training: forbidden
+  threshold_selection: forbidden
+  stage2: forbidden
+bundle:
+  path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a_v7/51209243/results/stage1_group_a.joblib
+  sha256: 474c02174b7d8cd47ac448e2fab1d50da559514e3fb6aa62c2640f2b7f2933d4
+  schema: sonogym-stage1-group-a-bundle-v2
+  development_protocol_sha256: f2c5498f8909e914ffe08565ad3693760d9c5b3bb9fd0b1eafbe56cd4c473fcb
+information_boundaries:
+  actor_allowed:
+    - clean_ultrasound_pixels
+    - actually_executed_home_relative_motion
+    - relative_angle
+    - acquisition_direction
+    - action_acceptance_completion_clamp_status
+    - contact_workspace_image_validity_booleans
+    - actor_owned_evidence_history
+    - calibrated_probe_image_footprint
+    - declared_home_prior
+    - calibration_session_derived_coordinate_offsets
+    - calibration_session_derived_adjacent_landmark_separations
+  actor_forbidden:
+    - raw_labels
+    - segmentation
+    - patient_id
+    - vertebra_mesh_identity
+    - absolute_patient_pose
+    - reference_coordinates
+    - goal_pose
+    - target_distance
+    - reward
+    - evaluator_score
+geometry:
+  ultrasound_shape_h_w: [200, 150]
+  ultrasound_resolution_mm_per_pixel: 0.5
+  mechanical_home_definition:
+    type: workspace_derived_not_anatomy_selected
+    patient_z_index: 195.0
+    angle_rad_by_session: see_sessions
+  longitudinal_scan:
+    start_z_index: 195.0
+    end_z_index: 90.0
+    step_indices: 1.0
+    physical_step_mm: 1.5
+    phases: [OUTBOUND_CAUDAL, RETURN_CRANIAL]
+    capture_fresh_home_baseline: true
+    expected_frames_per_complete_session: 211
+    maximum_action_steps_per_session: 360
+  movement_policy:
+    native_environment_step_interface_only: true
+    physically_move_from_native_reset_to_home: true
+    exclude_reset_to_home_frames_from_anatomical_inference: true
+    rejected_or_clamped_action_advances_actor_odometry: false
+    maximum_tracking_position_error_mm: 5.0
+    maximum_tracking_orientation_error_deg: 5.0
+    abort_session_on_workspace_nonfinite_or_incomplete_motion: true
+inference:
+  class_order: [sacrum, S1, L5, L4, L3, L2, L1]
+  acceptance_threshold: 0.30
+  minimum_adjacent_separation_mm: 10.0
+  direction_support_radius_mm: 5.0
+  separation_penalty_per_mm: 0.05
+  coordinate_offsets_source: frozen_bundle
+  adjacent_separations_source: frozen_bundle
+sessions:
+  - {session_id: cf7_00, split: locked_confirmation, seed: 2026111400, patient_x_index: 133.0, angle_rad: 2.75}
+  - {session_id: cf7_01, split: locked_confirmation, seed: 2026111401, patient_x_index: 137.0, angle_rad: 2.85}
+  - {session_id: cf7_02, split: locked_confirmation, seed: 2026111402, patient_x_index: 141.0, angle_rad: 2.95}
+  - {session_id: cf7_03, split: locked_confirmation, seed: 2026111403, patient_x_index: 143.0, angle_rad: 2.75}
+resource_bound_if_later_approved:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  one_job_at_a_time: true
+  current_protocol_authorizes_submission: false
+  maximum_storage_growth_gb: 0.5

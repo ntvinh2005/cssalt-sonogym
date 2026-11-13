@@ -1,0 +1,33 @@
+protocol_id: sonogym-stage1-group-a-confirmation-evaluation-v1
+status: PRE_GPU_FROZEN
+actor_protocol:
+  path: experiments/unity_two_stage_transfer/stage1_group_a_confirmation_actor_protocol_v1.yaml
+  sha256: d3723417bc56f39c7d99ffb39ac3df5d2541e2126f90fa728cd4cf0c787aa4f2
+actor_output_policy:
+  write_before_evaluation: true
+  sha256_required: true
+  modification_after_hash: forbidden
+expected_session_ids: [cf7_00, cf7_01, cf7_02, cf7_03]
+class_order: [sacrum, S1, L5, L4, L3, L2, L1]
+privileged_evaluation:
+  patient_id: s0010
+  annotation_path: experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json
+  annotation_sha256: 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3
+  raw_label_by_class: {sacrum: 25, S1: 26, L5: 27, L4: 28, L3: 29, L2: 30, L1: 31}
+  capture_raw_labels_may_be_read_only_after_actor_hash: true
+criteria:
+  localization_tolerance_mm: 10.0
+  required_complete_capture_sessions: 4
+  required_complete_map_sessions: 4
+  required_correct_events: 28
+  maximum_wrong_stops: 0
+  maximum_abstentions: 0
+  maximum_median_localization_error_mm: 10.0
+claims:
+  permits_if_passed:
+    - fixed_anatomy_s0010_seven_landmark_confirmation
+    - new_session_confirmation_within_tested_scan_corridor
+  forbidden:
+    - patient_generalization
+    - stage2_success
+    - clinical_mbb_validity
