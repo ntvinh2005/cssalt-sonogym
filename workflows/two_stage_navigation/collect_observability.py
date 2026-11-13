@@ -71,6 +71,7 @@ SUPPORTED_PROTOCOL_IDS = frozenset(
         "sonogym-unity-two-stage-g0-g1-v2",
         "sonogym-stage1-l4-confirmation-v1",
         "sonogym-stage1-l4-confirmation-v2",
+        "sonogym-stage1-group-a-confirmation-v1",
     }
 )
 LUMBAR_LABELS = frozenset(RAW_LABEL_NAMES)
