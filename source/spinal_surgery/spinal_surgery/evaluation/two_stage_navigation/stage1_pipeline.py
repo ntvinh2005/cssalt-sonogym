@@ -15,6 +15,7 @@ from .stage1_map import EvidenceObservation, LandmarkEvent, SpatialEvidenceMap, 
 
 Direction = Literal["FORWARD", "REVERSE"]
 LUMBAR_LABELS = (26, 27, 28, 29, 30, 31)
+GROUP_A_LABELS = (25, 26, 27, 28, 29, 30, 31)
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,14 @@ class PatchAnnotation:
     verifier_label: int | None
     dominant_lumbar_label: int | None
     lumbar_fraction: float
+    dominant_fraction: float
+
+
+@dataclass(frozen=True)
+class GroupAPatchAnnotation:
+    primary_label: int
+    anatomy_class: int | None
+    anatomy_fraction: float
     dominant_fraction: float
 
 
@@ -193,6 +202,38 @@ def annotate_patch_candidate(
         dominant_label,
         lumbar_fraction,
         dominant_fraction,
+    )
+
+
+def annotate_group_a_patch_candidate(
+    raw_labels: np.ndarray,
+    candidate: ActorPatchCandidate,
+    patch_spec: PatchSpec,
+    minimum_anatomy_fraction: float,
+) -> GroupAPatchAnnotation:
+    """Create privileged Group A labels outside actor inference."""
+    if not 0.0 < minimum_anatomy_fraction <= 1.0:
+        raise ValueError("minimum_anatomy_fraction must lie in (0, 1]")
+    patch = extract_interface_patch(
+        np.asarray(raw_labels), candidate.interface_row, candidate.column, patch_spec
+    )
+    if patch is None:
+        raise ValueError("actor candidate did not produce the corresponding label patch")
+    counts = np.asarray([np.count_nonzero(patch == label) for label in GROUP_A_LABELS])
+    fractions = counts.astype(np.float64) / float(patch.size)
+    anatomy_fraction = float(np.sum(fractions))
+    if anatomy_fraction < minimum_anatomy_fraction:
+        return GroupAPatchAnnotation(0, None, anatomy_fraction, 0.0)
+    maximum = int(np.max(counts))
+    winners = np.flatnonzero(counts == maximum)
+    if maximum <= 0 or len(winners) != 1:
+        return GroupAPatchAnnotation(1, None, anatomy_fraction, 0.0)
+    anatomy_class = int(winners[0])
+    return GroupAPatchAnnotation(
+        1,
+        anatomy_class,
+        anatomy_fraction,
+        float(fractions[anatomy_class]),
     )
 
 

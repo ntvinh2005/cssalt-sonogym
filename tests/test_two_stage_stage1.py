@@ -35,6 +35,7 @@ from two_stage_navigation.stage1_map import (  # noqa: E402
 from two_stage_navigation.stage1_pipeline import (  # noqa: E402
     ActorPatchCandidate,
     PatchLabelConfig,
+    annotate_group_a_patch_candidate,
     annotate_patch_candidate,
     binary_metrics,
     project_column_to_home_longitudinal_mm,
@@ -215,6 +216,44 @@ class Stage1PipelineTests(unittest.TestCase):
         )
         self.assertEqual(annotation.primary_label, 1)
         self.assertEqual(annotation.verifier_label, 0)
+
+    def test_group_a_annotation_includes_sacrum_without_raw_label_output(self) -> None:
+        candidate = ActorPatchCandidate(
+            feature=np.ones(774),
+            coordinate_mm=-150.0,
+            frame_sequence=1,
+            direction="FORWARD",
+            track_id="H0",
+            interface_row=100.0,
+            column=75.0,
+        )
+        labels = np.zeros((200, 150), dtype=np.uint8)
+        labels[80:120, 60:90] = 25
+        annotation = annotate_group_a_patch_candidate(
+            labels, candidate, UNITY_REFERENCE_PATCH_SPEC, 0.01
+        )
+        self.assertEqual(annotation.primary_label, 1)
+        self.assertEqual(annotation.anatomy_class, 0)
+        self.assertGreater(annotation.dominant_fraction, 0.0)
+
+    def test_group_a_annotation_rejects_ambiguous_dominant_identity(self) -> None:
+        candidate = ActorPatchCandidate(
+            feature=np.ones(774),
+            coordinate_mm=-100.0,
+            frame_sequence=1,
+            direction="FORWARD",
+            track_id="H0",
+            interface_row=100.0,
+            column=75.0,
+        )
+        labels = np.zeros((200, 150), dtype=np.uint8)
+        labels[80:100, 60:90] = 27
+        labels[100:120, 60:90] = 28
+        annotation = annotate_group_a_patch_candidate(
+            labels, candidate, UNITY_REFERENCE_PATCH_SPEC, 0.01
+        )
+        self.assertEqual(annotation.primary_label, 1)
+        self.assertIsNone(annotation.anatomy_class)
 
     def test_binary_metrics_require_precision_and_recall_conjunction(self) -> None:
         metrics = binary_metrics(
