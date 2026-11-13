@@ -1,8 +1,8 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_G0_G1_RUNTIME_BLOCKED**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_FAIL**
 
-Updated: 2026-11-11 (America/New_York)
+Updated: 2026-11-13 (America/New_York)
 
 ## Phase 4 runtime-validation outcome
 
@@ -162,7 +162,30 @@ Next decision: before any separately preregistered Phase 5B learning experiment,
 must decide whether the 3.0-rad command ceiling versus 3.14-rad target is intentional. No
 Phase 5B training is authorized by the Phase 5A result.
 
-## Phase 5C G0/G1 observability-capture status
+## Phase 5C current Stage 1 status
+
+G0/G1 capture job 50908807 completed 16 sessions and 3,376 frames. The fixed-anatomy L4
+pilot passed in CPU job 50920450; this did not establish reconstruction of every major
+lumbar/sacral structure.
+
+The frozen Group A development job 51116088 used anest-dept, four CPUs, 16 GB requested
+RAM, zero GPUs, and completed in 4:37. It failed the development gate: no threshold produced
+a complete seven-structure map, so the reused evaluation split remained unopened and no actor
+bundle was released. The concise result and full report are:
+
+- experiments/unity_two_stage_transfer/stage1_group_a_result.json
+- docs/research/sonogym_s0010_group_a_stage1_result.md
+
+Detailed annotation-review images are external to Git at
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_anatomical_ground_truth_review_20261113_v4.zip.
+The 24 MB ZIP SHA-256 is
+420395a6db98f4f56d6eb40995e8aa39dcdfd34bd5f747f9e76f8eb49039bc43.
+Stage 2 has not started.
+
+The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
+by successful capture job 50908807.
+
+## Phase 5C historical G0/G1 observability-capture status
 
 Phase 5C anatomical observability and coordinate-integrity gates are **BLOCKED**, not failed on
 scientific evidence. No complete scan and no ultrasound dataset were produced, so neither L4
