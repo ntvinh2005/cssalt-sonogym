@@ -403,7 +403,7 @@ def main() -> None:
     started = time.monotonic()
     protocol_hash = validate_protocol_seal(args.stage1_protocol)
     protocol = yaml.safe_load(args.stage1_protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-unity-two-stage-stage1-group-a-v1":
+    if protocol["protocol_id"] != "sonogym-unity-two-stage-stage1-group-a-v2":
         raise RuntimeError("unexpected Group A Stage 1 protocol identity")
     capture_summary = validate_capture(protocol, args.capture_root)
     reference_coordinates = validate_annotations(protocol)

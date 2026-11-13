@@ -1,12 +1,27 @@
-protocol_id: sonogym-unity-two-stage-stage1-group-a-v1
+protocol_id: sonogym-unity-two-stage-stage1-group-a-v2
 phase: 5C
 status: PRE_FIT_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-unity-two-stage-stage1-group-a-v1
+  failed_preflight_job_id: 51115154
+  fit_started: false
+  reason: full_precision_annotation_coordinates_differed_from_transcribed_values
+  changed_fields:
+    - protocol_id
+    - source.cssalt_sonogym_base
+    - evaluation.reference_coordinates_mm
+  unchanged_design:
+    - session_splits
+    - model_and_features
+    - thresholds_and_gates
+    - information_boundary
+    - resource_bound
 purpose: >-
   Test whether actor-visible s0010 ultrasound patches and executed Home-relative
   motion can reconstruct the ordered sacrum, S1, and L1-L5 Group A map. This is
   a fixed-anatomy observability experiment, not patient-held-out validation.
 source:
-  cssalt_sonogym_base: e067dfbfdaec62f5d2a4c5dc13de3b618a9f0c6d
+  cssalt_sonogym_base: 1dbd8505bdd884741f0e4c17d4f96378b57193de
   unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
   upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
 capture:
@@ -93,13 +108,13 @@ evaluation:
   require_every_class_session_success_rate: 0.80
   maximum_wrong_actor_stops: 0
   reference_coordinates_mm:
-    sacrum: -161.02143207454636
+    sacrum: -161.02143207454634
     S1: -136.62881495738247
-    L5: -112.25418732413239
+    L5: -112.2541873241324
     L4: -83.36209568080575
     L3: -51.71611401977894
-    L2: -20.52177444448825
-    L1: 11.429855715871263
+    L2: -20.52177494448823
+    L1: 11.429855715871255
 information_boundary:
   actor_inputs:
     - clean_ultrasound
