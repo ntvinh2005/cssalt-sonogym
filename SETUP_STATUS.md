@@ -207,6 +207,13 @@ not used to select the v2 coordinate. The checkpoint, 0.50 acceptance threshold,
 tolerance, actions, and actor information boundary remain unchanged. V2 must run on four new
 sessions before any demo-readiness claim.
 
+The first v2 execution, job 51197194, stopped before actor inference: cf2_00--cf2_02 completed,
+but cf2_03 reached 1.906 mm position error and 3.718 degree orientation error after 80 Home
+actions. Those values satisfy the protocol's 5 mm / 5 degree motion tolerance, while the collector
+incorrectly retained a 3 degree Home-only constant. The implementation now reads both Home
+tolerances from the sealed protocol. This is an engineering retry condition; job 51197194 contains
+no perception result and cannot be counted as confirmation evidence.
+
 The frozen Group A development job 51116088 used anest-dept, four CPUs, 16 GB requested
 RAM, zero GPUs, and completed in 4:37. It failed the development gate: no threshold produced
 a complete seven-structure map, so the reused evaluation split remained unopened and no actor

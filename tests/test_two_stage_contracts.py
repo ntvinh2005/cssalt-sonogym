@@ -37,6 +37,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     indices_to_mm,
     mm_to_indices,
     plan_native_action,
+    pose_within_tolerance,
     validate_planar_rotation,
     wrap_to_pi,
 )
@@ -136,6 +137,12 @@ class ActorContractTests(unittest.TestCase):
 
 
 class CoordinateTests(unittest.TestCase):
+    def test_pose_tolerance_uses_the_declared_protocol_limits(self) -> None:
+        self.assertTrue(pose_within_tolerance(1.906, 3.718, 5.0, 5.0))
+        self.assertFalse(pose_within_tolerance(1.906, 3.718, 3.0, 3.0))
+        with self.assertRaises(ValueError):
+            pose_within_tolerance(1.0, math.nan, 5.0, 5.0)
+
     def test_index_millimetre_round_trip(self) -> None:
         indices = np.asarray([132.0, 195.0])
         np.testing.assert_allclose(mm_to_indices(indices_to_mm(indices)), indices)

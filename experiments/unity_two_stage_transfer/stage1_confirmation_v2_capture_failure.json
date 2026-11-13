@@ -1,0 +1,36 @@
+{
+  "actor_inference_executed": false,
+  "decision": "ENGINEERING_FAIL_BEFORE_EVALUATION",
+  "failure": {
+    "failed_session_id": "cf2_03",
+    "home_action_count": 80,
+    "last_orientation_error_deg": 3.7178358897780206,
+    "last_position_error_mm": 1.9058218245736902,
+    "protocol_maximum_orientation_error_deg": 5.0,
+    "protocol_maximum_position_error_mm": 5.0,
+    "root_cause": "collector_hard_coded_3_degree_home_tolerance",
+    "session_status": "FAILED"
+  },
+  "job": {
+    "account": "anest-dept",
+    "allocated_cpus": 4,
+    "elapsed_seconds": 100,
+    "exit_code": "2:0",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "job_id": 51197194,
+    "maximum_gpu_memory_mib": 5005,
+    "maximum_gpu_utilization_percent": 58,
+    "maximum_resident_set_kib": 3436680,
+    "output_bytes": 70762090,
+    "requested_memory_gb": 30,
+    "state": "FAILED"
+  },
+  "protocol": {
+    "actor_sha256": "28d531dd664160c1f1a44eef7a578dc0d74a10f746d8e22a0c66135f9650e380",
+    "code_commit": "73b56a1b979194bc4b8ab63f09e69a0b086dcf34",
+    "evaluation_sha256": "644a1a4abaee079b215c80eeb2859eabea2b08fb1d503f2f2c1a9c0d2e6a61a8"
+  },
+  "schema": "sonogym-stage1-confirmation-capture-failure-v1",
+  "successful_capture_sessions": ["cf2_00", "cf2_01", "cf2_02"]
+}

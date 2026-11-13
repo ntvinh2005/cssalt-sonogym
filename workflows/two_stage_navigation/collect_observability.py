@@ -52,6 +52,7 @@ from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa
     assess_native_command,
     command_target_from_realized_error,
     plan_native_action,
+    pose_within_tolerance,
     wrap_to_pi,
 )
 
@@ -229,6 +230,8 @@ def take_step(env, target: np.ndarray) -> tuple[dict, dict[str, object]]:
 def move_to_home(
     env,
     target: np.ndarray,
+    maximum_position_error_mm: float,
+    maximum_orientation_error_deg: float,
     maximum_steps: int = 80,
     trajectory: list[dict[str, object]] | None = None,
 ) -> list[dict[str, object]]:
@@ -242,9 +245,11 @@ def move_to_home(
     )
     for step in range(maximum_steps):
         position_tracking_mm, angle_tracking_deg = tracking_errors(env.unwrapped, target)
-        if (
-            position_tracking_mm <= 3.0
-            and angle_tracking_deg <= 3.0
+        if pose_within_tolerance(
+            position_tracking_mm,
+            angle_tracking_deg,
+            maximum_position_error_mm,
+            maximum_orientation_error_deg,
         ):
             return trajectory
         command_target = command_target_from_realized_error(
@@ -396,15 +401,33 @@ def main() -> int:
         target = np.asarray(
             [session["patient_x_index"], 195.0, session["angle_rad"]], dtype=np.float64
         )
+        movement_policy = protocol["geometry"]["movement_policy"]
+        maximum_position_error_mm = float(
+            movement_policy["maximum_tracking_position_error_mm"]
+        )
+        maximum_orientation_error_deg = float(
+            movement_policy["maximum_tracking_orientation_error_deg"]
+        )
         reset_command = current_command(unwrapped).copy()
         reset_realized = current_realized_pose(unwrapped).copy()
-        move_to_home(env, target, trajectory=home_trajectory)
+        move_to_home(
+            env,
+            target,
+            maximum_position_error_mm,
+            maximum_orientation_error_deg,
+            trajectory=home_trajectory,
+        )
         home_pose = current_realized_pose(unwrapped).copy()
         home_command = current_command(unwrapped).copy()
         home_position_error_mm, home_orientation_error_deg = tracking_errors(
             unwrapped, target
         )
-        if home_position_error_mm > 3.0 or home_orientation_error_deg > 3.0:
+        if not pose_within_tolerance(
+            home_position_error_mm,
+            home_orientation_error_deg,
+            maximum_position_error_mm,
+            maximum_orientation_error_deg,
+        ):
             raise RuntimeError("physical Home return ended outside its realized-pose tolerance")
 
         freshness = FrameFreshnessGuard()

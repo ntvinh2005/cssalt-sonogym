@@ -48,6 +48,26 @@ def mm_to_indices(mm: object, resolution_mm: float = LABEL_RESOLUTION_MM) -> np.
     return array / resolution_mm
 
 
+def pose_within_tolerance(
+    position_error_mm: float,
+    orientation_error_deg: float,
+    maximum_position_error_mm: float,
+    maximum_orientation_error_deg: float,
+) -> bool:
+    values = (
+        position_error_mm,
+        orientation_error_deg,
+        maximum_position_error_mm,
+        maximum_orientation_error_deg,
+    )
+    if not all(math.isfinite(value) and value >= 0.0 for value in values):
+        raise ValueError("pose tolerances and errors must be finite and nonnegative")
+    return bool(
+        position_error_mm <= maximum_position_error_mm
+        and orientation_error_deg <= maximum_orientation_error_deg
+    )
+
+
 @dataclass(frozen=True)
 class PatientFrameConvention:
     """Declared sign convention for a fixed anatomy pilot.
