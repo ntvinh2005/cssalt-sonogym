@@ -1,12 +1,10 @@
 {
-  "schema": "sonogym-stage1-group-a-result-v1",
-  "decision": "FAIL",
-  "stage_reached": "development_calibration",
-  "evaluation_split_opened": false,
-  "code_commit": "dec3596214374ec950056227bc9dcfa60737724f",
+  "schema": "sonogym-stage1-group-a-result-v2",
+  "decision": "DEVELOPMENT_PASS",
+  "code_commit": "4db234fc4a7f20c5216f792b235c3b5c097981ca",
   "protocol": {
-    "id": "sonogym-unity-two-stage-stage1-group-a-v2",
-    "sha256": "b5ab90b09ae49d4237bc58680680b542b485d7f5e2aa7ea008fc2ae75102238b"
+    "id": "sonogym-unity-two-stage-stage1-group-a-v7",
+    "sha256": "f2c5498f8909e914ffe08565ad3693760d9c5b3bb9fd0b1eafbe56cd4c473fcb"
   },
   "capture": {
     "job_id": 50908807,
@@ -15,132 +13,95 @@
     "patient_count": 1,
     "patient_id": "s0010"
   },
-  "preflight_failure": {
-    "job_id": 51115154,
-    "fit_started": false,
-    "cause": "reference coordinate transcription precision mismatch",
-    "preserved_log_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a/51115154"
-  },
-  "development_job": {
-    "job_id": 51116088,
+  "job": {
+    "job_id": 51209243,
     "account": "anest-dept",
-    "slurm_state": "FAILED",
-    "application_exit_code": 3,
-    "application_meaning": "development gate failed",
+    "slurm_state": "COMPLETED",
+    "exit_code": "0:0",
     "cpu_cores": 4,
     "memory_requested_gb": 16,
     "gpu_count": 0,
-    "start": "2026-11-12T23:28:05-05:00",
-    "end": "2026-11-12T23:32:38-05:00",
-    "elapsed_seconds": 277,
-    "maximum_resident_memory_kib": 870956,
-    "run_size_mib_rounded": 2
+    "start": "2026-11-13T14:58:28-05:00",
+    "end": "2026-11-13T15:03:14-05:00",
+    "elapsed_seconds": 290,
+    "maximum_resident_memory_kib": 928044,
+    "run_size_bytes": 73294125
   },
   "split_accounting": {
     "training_sessions": 8,
     "calibration_sessions": 4,
-    "evaluation_sessions_reserved": 4,
-    "evaluation_status": "not opened because development gate failed"
+    "evaluation_development_sessions": 4,
+    "evaluation_status": "DEVELOPMENT_REUSED_AFTER_PRIOR_INSPECTION",
+    "locked_test_claim": false
   },
-  "training_examples": {
-    "primary_total": 22561,
-    "primary_positive": 16647,
-    "anatomy_total": 16645,
-    "anatomy_by_class": {
-      "sacrum": 5156,
-      "S1": 2079,
-      "L5": 2379,
-      "L4": 1559,
-      "L3": 2179,
-      "L2": 2416,
-      "L1": 877
-    }
+  "model": {
+    "family": "ExtraTreesClassifier",
+    "trees": 240,
+    "maximum_depth": 18,
+    "minimum_leaf": 3,
+    "random_seed": 20261112,
+    "training_primary_examples": 22561,
+    "training_anatomy_examples": 16645
   },
-  "calibration_patch_metrics": {
-    "primary": {
-      "threshold": 0.4,
-      "precision": 0.9751760353264113,
-      "recall": 0.9766913698302654,
-      "f1": 0.9759331143624963
-    },
-    "anatomy": {
-      "accuracy": 0.8761654315084867,
-      "macro_precision": 0.8572670655035718,
-      "macro_recall": 0.8440338786493852,
-      "per_class": {
-        "sacrum": {"precision": 0.9713818479149632, "recall": 0.9361702127659575},
-        "S1": {"precision": 0.8609625668449198, "recall": 0.9611940298507463},
-        "L5": {"precision": 0.8333333333333334, "recall": 0.9453781512605042},
-        "L4": {"precision": 0.868020304568528, "recall": 0.8465346534653465},
-        "L3": {"precision": 0.8972457627118644, "recall": 0.7282889079965607},
-        "L2": {"precision": 0.7705156136528686, "recall": 0.8619008935824533},
-        "L1": {"precision": 0.799410029498525, "recall": 0.62877030162413}
-      }
-    }
+  "selected_setting": {
+    "acceptance_threshold": 0.3,
+    "minimum_adjacent_separation_mm": 10.0,
+    "direction_support_radius_mm": 5.0,
+    "separation_penalty_per_mm": 0.05,
+    "expected_adjacent_separations_mm": [34.75, 26.0, 18.5, 24.75, 33.5, 18.25],
+    "coordinate_calibration": "per_class_midrange_minimax_offset"
   },
-  "selected_spatial_setting": {
-    "acceptance_threshold": 0.85,
-    "global_coordinate_offset_mm": -13.628814957382474,
+  "evaluation_development_metrics": {
+    "sessions": 4,
+    "complete_maps": 4,
+    "correct_events": 28,
+    "expected_events": 28,
     "event_precision": 1.0,
-    "event_recall": 0.17857142857142858,
-    "correct_events": 5,
-    "expected_events": 28,
-    "wrong_stops": 0,
-    "abstentions": 23,
-    "complete_maps": 0,
-    "session_count": 4,
-    "median_localization_error_mm": 2.0,
+    "event_recall": 1.0,
+    "wrong_actor_stops": 0,
+    "abstentions": 0,
+    "median_localization_error_mm": 3.125,
+    "p90_localization_error_mm": 5.825,
+    "maximum_localization_error_mm": 9.0,
     "per_class_success_count": {
-      "sacrum": 1,
+      "sacrum": 4,
       "S1": 4,
-      "L5": 0,
-      "L4": 0,
-      "L3": 0,
-      "L2": 0,
-      "L1": 0
-    }
-  },
-  "highest_recall_frozen_setting": {
-    "acceptance_threshold": 0.6,
-    "global_coordinate_offset_mm": -5.118944482133585,
-    "event_precision": 0.7222222222222222,
-    "event_recall": 0.4642857142857143,
-    "correct_events": 13,
-    "expected_events": 28,
-    "wrong_stops": 5,
-    "abstentions": 10,
-    "complete_maps": 0,
-    "session_count": 4,
-    "median_localization_error_mm": 3.4028304623546433,
-    "per_class_success_count": {
-      "sacrum": 0,
-      "S1": 2,
-      "L5": 1,
-      "L4": 3,
+      "L5": 4,
+      "L4": 4,
       "L3": 4,
-      "L2": 3,
-      "L1": 0
+      "L2": 4,
+      "L1": 4
     }
   },
-  "failure_analysis": [
-    "no frozen acceptance threshold produced a complete seven-structure map",
-    "sacrum, S1, and L5 frequently produced multiple accepted events and abstained on the top-score margin",
-    "L1 emitted consistently biased coordinates under the single global offset",
-    "patch-level discrimination did not translate into reliable spatial-event selection"
+  "preserved_negative_runs": [
+    {"job_id": 51116088, "decision": "DEVELOPMENT_NO_GO", "correct_events": 5, "expected_events": 28},
+    {"job_id": 51206842, "decision": "DEVELOPMENT_NO_GO", "correct_events": 26, "expected_events": 28},
+    {"job_id": 51207828, "decision": "TECHNICAL_FAILURE", "cause": "threshold-specific spacing calibration lacked a complete high-threshold path"},
+    {"job_id": 51208322, "decision": "DEVELOPMENT_NO_GO", "correct_events": 26, "expected_events": 28}
   ],
-  "bundle_created": false,
-  "stage2_authorized_or_executed": false,
+  "bundle": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a_v7/51209243/results/stage1_group_a.joblib",
+    "sha256": "474c02174b7d8cd47ac448e2fab1d50da559514e3fb6aa62c2640f2b7f2933d4"
+  },
+  "demo": {
+    "job_id": 51210068,
+    "session_id": "ua_00",
+    "frame_count": 211,
+    "duration_seconds": 14.066666666666666,
+    "final_complete_landmark_count": 7,
+    "video_sha256": "462d9762b3a231bace5c5a6d687d33b32185c4c12f62684b244867e598f7570e"
+  },
   "external_artifacts": {
-    "root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a/51116088",
-    "development_report": "results/development_report.json",
-    "development_report_sha256": "11d232c53867ffc39bbaa73c0e11458d8907468a6b0da8fedca3870aafeef35d",
-    "threshold_sweep": "results/calibration_thresholds.json",
-    "threshold_sweep_sha256": "fce0c36146c041aa6e9d63f3ad9f94d998433dbf0a56fd1a0048f57c4e97be54"
+    "root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_group_a_v7/51209243",
+    "development_report_sha256": "89619b90ef841540b572bc3c95a70c3e0774a2c2497098d3e943a8635c5853c5",
+    "evaluation_report_sha256": "43d4a3e3b74010848baaa66b9bce4be43afd46d74df7f048a21b436250e5ebd7",
+    "threshold_sweep_sha256": "3ad35f1c6c61a8cf853942d92908b4688585f176a9bdca857bb1109c16e3f972"
   },
   "limitations": {
     "fixed_anatomy_only": true,
-    "locked_or_untouched_test_claim": false,
+    "existing_capture_development_only": true,
+    "locked_confirmation_established": false,
     "patient_generalization_established": false,
-    "complete_group_a_reconstruction_established": false
+    "stage2_established": false
   }
 }
