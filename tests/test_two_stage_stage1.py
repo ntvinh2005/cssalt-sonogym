@@ -252,6 +252,36 @@ class SpatialMapTests(unittest.TestCase):
             [-40.0, -15.0, 10.0],
         )
 
+    def test_ordered_path_can_prefer_calibrated_anatomical_spacing(self) -> None:
+        def event(coordinate: float, score: float) -> LandmarkEvent:
+            return LandmarkEvent(
+                coordinate,
+                score,
+                2,
+                2,
+                (coordinate, coordinate),
+                True,
+                False,
+                (),
+            )
+
+        path = select_ordered_event_path(
+            [
+                [event(0.0, 0.9)],
+                [event(15.0, 0.95), event(20.0, 0.7)],
+                [event(40.0, 0.9)],
+            ],
+            10.0,
+            expected_adjacent_separations_mm=(20.0, 20.0),
+            separation_penalty_per_mm=0.1,
+        )
+        self.assertIsNotNone(path)
+        assert path is not None
+        self.assertEqual(
+            [item.coordinate_mm for item in path.events],
+            [0.0, 20.0, 40.0],
+        )
+
     def test_direction_support_radius_combines_neighboring_scan_bins(self) -> None:
         config = map_config()
         spatial_map = SpatialEvidenceMap(

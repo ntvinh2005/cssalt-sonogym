@@ -246,6 +246,7 @@ def session_prediction(
     ordered_protocol: dict[str, Any],
     acceptance_threshold: float,
     coordinate_offsets_mm: dict[str, float],
+    expected_adjacent_separations_mm: list[float] | None = None,
 ) -> dict[str, Any]:
     features = session.features
     primary = positive_probability(primary_model, features)
@@ -313,6 +314,14 @@ def session_prediction(
                 ordered_protocol.get(
                     "last_event_must_be_maximum_coordinate", False
                 )
+            ),
+            expected_adjacent_separations_mm=(
+                tuple(expected_adjacent_separations_mm)
+                if expected_adjacent_separations_mm is not None
+                else None
+            ),
+            separation_penalty_per_mm=float(
+                ordered_protocol.get("separation_penalty_per_mm", 0.0)
             ),
         )
         selected_events = (
@@ -420,6 +429,35 @@ def calibrate_coordinate_offsets(
     raise RuntimeError(f"unsupported coordinate calibration: {method}")
 
 
+def calibrate_adjacent_separations(
+    results: list[dict[str, Any]], class_order: list[str]
+) -> list[float]:
+    session_coordinates = []
+    for result in results:
+        by_class = {
+            str(prediction["anatomy"]): prediction["selected_event_coordinate_mm"]
+            for prediction in result["predictions"]
+        }
+        if any(by_class.get(name) is None for name in class_order):
+            continue
+        session_coordinates.append(
+            [float(by_class[name]) for name in class_order]
+        )
+    if not session_coordinates:
+        raise RuntimeError("no complete calibration path for separation estimation")
+    return [
+        float(
+            np.median(
+                [
+                    coordinates[index + 1] - coordinates[index]
+                    for coordinates in session_coordinates
+                ]
+            )
+        )
+        for index in range(len(class_order) - 1)
+    ]
+
+
 def evaluate_results(
     results: list[dict[str, Any]],
     class_order: list[str],
@@ -517,7 +555,7 @@ def main() -> None:
         "sonogym-unity-two-stage-stage1-group-a-v3",
         "sonogym-unity-two-stage-stage1-group-a-v4",
         "sonogym-unity-two-stage-stage1-group-a-v5",
-        "sonogym-unity-two-stage-stage1-group-a-v4",
+        "sonogym-unity-two-stage-stage1-group-a-v6",
     }:
         raise RuntimeError("unexpected Group A Stage 1 protocol identity")
     capture_summary = validate_capture(protocol, args.capture_root)
@@ -578,7 +616,7 @@ def main() -> None:
     zero_offsets = {name: 0.0 for name in class_order}
     threshold_rows: list[dict[str, Any]] = []
     for threshold in protocol["spatial_map"]["calibration_acceptance_thresholds"]:
-        raw_results = [
+        unstructured_raw_results = [
             session_prediction(
                 session,
                 primary_model,
@@ -592,8 +630,34 @@ def main() -> None:
             )
             for session in calibration
         ]
+        separation_penalty_per_mm = float(
+            protocol["ordered_map"].get("separation_penalty_per_mm", 0.0)
+        )
+        expected_adjacent_separations_mm = (
+            calibrate_adjacent_separations(
+                unstructured_raw_results,
+                class_order,
+            )
+            if separation_penalty_per_mm > 0.0
+            else None
+        )
+        structured_raw_results = [
+            session_prediction(
+                session,
+                primary_model,
+                anatomy_model,
+                class_order,
+                reference_coordinates,
+                protocol["spatial_map"],
+                protocol["ordered_map"],
+                float(threshold),
+                zero_offsets,
+                expected_adjacent_separations_mm,
+            )
+            for session in calibration
+        ]
         coordinate_offsets_mm = calibrate_coordinate_offsets(
-            raw_results,
+            structured_raw_results,
             class_order,
             str(protocol["spatial_map"]["coordinate_calibration"]),
         )
@@ -608,6 +672,7 @@ def main() -> None:
                 protocol["ordered_map"],
                 float(threshold),
                 coordinate_offsets_mm,
+                expected_adjacent_separations_mm,
             )
             for session in calibration
         ]
@@ -616,10 +681,11 @@ def main() -> None:
             {
                 "acceptance_threshold": float(threshold),
                 "coordinate_offsets_mm": coordinate_offsets_mm,
+                "expected_adjacent_separations_mm": expected_adjacent_separations_mm,
                 "coordinate_offset_sample_count_by_class": {
                     name: sum(
                         prediction["actor_status"] == "SUCCESS"
-                        for result in raw_results
+                        for result in structured_raw_results
                         for prediction in result["predictions"]
                         if prediction["anatomy"] == name
                     )
@@ -695,6 +761,9 @@ def main() -> None:
         "pixel_resolution_mm": float(patch_values["pixel_resolution_mm"]),
         "acceptance_threshold": float(selected["acceptance_threshold"]),
         "coordinate_offsets_mm": selected["coordinate_offsets_mm"],
+        "expected_adjacent_separations_mm": selected[
+            "expected_adjacent_separations_mm"
+        ],
         "minimum_top_event_score_margin": float(
             protocol["spatial_map"]["minimum_top_event_score_margin"]
         ),
@@ -736,6 +805,7 @@ def main() -> None:
                 name: float(bundle["coordinate_offsets_mm"][name])
                 for name in class_order
             },
+            bundle["expected_adjacent_separations_mm"],
         )
         for session in evaluation_sessions
     ]
@@ -753,6 +823,9 @@ def main() -> None:
         "locked_test_claim": False,
         "acceptance_threshold": bundle["acceptance_threshold"],
         "coordinate_offsets_mm": bundle["coordinate_offsets_mm"],
+        "expected_adjacent_separations_mm": bundle[
+            "expected_adjacent_separations_mm"
+        ],
         "evaluation_session_ids": [
             item.session_id for item in evaluation_sessions
         ],

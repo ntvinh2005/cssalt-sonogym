@@ -102,12 +102,24 @@ def select_ordered_event_path(
     *,
     first_event_must_be_minimum_coordinate: bool = False,
     last_event_must_be_maximum_coordinate: bool = False,
+    expected_adjacent_separations_mm: tuple[float, ...] | None = None,
+    separation_penalty_per_mm: float = 0.0,
 ) -> OrderedEventPath | None:
     """Select the highest-scoring complete path under the declared anatomy order."""
     if not math.isfinite(minimum_adjacent_separation_mm) or minimum_adjacent_separation_mm <= 0:
         raise ValueError("minimum_adjacent_separation_mm must be finite and positive")
     if not event_sets:
         raise ValueError("event_sets must be nonempty")
+    if not math.isfinite(separation_penalty_per_mm) or separation_penalty_per_mm < 0.0:
+        raise ValueError("separation_penalty_per_mm must be finite and nonnegative")
+    if expected_adjacent_separations_mm is not None:
+        if len(expected_adjacent_separations_mm) != len(event_sets) - 1:
+            raise ValueError("expected separations must align with adjacent classes")
+        if any(
+            not math.isfinite(value) or value <= 0.0
+            for value in expected_adjacent_separations_mm
+        ):
+            raise ValueError("expected separations must be finite and positive")
     accepted = [
         sorted(
             (event for event in events if event.accepted),
@@ -127,11 +139,24 @@ def select_ordered_event_path(
     states: list[list[tuple[tuple[LandmarkEvent, ...], float]]] = [
         [((event,), math.log(event.score))] for event in accepted[0]
     ]
-    for events in accepted[1:]:
+    for class_index, events in enumerate(accepted[1:], start=1):
         next_states: list[list[tuple[tuple[LandmarkEvent, ...], float]]] = []
         for event in events:
             candidates = [
-                (path + (event,), score + math.log(event.score))
+                (
+                    path + (event,),
+                    score
+                    + math.log(event.score)
+                    - (
+                        separation_penalty_per_mm
+                        * abs(
+                            (event.coordinate_mm - path[-1].coordinate_mm)
+                            - expected_adjacent_separations_mm[class_index - 1]
+                        )
+                        if expected_adjacent_separations_mm is not None
+                        else 0.0
+                    ),
+                )
                 for terminal_states in states
                 for path, score in terminal_states
                 if event.coordinate_mm - path[-1].coordinate_mm

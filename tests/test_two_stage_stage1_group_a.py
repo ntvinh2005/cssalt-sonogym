@@ -16,6 +16,7 @@ WORKFLOW_ROOT = REPOSITORY_ROOT / "workflows" / "two_stage_navigation"
 sys.path.insert(0, str(WORKFLOW_ROOT))
 
 from train_stage1_group_a import (  # noqa: E402
+    calibrate_adjacent_separations,
     calibrate_coordinate_offsets,
     evaluate_results,
     gate_pass,
@@ -124,6 +125,26 @@ class GroupAEvaluationTests(unittest.TestCase):
             ]
         )
 
+    def test_v6_protocol_uses_calibration_derived_spacing_prior(self) -> None:
+        path = (
+            REPOSITORY_ROOT
+            / "experiments"
+            / "unity_two_stage_transfer"
+            / "stage1_group_a_protocol_v6.yaml"
+        )
+        expected = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        observed = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.assertEqual(observed, expected)
+        specification = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            specification["ordered_map"]["separation_estimation"],
+            "calibration_session_median_raw_adjacent_event_separation",
+        )
+        self.assertEqual(
+            specification["ordered_map"]["separation_penalty_per_mm"],
+            0.05,
+        )
+
     def test_complete_ordered_maps_pass(self) -> None:
         results = [successful_session(f"session_{index}") for index in range(4)]
         metrics = evaluate_results(results, CLASS_ORDER, 10.0)
@@ -169,6 +190,26 @@ class GroupAEvaluationTests(unittest.TestCase):
         )
         self.assertEqual(offsets["L4"], 0.0)
         self.assertEqual(offsets["sacrum"], 1.0)
+
+    def test_adjacent_separations_are_calibration_session_medians(self) -> None:
+        results = []
+        for session_index, step in enumerate((20.0, 30.0, 40.0)):
+            results.append(
+                {
+                    "session_id": f"session_{session_index}",
+                    "predictions": [
+                        {
+                            "anatomy": name,
+                            "selected_event_coordinate_mm": class_index * step,
+                        }
+                        for class_index, name in enumerate(CLASS_ORDER)
+                    ],
+                }
+            )
+        self.assertEqual(
+            calibrate_adjacent_separations(results, CLASS_ORDER),
+            [30.0] * (len(CLASS_ORDER) - 1),
+        )
 
 
 if __name__ == "__main__":
