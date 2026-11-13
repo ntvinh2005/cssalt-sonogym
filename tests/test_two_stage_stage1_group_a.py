@@ -20,6 +20,7 @@ from train_stage1_group_a import (  # noqa: E402
     calibrate_coordinate_offsets,
     evaluate_results,
     gate_pass,
+    select_calibration_row,
 )
 
 
@@ -145,6 +146,22 @@ class GroupAEvaluationTests(unittest.TestCase):
             0.05,
         )
 
+    def test_v7_protocol_prioritizes_declared_low_threshold_preference(self) -> None:
+        path = (
+            REPOSITORY_ROOT
+            / "experiments"
+            / "unity_two_stage_transfer"
+            / "stage1_group_a_protocol_v7.yaml"
+        )
+        expected = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        observed = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.assertEqual(observed, expected)
+        specification = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            specification["spatial_map"]["passing_threshold_selection_order"],
+            "primary_metrics_then_threshold_then_localization_error",
+        )
+
     def test_complete_ordered_maps_pass(self) -> None:
         results = [successful_session(f"session_{index}") for index in range(4)]
         metrics = evaluate_results(results, CLASS_ORDER, 10.0)
@@ -210,6 +227,32 @@ class GroupAEvaluationTests(unittest.TestCase):
             calibrate_adjacent_separations(results, CLASS_ORDER),
             [30.0] * (len(CLASS_ORDER) - 1),
         )
+
+    def test_lowest_passing_threshold_precedes_median_error_tie_break(self) -> None:
+        rows = [
+            {
+                "acceptance_threshold": 0.3,
+                "gate_pass": True,
+                "metrics": {
+                    "event_precision": 1.0,
+                    "event_recall": 1.0,
+                    "complete_map_session_rate": 1.0,
+                    "median_localization_error_mm": 4.0,
+                },
+            },
+            {
+                "acceptance_threshold": 0.5,
+                "gate_pass": True,
+                "metrics": {
+                    "event_precision": 1.0,
+                    "event_recall": 1.0,
+                    "complete_map_session_rate": 1.0,
+                    "median_localization_error_mm": 2.0,
+                },
+            },
+        ]
+        selected = select_calibration_row(rows, "lowest")
+        self.assertEqual(selected["acceptance_threshold"], 0.3)
 
 
 if __name__ == "__main__":

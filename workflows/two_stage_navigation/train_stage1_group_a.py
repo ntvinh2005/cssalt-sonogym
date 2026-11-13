@@ -540,6 +540,47 @@ def gate_pass(metrics: dict[str, Any], protocol: dict[str, Any]) -> bool:
     )
 
 
+def select_calibration_row(
+    threshold_rows: list[dict[str, Any]], threshold_tie_break: str
+) -> dict[str, Any]:
+    if threshold_tie_break not in {"highest", "lowest"}:
+        raise RuntimeError("passing_threshold_tie_break must be highest or lowest")
+    passing = [item for item in threshold_rows if item["gate_pass"]]
+
+    def threshold_priority(item: dict[str, Any]) -> float:
+        value = float(item["acceptance_threshold"])
+        return value if threshold_tie_break == "highest" else -value
+
+    def median_priority(item: dict[str, Any]) -> float:
+        value = item["metrics"]["median_localization_error_mm"]
+        return -(float(value) if value is not None else math.inf)
+
+    def common_metrics(item: dict[str, Any]) -> tuple[float, float, float]:
+        metrics = item["metrics"]
+        return (
+            float(metrics["event_precision"]),
+            float(metrics["event_recall"]),
+            float(metrics["complete_map_session_rate"]),
+        )
+    if passing:
+        return max(
+            passing,
+            key=lambda item: (
+                *common_metrics(item),
+                threshold_priority(item),
+                median_priority(item),
+            ),
+        )
+    return max(
+        threshold_rows,
+        key=lambda item: (
+            *common_metrics(item),
+            median_priority(item),
+            threshold_priority(item),
+        ),
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage1-protocol", type=Path, required=True)
@@ -556,6 +597,7 @@ def main() -> None:
         "sonogym-unity-two-stage-stage1-group-a-v4",
         "sonogym-unity-two-stage-stage1-group-a-v5",
         "sonogym-unity-two-stage-stage1-group-a-v6",
+        "sonogym-unity-two-stage-stage1-group-a-v7",
     }:
         raise RuntimeError("unexpected Group A Stage 1 protocol identity")
     capture_summary = validate_capture(protocol, args.capture_root)
@@ -708,29 +750,12 @@ def main() -> None:
                 "results": results,
             }
         )
-    passing = [item for item in threshold_rows if item["gate_pass"]]
     threshold_tie_break = str(
         protocol["spatial_map"].get("passing_threshold_tie_break", "highest")
     )
-    if threshold_tie_break not in {"highest", "lowest"}:
-        raise RuntimeError("passing_threshold_tie_break must be highest or lowest")
-    selected = max(
-        passing if passing else threshold_rows,
-        key=lambda item: (
-            item["metrics"]["event_precision"],
-            item["metrics"]["event_recall"],
-            item["metrics"]["complete_map_session_rate"],
-            -(
-                item["metrics"]["median_localization_error_mm"]
-                if item["metrics"]["median_localization_error_mm"] is not None
-                else math.inf
-            ),
-            (
-                item["acceptance_threshold"]
-                if threshold_tie_break == "highest"
-                else -item["acceptance_threshold"]
-            ),
-        ),
+    selected = select_calibration_row(
+        threshold_rows,
+        threshold_tie_break,
     )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     write_json(args.output_dir / "calibration_thresholds.json", threshold_rows)
