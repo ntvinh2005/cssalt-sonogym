@@ -7,10 +7,10 @@ source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common.sh
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
-ACTOR_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_actor_protocol.yaml"
-ACTOR_PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_actor_protocol.sha256"
-EVALUATION_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_evaluation_protocol.yaml"
-EVALUATION_PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_evaluation_protocol.sha256"
+ACTOR_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_actor_protocol_v2.yaml"
+ACTOR_PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_actor_protocol_v2.sha256"
+EVALUATION_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_evaluation_protocol_v2.yaml"
+EVALUATION_PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_confirmation_evaluation_protocol_v2.sha256"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/stage1_confirmation/$SLURM_JOB_ID"
 mkdir -p "$RUN_DIR/sessions" "$RUN_DIR/results" "$RUN_DIR/metrics" "$RUN_DIR/video"
 capture_run_context "$RUN_DIR"
@@ -18,8 +18,8 @@ cp "$ACTOR_PROTOCOL" "$ACTOR_PROTOCOL_SEAL" "$EVALUATION_PROTOCOL" \
     "$EVALUATION_PROTOCOL_SEAL" "$RUN_DIR/context/"
 (
     cd "$RUN_DIR/context"
-    sha256sum -c stage1_confirmation_actor_protocol.sha256
-    sha256sum -c stage1_confirmation_evaluation_protocol.sha256
+    sha256sum -c stage1_confirmation_actor_protocol_v2.sha256
+    sha256sum -c stage1_confirmation_evaluation_protocol_v2.sha256
 )
 
 nvidia-smi --query-gpu=timestamp,name,driver_version,utilization.gpu,memory.used,memory.total \

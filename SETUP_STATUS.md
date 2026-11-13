@@ -197,6 +197,16 @@ tolerance are frozen before GPU capture. The approved bound is one L4, four CPUs
 15 minutes on anest-dept. Actor output must be written and hashed before evaluator-only L4 data
 are opened.
 
+Confirmation job 51196094 completed all four physical scans and produced a valid 211-frame,
+14.07-second video, but it failed the frozen scientific gate: three sessions were within 10 mm
+and cf_03 emitted a coordinate with 10.362 mm error. The job therefore exited 3 and is retained
+as negative evidence. A v2 actor protocol changes only the reported coordinate from the accepted
+event's highest grid bin to the midpoint of that event's existing support interval. This rule
+passes all four pre-existing development sessions with 6.49 mm median error; job 51196094 was
+not used to select the v2 coordinate. The checkpoint, 0.50 acceptance threshold, 10 mm evaluator
+tolerance, actions, and actor information boundary remain unchanged. V2 must run on four new
+sessions before any demo-readiness claim.
+
 The frozen Group A development job 51116088 used anest-dept, four CPUs, 16 GB requested
 RAM, zero GPUs, and completed in 4:37. It failed the development gate: no threshold produced
 a complete seven-structure map, so the reused evaluation split remained unopened and no actor

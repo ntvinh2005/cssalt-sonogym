@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "actor_result_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/results/actor_results.json",
+    "actor_result_sha256": "9d3532f06f15443d7a0d3ac7c32d67430c93de45f1fe8d61bbdbe8ac7c58c13e",
+    "evaluation_report_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/results/evaluation_report.json",
+    "evaluation_report_sha256": "857c8c35e1f4cedf6b4686a79c09fe4048759c3af0ede6c0fb3671fcc656015d",
+    "video_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/video/sonogym-phase1-confirmation.mp4",
+    "video_sha256": "d411bd364a2e955d2bc48ad60678c7d7997be8a614ce8260523d346318956b34"
+  },
+  "decision": "FAIL",
+  "job": {
+    "account": "anest-dept",
+    "allocated_cpus": 4,
+    "elapsed_seconds": 149,
+    "exit_code": "3:0",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "job_id": 51196094,
+    "maximum_gpu_memory_mib": 5009,
+    "maximum_gpu_utilization_percent": 54,
+    "maximum_resident_set_kib": 3123836,
+    "output_bytes": 102103959,
+    "requested_memory_gb": 30,
+    "state": "FAILED"
+  },
+  "metrics": {
+    "abstention_count": 0,
+    "complete_capture_session_count": 4,
+    "correct_count": 3,
+    "median_forward_reverse_peak_difference_mm": 3.25,
+    "median_localization_error_mm": 7.862095680805751,
+    "p90_localization_error_mm": 8.662095680805752,
+    "wrong_stop_count": 1
+  },
+  "protocol": {
+    "actor_sha256": "965e5cfefd09eace010841f9f720485e48967484ee8df508af48aebfaa5bcce8",
+    "code_commit": "2bb98417192e26cb3c331da3c2286f2c917d263e",
+    "evaluation_sha256": "b7fdb067a2b90ac2ae3bcfb5e62c78a62c046b593cd2ee3b9bee6ef7eeafa6cd"
+  },
+  "schema": "sonogym-stage1-confirmation-result-v1",
+  "sessions": {
+    "cf_00": {"coordinate_mm": -75.5, "error_mm": 7.862095680805751, "status": "SUCCESS_WITHIN_TOLERANCE"},
+    "cf_01": {"coordinate_mm": -74.5, "error_mm": 8.862095680805751, "status": "SUCCESS_WITHIN_TOLERANCE"},
+    "cf_02": {"coordinate_mm": -77.5, "error_mm": 5.862095680805751, "status": "SUCCESS_WITHIN_TOLERANCE"},
+    "cf_03": {"coordinate_mm": -73.0, "error_mm": 10.362095680805751, "status": "WRONG_STOP"}
+  },
+  "video": {
+    "duration_seconds": 14.066666666666666,
+    "frame_count": 211,
+    "ready_for_phase1_demo": false,
+    "session_id": "cf_00"
+  }
+}

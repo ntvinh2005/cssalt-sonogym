@@ -1,0 +1,55 @@
+{
+  "decision": "PASS",
+  "evaluation_reference_coordinate_mm": -83.36209568080575,
+  "metrics": {
+    "abstention_count": 0,
+    "correct_count": 4,
+    "median_forward_reverse_peak_difference_mm": 3.5,
+    "median_localization_error_mm": 6.487095680805751,
+    "p90_localization_error_mm": 7.137095680805752,
+    "wrong_stop_count": 0
+  },
+  "rule": "accepted_event_support_midpoint",
+  "schema": "sonogym-stage1-confirmation-v2-development-check-v1",
+  "selection_boundary": {
+    "confirmation_job_51196094_used_for_selection": false,
+    "development_session_ids": [
+      "cd_00",
+      "cd_01",
+      "cd_02",
+      "cd_03"
+    ]
+  },
+  "sessions": [
+    {
+      "coordinate_mm": -76.75,
+      "localization_error_mm": 6.612095680805751,
+      "session_id": "cd_00",
+      "support_interval_mm": [-78.5, -75.0]
+    },
+    {
+      "coordinate_mm": -77.0,
+      "localization_error_mm": 6.362095680805751,
+      "session_id": "cd_01",
+      "support_interval_mm": [-77.0, -77.0]
+    },
+    {
+      "coordinate_mm": -76.0,
+      "localization_error_mm": 7.362095680805751,
+      "session_id": "cd_02",
+      "support_interval_mm": [-76.5, -75.5]
+    },
+    {
+      "coordinate_mm": -77.0,
+      "localization_error_mm": 6.362095680805751,
+      "session_id": "cd_03",
+      "support_interval_mm": [-77.5, -76.5]
+    }
+  ],
+  "source": {
+    "pilot_report_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_supervised_pilot/51192890/results/pilot_report.json",
+    "pilot_report_sha256": "ffb8c5a0eb8ed9192c971cb26727f317e643a8acb88b0dbe1c02a555703f7e12",
+    "pilot_spatial_threshold": 0.5
+  },
+  "tolerance_mm": 10.0
+}

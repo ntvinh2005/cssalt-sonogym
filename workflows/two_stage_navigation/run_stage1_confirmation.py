@@ -164,7 +164,23 @@ def infer(
         coordinate_offset_mm=float(spatial["coordinate_offset_mm"]),
         minimum_top_score_margin=float(spatial["minimum_top_event_score_margin"]),
     )
-    return asdict(result), events
+    actor_result = asdict(result)
+    coordinate_rule = str(spatial.get("coordinate_rule", "accepted_event_peak"))
+    if coordinate_rule == "accepted_event_peak":
+        return actor_result, events
+    if coordinate_rule != "accepted_event_support_midpoint":
+        raise RuntimeError(f"unsupported coordinate rule: {coordinate_rule}")
+    if result.status == "SUCCESS":
+        accepted = [event for event in events if event.accepted]
+        selected = min(
+            accepted,
+            key=lambda event: abs(float(event.coordinate_mm) - float(result.coordinate_mm)),
+        )
+        actor_result["coordinate_mm"] = 0.5 * (
+            float(selected.support_interval_mm[0])
+            + float(selected.support_interval_mm[1])
+        )
+    return actor_result, events
 
 
 def validate_public_session(
@@ -357,7 +373,10 @@ def run_actor(args: argparse.Namespace) -> int:
     started = time.monotonic()
     actor_hash = validate_seal(args.actor_protocol)
     protocol = yaml.safe_load(args.actor_protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-stage1-l4-confirmation-v1":
+    if protocol["protocol_id"] not in {
+        "sonogym-stage1-l4-confirmation-v1",
+        "sonogym-stage1-l4-confirmation-v2",
+    }:
         raise RuntimeError("unexpected actor protocol")
     checkpoint_path = Path(protocol["checkpoint"]["path"])
     checkpoint_hash = file_sha256(checkpoint_path)
@@ -403,7 +422,10 @@ def run_evaluator(args: argparse.Namespace) -> int:
     evaluation = yaml.safe_load(
         args.evaluation_protocol.read_text(encoding="utf-8")
     )
-    if evaluation["protocol_id"] != "sonogym-stage1-l4-confirmation-evaluation-v1":
+    if evaluation["protocol_id"] not in {
+        "sonogym-stage1-l4-confirmation-evaluation-v1",
+        "sonogym-stage1-l4-confirmation-evaluation-v2",
+    }:
         raise RuntimeError("unexpected evaluation protocol")
     actor_protocol_hash = validate_seal(args.actor_protocol)
     if actor_protocol_hash != evaluation["actor_protocol"]["sha256"]:

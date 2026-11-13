@@ -36,13 +36,13 @@ ACTOR_PROTOCOL = (
     REPOSITORY_ROOT
     / "experiments"
     / "unity_two_stage_transfer"
-    / "stage1_confirmation_actor_protocol.yaml"
+    / "stage1_confirmation_actor_protocol_v2.yaml"
 )
 EVALUATION_PROTOCOL = (
     REPOSITORY_ROOT
     / "experiments"
     / "unity_two_stage_transfer"
-    / "stage1_confirmation_evaluation_protocol.yaml"
+    / "stage1_confirmation_evaluation_protocol_v2.yaml"
 )
 
 
@@ -80,11 +80,22 @@ class ConfirmationProtocolTests(unittest.TestCase):
                 / "protocol.yaml"
             ).read_text(encoding="utf-8")
         )
+        first_confirmation = yaml.safe_load(
+            (
+                REPOSITORY_ROOT
+                / "experiments"
+                / "unity_two_stage_transfer"
+                / "stage1_confirmation_actor_protocol.yaml"
+            ).read_text(encoding="utf-8")
+        )
         sessions = actor["sessions"]
-        self.assertEqual([row["session_id"] for row in sessions], ["cf_00", "cf_01", "cf_02", "cf_03"])
+        self.assertEqual(
+            [row["session_id"] for row in sessions],
+            ["cf2_00", "cf2_01", "cf2_02", "cf2_03"],
+        )
         old_pairs = {
             (float(row["patient_x_index"]), float(row["angle_rad"]))
-            for row in development["sessions"]
+            for row in development["sessions"] + first_confirmation["sessions"]
         }
         new_pairs = {
             (float(row["patient_x_index"]), float(row["angle_rad"]))
@@ -106,6 +117,10 @@ class ConfirmationProtocolTests(unittest.TestCase):
         self.assertEqual(resources["walltime"], "00:15:00")
         self.assertEqual(
             actor["inference"]["spatial_map"]["acceptance_score"], 0.50
+        )
+        self.assertEqual(
+            actor["inference"]["spatial_map"]["coordinate_rule"],
+            "accepted_event_support_midpoint",
         )
         self.assertEqual(evaluator["criteria"]["required_correct_sessions"], 4)
         self.assertEqual(evaluator["criteria"]["maximum_wrong_stops"], 0)
@@ -147,6 +162,32 @@ class ConfirmationActorTests(unittest.TestCase):
         scores = np.asarray([0.1, 0.9, 0.9, 0.1])
         result, _ = infer(candidates, scores, scores, self.protocol)
         self.assertEqual(result["status"], "ABSTAIN")
+
+    def test_support_midpoint_rule_uses_the_accepted_interval(self) -> None:
+        protocol = yaml.safe_load(ACTOR_PROTOCOL.read_text(encoding="utf-8"))
+        protocol["inference"]["spatial_map"][
+            "coordinate_rule"
+        ] = "accepted_event_support_midpoint"
+        candidates = [
+            candidate(-100.0, 1, "FORWARD"),
+            candidate(-80.5, 2, "FORWARD"),
+            candidate(-80.5, 3, "FORWARD"),
+            candidate(-80.5, 4, "REVERSE"),
+            candidate(-80.5, 5, "REVERSE"),
+            candidate(-80.0, 6, "FORWARD"),
+            candidate(-80.0, 7, "FORWARD"),
+            candidate(-80.0, 8, "REVERSE"),
+            candidate(-80.0, 9, "REVERSE"),
+            candidate(-60.0, 10, "REVERSE"),
+        ]
+        shared = np.asarray([0.1, 0.8, 0.8, 0.8, 0.8, 0.9, 0.9, 0.9, 0.9, 0.1])
+        anatomy = shared.copy()
+        result, events = infer(candidates, shared, anatomy, protocol)
+        accepted = [event for event in events if event.accepted]
+        self.assertEqual(result["status"], "SUCCESS")
+        self.assertEqual(len(accepted), 1)
+        expected = sum(accepted[0].support_interval_mm) / 2.0
+        self.assertEqual(result["coordinate_mm"], expected)
 
     def test_directional_peak_requires_distinct_frames(self) -> None:
         candidates = [
