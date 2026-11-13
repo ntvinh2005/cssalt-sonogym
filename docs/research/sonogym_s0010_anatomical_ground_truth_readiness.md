@@ -10,7 +10,7 @@ This report validates a privileged provisional annotation layer for SonoGym pati
 |---|---|---|---|---|
 | 1 | source-anatomy and transform integrity | [A0](../notation.md#a0) | identical CT/segmentation shape and affine; maximum bidirectional surface p95 1.5 mm | PASS |
 | 2 | major vertebral and sacral coverage | [A1](../notation.md#a1) | 7 / 7 structures, 3.90--7.01 mm uncertainty | PASS |
-| 3 | fine bony geometry audit | [A2](../notation.md#a2) | 14 / 34 PROVISIONAL; 20 / 34 UNRESOLVED | PASS |
+| 3 | fine bony geometry audit | [A2](../notation.md#a2) | 8 / 34 PROVISIONAL; 26 / 34 UNRESOLVED; 6 rejected facet candidates retained as negative evidence | PASS |
 | 4 | actor-visible anatomical evidence | [A3](../notation.md#a3) | all labels present in forward/reverse captures; no disjoint-trajectory recognition test | INCONCLUSIVE |
 | 5 | task-specific readiness | [A4](../notation.md#a4) | Stage 1 READY; L4 view acquisition PROVISIONAL; procedure-specific work BLOCKED | MIXED |
 
@@ -43,8 +43,8 @@ workflows/two_stage_navigation/annotate_s0010_anatomy.py reconstructs source geo
 
 | what | value | spec |
 |---|---|---|
-| generator commit | 7a99c2feecbdd2130bebad51ab311a39729948d5 | annotation implementation |
-| evidence commit | 798581e | generated manifest and figures |
+| generator commit | 0640c4f22b13ad8ab8459d13e14d4b1941961e13 | fail-closed facet correction and exporter |
+| evidence commit | f447616 | corrected manifest and figures |
 | Unity reference | f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0 | verified merged implementation |
 | CT | /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data/HumanModels/selected_dataset/s0010/ct.nii.gz | SHA-256 eff5e5f5829cf8cc3e413b3ac09ce455e45bc0f91f5ba37fab9b37b1fe683546 |
 | segmentation | /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz | SHA-256 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed |
@@ -57,8 +57,8 @@ export PYTHONPATH="$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/eva
 taskset -c 0 "$SONOGYM_ENV_PREFIX/bin/python" workflows/two_stage_navigation/annotate_s0010_anatomy.py \
   --asset-root "$SONOGYM_RUNTIME_DIR/assets/data/HumanModels" \
   --capture-root "$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/g0_g1_v2/50908807" \
-  --output-json experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v1.json \
-  --figure-dir docs/research/figures/s0010_anatomical_ground_truth \
+  --output-json experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json \
+  --figure-dir docs/research/figures/s0010_anatomical_ground_truth_v2 \
   --unity-commit f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
 # Resolved: one CPU; no Slurm job; no GPU.
 ~~~
@@ -90,8 +90,8 @@ Nothing was dropped.
 
 | file | contents |
 |---|---|
-| [annotation manifest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v1.json) | transforms, hashes, geometry, validation, and annotations |
-| [manifest digest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v1.sha256) | immutable JSON digest |
+| [annotation manifest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json) | transforms, hashes, geometry, validation, and annotations |
+| [manifest digest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.sha256) | immutable JSON digest |
 | [annotation module](../../source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/anatomical_ground_truth.py) | schema, transforms, comparison, and leakage guard |
 
 ## 2. Major anatomy coverage — are sacrum, S1, and L1--L5 usable as ordered references?
@@ -112,7 +112,7 @@ The same workflow creates one privileged [Group A annotation](../notation.md#gro
 
 | what | value | spec |
 |---|---|---|
-| run identity | manifest SHA-256 8b58eaa09cd20ac3bd92f667c397440c1f08550ef649edea304890a99ce7b20a | §1 invocation |
+| run identity | manifest SHA-256 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3 | §1 invocation |
 | raw labels | 25--31 | current label_conversion.yaml, SHA-256 4ce73c412ef26f69fefe0caf003a531f4fd0928ac24f2248af0a019c4d76ff9a |
 | Home reference | z index 195 | frozen capture protocol |
 | inputs | CT, segmentation, and seven meshes from §1 | no additional assets |
@@ -152,10 +152,10 @@ The same workflow creates one privileged [Group A annotation](../notation.md#gro
 
 | file | contents |
 |---|---|
-| [L3 CT views](figures/s0010_anatomical_ground_truth/ct_mpr_L3.png) | axial, sagittal, and coronal review |
-| [L4 CT views](figures/s0010_anatomical_ground_truth/ct_mpr_L4.png) | axial, sagittal, and coronal review |
-| [L5 CT views](figures/s0010_anatomical_ground_truth/ct_mpr_L5.png) | axial, sagittal, and coronal review |
-| [3D review](figures/s0010_anatomical_ground_truth/lumbar_mesh_regions.png) | oriented meshes and investigated regions |
+| [L3 CT views](figures/s0010_anatomical_ground_truth_v2/ct_mpr_L3.png) | axial, sagittal, and coronal review |
+| [L4 CT views](figures/s0010_anatomical_ground_truth_v2/ct_mpr_L4.png) | axial, sagittal, and coronal review |
+| [L5 CT views](figures/s0010_anatomical_ground_truth_v2/ct_mpr_L5.png) | axial, sagittal, and coronal review |
+| [3D review](figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png) | oriented meshes and investigated regions |
 
 ## 3. Fine bony geometry — which later medial branch block references are supportable?
 
@@ -165,7 +165,8 @@ The same workflow investigates [Group B annotations](../notation.md#group-b-anno
 
 ### 3.1 Method
 
-- Bilateral L3--L5 transverse-process, L3--S1 facet, and sacral-ala candidates remain low-confidence PROVISIONAL regions.
+- Bilateral L3--L5 transverse-process and sacral-ala candidates remain low-confidence PROVISIONAL regions.
+- Six nearest-surface facet candidates are REJECTED because adjacent meshes share exact boundary vertices; the actual facet-joint regions remain UNRESOLVED.
 - Superior and inferior articular, mammillary, and accessory processes remain UNRESOLVED because mesh quantiles do not establish their identity.
 - Lumbar medial branches relate to the transverse-process/superior-articular-process and mammillo-accessory regions; L5 has a distinct S1/sacral-ala relationship ([CT-anatomic correlation](https://pmc.ncbi.nlm.nih.gov/articles/PMC7977091/), [3D mapping](https://pmc.ncbi.nlm.nih.gov/articles/PMC11372964/), [consensus guidelines](https://pmc.ncbi.nlm.nih.gov/articles/PMC7362874/)).
 - No nerve is segmented; pedicle-screw trajectories are not used as targets.
@@ -174,7 +175,7 @@ The same workflow investigates [Group B annotations](../notation.md#group-b-anno
 
 | what | value | spec |
 |---|---|---|
-| run identity | manifest SHA-256 8b58eaa09cd20ac3bd92f667c397440c1f08550ef649edea304890a99ce7b20a | §1 invocation |
+| run identity | manifest SHA-256 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3 | §1 invocation |
 | anatomy | s0010 L3--L5, S1, sacrum | one fixed patient |
 | evidence | CT multiplanar and 3D mesh review | evaluator-only |
 
@@ -185,8 +186,9 @@ The same workflow investigates [Group B annotations](../notation.md#group-b-anno
 | | value |
 |---|---|
 | attempted | 34 |
-| retained PROVISIONAL | 14 |
-| retained UNRESOLVED | 20 |
+| retained PROVISIONAL | 8 |
+| retained UNRESOLVED | 26 |
+| rejected facet candidates retained in validation audit | 6 |
 | dropped | 0 |
 | **final** | **34** |
 
@@ -195,7 +197,7 @@ The same workflow investigates [Group B annotations](../notation.md#group-b-anno
 | structure | levels | result | uncertainty |
 |---|---|---|---|
 | transverse-process region | L3--L5, bilateral | 6 / 6 PROVISIONAL, low confidence | 6.0 mm |
-| facet-joint region | L3--L4, L4--L5, L5--S1, bilateral | 6 / 6 PROVISIONAL, low confidence | 6.0 mm |
+| facet-joint region | L3--L4, L4--L5, L5--S1, bilateral | 6 / 6 UNRESOLVED; 6 former nearest-surface candidates REJECTED | not assigned |
 | sacral-ala region | bilateral | 2 / 2 PROVISIONAL, low confidence | 8.0 mm |
 | superior/inferior articular processes | L3--L5, bilateral | 12 / 12 UNRESOLVED | not assigned |
 | mammillary/accessory processes | L3--L5 | 6 / 6 UNRESOLVED | not assigned |
@@ -206,6 +208,8 @@ The same workflow investigates [Group B annotations](../notation.md#group-b-anno
 ### 3.4 Reading it
 
 - Resolved regions are simulator engineering candidates, not clinician-validated landmarks.
+- Every rejected facet candidate had 0.0 mm surface separation. The selected regions shared 43/55, 75/59, and 22/14 exact vertices for the left/right L3--L4, L4--L5, and L5--S1 pairs, respectively.
+- Across the full mesh pairs, L3--L4, L4--L5, and L5--S1 shared 124, 215, and 139 exact vertices. These are segmentation-boundary artifacts, not facet identities.
 - Visual 3D review kept articular-process candidates UNRESOLVED rather than promoting quantile regions to named points.
 - No exact nerve centre or supported procedure target can be inferred.
 - Missing nerve data do not block Group A work.
@@ -214,8 +218,10 @@ The same workflow investigates [Group B annotations](../notation.md#group-b-anno
 
 | file | contents |
 |---|---|
-| [3D region review](figures/s0010_anatomical_ground_truth/lumbar_mesh_regions.png) | evidence for provisional and unresolved candidates |
-| [annotation manifest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v1.json) | all 34 records with evidence and limitations |
+| [3D region review](figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png) | evidence for provisional and unresolved candidates |
+| [annotation manifest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json) | 34 current records plus six rejected candidates retained under validation |
+
+The detailed external reviewer archive is `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_anatomical_ground_truth_review_20261113_v5.zip` (SHA-256 `2cab0d5ad220e4d5685e4f8c9cda94d11cdd5e1fa4d2fbd4583a1fb6cd290083`). It contains separate CT multiplanar images for all six rejected facet candidates.
 
 ## 4. Ultrasound correspondence — are the annotated structures present and discriminative?
 
@@ -275,8 +281,8 @@ The same workflow audits existing job 50908807 captures and produces separate cl
 
 | file | contents |
 |---|---|
-| [ultrasound review](figures/s0010_anatomical_ground_truth/ultrasound_correspondence.png) | clean positives/negatives beside evaluator-only overlays |
-| [annotation manifest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v1.json) | counts, frame hashes, directions, and session provenance |
+| [ultrasound review](figures/s0010_anatomical_ground_truth_v2/ultrasound_correspondence.png) | clean positives/negatives beside evaluator-only overlays |
+| [annotation manifest](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json) | counts, frame hashes, directions, and session provenance |
 
 ## 5. Readiness and verification — what experiment may proceed now?
 
@@ -296,8 +302,8 @@ The annotation tests and existing two-stage CPU suites validate records, transfo
 | what | value | spec |
 |---|---|---|
 | test runtime | Python 3.10.8; pytest 7.4.3 | UF module, one CPU |
-| test files | test_anatomical_ground_truth.py plus three two-stage suites | 42 tests |
-| artifact validation | 41 records; 5 visualizations | all paths and hashes checked |
+| test files | test_anatomical_ground_truth.py plus three two-stage suites | 46 tests |
+| artifact validation | 41 annotation records; 6 rejected candidates; 5 visualizations | all paths and hashes checked |
 | resources | one CPU; no GPU; no Slurm job | bounded local execution |
 
 ~~~bash
@@ -310,7 +316,7 @@ taskset -c 0 python -m pytest -q \
   tests/test_two_stage_contracts.py \
   tests/test_two_stage_protocol.py \
   tests/test_two_stage_stage1.py
-# Resolved result: 42 passed in 0.43 s.
+# Resolved result: 46 passed in 0.51 s.
 ~~~
 
 Nothing was dropped.
@@ -324,7 +330,7 @@ Nothing was dropped.
 | provisional bony medial branch block target | BLOCKED | named fine structures and nerve relationship unresolved |
 | simulated instrument positioning | BLOCKED | no supported target, trajectory, or safety model |
 | nerve-specific validation | BLOCKED | no nerve data or clinician validation |
-| CPU verification | PASS | 42 / 42 passed in 0.43 s |
+| CPU verification | PASS | 46 / 46 passed in 0.51 s |
 
 **Verdict: PASS for starting the bounded Unity Stage 1 experiment and PROVISIONAL for defining Stage 2; procedure-specific capabilities remain BLOCKED.**
 
@@ -342,5 +348,5 @@ Nothing was dropped.
 |---|---|
 | [annotation tests](../../tests/test_anatomical_ground_truth.py) | schema, transforms, completion, and leakage checks |
 | [annotation workflow](../../workflows/two_stage_navigation/annotate_s0010_anatomy.py) | reproducible CPU generation |
-| [machine-readable result](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v1.json) | annotation deliverable |
+| [machine-readable result](../../experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json) | corrected annotation deliverable |
 | [notation registry](../notation.md) | definitions used by this report |

@@ -176,10 +176,18 @@ bundle was released. The concise result and full report are:
 - experiments/unity_two_stage_transfer/stage1_group_a_result.json
 - docs/research/sonogym_s0010_group_a_stage1_result.md
 
-Detailed annotation-review images are external to Git at
-/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_anatomical_ground_truth_review_20261113_v4.zip.
-The 24 MB ZIP SHA-256 is
-420395a6db98f4f56d6eb40995e8aa39dcdfd34bd5f747f9e76f8eb49039bc43.
+Reviewer audit found that the six v1 facet candidates were nearest points on adjacent meshes
+with 0.0 mm separation, not demonstrated facet-joint locations. Commit `0640c4f` now rejects
+that construction; evidence commit `f447616` preserves the six candidates as `REJECTED` audit
+records and marks all six actual facet-joint annotations `UNRESOLVED`. Group A remains 7/7;
+Group B is now 8/34 `PROVISIONAL` and 26/34 `UNRESOLVED`.
+
+The corrected detailed review package is external to Git at
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_anatomical_ground_truth_review_20261113_v5.zip.
+The 24,564,576-byte ZIP SHA-256 is
+2cab0d5ad220e4d5685e4f8c9cda94d11cdd5e1fa4d2fbd4583a1fb6cd290083.
+Its 37 PNG files decode successfully, all internal SHA-256 checks pass, and `unzip -t` reports
+no errors. The prior v4 archive is retained as superseded review history.
 Stage 2 has not started.
 
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
