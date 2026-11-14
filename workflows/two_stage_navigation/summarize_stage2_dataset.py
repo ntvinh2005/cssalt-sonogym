@@ -38,6 +38,7 @@ def main() -> int:
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
     summaries = []
     public_hashes: set[str] = set()
+    trajectory_ids: set[str] = set()
     for session in protocol["sessions"]:
         session_id = str(session["session_id"])
         root = args.capture_root / "sessions" / session_id
@@ -62,13 +63,20 @@ def main() -> int:
             )
             if actor_key != annotation_key:
                 raise RuntimeError(f"public/privileged join mismatch in {session_id}")
+            if actor.get("trajectory_id") != annotation.get("trajectory_id"):
+                raise RuntimeError(f"trajectory join mismatch in {session_id}")
+            trajectory_ids.add(str(actor["trajectory_id"]))
             public_hashes.add(str(actor["frame_sha256"]))
         summaries.append(summary)
+    expected_trajectories = sum(int(row.get("trajectory_count", 1)) for row in summaries)
+    if len(trajectory_ids) != expected_trajectories:
+        raise RuntimeError("unexpected Stage 2 trajectory count")
     report = {
         "schema": "sonogym-stage2-dataset-summary-v1",
         "decision": "DATA_READY",
         "protocol_sha256": protocol_hash,
         "session_count": len(summaries),
+        "trajectory_count": len(trajectory_ids),
         "frame_count": sum(int(row["frame_count"]) for row in summaries),
         "valid_frame_count": sum(int(row["valid_frame_count"]) for row in summaries),
         "distinct_frame_hash_count": len(public_hashes),
