@@ -258,6 +258,9 @@ def main() -> int:
                     maximum_position_error_mm=position_tolerance,
                     maximum_orientation_error_deg=movement_orientation_tolerance,
                     ratio=tuple(float(value) for value in controller["ratio"]),
+                    allow_angle_ceiling_saturation=bool(
+                        controller.get("capture_angle_ceiling_limited_samples", False)
+                    ),
                     trajectory_sink=action_rows,
                 )
             else:

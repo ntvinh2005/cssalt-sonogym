@@ -34,6 +34,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     PatientFrameConvention,
     PixelGeometry,
     assess_native_command,
+    can_capture_angle_ceiling_limited,
     command_target_from_realized_error,
     command_with_replaced_angle,
     indices_to_mm,
@@ -164,7 +165,10 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v10"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v10"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v10"))
-        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v11"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v11"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v11"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v11"))
+        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v12"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
         with self.assertRaises(ValueError):
@@ -186,6 +190,32 @@ class CoordinateTests(unittest.TestCase):
         self.assertFalse(pose_within_tolerance(1.906, 3.718, 3.0, 3.0))
         with self.assertRaises(ValueError):
             pose_within_tolerance(1.0, math.nan, 5.0, 5.0)
+
+    def test_ceiling_limited_capture_never_overrides_position_clamp(self) -> None:
+        self.assertTrue(
+            can_capture_angle_ceiling_limited(
+                0.34,
+                5.0,
+                command_angle_clamped=True,
+                command_position_clamped=False,
+            )
+        )
+        self.assertFalse(
+            can_capture_angle_ceiling_limited(
+                5.01,
+                5.0,
+                command_angle_clamped=True,
+                command_position_clamped=False,
+            )
+        )
+        self.assertFalse(
+            can_capture_angle_ceiling_limited(
+                0.34,
+                5.0,
+                command_angle_clamped=True,
+                command_position_clamped=True,
+            )
+        )
 
     def test_index_millimetre_round_trip(self) -> None:
         indices = np.asarray([132.0, 195.0])

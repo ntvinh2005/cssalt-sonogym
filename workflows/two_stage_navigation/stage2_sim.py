@@ -11,6 +11,7 @@ from isaaclab.utils.math import matrix_from_quat
 
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (
     assess_native_command,
+    can_capture_angle_ceiling_limited,
     command_target_from_realized_error,
     command_with_replaced_angle,
     plan_native_action,
@@ -198,6 +199,7 @@ def move_proportional_target(
     maximum_position_error_mm: float,
     maximum_orientation_error_deg: float,
     ratio: np.ndarray | tuple[float, float, float] = (0.02, 0.02, 0.6),
+    allow_angle_ceiling_saturation: bool = False,
     trajectory_sink: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Run bounded coupled feedback while allowing only the declared angle ceiling clamp.
@@ -239,6 +241,18 @@ def move_proportional_target(
         position_error_mm <= maximum_position_error_mm
         and orientation_error_deg <= maximum_orientation_error_deg
     ):
+        return trajectory
+    if (
+        allow_angle_ceiling_saturation
+        and trajectory
+        and can_capture_angle_ceiling_limited(
+            position_error_mm,
+            maximum_position_error_mm,
+            command_angle_clamped=bool(trajectory[-1]["command_angle_clamped"]),
+            command_position_clamped=bool(trajectory[-1]["command_position_clamped"]),
+        )
+    ):
+        trajectory[-1]["ceiling_limited_capture"] = True
         return trajectory
     raise TimeoutError(
         f"coupled pose did not converge after {maximum_steps} steps: "

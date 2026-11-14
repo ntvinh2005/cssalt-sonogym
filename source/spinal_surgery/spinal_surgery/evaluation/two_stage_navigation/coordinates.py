@@ -15,13 +15,13 @@ import numpy as np
 
 LABEL_RESOLUTION_MM = 1.5
 STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(1, 11)
+    f"sonogym-stage2-dataset-v{version}" for version in range(1, 12)
 )
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(4, 11)
+    f"sonogym-stage2-dataset-v{version}" for version in range(4, 12)
 )
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(5, 11)
+    f"sonogym-stage2-dataset-v{version}" for version in range(5, 12)
 )
 
 
@@ -74,6 +74,26 @@ def pose_within_tolerance(
     return bool(
         position_error_mm <= maximum_position_error_mm
         and orientation_error_deg <= maximum_orientation_error_deg
+    )
+
+
+def can_capture_angle_ceiling_limited(
+    position_error_mm: float,
+    maximum_position_error_mm: float,
+    *,
+    command_angle_clamped: bool,
+    command_position_clamped: bool,
+) -> bool:
+    """Allow a bounded invalid candidate only when the angle command hit its native ceiling."""
+    if not all(
+        math.isfinite(value) and value >= 0.0
+        for value in (position_error_mm, maximum_position_error_mm)
+    ):
+        raise ValueError("position error and tolerance must be finite and nonnegative")
+    return bool(
+        position_error_mm <= maximum_position_error_mm
+        and command_angle_clamped
+        and not command_position_clamped
     )
 
 
