@@ -1,0 +1,33 @@
+{
+  "schema": "sonogym-stage2-dataset-error-v1",
+  "decision": "TECHNICAL_ERROR_NOT_EVALUATED",
+  "job": {
+    "job_id": 51337309,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "elapsed": "00:00:38",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "fa65cffb32fee6f4fa4b73db5d3fa019f89e2a91",
+  "protocol_sha256": "d5008b963acefbc829b2a2bbe84cca039ff2176cb4ee2f998a7a2f18edd2f9de",
+  "failure": {
+    "session_id": "s2tr_00",
+    "trigger": "protocol v5 was incorrectly dispatched to legacy move_to_pose",
+    "evidence": "The traceback originated from move_to_pose and the status lacked controller_ratio/controller_target fields from coupled feedback.",
+    "interpretation": "This was an implementation dispatch defect, not a simulator, label, or data-collection acceptance failure."
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 53,
+    "maximum_resident_memory_kib": 3625552,
+    "timed_session_elapsed_seconds": 34.36,
+    "artifact_bytes": 166816
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v5/51337309"
+}
