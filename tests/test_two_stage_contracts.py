@@ -38,6 +38,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     command_with_replaced_angle,
     indices_to_mm,
     is_supported_stage2_dataset_protocol,
+    is_stage2_trajectory_start,
     mm_to_indices,
     plan_native_action,
     plan_proportional_target_action,
@@ -153,17 +154,29 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v6"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v7"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v8"))
-        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v9"))
+        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v10"))
         self.assertFalse(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v4"))
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v5"))
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v7"))
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v8"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v9"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v9"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v9"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
         with self.assertRaises(ValueError):
             is_supported_stage2_dataset_protocol("")
         with self.assertRaises(ValueError):
             uses_segmented_stage2_dataset_capture("")
+
+    def test_each_segment_start_uses_initial_positioning_semantics(self) -> None:
+        starts = [0, 20, 40, 60]
+        for frame_sequence in starts:
+            self.assertTrue(is_stage2_trajectory_start(frame_sequence, starts))
+        self.assertFalse(is_stage2_trajectory_start(19, starts))
+        self.assertFalse(is_stage2_trajectory_start(21, starts))
+        with self.assertRaises(ValueError):
+            is_stage2_trajectory_start(0, [0, 40, 20])
 
     def test_pose_tolerance_uses_the_declared_protocol_limits(self) -> None:
         self.assertTrue(pose_within_tolerance(1.906, 3.718, 5.0, 5.0))

@@ -15,13 +15,13 @@ import numpy as np
 
 LABEL_RESOLUTION_MM = 1.5
 STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(1, 9)
+    f"sonogym-stage2-dataset-v{version}" for version in range(1, 10)
 )
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(4, 9)
+    f"sonogym-stage2-dataset-v{version}" for version in range(4, 10)
 )
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(5, 9)
+    f"sonogym-stage2-dataset-v{version}" for version in range(5, 10)
 )
 
 
@@ -94,6 +94,15 @@ def uses_segmented_stage2_dataset_capture(protocol_id: str) -> bool:
     if not isinstance(protocol_id, str) or not protocol_id:
         raise ValueError("protocol_id must be a non-empty string")
     return protocol_id in SEGMENTED_STAGE2_DATASET_PROTOCOLS
+
+
+def is_stage2_trajectory_start(frame_sequence: int, start_frames: object) -> bool:
+    if not isinstance(frame_sequence, int) or frame_sequence < 0:
+        raise ValueError("frame_sequence must be a non-negative integer")
+    starts = tuple(int(value) for value in start_frames)
+    if not starts or starts[0] != 0 or tuple(sorted(set(starts))) != starts:
+        raise ValueError("start_frames must be sorted, unique, and begin at zero")
+    return frame_sequence in starts
 
 
 @dataclass(frozen=True)

@@ -45,6 +45,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
 )
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa: E402
     is_supported_stage2_dataset_protocol,
+    is_stage2_trajectory_start,
     uses_coupled_stage2_dataset_controller,
     uses_segmented_stage2_dataset_capture,
     wrap_to_pi,
@@ -228,7 +229,9 @@ def main() -> int:
             maximum_steps = int(
                 sampling[
                     "maximum_initial_positioning_steps"
-                    if frame_sequence == 0
+                    if is_stage2_trajectory_start(
+                        frame_sequence, trajectory_start_frames
+                    )
                     else "maximum_action_steps_per_waypoint"
                 ]
             )
