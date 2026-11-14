@@ -25,6 +25,7 @@ PROTOCOL = (
 PROTOCOL_V2 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v2.yaml")
 PROTOCOL_V3 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v3.yaml")
 PROTOCOL_V4 = PROTOCOL.with_name("stage2_coupled_smoke_protocol_v4.yaml")
+PROTOCOL_V5 = PROTOCOL.with_name("stage2_coupled_smoke_protocol_v5.yaml")
 
 from two_stage_navigation.stage2_settling import (  # noqa: E402
     SettlingCriteria,
@@ -160,6 +161,24 @@ class SettlingProtocolTests(unittest.TestCase):
             self.assertEqual(third["resource_bound"][key], fourth["resource_bound"][key])
         self.assertEqual(fourth["scope"]["model_training"], "forbidden")
         self.assertEqual(fourth["scope"]["dataset_recapture"], "forbidden")
+
+    def test_v5_is_a_guard_only_retry_with_the_same_controller_and_gate(self) -> None:
+        expected = PROTOCOL_V5.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V5.read_bytes()).hexdigest(), expected)
+        fourth = yaml.safe_load(PROTOCOL_V4.read_text(encoding="utf-8"))
+        fifth = yaml.safe_load(PROTOCOL_V5.read_text(encoding="utf-8"))
+        self.assertEqual(fifth["amendment"]["evidence_job"], 51332269)
+        self.assertEqual(fourth["session"], fifth["session"])
+        self.assertEqual(fourth["motion"]["controller_ratio"], fifth["motion"]["controller_ratio"])
+        self.assertEqual(fourth["motion"]["requested_angle_rad"], fifth["motion"]["requested_angle_rad"])
+        self.assertEqual(
+            fourth["motion"]["controller_target_angle_rad"],
+            fifth["motion"]["controller_target_angle_rad"],
+        )
+        self.assertEqual(fourth["motion"]["maximum_coupled_steps"], fifth["motion"]["maximum_coupled_steps"])
+        self.assertEqual(fourth["criteria"], fifth["criteria"])
+        for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
+            self.assertEqual(fourth["resource_bound"][key], fifth["resource_bound"][key])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,46 @@
+{
+  "schema": "sonogym-stage2-coupled-smoke-error-v1",
+  "decision": "TECHNICAL_ERROR_NOT_EVALUATED",
+  "job": {
+    "job_id": 51332269,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:15:00",
+    "elapsed": "00:00:40",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "82a8bc1611858401e6be29550814bc689afc1bf9",
+  "implementation_commit": "98a5c70bb76c2bba538ef18f65ffa1451e27d482",
+  "protocol_sha256": "c24d83d5f0c45389fade08e5f5ea6bbd3a22c21e67808a989a63a4825cabf5c5",
+  "failure": {
+    "coupled_step": 40,
+    "technical_state_finite": true,
+    "command_mapping_valid": true,
+    "command_position_clamped": false,
+    "command_angle_clamped": false,
+    "surface_proxy_ok": true,
+    "terminated": false,
+    "truncated": false,
+    "position_error_mm": 11.56193819427823,
+    "orientation_error_deg_to_controller_target": 74.0211036099362,
+    "trigger": "command_progressed was false",
+    "interpretation": "The coupled planner acts from realized pose error. Robot lag allowed the realized pose to move toward the target while the internal command temporarily moved away, so command monotonicity was not a valid physical-safety condition. No acceptance frame was acquired."
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 37,
+    "maximum_resident_memory_kib": 3323536,
+    "timed_application_elapsed_seconds": 34.97,
+    "artifact_bytes": 51391
+  },
+  "fix": {
+    "commit": "321b84df3a98f664e20f3d0a3c93315108e7646c",
+    "scope": "Remove command-space monotonicity as a coupled-controller failure gate; retain finite state, command mapping, position clamp, surface, termination, truncation, and the 300-step bound. Stream each attempted action into the failure artifact sink."
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_coupled_smoke_v4/51332269"
+}
