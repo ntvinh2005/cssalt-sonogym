@@ -1,0 +1,48 @@
+{
+  "schema": "sonogym-stage2-dataset-result-v1",
+  "decision": "DATA_READY",
+  "job": {
+    "job_id": 51359047,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "start": "2026-11-14T17:26:25-05:00",
+    "end": "2026-11-14T17:30:53-05:00",
+    "elapsed": "00:04:28",
+    "slurm_state": "COMPLETED",
+    "exit_code": "0:0"
+  },
+  "capture_commit": "28e1bc870c68097d254be622797b0a4797f72dde",
+  "protocol_id": "sonogym-stage2-dataset-v12",
+  "protocol_sha256": "cb0c60de6546440bb69a08bdaaa8f8abc580de22e856067a0e4720066bb38862",
+  "dataset": {
+    "patient_id": "s0010",
+    "session_count": 6,
+    "trajectory_count": 48,
+    "frame_count": 450,
+    "distinct_frame_hash_count": 347,
+    "valid_frame_count": 58,
+    "training_valid_frame_count": 40,
+    "calibration_valid_frame_count": 10,
+    "development_valid_frame_count": 8,
+    "public_privileged_one_to_one": true,
+    "bytes": 80303699
+  },
+  "resources": {
+    "peak_gpu_memory_mib": 5009,
+    "peak_gpu_utilization_percent": 57,
+    "maximum_resident_memory_kib": 3397008
+  },
+  "external_artifacts": {
+    "capture_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v12/51359047",
+    "review_zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/sonogym_stage2_dataset_review_20261114_job51359047.zip",
+    "review_zip_sha256": "8a200aa8bca0ff54bca23548157fda908d7a8368a2d363be32f9a18bdcbb9b0b",
+    "review_zip_bytes": 2714231,
+    "review_image_count": 18
+  },
+  "scientific_boundary": "DATA_READY establishes bounded image acquisition and offline labels on fixed anatomy s0010. It does not establish image-only recognition, generalization, or clinical validity. No model was trained by this job."
+}
