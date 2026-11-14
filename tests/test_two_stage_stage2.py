@@ -26,6 +26,7 @@ PROTOCOL = (
 PROTOCOL_V2 = PROTOCOL.with_name("stage2_dataset_protocol_v2.yaml")
 PROTOCOL_V3 = PROTOCOL.with_name("stage2_dataset_protocol_v3.yaml")
 PROTOCOL_V4 = PROTOCOL.with_name("stage2_dataset_protocol_v4.yaml")
+PROTOCOL_V5 = PROTOCOL.with_name("stage2_dataset_protocol_v5.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -171,6 +172,24 @@ class Stage2ProtocolTests(unittest.TestCase):
         )
         self.assertEqual(fourth["sampling"]["maximum_initial_positioning_steps"], 300)
         self.assertEqual(fourth["sampling"]["maximum_action_steps_per_waypoint"], 60)
+
+    def test_v5_segments_capture_without_disabling_task_timeout(self) -> None:
+        expected = PROTOCOL_V5.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V5.read_bytes()).hexdigest(), expected)
+        fourth = yaml.safe_load(PROTOCOL_V4.read_text(encoding="utf-8"))
+        fifth = yaml.safe_load(PROTOCOL_V5.read_text(encoding="utf-8"))
+        self.assertEqual(fifth["amendment"]["evidence_job"], 51335739)
+        for key in ("sessions", "labels", "features", "model", "development_gate"):
+            self.assertEqual(fourth[key], fifth[key])
+        self.assertEqual(
+            fourth["sampling"]["physical_controller"],
+            fifth["sampling"]["physical_controller"],
+        )
+        self.assertEqual(fifth["sampling"]["trajectory_start_frames"], [0, 20, 40, 60])
+        self.assertEqual(fifth["sampling"]["expected_trajectories_per_session"], 4)
+        self.assertEqual(fifth["sampling"]["expected_total_trajectories"], 24)
+        self.assertEqual(fifth["sampling"]["maximum_total_action_steps_per_session"], 1800)
+        self.assertIn("task_timeout_and_dynamics", fifth["amendment"]["unchanged_design"])
 
 
 class Stage2LabelTests(unittest.TestCase):

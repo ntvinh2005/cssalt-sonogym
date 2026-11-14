@@ -1,0 +1,38 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v1",
+  "decision": "TECHNICAL_ERROR_NOT_DATA_READY",
+  "job": {
+    "job_id": 51335739,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "elapsed": "00:00:44",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "d7ce7410b225214fa0841b1e6029f5388eaebf27",
+  "implementation_commit": "0c84b285be7436b2474b7990ba7eaa9af7a7990b",
+  "protocol_sha256": "db1a4024235e8bae137bd4f9a1fb701746aa24530ccc7bfb70ce571792ac0121",
+  "failure": {
+    "session_id": "s2tr_00",
+    "frame_sequence_in_progress": 37,
+    "completed_frame_candidates_before_failure": 37,
+    "serialized_complete_dataset_frames": 0,
+    "action_rows_preserved": 599,
+    "trigger": "environment time-limit truncation at the 600-step episode horizon",
+    "evidence": "The final step returned truncated=true and the auto-reset changed command and realized pose, producing the observed mapping discontinuity.",
+    "interpretation": "The coupled controller was valid through the preceding step. A 75-waypoint acquisition is longer than one unchanged SonoGym episode and must be represented as multiple deterministic acquisition trajectories rather than disabling timeout."
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 55,
+    "maximum_resident_memory_kib": 3601168,
+    "timed_session_elapsed_seconds": 39.91,
+    "artifact_bytes": 789499
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v4/51335739"
+}
