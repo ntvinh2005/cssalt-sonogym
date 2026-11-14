@@ -1,0 +1,74 @@
+{
+  "schema": "sonogym-stage2-orientation-smoke-evidence-v2",
+  "audited_decision": "FAIL",
+  "recorded_runtime_decision": "ERROR",
+  "stage2_dataset_status": "BLOCKED",
+  "reason": "The approved orientation-only retry completed its 120-step bound without an earlier invalid-transition error but ended 3.747533552289236 degrees from the 3.0-radian command, above the frozen 1-degree criterion. Positioning, ten-frame acquisition, dataset capture, and training did not run.",
+  "job": {
+    "job_id": 51276637,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c0602a-s19",
+    "state": "FAILED",
+    "exit_code": "2:0",
+    "elapsed": "00:00:39",
+    "start": "2026-11-14T04:03:18-05:00",
+    "end": "2026-11-14T04:03:54-05:00"
+  },
+  "resources": {
+    "cpu_cores": 4,
+    "memory_requested_gb": 30,
+    "gpu_count": 1,
+    "gpu_model": "NVIDIA L4",
+    "gpu_memory_total_mib": 23034,
+    "gpu_memory_sampled_peak_mib": 5009,
+    "gpu_utilization_sampled_peak_percent": 47,
+    "process_maximum_resident_set_kib": 3340360,
+    "output_bytes": 48656
+  },
+  "software": {
+    "project_commit": "a4997121106270afd57698f4c6d547b72341061d",
+    "implementation_commit": "4c8ee26a231c1d107c9d800168a66ab88d37f44c",
+    "isaaclab_commit": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e",
+    "upstream_sonogym_commit": "e67be58334d1a5274f0913af36f56e4b0b7ffe5a",
+    "python": "3.10.22",
+    "driver": "580.178.04"
+  },
+  "protocol": {
+    "path": "experiments/unity_two_stage_transfer/stage2_orientation_smoke_protocol_v2.yaml",
+    "sha256": "bc4cbc9ec6d95fb342b104039370d7342223a345afe0bc722a0081d7450a6176",
+    "seed": 2026111600,
+    "requested_angle_rad": 3.0,
+    "maximum_orientation_steps": 120,
+    "maximum_positioning_steps": 120,
+    "required_settled_frames": 10,
+    "maximum_command_orientation_error_deg": 1.0,
+    "maximum_goal_orientation_error_deg": 10.0
+  },
+  "measurement": {
+    "orientation_steps_executed": 120,
+    "final_command_orientation_error_deg": 3.747533552289236,
+    "criterion_passed": false,
+    "positioning_started": false,
+    "settled_frames": 0,
+    "ultrasound_frames_saved": 0,
+    "dataset_capture_started": false,
+    "model_training_started": false
+  },
+  "source_audit": {
+    "configured_goal_angle_rad": 3.14,
+    "configured_command_maximum_angle_rad": 3.0,
+    "configured_gap_deg": 8.021409131831525,
+    "phase5a_oracle_job": 50656802,
+    "phase5a_oracle_horizon_steps": 300,
+    "phase5a_oracle_median_final_goal_orientation_error_deg": 8.537524726651668,
+    "comparison_limit": "The privileged Phase 5A oracle used 300 steps and simultaneous pose feedback, so it is feasibility evidence rather than a matched result for this 120-step orientation-only run."
+  },
+  "artifact_limitations": {
+    "runtime_misclassified_bound_exhaustion_as_error": true,
+    "partial_action_trace_saved": false,
+    "audit_basis": "The orientation loop can reach its final Timeout only after all 120 transitions pass finite, unclamped, mapping, progress, surface, termination, and truncation checks."
+  },
+  "next_research_decision": "Decide whether to approve a 300-step orientation-settling protocol supported by existing Phase 5A oracle evidence, or instead revise the 3.14-radian goal versus 3.0-radian command-range inconsistency. Do not change either silently.",
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke_v2/51276637"
+}

@@ -160,7 +160,7 @@ def move_to_pose(
         and orientation_error_deg <= maximum_orientation_error_deg
     ):
         return trajectory
-    raise RuntimeError(
+    raise TimeoutError(
         f"pose did not converge after {maximum_steps} steps: "
         f"position={position_error_mm}, orientation={orientation_error_deg}"
     )
@@ -204,7 +204,7 @@ def move_orientation_only(
     )
     if orientation_error_deg <= maximum_orientation_error_deg:
         return trajectory
-    raise RuntimeError(
+    raise TimeoutError(
         f"orientation did not converge after {maximum_steps} steps: "
         f"orientation={orientation_error_deg}"
     )

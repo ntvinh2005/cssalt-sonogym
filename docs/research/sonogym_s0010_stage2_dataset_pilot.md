@@ -4,11 +4,12 @@ This report tests whether the fixed-`s0010` simulator can supply the labeled loc
 
 ## Result
 
-**BLOCKED: the frozen acquisition produced one complete 75-frame session with zero validity-positive frames, then failed the physical orientation tolerance in the second session.**
+**BLOCKED: the dataset had zero validity-positive frames, and the approved orientation-only retry remained 3.7475 degrees from its command after the frozen 120-step bound.**
 
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
 | 1 | six-session supervised dataset acquisition | 6 / 6 complete sessions; 450 joined frames; positive and negative validity support; all waypoint poses within 5 mm and 5 degrees | 1 / 6 complete; 75 / 450 frames; 0 positives; second session ended at 1.052 mm and 5.497 degrees | BLOCKED |
+| 2 | orientation-only physical convergence | command orientation error at most 1 degree, then 10 / 10 frames meeting all pose, image, and L4 criteria | 3.747533552289236 degrees after 120 / 120 steps; 0 / 10 frames acquired | FAIL |
 
 The frozen 10 mm / 10 degree validity definition was not relaxed. Training and closed-loop evaluation were not run because the dataset gate failed.
 
@@ -150,3 +151,98 @@ frames. The Slurm wrapper still failed closed and no downstream work ran.
 | [orientation error evidence](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v1_error.json) | exact job, resource, transition, and interpretation record |
 | [orientation evidence digest](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v1_error.sha256) | error-evidence SHA-256 |
 | external run | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke/51274046` |
+
+## 3. Orientation-only bounded retry — can the robot meet the 1 degree command criterion?
+
+`workflows/two_stage_navigation/run_stage2_orientation_smoke.py`, run by
+`hpg/jobs/two_stage_stage2_orientation_smoke_v2.sbatch`. It rotates without requesting
+translation, then permits positioning and acquisition only after the realized orientation meets
+the frozen command criterion.
+
+**Criterion.** Protocol v2 requires realized orientation error at most 1 degree from the
+3.0-radian command within 120 orientation actions. It then requires all ten fresh frames to be
+technically valid, within 5 mm / 1 degree of the command, within 10 mm / 10 degrees of the
+evaluator goal, and to contain raw-label-28 fraction at least 0.05. The criterion was frozen
+before job `51276637`.
+
+### 3.1 Method
+
+- Each orientation action retains the current translation command and changes only angle.
+- Finite state, command mapping, progress, surface state, termination, and truncation are checked
+  after every action.
+- Translation, frame acquisition, dataset capture, and fitting remain gated until orientation
+  convergence passes.
+- The actor-visible record remains separate from privileged goal pose and raw labels.
+
+### 3.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| job / code | `51276637`; `a4997121106270afd57698f4c6d547b72341061d` | clean recorded worktree |
+| implementation | `4c8ee26a231c1d107c9d800168a66ab88d37f44c` | orientation and translation separated |
+| protocol | SHA-256 `bc4cbc9ec6d95fb342b104039370d7342223a345afe0bc722a0081d7450a6176` | seed `2026111600` |
+| task | `Isaac-robot-US-guidance-v0`; `conv`; `s0010`; one environment | real Isaac Lab task |
+| resources | `anest-dept`; one NVIDIA L4; four CPUs; 30 GB; 15 minutes | one job |
+
+~~~bash
+sbatch --parsable \
+  --account=anest-dept --qos=anest-dept --partition=hpg-turin \
+  --constraint=l4 --gres=gpu:l4:1 --nodes=1 --ntasks=1 \
+  --cpus-per-task=4 --mem=30G --time=00:15:00 \
+  --job-name=sg-s2-orient2 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-s2-orient2-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env \
+  hpg/jobs/two_stage_stage2_orientation_smoke_v2.sbatch
+
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/envs/sonogym/bin/python \
+  workflows/two_stage_navigation/run_stage2_orientation_smoke.py \
+  --protocol experiments/unity_two_stage_transfer/stage2_orientation_smoke_protocol_v2.yaml \
+  --output-dir /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke_v2/51276637/results \
+  --assets-data-dir /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data \
+  --headless --device cuda:0
+~~~
+
+| | value |
+|---|---:|
+| allowed orientation actions | 120 |
+| completed orientation actions | 120 |
+| required settled frames | 10 |
+| acquired settled frames | 0 |
+| dropped because orientation did not converge | 10 |
+| **final analyzed frames** | **0** |
+
+### 3.3 Results
+
+| v2 setting | criterion | measured | verdict |
+|---|---:|---:|---|
+| command orientation after 120 actions | at most 1 degree | 3.747533552289236 degrees | FAIL |
+| required fresh-frame conjunction | 10 / 10 | 0 / 10 acquired | NOT_RUN |
+| dataset and fitting | only after convergence PASS | not started | NOT_RUN |
+
+Job `51276637` ran for 39 seconds, sampled 5,009 MiB peak GPU memory and 47% peak GPU
+utilization, used 3,340,360 KiB maximum resident memory, and wrote 48,656 bytes.
+
+**Verdict: FAIL**, because the physical orientation remained 2.747533552289236 degrees above
+the frozen command-error limit after the complete 120-action bound.
+
+### 3.4 Reading it
+
+- No transition failed before the 120-step limit; otherwise the loop would have stopped earlier.
+- The runtime artifact recorded `ERROR`, but the audited result is `FAIL` because exhausting the
+  predeclared convergence bound is an acceptance failure, not an infrastructure error.
+- The task config sets goal angle 3.14 rad and command maximum 3.0 rad, a gap of
+  8.021409131831525 degrees before robot tracking error.
+- Phase 5A's privileged oracle reached median final goal-orientation error
+  8.537524726651668 degrees over 300 steps; that is feasibility evidence, not a matched
+  comparison to this 120-step orientation-only check.
+- Phase 1 remains successful; Stage 2 data collection and model fitting remain blocked.
+- No threshold, task goal, command range, reward, observation, or dynamics was changed.
+
+### 3.5 Files
+
+| file | contents |
+|---|---|
+| [v2 protocol](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_protocol_v2.yaml) | frozen two-phase motion, criteria, resources, and stop policy |
+| [v2 failure evidence](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v2_failure.json) | exact job, bounded result, source audit, and next decision |
+| [v2 evidence digest](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v2_failure.sha256) | failure-evidence SHA-256 |
+| external run | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke_v2/51276637` |

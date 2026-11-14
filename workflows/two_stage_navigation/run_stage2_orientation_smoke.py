@@ -248,6 +248,12 @@ def main() -> int:
         write_jsonl(public_dir / "frames.jsonl", public_rows)
         write_jsonl(privileged_dir / "annotations.jsonl", privileged_rows)
         return 0 if metrics["decision"] == "PASS" else 3
+    except TimeoutError as error:
+        result["decision"] = "FAIL"
+        result["engineering_status"] = "PHYSICAL_CONVERGENCE_FAIL"
+        result["error"] = f"{type(error).__name__}: {error}"
+        result["traceback"] = traceback.format_exc()
+        return 3
     except Exception as error:
         result["decision"] = "ERROR"
         result["engineering_status"] = "TECHNICAL_ERROR"
