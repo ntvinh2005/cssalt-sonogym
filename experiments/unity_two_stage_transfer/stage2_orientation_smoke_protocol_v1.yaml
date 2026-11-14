@@ -1,0 +1,73 @@
+protocol_id: sonogym-stage2-orientation-smoke-v1
+status: PRE_GPU_FROZEN
+purpose: >-
+  Determine whether the real robot and ultrasound pipeline can physically settle at the
+  maximum supported 3.0-radian command closely enough to produce ten technically valid
+  L4-positive frames satisfying the unchanged 10 mm and 10 degree evaluator criteria.
+source:
+  implementation_commit: dd60a007cfc9491c98986547d3bcbb1ff239e868
+  blocked_dataset_jobs: [51231922, 51245393, 51245827]
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+scope:
+  task: Isaac-robot-US-guidance-v0
+  ultrasound_mode: conv
+  patient_id: s0010
+  simulator_environments: 1
+  model_training: forbidden
+  dataset_recapture: forbidden
+  ppo_changes: forbidden
+  task_reward_action_dynamics_changes: forbidden
+  phase5a_protocol_changes: forbidden
+information_boundaries:
+  actor_record_allowed:
+    - clean_ultrasound_pixels
+    - frame_sha256
+    - frame_and_producer_sequence
+    - actually_executed_relative_motion
+    - action_acceptance_completion_clamp_status
+    - contact_workspace_image_validity_booleans
+  actor_record_forbidden:
+    - patient_id
+    - raw_labels
+    - segmentation
+    - vertebra_mesh_identity
+    - absolute_patient_pose
+    - requested_command_pose
+    - goal_cmd_pose
+    - target_distance
+    - reward
+    - evaluator_score
+  privileged_engineering_check_only:
+    - evaluator_goal_x_z_for_single_positioning_target
+    - requested_and_realized_pose
+    - raw_l4_label_28
+    - command_and_goal_pose_errors
+session:
+  session_id: stage2_orientation_smoke_00
+  seed: 2026111600
+motion:
+  requested_angle_rad: 3.0
+  maximum_settling_steps: 120
+criteria:
+  required_frame_count: 10
+  maximum_command_position_error_mm: 5.0
+  maximum_command_orientation_error_deg: 1.0
+  maximum_goal_position_error_mm: 10.0
+  maximum_goal_orientation_error_deg: 10.0
+  minimum_l4_visible_fraction: 0.05
+freshness:
+  producer_sequence_must_be_strictly_increasing: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:15:00"
+  one_job_at_a_time: true
+  maximum_storage_growth_gb: 0.1
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke
+stop_policy:
+  - Execute exactly one bounded GPU job under this protocol.
+  - Do not retry automatically after FAIL or technical error.
+  - Do not start dataset capture or model training from this job.

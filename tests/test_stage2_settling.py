@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import sys
 import unittest
+import hashlib
 from pathlib import Path
+
+import yaml
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +16,12 @@ EVALUATION_ROOT = (
     REPOSITORY_ROOT / "source" / "spinal_surgery" / "spinal_surgery" / "evaluation"
 )
 sys.path.insert(0, str(EVALUATION_ROOT))
+PROTOCOL = (
+    REPOSITORY_ROOT
+    / "experiments"
+    / "unity_two_stage_transfer"
+    / "stage2_orientation_smoke_protocol_v1.yaml"
+)
 
 from two_stage_navigation.stage2_settling import (  # noqa: E402
     SettlingCriteria,
@@ -70,6 +79,32 @@ class SettlingGateTests(unittest.TestCase):
         result = evaluate_settled_frames(rows, SettlingCriteria())
         self.assertEqual(result["decision"], "FAIL")
         self.assertFalse(result["producer_sequence_strictly_increasing"])
+
+
+class SettlingProtocolTests(unittest.TestCase):
+    def test_protocol_is_sealed_and_uses_the_approved_resources(self) -> None:
+        expected = PROTOCOL.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(PROTOCOL.read_text(encoding="utf-8"))
+        resources = protocol["resource_bound"]
+        self.assertEqual(resources["account"], "anest-dept")
+        self.assertEqual(resources["gpu_count"], 1)
+        self.assertEqual(resources["cpu_cores"], 4)
+        self.assertEqual(resources["memory"], "30gb")
+        self.assertEqual(resources["walltime"], "00:15:00")
+
+    def test_protocol_preserves_the_scientific_gate_and_forbids_training(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL.read_text(encoding="utf-8"))
+        criteria = protocol["criteria"]
+        self.assertEqual(criteria["required_frame_count"], 10)
+        self.assertEqual(criteria["maximum_goal_position_error_mm"], 10.0)
+        self.assertEqual(criteria["maximum_goal_orientation_error_deg"], 10.0)
+        self.assertEqual(criteria["minimum_l4_visible_fraction"], 0.05)
+        self.assertEqual(protocol["scope"]["model_training"], "forbidden")
+        self.assertEqual(protocol["scope"]["dataset_recapture"], "forbidden")
+        forbidden = set(protocol["information_boundaries"]["actor_record_forbidden"])
+        self.assertIn("raw_labels", forbidden)
+        self.assertIn("goal_cmd_pose", forbidden)
 
 
 if __name__ == "__main__":
