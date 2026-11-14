@@ -23,6 +23,7 @@ PROTOCOL = (
     / "stage2_orientation_smoke_protocol_v1.yaml"
 )
 PROTOCOL_V2 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v2.yaml")
+PROTOCOL_V3 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v3.yaml")
 
 from two_stage_navigation.stage2_settling import (  # noqa: E402
     SettlingCriteria,
@@ -123,6 +124,24 @@ class SettlingProtocolTests(unittest.TestCase):
         self.assertEqual(second["motion"]["maximum_orientation_steps"], 120)
         self.assertEqual(second["motion"]["maximum_positioning_steps"], 120)
         self.assertIn("single researcher-approved retry", second["amendment"]["retry_policy"])
+
+    def test_v3_only_extends_the_approved_orientation_bound(self) -> None:
+        expected = PROTOCOL_V3.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V3.read_bytes()).hexdigest(), expected)
+        second = yaml.safe_load(PROTOCOL_V2.read_text(encoding="utf-8"))
+        third = yaml.safe_load(PROTOCOL_V3.read_text(encoding="utf-8"))
+        self.assertEqual(third["amendment"]["evidence_job"], 51276637)
+        self.assertEqual(second["session"], third["session"])
+        self.assertEqual(second["criteria"], third["criteria"])
+        self.assertEqual(second["information_boundaries"], third["information_boundaries"])
+        self.assertEqual(second["motion"]["sequence"], third["motion"]["sequence"])
+        self.assertEqual(second["motion"]["requested_angle_rad"], third["motion"]["requested_angle_rad"])
+        self.assertEqual(second["motion"]["maximum_orientation_steps"], 120)
+        self.assertEqual(third["motion"]["maximum_orientation_steps"], 300)
+        self.assertEqual(second["motion"]["maximum_positioning_steps"], third["motion"]["maximum_positioning_steps"])
+        for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
+            self.assertEqual(second["resource_bound"][key], third["resource_bound"][key])
+        self.assertIn("final researcher-approved", third["amendment"]["retry_policy"])
 
 
 if __name__ == "__main__":
