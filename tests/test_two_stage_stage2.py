@@ -32,6 +32,7 @@ PROTOCOL_V7 = PROTOCOL.with_name("stage2_dataset_protocol_v7.yaml")
 PROTOCOL_V8 = PROTOCOL.with_name("stage2_dataset_protocol_v8.yaml")
 PROTOCOL_V9 = PROTOCOL.with_name("stage2_dataset_protocol_v9.yaml")
 PROTOCOL_V10 = PROTOCOL.with_name("stage2_dataset_protocol_v10.yaml")
+PROTOCOL_V11 = PROTOCOL.with_name("stage2_dataset_protocol_v11.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -272,6 +273,36 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertTrue(
             tenth["sampling"]["physical_controller"][
                 "accept_against_evaluator_goal_angle"
+            ]
+        )
+
+    def test_v11_records_angle_ceiling_as_invalid_candidate_without_changing_labels(self) -> None:
+        expected = PROTOCOL_V11.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V11.read_bytes()).hexdigest(), expected)
+        tenth = yaml.safe_load(PROTOCOL_V10.read_text(encoding="utf-8"))
+        eleventh = yaml.safe_load(PROTOCOL_V11.read_text(encoding="utf-8"))
+        self.assertEqual(eleventh["amendment"]["evidence_job"], 51343674)
+        for key in ("sessions", "labels", "features", "model", "development_gate"):
+            self.assertEqual(tenth[key], eleventh[key])
+        for key in (
+            "goal_relative_x_offsets_index",
+            "goal_relative_z_offsets_index",
+            "command_angles_rad",
+            "expected_frames_per_session",
+            "trajectory_start_frames",
+            "trajectory_seed_stride",
+            "expected_trajectories_per_session",
+            "expected_total_trajectories",
+            "maximum_initial_positioning_steps",
+            "maximum_action_steps_per_waypoint",
+            "maximum_total_action_steps_per_session",
+            "physical_tracking_position_tolerance_mm",
+            "physical_tracking_orientation_tolerance_deg",
+        ):
+            self.assertEqual(tenth["sampling"][key], eleventh["sampling"][key])
+        self.assertTrue(
+            eleventh["sampling"]["physical_controller"][
+                "capture_angle_ceiling_limited_samples"
             ]
         )
 

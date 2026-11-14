@@ -1,0 +1,34 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v1",
+  "decision": "TECHNICAL_ERROR_NOT_DATA_READY",
+  "job": {
+    "job_id": 51343674,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "elapsed": "00:00:41",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "7cca60e1eafa99ee87ccc5e31d8e83cc20b931a2",
+  "protocol_sha256": "a1f68e94e6c4aa1ea4d0266fe1c02a686549107528a7f1a6800ebf1ef526d98e",
+  "failure": {
+    "session_id": "s2tr_00",
+    "position_error_mm": 0.3385924472095309,
+    "orientation_error_deg": 11.600488908998036,
+    "trigger": "a highest-angle candidate reached the native 3.0-radian command ceiling but could not enter the unchanged 10-degree evaluator validity region",
+    "evidence": "The final eight actions were finite, mapping-valid, surface-valid, position-unclamped and angle-clamped. The realized position was within 0.339 mm while orientation plateaued near 11.6 degrees.",
+    "interpretation": "This is a physically reachable but evaluator-invalid negative candidate. Dataset acquisition must preserve and label it invalid instead of treating native angle saturation as a fatal transition."
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 56,
+    "maximum_resident_memory_kib": 3603196,
+    "artifact_bytes": 219084
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v10/51343674"
+}
