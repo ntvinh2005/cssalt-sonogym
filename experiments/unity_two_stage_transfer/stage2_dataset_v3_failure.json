@@ -1,0 +1,90 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v2",
+  "decision": "BLOCKED",
+  "code_commit": "330495073c494df1160a20af4c9d3d8d1d74e26f",
+  "protocol": {
+    "id": "sonogym-stage2-dataset-v3",
+    "sha256": "8a2a308c4e24b2508606f82dbe3bd156dd54ec07c0d1a4fee7035cbeee9f0d29"
+  },
+  "jobs": [
+    {
+      "job_id": 51231922,
+      "protocol_id": "sonogym-stage2-dataset-v1",
+      "state": "FAILED",
+      "exit_code": "2:0",
+      "elapsed_seconds": 39,
+      "failure": "orientation 6.571863765790991 deg after 8 waypoint actions"
+    },
+    {
+      "job_id": 51245393,
+      "protocol_id": "sonogym-stage2-dataset-v2",
+      "state": "FAILED",
+      "exit_code": "2:0",
+      "elapsed_seconds": 43,
+      "failure": "orientation 5.103181848941489 deg after 16 waypoint actions"
+    },
+    {
+      "job_id": 51245827,
+      "protocol_id": "sonogym-stage2-dataset-v3",
+      "state": "FAILED",
+      "exit_code": "2:0",
+      "elapsed_seconds": 38,
+      "failure": "orientation 5.49662150890932 deg after 24 waypoint actions"
+    }
+  ],
+  "resources": {
+    "account": "anest-dept",
+    "gpu_model": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "memory_requested_gb": 30,
+    "driver_version": "580.178.04",
+    "v3_peak_gpu_memory_mib": 5003,
+    "v3_peak_gpu_utilization_percent": 47,
+    "v3_output_size_bytes": 8929478
+  },
+  "v3_capture": {
+    "completed_sessions": 1,
+    "required_sessions": 6,
+    "completed_frames": 75,
+    "required_frames": 450,
+    "distinct_frame_hashes": 52,
+    "validity_positive_frames": 0,
+    "technical_image_valid_frames": 75,
+    "position_within_10mm_frames": 25,
+    "orientation_within_10deg_frames": 1,
+    "l4_visibility_at_least_0_05_frames": 45,
+    "position_and_orientation_conjunction_frames": 0,
+    "minimum_position_error_mm": 1.5780634810904883,
+    "minimum_orientation_error_deg": 8.62467111027186,
+    "maximum_l4_visible_fraction": 0.26253333333333334,
+    "failed_session": {
+      "session_id": "s2tr_01",
+      "position_error_mm": 1.0518428672133602,
+      "orientation_error_deg": 5.49662150890932,
+      "maximum_waypoint_actions": 24
+    }
+  },
+  "downstream": {
+    "model_training": "NOT_RUN",
+    "closed_loop_evaluation": "NOT_RUN",
+    "reason": "incomplete dataset and zero validity positives"
+  },
+  "scientific_boundary": {
+    "validity_thresholds_changed": false,
+    "phase5a_protocol_changed": false,
+    "ppo_changed": false,
+    "stage1_changed": false,
+    "patient_generalization_established": false,
+    "stage2_success_established": false
+  },
+  "next_required_review": {
+    "proposal": "one-session orientation-settling engineering smoke before another dataset protocol",
+    "requested_command_angle_rad": 3.0,
+    "maximum_realized_orientation_error_to_requested_command_deg": 1.0,
+    "required_realized_orientation_error_to_phase5a_goal_deg": 10.0,
+    "scientific_threshold_change": false,
+    "gpu_execution_authorized_by_current_protocol": false
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v3/51245827"
+}

@@ -293,6 +293,20 @@ This establishes fixed-anatomy seven-landmark confirmation within the tested sca
 does not establish patient-held-out generalization, Stage 2 best-view acquisition, or clinical
 MBB performance. Phase 2 has not started.
 
+The approved Stage 2 supervised-data pilot is now BLOCKED before model fitting. GPU jobs
+51231922, 51245393, and final retry 51245827 preserved the fixed pose grid, labels, model gate,
+and `anest-dept` resource request while increasing only the waypoint convergence limit from 8
+to 16 to 24 actions. The final job completed one 75-frame session, then failed the second
+session at 1.052 mm position error and 5.497 degree orientation error against the unchanged
+5 mm / 5 degree physical tolerance.
+
+The completed session had 75 / 75 technically valid images and L4 raw-label fraction at least
+0.05 in 45 / 75 frames, but only 1 / 75 frames had orientation error at most 10 degrees and no
+frame jointly met the 10 mm / 10 degree geometry requirement. Therefore it contained zero
+validity-positive examples. ExtraTrees fitting and closed-loop Stage 2 evaluation were NOT_RUN.
+The next action requires review of a one-session orientation-settling smoke; do not relax the
+10-degree scientific label or submit another full dataset capture without that evidence.
+
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
 by successful capture job 50908807.
 
