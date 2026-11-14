@@ -15,10 +15,13 @@ import numpy as np
 
 LABEL_RESOLUTION_MM = 1.5
 STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(1, 8)
+    f"sonogym-stage2-dataset-v{version}" for version in range(1, 9)
 )
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(4, 8)
+    f"sonogym-stage2-dataset-v{version}" for version in range(4, 9)
+)
+SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
+    f"sonogym-stage2-dataset-v{version}" for version in range(5, 9)
 )
 
 
@@ -85,6 +88,12 @@ def is_supported_stage2_dataset_protocol(protocol_id: str) -> bool:
     if not isinstance(protocol_id, str) or not protocol_id:
         raise ValueError("protocol_id must be a non-empty string")
     return protocol_id in STAGE2_DATASET_PROTOCOLS
+
+
+def uses_segmented_stage2_dataset_capture(protocol_id: str) -> bool:
+    if not isinstance(protocol_id, str) or not protocol_id:
+        raise ValueError("protocol_id must be a non-empty string")
+    return protocol_id in SEGMENTED_STAGE2_DATASET_PROTOCOLS
 
 
 @dataclass(frozen=True)

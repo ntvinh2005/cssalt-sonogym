@@ -43,6 +43,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     plan_proportional_target_action,
     pose_within_tolerance,
     uses_coupled_stage2_dataset_controller,
+    uses_segmented_stage2_dataset_capture,
     validate_planar_rotation,
     wrap_to_pi,
 )
@@ -147,14 +148,22 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v5"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v6"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v7"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v8"))
         self.assertFalse(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v3"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v6"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v7"))
-        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v8"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v8"))
+        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v9"))
+        self.assertFalse(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v4"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v5"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v7"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v8"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
         with self.assertRaises(ValueError):
             is_supported_stage2_dataset_protocol("")
+        with self.assertRaises(ValueError):
+            uses_segmented_stage2_dataset_capture("")
 
     def test_pose_tolerance_uses_the_declared_protocol_limits(self) -> None:
         self.assertTrue(pose_within_tolerance(1.906, 3.718, 5.0, 5.0))

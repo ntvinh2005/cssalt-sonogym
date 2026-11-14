@@ -46,6 +46,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa: E402
     is_supported_stage2_dataset_protocol,
     uses_coupled_stage2_dataset_controller,
+    uses_segmented_stage2_dataset_capture,
     wrap_to_pi,
 )
 from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # noqa: E402
@@ -177,7 +178,7 @@ def main() -> int:
         sampling = protocol["sampling"]
         trajectory_start_frames = [0]
         trajectory_seed_stride = 0
-        if protocol["protocol_id"] == "sonogym-stage2-dataset-v5":
+        if uses_segmented_stage2_dataset_capture(protocol["protocol_id"]):
             trajectory_start_frames = [
                 int(value) for value in sampling["trajectory_start_frames"]
             ]
