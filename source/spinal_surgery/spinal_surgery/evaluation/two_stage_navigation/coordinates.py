@@ -216,6 +216,15 @@ def command_target_from_realized_error(
     return corrected
 
 
+def command_with_replaced_angle(current_command: object, target_angle_rad: float) -> np.ndarray:
+    """Keep the current translation command while changing only its angle."""
+    command = _finite_array(current_command, (3,), "current_command").copy()
+    if not math.isfinite(target_angle_rad):
+        raise ValueError("target_angle_rad must be finite")
+    command[2] = target_angle_rad
+    return command
+
+
 def plan_native_action(
     patient_delta_index: object,
     angle_delta_rad: float,

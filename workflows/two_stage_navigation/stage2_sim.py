@@ -12,6 +12,7 @@ from isaaclab.utils.math import matrix_from_quat
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (
     assess_native_command,
     command_target_from_realized_error,
+    command_with_replaced_angle,
     plan_native_action,
     wrap_to_pi,
 )
@@ -100,6 +101,8 @@ def take_step(env: Any, target: np.ndarray) -> tuple[dict[str, Any], dict[str, A
         "before_realized_pose": before_realized.tolist(),
         "after_realized_pose": after_realized.tolist(),
         "command_clamped": assessment.native_clamped,
+        "command_position_mapping_error_index": assessment.position_mapping_error_index,
+        "command_angle_mapping_error_rad": assessment.angle_mapping_error_rad,
         "command_mapping_valid": assessment.mapping_valid,
         "command_progressed": assessment.progressed_toward_target,
         "finite": finite,
@@ -161,6 +164,60 @@ def move_to_pose(
         f"pose did not converge after {maximum_steps} steps: "
         f"position={position_error_mm}, orientation={orientation_error_deg}"
     )
+
+
+def move_orientation_only(
+    env: Any,
+    target_angle_rad: float,
+    *,
+    maximum_steps: int,
+    maximum_orientation_error_deg: float,
+) -> list[dict[str, Any]]:
+    trajectory: list[dict[str, Any]] = []
+    for step in range(maximum_steps):
+        realized = current_realized_pose(env.unwrapped)
+        orientation_error_deg = (
+            abs(float(wrap_to_pi(realized[2] - target_angle_rad))) * 180.0 / math.pi
+        )
+        if orientation_error_deg <= maximum_orientation_error_deg:
+            return trajectory
+        target = command_with_replaced_angle(
+            current_command(env.unwrapped), target_angle_rad
+        )
+        _, status = take_step(env, target)
+        status["orientation_step"] = step + 1
+        status["requested_angle_rad"] = target_angle_rad
+        trajectory.append(status)
+        if (
+            not status["finite"]
+            or status["command_clamped"]
+            or not status["command_mapping_valid"]
+            or not status["command_progressed"]
+            or not status["surface_proxy_ok"]
+            or status["terminated"]
+            or status["truncated"]
+        ):
+            raise RuntimeError(f"physical orientation movement failed: {status}")
+    realized = current_realized_pose(env.unwrapped)
+    orientation_error_deg = (
+        abs(float(wrap_to_pi(realized[2] - target_angle_rad))) * 180.0 / math.pi
+    )
+    if orientation_error_deg <= maximum_orientation_error_deg:
+        return trajectory
+    raise RuntimeError(
+        f"orientation did not converge after {maximum_steps} steps: "
+        f"orientation={orientation_error_deg}"
+    )
+
+
+def realized_feedback_target(unwrapped: Any, target: np.ndarray) -> np.ndarray:
+    command_range = unwrapped.US_slicer.x_z_range.detach().cpu().to(torch.float64).numpy()
+    corrected = command_target_from_realized_error(
+        current_realized_pose(unwrapped),
+        target,
+        position_multiplier=POSITION_CORRECTION_MULTIPLIER,
+    )
+    return np.clip(corrected, command_range[0], command_range[1])
 
 
 def clean_ultrasound(unwrapped: Any) -> np.ndarray:

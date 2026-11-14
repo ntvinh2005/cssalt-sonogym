@@ -34,6 +34,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     PixelGeometry,
     assess_native_command,
     command_target_from_realized_error,
+    command_with_replaced_angle,
     indices_to_mm,
     mm_to_indices,
     plan_native_action,
@@ -277,6 +278,12 @@ class CoordinateTests(unittest.TestCase):
                 target_pose=[132.0, 139.0, 2.7],
                 position_multiplier=0.0,
             )
+
+    def test_orientation_command_does_not_request_translation(self) -> None:
+        command = command_with_replaced_angle([133.1, 145.9, 2.17], 3.0)
+        np.testing.assert_allclose(command, [133.1, 145.9, 3.0])
+        with self.assertRaises(ValueError):
+            command_with_replaced_angle([133.1, 145.9, 2.17], math.nan)
 
 
 if __name__ == "__main__":

@@ -51,15 +51,20 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_settling import (  # 
 from stage2_sim import (  # noqa: E402
     clean_ultrasound,
     current_realized_pose,
+    move_orientation_only,
     move_to_pose,
     raw_label_slice,
+    realized_feedback_target,
     surface_proxy_ok,
     take_step,
     tensor_row,
 )
 
 
-PROTOCOL_ID = "sonogym-stage2-orientation-smoke-v1"
+PROTOCOL_IDS = {
+    "sonogym-stage2-orientation-smoke-v1",
+    "sonogym-stage2-orientation-smoke-v2",
+}
 
 
 def file_sha256(path: Path) -> str:
@@ -88,7 +93,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 def main() -> int:
     protocol_path = Path(args.protocol).resolve()
     protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != PROTOCOL_ID:
+    if protocol["protocol_id"] not in PROTOCOL_IDS:
         raise RuntimeError("unexpected orientation protocol")
     protocol_hash = file_sha256(protocol_path)
     expected_hash = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
@@ -122,10 +127,26 @@ def main() -> int:
             [goal[0], goal[1], float(protocol["motion"]["requested_angle_rad"])],
             dtype=np.float64,
         )
+        orientation_trajectory: list[dict[str, Any]] = []
+        if protocol["protocol_id"] == "sonogym-stage2-orientation-smoke-v2":
+            orientation_trajectory = move_orientation_only(
+                env,
+                requested[2],
+                maximum_steps=int(protocol["motion"]["maximum_orientation_steps"]),
+                maximum_orientation_error_deg=float(
+                    protocol["criteria"]["maximum_command_orientation_error_deg"]
+                ),
+            )
+            action_rows.extend(orientation_trajectory)
         trajectory = move_to_pose(
             env,
             requested,
-            maximum_steps=int(protocol["motion"]["maximum_settling_steps"]),
+            maximum_steps=int(
+                protocol["motion"].get(
+                    "maximum_positioning_steps",
+                    protocol["motion"].get("maximum_settling_steps"),
+                )
+            ),
             maximum_position_error_mm=float(
                 protocol["criteria"]["maximum_command_position_error_mm"]
             ),
@@ -145,7 +166,8 @@ def main() -> int:
         criteria = SettlingCriteria(**protocol["criteria"])
         previous_pose = current_realized_pose(unwrapped).copy()
         for frame_sequence in range(criteria.required_frame_count):
-            _, status = take_step(env, requested)
+            feedback_target = realized_feedback_target(unwrapped, requested)
+            _, status = take_step(env, feedback_target)
             status["frame_sequence"] = frame_sequence
             action_rows.append(status)
             pose = current_realized_pose(unwrapped)
@@ -210,7 +232,9 @@ def main() -> int:
         metrics = evaluate_settled_frames(privileged_rows, criteria)
         result.update(
             decision=metrics["decision"],
-            settling_action_steps=len(trajectory),
+            orientation_action_steps=len(orientation_trajectory),
+            positioning_action_steps=len(trajectory),
+            settling_action_steps=len(orientation_trajectory) + len(trajectory),
             requested_command_pose=requested.tolist(),
             goal_cmd_pose_evaluator_only=goal.tolist(),
             metrics=metrics,
