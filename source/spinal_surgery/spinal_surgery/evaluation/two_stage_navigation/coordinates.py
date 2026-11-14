@@ -15,13 +15,13 @@ import numpy as np
 
 LABEL_RESOLUTION_MM = 1.5
 STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(1, 10)
+    f"sonogym-stage2-dataset-v{version}" for version in range(1, 11)
 )
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(4, 10)
+    f"sonogym-stage2-dataset-v{version}" for version in range(4, 11)
 )
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
-    f"sonogym-stage2-dataset-v{version}" for version in range(5, 10)
+    f"sonogym-stage2-dataset-v{version}" for version in range(5, 11)
 )
 
 

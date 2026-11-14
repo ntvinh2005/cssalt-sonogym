@@ -237,19 +237,26 @@ def main() -> int:
             )
             action_start = len(action_rows)
             controller_target = waypoint.copy()
+            acceptance_target = waypoint.copy()
+            movement_orientation_tolerance = orientation_tolerance
             if uses_coupled_stage2_dataset_controller(protocol["protocol_id"]):
                 controller = sampling["physical_controller"]
                 if waypoint[2] >= float(
                     controller["ceiling_assisted_minimum_requested_angle_rad"]
                 ):
                     controller_target[2] = float(controller["controller_target_angle_rad"])
+                    if bool(controller.get("accept_against_evaluator_goal_angle", False)):
+                        acceptance_target[2] = goal[2]
+                        movement_orientation_tolerance = float(
+                            label["validity"]["maximum_orientation_error_deg"]
+                        )
                 trajectory = move_proportional_target(
                     env,
                     controller_target,
-                    waypoint,
+                    acceptance_target,
                     maximum_steps=maximum_steps,
                     maximum_position_error_mm=position_tolerance,
-                    maximum_orientation_error_deg=orientation_tolerance,
+                    maximum_orientation_error_deg=movement_orientation_tolerance,
                     ratio=tuple(float(value) for value in controller["ratio"]),
                     trajectory_sink=action_rows,
                 )
