@@ -33,6 +33,7 @@ PROTOCOL_V8 = PROTOCOL.with_name("stage2_dataset_protocol_v8.yaml")
 PROTOCOL_V9 = PROTOCOL.with_name("stage2_dataset_protocol_v9.yaml")
 PROTOCOL_V10 = PROTOCOL.with_name("stage2_dataset_protocol_v10.yaml")
 PROTOCOL_V11 = PROTOCOL.with_name("stage2_dataset_protocol_v11.yaml")
+PROTOCOL_V12 = PROTOCOL.with_name("stage2_dataset_protocol_v12.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -305,6 +306,33 @@ class Stage2ProtocolTests(unittest.TestCase):
                 "capture_angle_ceiling_limited_samples"
             ]
         )
+
+    def test_v12_segments_same_grid_before_native_timeout(self) -> None:
+        expected = PROTOCOL_V12.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V12.read_bytes()).hexdigest(), expected)
+        eleventh = yaml.safe_load(PROTOCOL_V11.read_text(encoding="utf-8"))
+        twelfth = yaml.safe_load(PROTOCOL_V12.read_text(encoding="utf-8"))
+        self.assertEqual(twelfth["amendment"]["evidence_job"], 51344965)
+        for key in ("sessions", "labels", "features", "model", "development_gate"):
+            self.assertEqual(eleventh[key], twelfth[key])
+        for key in (
+            "goal_relative_x_offsets_index",
+            "goal_relative_z_offsets_index",
+            "command_angles_rad",
+            "expected_frames_per_session",
+            "physical_controller",
+            "maximum_initial_positioning_steps",
+            "maximum_action_steps_per_waypoint",
+            "physical_tracking_position_tolerance_mm",
+            "physical_tracking_orientation_tolerance_deg",
+        ):
+            self.assertEqual(eleventh["sampling"][key], twelfth["sampling"][key])
+        self.assertEqual(
+            twelfth["sampling"]["trajectory_start_frames"],
+            [0, 10, 20, 30, 40, 50, 60, 70],
+        )
+        self.assertEqual(twelfth["sampling"]["expected_total_trajectories"], 48)
+        self.assertEqual(twelfth["sampling"]["maximum_total_action_steps_per_session"], 4000)
 
 
 class Stage2LabelTests(unittest.TestCase):

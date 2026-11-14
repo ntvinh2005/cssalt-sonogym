@@ -1,0 +1,34 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v1",
+  "decision": "TECHNICAL_ERROR_NOT_DATA_READY",
+  "job": {
+    "job_id": 51344965,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "elapsed": "00:00:49",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "180bccf595978c6c4cf4947da2be5f2a9bb27c01",
+  "protocol_sha256": "304b079570acc2d16f58ed5f21818f9fcedc1f3e462d40c197f985d366401abe",
+  "failure": {
+    "session_id": "s2tr_00",
+    "frame_sequence_in_progress": 34,
+    "action_rows_preserved": 1098,
+    "trigger": "the second 20-frame trajectory reached the unchanged 600-action task horizon before its declared reset",
+    "evidence": "Frames 0-19 used 499 actions. The trajectory beginning at frame 20 used 599 actions by frame 34, where the simulator returned truncated=true. Five preceding ceiling-limited candidates were preserved without violating transition checks.",
+    "interpretation": "The fixed reset interval must be shorter for the now-correctly settled high-angle candidates. Splitting the same 75-waypoint grid every 10 frames keeps the native task timeout enabled and does not alter labels or sample poses."
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 59,
+    "maximum_resident_memory_kib": 3617540,
+    "artifact_bytes": 1389231
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v11/51344965"
+}
