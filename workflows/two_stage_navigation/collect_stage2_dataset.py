@@ -67,6 +67,7 @@ PROTOCOL_IDS = frozenset(
         "sonogym-stage2-dataset-v2",
         "sonogym-stage2-dataset-v3",
         "sonogym-stage2-dataset-v4",
+        "sonogym-stage2-dataset-v5",
     }
 )
 
@@ -181,6 +182,17 @@ def main() -> int:
         goal = tensor_row(unwrapped.goal_cmd_pose)
         waypoints = ordered_waypoints(protocol, session, goal)
         sampling = protocol["sampling"]
+        trajectory_start_frames = [0]
+        trajectory_seed_stride = 0
+        if protocol["protocol_id"] == "sonogym-stage2-dataset-v5":
+            trajectory_start_frames = [
+                int(value) for value in sampling["trajectory_start_frames"]
+            ]
+            trajectory_seed_stride = int(sampling["trajectory_seed_stride"])
+            if trajectory_start_frames[0] != 0 or trajectory_start_frames != sorted(
+                set(trajectory_start_frames)
+            ):
+                raise RuntimeError("invalid frozen trajectory boundaries")
         position_tolerance = float(sampling["physical_tracking_position_tolerance_mm"])
         orientation_tolerance = float(
             sampling["physical_tracking_orientation_tolerance_deg"]
@@ -200,7 +212,25 @@ def main() -> int:
         )
         previous_realized = current_realized_pose(unwrapped).copy()
         total_steps = 0
-        for frame_sequence, waypoint in enumerate(waypoints):
+        for frame_sequence in range(int(sampling["expected_frames_per_session"])):
+            trajectory_index = max(
+                index
+                for index, start in enumerate(trajectory_start_frames)
+                if start <= frame_sequence
+            )
+            trajectory_start = trajectory_start_frames[trajectory_index]
+            trajectory_id = f"{session['session_id']}_seg{trajectory_index:02d}"
+            if frame_sequence == trajectory_start and frame_sequence > 0:
+                trajectory_seed = int(session["seed"]) + (
+                    trajectory_index * trajectory_seed_stride
+                )
+                observation, _ = env.reset(seed=trajectory_seed)
+                if tuple(observation["policy"].shape) != (1, 1, 200, 150):
+                    raise RuntimeError("unexpected policy observation shape after reset")
+                goal = tensor_row(unwrapped.goal_cmd_pose)
+                waypoints = ordered_waypoints(protocol, session, goal)
+                previous_realized = current_realized_pose(unwrapped).copy()
+            waypoint = waypoints[frame_sequence]
             maximum_steps = int(
                 sampling[
                     "maximum_initial_positioning_steps"
@@ -240,6 +270,7 @@ def main() -> int:
                 raise RuntimeError("Stage 2 dataset action budget exceeded")
             for row in action_rows[action_start:]:
                 row["frame_sequence"] = frame_sequence
+                row["trajectory_id"] = trajectory_id
 
             image = clean_ultrasound(unwrapped)
             raw = raw_label_slice(unwrapped, raw_volume)
@@ -279,6 +310,8 @@ def main() -> int:
             public_row = {
                 "schema": "sonogym-stage2-actor-frame-v1",
                 "session_id": session["session_id"],
+                "trajectory_id": trajectory_id,
+                "trajectory_frame_sequence": frame_sequence - trajectory_start,
                 "split": session["split"],
                 "frame_sequence": frame_sequence,
                 "producer_sequence": int(unwrapped.num_step),
@@ -309,6 +342,10 @@ def main() -> int:
                 {
                     "schema": "sonogym-stage2-privileged-annotation-v1",
                     "session_id": session["session_id"],
+                    "trajectory_id": trajectory_id,
+                    "trajectory_frame_sequence": frame_sequence - trajectory_start,
+                    "trajectory_seed": int(session["seed"])
+                    + trajectory_index * trajectory_seed_stride,
                     "frame_sequence": frame_sequence,
                     "frame_sha256": frame_hash,
                     "patient_id": "s0010",
@@ -347,6 +384,7 @@ def main() -> int:
         summary.update(
             status="PASSED",
             frame_count=len(public_rows),
+            trajectory_count=len(trajectory_start_frames),
             valid_frame_count=sum(int(row["validity_label"]) for row in privileged_rows),
             distinct_frame_hash_count=len({row["frame_sha256"] for row in public_rows}),
             total_action_steps=total_steps,
