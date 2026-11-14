@@ -64,6 +64,7 @@ from stage2_sim import (  # noqa: E402
 PROTOCOL_IDS = {
     "sonogym-stage2-orientation-smoke-v1",
     "sonogym-stage2-orientation-smoke-v2",
+    "sonogym-stage2-orientation-smoke-v3",
 }
 
 
@@ -128,7 +129,10 @@ def main() -> int:
             dtype=np.float64,
         )
         orientation_trajectory: list[dict[str, Any]] = []
-        if protocol["protocol_id"] == "sonogym-stage2-orientation-smoke-v2":
+        if protocol["protocol_id"] in {
+            "sonogym-stage2-orientation-smoke-v2",
+            "sonogym-stage2-orientation-smoke-v3",
+        }:
             orientation_trajectory = move_orientation_only(
                 env,
                 requested[2],
