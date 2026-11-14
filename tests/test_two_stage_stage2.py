@@ -25,6 +25,7 @@ PROTOCOL = (
 )
 PROTOCOL_V2 = PROTOCOL.with_name("stage2_dataset_protocol_v2.yaml")
 PROTOCOL_V3 = PROTOCOL.with_name("stage2_dataset_protocol_v3.yaml")
+PROTOCOL_V4 = PROTOCOL.with_name("stage2_dataset_protocol_v4.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -146,6 +147,30 @@ class Stage2ProtocolTests(unittest.TestCase):
             "development_gate",
         ):
             self.assertEqual(second[key], third[key])
+
+    def test_v4_preserves_data_design_and_changes_only_physical_control(self) -> None:
+        expected = PROTOCOL_V4.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V4.read_bytes()).hexdigest(), expected)
+        third = yaml.safe_load(PROTOCOL_V3.read_text(encoding="utf-8"))
+        fourth = yaml.safe_load(PROTOCOL_V4.read_text(encoding="utf-8"))
+        self.assertEqual(fourth["amendment"]["evidence_jobs"], [51245827, 51334984])
+        for key in ("sessions", "labels", "features", "model", "development_gate"):
+            self.assertEqual(third[key], fourth[key])
+        for key in (
+            "goal_relative_x_offsets_index",
+            "goal_relative_z_offsets_index",
+            "command_angles_rad",
+            "expected_frames_per_session",
+            "maximum_total_action_steps_per_session",
+            "physical_tracking_position_tolerance_mm",
+            "physical_tracking_orientation_tolerance_deg",
+        ):
+            self.assertEqual(third["sampling"][key], fourth["sampling"][key])
+        self.assertEqual(
+            fourth["sampling"]["physical_controller"]["ratio"], [0.02, 0.02, 0.6]
+        )
+        self.assertEqual(fourth["sampling"]["maximum_initial_positioning_steps"], 300)
+        self.assertEqual(fourth["sampling"]["maximum_action_steps_per_waypoint"], 60)
 
 
 class Stage2LabelTests(unittest.TestCase):
