@@ -1,0 +1,71 @@
+{
+  "schema": "sonogym-stage2-orientation-smoke-evidence-v1",
+  "scientific_status": "NOT_EVALUATED",
+  "engineering_status": "TECHNICAL_ERROR",
+  "reason": "The direct reset-to-target move stopped at action four when the command-mapping assertion failed during simultaneous saturated translation and rotation. No settled frame was acquired, so physical orientation reachability was not evaluated.",
+  "job": {
+    "job_id": 51274046,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c0602a-s5",
+    "state": "FAILED",
+    "exit_code": "3:0",
+    "elapsed": "00:00:40",
+    "start": "2026-11-14T03:32:45-05:00",
+    "end": "2026-11-14T03:33:21-05:00"
+  },
+  "resources": {
+    "cpu_cores": 4,
+    "memory_requested_gb": 30,
+    "gpu_count": 1,
+    "gpu_model": "NVIDIA L4",
+    "gpu_memory_total_mib": 23034,
+    "gpu_memory_sampled_peak_mib": 5009,
+    "gpu_utilization_sampled_peak_percent": 1,
+    "process_maximum_resident_set_kib": 3337272,
+    "output_bytes": 48938
+  },
+  "software": {
+    "project_commit": "395e3a05b59a8caf8104db90442cdac08086caa7",
+    "implementation_commit": "dd60a007cfc9491c98986547d3bcbb1ff239e868",
+    "isaaclab_commit": "21f7136325136ca3f6ca4e0a8125edffe5c24f7e",
+    "upstream_sonogym_commit": "e67be58334d1a5274f0913af36f56e4b0b7ffe5a",
+    "python": "3.10.22",
+    "driver": "580.178.04"
+  },
+  "protocol": {
+    "path": "experiments/unity_two_stage_transfer/stage2_orientation_smoke_protocol_v1.yaml",
+    "sha256": "49dbaa61413663f7e615ec1a4f415036b163cb2dc040bfbbe1132ab2821151ba",
+    "seed": 2026111600,
+    "requested_angle_rad": 3.0,
+    "maximum_settling_steps": 120,
+    "required_settled_frames": 10
+  },
+  "last_recorded_transition": {
+    "movement_step": 4,
+    "normalized_action": [-2.0, -1.5687233759743675, 2.0],
+    "command_mapping_valid": false,
+    "command_clamped": false,
+    "command_progressed": true,
+    "finite": true,
+    "surface_proxy_ok": true,
+    "terminated": false,
+    "truncated": false,
+    "target_position_error_mm": 111.25558085834638,
+    "target_orientation_error_deg": 76.24476649725953
+  },
+  "acquisition": {
+    "settled_frames": 0,
+    "ultrasound_frames_saved": 0,
+    "physical_orientation_gate_evaluated": false,
+    "dataset_capture_started": false,
+    "model_training_started": false
+  },
+  "interpretation": {
+    "does_not_show_orientation_unreachable": true,
+    "does_not_change_stage1_result": true,
+    "does_not_authorize_threshold_relaxation": true,
+    "next_fix": "Separate initial positioning into orientation-first and translation-second phases, retain the same 3.0-radian command and unchanged evaluator criteria, then freeze a new protocol before one reviewed retry."
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke/51274046"
+}

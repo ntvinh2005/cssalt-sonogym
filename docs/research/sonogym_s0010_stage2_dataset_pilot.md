@@ -102,3 +102,51 @@ Job `51245827` ran for 38 seconds, sampled 5,003 MiB peak GPU memory and 47% pea
 | [v2 failure manifest](../../experiments/unity_two_stage_transfer/stage2_dataset_v2_failure.json) | preserved 16-action failure |
 | [v1 failure manifest](../../experiments/unity_two_stage_transfer/stage2_dataset_v1_failure.json) | preserved 8-action failure |
 | external v3 run | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v3/51245827` |
+
+## 2. Single-session orientation convergence check
+
+### 2.1 Question and criterion
+
+The follow-up asked whether the physical robot can settle within 1 degree of the supported
+3.0-radian command and then produce ten fresh L4-positive frames that also satisfy the
+unchanged 10 mm and 10 degree evaluator criteria. Protocol SHA-256
+`49dbaa61413663f7e615ec1a4f415036b163cb2dc040bfbbe1132ab2821151ba` froze one job,
+seed `2026111600`, at most 120 positioning actions, and no dataset capture or training.
+
+### 2.2 Setup and execution
+
+Job `51274046` ran commit `395e3a05b59a8caf8104db90442cdac08086caa7` on `anest-dept`
+with one NVIDIA L4, four CPUs, 30 GB requested RAM, and a 15-minute limit. It started at
+2026-11-14 03:32:45 EST and ended after 40 seconds with Slurm exit `3:0`. The process sampled
+5,009 MiB peak GPU memory and used 3,337,272 KiB maximum resident memory; the artifact tree
+grew by 48,938 bytes.
+
+### 2.3 Result
+
+**NOT_EVALUATED because of a technical positioning error.** The direct reset-to-target move
+stopped on action four. The transition was finite, unclamped, progressing toward the target,
+and retained valid surface state, but the predicted-to-observed command mapping exceeded the
+frozen mapping tolerance while a saturated translation and saturated rotation were applied in
+the same action. The robot was still 111.256 mm and 76.245 degrees from the requested pose.
+No settled ultrasound frame was acquired, so this job provides no evidence for or against
+orientation reachability and no Stage 2 scientific gate was evaluated.
+
+The application result initialized its decision field as `FAIL`, but this report classifies the
+run as `TECHNICAL_ERROR / NOT_EVALUATED` because the evaluator never received the required ten
+frames. The Slurm wrapper still failed closed and no downstream work ran.
+
+### 2.4 Interpretation and next reviewed action
+
+- Phase 1 remains successful and unchanged.
+- The Stage 2 dataset remains blocked; no ExtraTrees model or closed-loop controller exists.
+- The 10 mm, 10 degree, and 0.05 L4-fraction criteria remain unchanged.
+- A justified retry would separate initial positioning into rotation at the current location,
+  followed by translation at the settled orientation. It requires a new sealed protocol and
+  review because v1 allowed exactly one execution and forbade automatic retry.
+
+| file | contents |
+|---|---|
+| [orientation protocol](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_protocol_v1.yaml) | frozen command, criteria, resources, and stop policy |
+| [orientation error evidence](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v1_error.json) | exact job, resource, transition, and interpretation record |
+| [orientation evidence digest](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v1_error.sha256) | error-evidence SHA-256 |
+| external run | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke/51274046` |
