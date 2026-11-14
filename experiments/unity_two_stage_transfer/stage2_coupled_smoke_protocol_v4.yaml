@@ -1,0 +1,109 @@
+protocol_id: sonogym-stage2-coupled-smoke-v4
+status: PRE_GPU_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-stage2-orientation-smoke-v3
+  prior_sha256: d4407cff5f17dfcbdbd5577e7ff670173d48ea81ebfc789c04b2b49998aa4c46
+  evidence_job: 51279543
+  reason: >-
+    The orientation-only controller plateaued 3.7384630610714593 degrees from the native
+    3.0-radian command after 300 valid actions. Phase 5A job 50656802 used simultaneous
+    translation and rotation with proportional ratio [0.02, 0.02, 0.6] and reached all 32
+    terminal records, so this protocol tests that exact coupled control structure without
+    changing the task, target, or scientific acceptance criteria.
+  changed_fields:
+    - protocol_id
+    - source.implementation_commit
+    - motion
+    - resource_bound.output_root
+  unchanged_design:
+    - seed_and_patient
+    - native_3.0_radian_command_ceiling
+    - acceptance_criteria
+    - actor_privileged_information_boundary
+    - scheduler_resources_and_walltime
+  retry_policy: >-
+    Execute exactly one researcher-approved coupled-controller smoke. Preserve any failure and
+    do not launch dataset capture unless every smoke acceptance condition passes.
+purpose: >-
+  Determine whether the real robot and ultrasound pipeline can reproduce the Phase 5A
+  coupled proportional motion pattern, settle within 5 mm and 1 degree of the maximum supported
+  command pose, and produce ten technically valid L4-positive frames.
+source:
+  implementation_commit: 98a5c70bb76c2bba538ef18f65ffa1451e27d482
+  blocked_dataset_jobs: [51231922, 51245393, 51245827]
+  prior_orientation_jobs: [51274046, 51276637, 51279543]
+  phase5a_oracle_job: 50656802
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+scope:
+  task: Isaac-robot-US-guidance-v0
+  ultrasound_mode: conv
+  patient_id: s0010
+  simulator_environments: 1
+  model_training: forbidden
+  dataset_recapture: forbidden
+  ppo_changes: forbidden
+  task_reward_action_dynamics_changes: forbidden
+  phase5a_protocol_changes: forbidden
+information_boundaries:
+  actor_record_allowed:
+    - clean_ultrasound_pixels
+    - frame_sha256
+    - frame_and_producer_sequence
+    - actually_executed_relative_motion
+    - action_acceptance_completion_and_separate_clamp_status
+    - contact_workspace_image_validity_booleans
+  actor_record_forbidden:
+    - patient_id
+    - raw_labels
+    - segmentation
+    - vertebra_mesh_identity
+    - absolute_patient_pose
+    - requested_command_pose
+    - goal_cmd_pose
+    - target_distance
+    - reward
+    - evaluator_score
+  privileged_engineering_check_only:
+    - evaluator_goal_x_z_for_single_positioning_target
+    - requested_and_realized_pose
+    - raw_l4_label_28
+    - command_and_goal_pose_errors
+session:
+  session_id: stage2_coupled_smoke_00
+  seed: 2026111600
+motion:
+  controller: coupled_proportional_target
+  controller_ratio: [0.02, 0.02, 0.6]
+  requested_angle_rad: 3.0
+  controller_target_angle_rad: 3.14
+  angle_ceiling_policy: >-
+    The simulator clips the native command angle at 3.0 radians. Angle-only ceiling clamp is
+    expected and recorded; any position clamp is a technical failure.
+  sequence:
+    - simultaneous_translation_and_rotation_from_realized_pose_error
+    - maintain_coupled_feedback_for_fresh_frame_acquisition
+  maximum_coupled_steps: 300
+criteria:
+  required_frame_count: 10
+  maximum_command_position_error_mm: 5.0
+  maximum_command_orientation_error_deg: 1.0
+  maximum_goal_position_error_mm: 10.0
+  maximum_goal_orientation_error_deg: 10.0
+  minimum_l4_visible_fraction: 0.05
+freshness:
+  producer_sequence_must_be_strictly_increasing: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:15:00"
+  one_job_at_a_time: true
+  maximum_storage_growth_gb: 0.1
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_coupled_smoke_v4
+stop_policy:
+  - Execute exactly one bounded GPU job under this protocol.
+  - Preserve PASS, FAIL, or technical-error evidence without automatic retry.
+  - Only a complete PASS permits the separately frozen Stage 2 dataset capture.
+  - Do not train a model from this job.

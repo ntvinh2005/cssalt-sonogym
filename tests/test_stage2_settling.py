@@ -24,6 +24,7 @@ PROTOCOL = (
 )
 PROTOCOL_V2 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v2.yaml")
 PROTOCOL_V3 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v3.yaml")
+PROTOCOL_V4 = PROTOCOL.with_name("stage2_coupled_smoke_protocol_v4.yaml")
 
 from two_stage_navigation.stage2_settling import (  # noqa: E402
     SettlingCriteria,
@@ -142,6 +143,23 @@ class SettlingProtocolTests(unittest.TestCase):
         for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
             self.assertEqual(second["resource_bound"][key], third["resource_bound"][key])
         self.assertIn("final researcher-approved", third["amendment"]["retry_policy"])
+
+    def test_v4_freezes_the_coupled_controller_without_changing_the_gate(self) -> None:
+        expected = PROTOCOL_V4.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V4.read_bytes()).hexdigest(), expected)
+        third = yaml.safe_load(PROTOCOL_V3.read_text(encoding="utf-8"))
+        fourth = yaml.safe_load(PROTOCOL_V4.read_text(encoding="utf-8"))
+        self.assertEqual(fourth["amendment"]["evidence_job"], 51279543)
+        self.assertEqual(third["session"]["seed"], fourth["session"]["seed"])
+        self.assertEqual(third["criteria"], fourth["criteria"])
+        self.assertEqual(fourth["motion"]["controller_ratio"], [0.02, 0.02, 0.6])
+        self.assertEqual(fourth["motion"]["requested_angle_rad"], 3.0)
+        self.assertEqual(fourth["motion"]["controller_target_angle_rad"], 3.14)
+        self.assertEqual(fourth["motion"]["maximum_coupled_steps"], 300)
+        for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
+            self.assertEqual(third["resource_bound"][key], fourth["resource_bound"][key])
+        self.assertEqual(fourth["scope"]["model_training"], "forbidden")
+        self.assertEqual(fourth["scope"]["dataset_recapture"], "forbidden")
 
 
 if __name__ == "__main__":
