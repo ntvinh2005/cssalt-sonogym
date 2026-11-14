@@ -168,7 +168,10 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v11"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v11"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v11"))
-        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v12"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v12"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v12"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v12"))
+        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v13"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
         with self.assertRaises(ValueError):
