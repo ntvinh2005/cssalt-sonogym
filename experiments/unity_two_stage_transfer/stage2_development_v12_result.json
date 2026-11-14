@@ -1,0 +1,83 @@
+{
+  "schema": "sonogym-stage2-development-result-v1",
+  "decision": "DEVELOPMENT_NO_GO",
+  "job": {
+    "job_id": 51367445,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "gpu_count": 0,
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "walltime_limit": "00:30:00",
+    "start": "2026-11-14T18:26:12-05:00",
+    "end": "2026-11-14T18:26:24-05:00",
+    "elapsed": "00:00:12",
+    "slurm_state": "FAILED",
+    "exit_code": "3:0",
+    "interpretation": "Exit 3 is the declared scientific development-gate failure, not a runtime failure."
+  },
+  "source_commit": "d404b77fa4449c62225d57160380a18f3fe3e8f2",
+  "protocol_sha256": "cb0c60de6546440bb69a08bdaaa8f8abc580de22e856067a0e4720066bb38862",
+  "capture_job_id": 51359047,
+  "data": {
+    "patient_count": 1,
+    "session_count": 6,
+    "frame_count": 450,
+    "train_frames": 300,
+    "calibration_frames": 75,
+    "development_frames": 75,
+    "train_positive_frames": 40,
+    "calibration_positive_frames": 10,
+    "development_positive_frames": 8,
+    "cross_split_duplicate_hashes": 0
+  },
+  "validity_classifier": {
+    "selected_threshold": 0.6666666666666666,
+    "calibration": {
+      "precision": 1.0,
+      "recall": 0.2,
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 8,
+      "true_negative": 65
+    },
+    "development": {
+      "precision": 1.0,
+      "recall": 0.5,
+      "true_positive": 4,
+      "false_positive": 0,
+      "false_negative": 4,
+      "true_negative": 67
+    },
+    "gate": {
+      "minimum_precision": 0.95,
+      "minimum_recall": 0.8,
+      "passed": false
+    },
+    "diagnostic": {
+      "calibration_at_threshold_0_3": {"precision": 0.8333333333333334, "recall": 1.0},
+      "development_at_threshold_0_3": {"precision": 1.0, "recall": 0.75},
+      "interpretation": "Lowering the threshold alone cannot satisfy the frozen precision and recall gate on calibration and still remains below the recall gate on development."
+    }
+  },
+  "quality_regressor": {
+    "development_support": 51,
+    "spearman": 0.7634057971014493,
+    "mse": 0.007853291701337759,
+    "training_mean_constant_mse": 0.02418416365981102,
+    "minimum_spearman": 0.3,
+    "passed": true
+  },
+  "resources": {
+    "application_elapsed_seconds": 4.946393,
+    "maximum_resident_memory_kib": 119752
+  },
+  "artifacts": {
+    "run_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v12/51367445",
+    "development_report_sha256": "ca06aa97fd9ee48c108d0c54dc12471953e9b1f3355f5da9d2382242a64072be",
+    "model_bundle_sha256": "f98be9728e44874c255431fc33d3d60639f84a33adde887d9a53600e84d5c17d",
+    "model_bundle_bytes": 2193123,
+    "model_bundle_closed_loop_eligible": false
+  },
+  "boundary": "No threshold, label, feature, split, model hyperparameter, or development gate was changed after observing the result. Closed-loop evaluation remains NOT_RUN."
+}

@@ -293,19 +293,20 @@ This establishes fixed-anatomy seven-landmark confirmation within the tested sca
 does not establish patient-held-out generalization, Stage 2 best-view acquisition, or clinical
 MBB performance. Phase 2 has not started.
 
-The approved Stage 2 supervised-data pilot is now BLOCKED before model fitting. GPU jobs
-51231922, 51245393, and final retry 51245827 preserved the fixed pose grid, labels, model gate,
-and `anest-dept` resource request while increasing only the waypoint convergence limit from 8
-to 16 to 24 actions. The final job completed one 75-frame session, then failed the second
-session at 1.052 mm position error and 5.497 degree orientation error against the unchanged
-5 mm / 5 degree physical tolerance.
+The reviewed coupled-motion Stage 2 capture is complete. GPU job `51359047` (`anest-dept`, one
+L4, four CPUs, 30 GB) produced all six sessions, 48 trajectories, and 450 joined frames in 4:28,
+including 58 validity positives distributed as 40 train, 10 calibration, and 8 development.
+Actor-visible ultrasound/motion records and privileged offline labels joined one-to-one. The
+result is `DATA_READY`; it supersedes the earlier capture block without changing the frozen
+10 mm / 10 degree validity definition.
 
-The completed session had 75 / 75 technically valid images and L4 raw-label fraction at least
-0.05 in 45 / 75 frames, but only 1 / 75 frames had orientation error at most 10 degrees and no
-frame jointly met the 10 mm / 10 degree geometry requirement. Therefore it contained zero
-validity-positive examples. ExtraTrees fitting and closed-loop Stage 2 evaluation were NOT_RUN.
-The next action requires review of a one-session orientation-settling smoke; do not relax the
-10-degree scientific label or submit another full dataset capture without that evidence.
+CPU job `51367445` then fitted the frozen ExtraTrees validity classifier and quality regressor.
+The result is `DEVELOPMENT_NO_GO`: development validity precision was 1.00 but recall was 0.50
+against the 0.80 gate. The quality regressor passed with Spearman 0.7634 and MSE 0.00785 versus
+the 0.02418 training-mean constant baseline. Closed-loop Stage 2 evaluation is therefore
+`NOT_RUN`; the bundle must not be used for coarse/fine/micro search. The next action requires
+researcher approval of a bounded false-negative morphology/coverage follow-up. Do not tune the
+threshold or submit another GPU job automatically.
 
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
 by successful capture job 50908807.

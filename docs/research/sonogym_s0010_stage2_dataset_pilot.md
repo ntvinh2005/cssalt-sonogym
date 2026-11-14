@@ -1,18 +1,21 @@
 # SonoGym s0010 Stage 2 dataset pilot
 
-This report tests whether the fixed-`s0010` simulator can supply the labeled local-view data required for the supervised classifier and regressor in [Unity Stage 2](../notation.md#unity-stage-2). It covers physical data acquisition only; model fitting and closed-loop search were gated off when capture failed.
+This report tests whether the fixed-`s0010` simulator can supply the labeled local-view data and supervised perception required for [Unity Stage 2](../notation.md#unity-stage-2). It covers physical acquisition and session-separated development evaluation; closed-loop search remains gated off.
 
 ## Result
 
-**BLOCKED: the dataset had zero validity-positive frames, and orientation-only control plateaued 3.7385 degrees from its command after the final 300-step check.**
+**DEVELOPMENT_NO_GO: capture produced 450 labeled frames and 58 positives, but the validity classifier reached 0.50 development recall against the frozen 0.80 gate.**
 
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
 | 1 | six-session supervised dataset acquisition | 6 / 6 complete sessions; 450 joined frames; positive and negative validity support; all waypoint poses within 5 mm and 5 degrees | 1 / 6 complete; 75 / 450 frames; 0 positives; second session ended at 1.052 mm and 5.497 degrees | BLOCKED |
-| 2 | orientation-only physical convergence | command orientation error at most 1 degree, then 10 / 10 frames meeting all pose, image, and L4 criteria | 3.747533552289236 degrees after 120 / 120 steps; 0 / 10 frames acquired | FAIL |
-| 3 | extended orientation-only physical convergence | same criteria as step 2; orientation bound extended to 300 using Phase 5A evidence | 3.7384630610714593 degrees after 300 / 300 steps; only 0.0090704912177767 degree improvement; 0 / 10 frames acquired | FAIL |
+| 2 | initial orientation check | acquire ten settled frames after bounded positioning | no frame acquired because of a command-mapping technical error | NOT_EVALUATED |
+| 3 | orientation-only physical convergence | command orientation error at most 1 degree, then 10 / 10 frames meeting all pose, image, and L4 criteria | 3.747533552289236 degrees after 120 / 120 steps; 0 / 10 frames acquired | FAIL |
+| 4 | extended orientation-only physical convergence | same criteria as step 3; orientation bound extended to 300 using Phase 5A evidence | 3.7384630610714593 degrees after 300 / 300 steps; only 0.0090704912177767 degree improvement; 0 / 10 frames acquired | FAIL |
+| 5 | coupled six-session dataset acquisition | 6 / 6 sessions; 450 joined frames; positive and negative support; public/privileged one-to-one | 6 / 6; 450 frames; 58 positives; one-to-one true | PASS |
+| 6 | supervised development evaluation | precision at least 0.95; recall at least 0.80; Spearman at least 0.30; regressor MSE below the training-mean constant | 1.00 precision; 0.50 recall; 0.7634 Spearman; 0.00785 versus 0.02418 MSE | NO_GO |
 
-The frozen 10 mm / 10 degree validity definition was not relaxed. Training and closed-loop evaluation were not run because the dataset gate failed.
+The frozen 10 mm / 10 degree validity definition was not relaxed. The reviewed dataset opened supervised fitting; the failed recall gate kept closed-loop evaluation closed.
 
 ## 1. Physical acquisition — can the frozen local grid produce trainable positive and negative views?
 
@@ -328,7 +331,9 @@ utilization, used 3,338,912 KiB maximum resident memory, and wrote 48,940 bytes.
   privileged target-relative state and is not an image-only result.
 - A transferred controller may use robot kinematics and its own inferred relative target, but it
   must not receive `goal_cmd_pose` or evaluator annotations at inference.
-- Phase 1 remains successful; Stage 2 dataset collection and fitting remain blocked.
+- At this historical checkpoint, Phase 1 remained successful and Stage 2 dataset collection and
+  fitting remained blocked. Section 5 records the later coupled-motion capture that cleared this
+  data gate.
 - No task goal, command range, threshold, reward, observation, or dynamics was changed.
 
 ### 4.5 Files
@@ -339,3 +344,144 @@ utilization, used 3,338,912 KiB maximum resident memory, and wrote 48,940 bytes.
 | [v3 failure evidence](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v3_failure.json) | exact job, plateau measurement, oracle comparison, and next decision |
 | [v3 evidence digest](../../experiments/unity_two_stage_transfer/stage2_orientation_smoke_v3_failure.sha256) | failure-evidence SHA-256 |
 | external run | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_smoke_v3/51279543` |
+
+## 5. Coupled dataset capture — did the reviewed grid produce complete labeled support?
+
+`workflows/two_stage_navigation/collect_stage2_dataset.py`, run by
+`hpg/jobs/two_stage_stage2_dataset_v12.sbatch`. The reviewed coupled-motion protocol preserved
+the frozen validity definition while using the task's physically supported simultaneous pose
+correction. Public ultrasound records and privileged offline annotations remained separate and
+joined one-to-one by acquisition identity.
+
+**Criterion.** Protocol v12 requires all six complete sessions and 450 joined frames, positive
+and negative validity support in every supervised split, and one-to-one public/privileged
+records. The 10 mm / 10 degree validity thresholds and 0.05 L4 raw-label fraction were unchanged.
+
+### 5.1 Method
+
+- Four training sessions, one calibration session, and one development session were frozen by
+  complete acquisition trajectory; adjacent frames were not randomly split.
+- Forty-eight trajectories sampled the reviewed local position/orientation grid through the real
+  Isaac Lab action and IK path.
+- Ultrasound pixels and executed-motion history were actor-visible. Goal pose, raw anatomy label,
+  and validity/quality annotations remained evaluator-only.
+- No model was fitted by the capture job.
+
+### 5.2 Setup
+
+~~~bash
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-turin \
+  --constraint=l4 --gres=gpu:l4:1 --nodes=1 --ntasks=1 \
+  --cpus-per-task=4 --mem=30G --time=00:30:00 \
+  --job-name=sg-stage2-data12 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-stage2-data12-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env \
+  hpg/jobs/two_stage_stage2_dataset_v12.sbatch
+~~~
+
+| what | measured |
+|---|---:|
+| job / capture commit | `51359047` / `28e1bc870c68097d254be622797b0a4797f72dde` |
+| protocol SHA-256 | `cb0c60de6546440bb69a08bdaaa8f8abc580de22e856067a0e4720066bb38862` |
+| sessions / trajectories | 6 / 48 |
+| attempted / dropped / final frames | 450 / 0 / 450 |
+| distinct image hashes | 347 |
+| train / calibration / development positives | 40 / 10 / 8 |
+| public/privileged joins | 450 / 450, one-to-one |
+
+### 5.3 Results
+
+**Verdict: PASS / DATA_READY.** Job `51359047` completed with Slurm exit `0:0` in 4:28.
+It used one NVIDIA L4, four CPUs, and a 30 GB request; sampled peak GPU memory was 5,009 MiB,
+peak utilization was 57%, and maximum resident memory was 3,397,008 KiB. The capture tree grew
+by 80,303,699 bytes.
+
+This establishes complete fixed-`s0010` supervised acquisition support. It does not establish
+image-only recognition or closed-loop acquisition performance.
+
+### 5.4 Files
+
+| file | contents |
+|---|---|
+| [v12 protocol](../../experiments/unity_two_stage_transfer/stage2_dataset_protocol_v12.yaml) | frozen capture and supervised-development criteria |
+| [v12 capture result](../../experiments/unity_two_stage_transfer/stage2_dataset_v12_result.json) | job, dataset, resource, and artifact evidence |
+| external capture | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v12/51359047` |
+| reviewer ZIP | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/sonogym_stage2_dataset_review_20261114_job51359047.zip` |
+
+## 6. Supervised development evaluation — do both perception models clear the frozen gate?
+
+`workflows/two_stage_navigation/train_stage2.py`, run by
+`hpg/jobs/two_stage_stage2_train_v12.sbatch`. It fits the frozen ExtraTrees validity classifier
+and quality regressor from training sessions, selects the validity threshold on calibration only,
+then evaluates the untouched development session.
+
+**Criterion.** Validity precision must be at least 0.95 and recall at least 0.80. Quality
+Spearman correlation must be at least 0.30 and regressor MSE must be below the training-mean
+constant baseline. All four conditions must hold before closed-loop evaluation.
+
+### 6.1 Setup
+
+~~~bash
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-default \
+  --nodes=1 --ntasks=1 --cpus-per-task=4 --mem=16G --time=00:30:00 \
+  --job-name=sg-stage2-train12 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-stage2-train12-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env \
+  hpg/jobs/two_stage_stage2_train_v12.sbatch
+
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/envs/stage1-python/bin/python \
+  workflows/two_stage_navigation/train_stage2.py \
+  --protocol experiments/unity_two_stage_transfer/stage2_dataset_protocol_v12.yaml \
+  --capture-root /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v12/51359047 \
+  --output-dir /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v12/51367445/results
+~~~
+
+| accounting | attempted | dropped | final |
+|---|---:|---:|---:|
+| all frames | 450 | 0 | 450 |
+| training | 300 | 0 | 300 |
+| calibration | 75 | 0 | 75 |
+| development | 75 | 0 | 75 |
+
+No image hash crossed a split boundary. Training, calibration, and development contained 232,
+58, and 57 distinct hashes, respectively.
+
+### 6.2 Results
+
+| measurement | criterion | measured | verdict |
+|---|---:|---:|---|
+| calibration validity precision | at least 0.95 | 1.00 | PASS |
+| calibration validity recall | at least 0.80 | 0.20 | FAIL |
+| development validity precision | at least 0.95 | 1.00 | PASS |
+| development validity recall | at least 0.80 | 0.50 (4 TP, 4 FN) | FAIL |
+| development quality Spearman | at least 0.30 | 0.7634057971 | PASS |
+| development regressor MSE | below 0.0241841637 | 0.0078532917 | PASS |
+
+The calibration-selected validity threshold was 0.6666666667. Job `51367445` returned the
+declared gate-failure exit `3:0` after 12 seconds; the application itself took 4.946393 seconds
+and used 119,752 KiB maximum resident memory.
+
+**Verdict: DEVELOPMENT_NO_GO.** The quality regressor passed both frozen requirements, but the
+validity classifier failed the recall requirement. The fitted bundle is evidence for this
+development result only and is not eligible for closed-loop execution.
+
+### 6.3 Reading it
+
+- Lowering the threshold to 0.3 would give calibration precision 0.8333 and recall 1.0, so it
+  would violate the frozen precision gate. Development recall would still be only 0.75.
+- Four of eight development-positive images were false negatives despite valid geometry and
+  L4 visibility. The current evidence therefore points to incomplete image feature/model
+  coverage, not an absence of labeled positives.
+- No threshold, label, split, feature, model hyperparameter, or gate was changed after seeing
+  the result.
+- Closed-loop coarse/fine/micro search, return-to-best, and fresh confirmation remain NOT_RUN.
+- Phase 1 evidence and the Phase 5A frozen evaluation remain unchanged.
+
+### 6.4 Files
+
+| file | contents |
+|---|---|
+| [development result](../../experiments/unity_two_stage_transfer/stage2_development_v12_result.json) | concise immutable scientific and resource evidence |
+| [development result digest](../../experiments/unity_two_stage_transfer/stage2_development_v12_result.sha256) | result-manifest SHA-256 |
+| external development report | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v12/51367445/results/development_report.json` |
+| external model bundle | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v12/51367445/results/stage2_models.joblib` |
