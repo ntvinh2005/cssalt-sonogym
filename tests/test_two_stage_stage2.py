@@ -30,6 +30,7 @@ PROTOCOL_V5 = PROTOCOL.with_name("stage2_dataset_protocol_v5.yaml")
 PROTOCOL_V6 = PROTOCOL.with_name("stage2_dataset_protocol_v6.yaml")
 PROTOCOL_V7 = PROTOCOL.with_name("stage2_dataset_protocol_v7.yaml")
 PROTOCOL_V8 = PROTOCOL.with_name("stage2_dataset_protocol_v8.yaml")
+PROTOCOL_V9 = PROTOCOL.with_name("stage2_dataset_protocol_v9.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -229,6 +230,18 @@ class Stage2ProtocolTests(unittest.TestCase):
         for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
             self.assertEqual(seventh["resource_bound"][key], eighth["resource_bound"][key])
         self.assertIn("task_timeout_and_dynamics", eighth["amendment"]["unchanged_design"])
+
+    def test_v9_applies_the_existing_initial_bound_to_each_segment(self) -> None:
+        expected = PROTOCOL_V9.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V9.read_bytes()).hexdigest(), expected)
+        eighth = yaml.safe_load(PROTOCOL_V8.read_text(encoding="utf-8"))
+        ninth = yaml.safe_load(PROTOCOL_V9.read_text(encoding="utf-8"))
+        self.assertEqual(ninth["amendment"]["evidence_job"], 51340679)
+        for key in ("sessions", "labels", "features", "model", "development_gate", "sampling"):
+            self.assertEqual(eighth[key], ninth[key])
+        for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
+            self.assertEqual(eighth["resource_bound"][key], ninth["resource_bound"][key])
+        self.assertIn("initial_and_ordinary_action_bounds", ninth["amendment"]["unchanged_design"])
 
 
 class Stage2LabelTests(unittest.TestCase):
