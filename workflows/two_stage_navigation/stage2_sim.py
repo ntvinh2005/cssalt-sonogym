@@ -14,6 +14,7 @@ from spinal_surgery.evaluation.two_stage_navigation.coordinates import (
     command_target_from_realized_error,
     command_with_replaced_angle,
     plan_native_action,
+    plan_proportional_target_action,
     wrap_to_pi,
 )
 
@@ -101,6 +102,8 @@ def take_step(env: Any, target: np.ndarray) -> tuple[dict[str, Any], dict[str, A
         "before_realized_pose": before_realized.tolist(),
         "after_realized_pose": after_realized.tolist(),
         "command_clamped": assessment.native_clamped,
+        "command_position_clamped": assessment.position_clamped,
+        "command_angle_clamped": assessment.angle_clamped,
         "command_position_mapping_error_index": assessment.position_mapping_error_index,
         "command_angle_mapping_error_rad": assessment.angle_mapping_error_rad,
         "command_mapping_valid": assessment.mapping_valid,
@@ -115,6 +118,125 @@ def take_step(env: Any, target: np.ndarray) -> tuple[dict[str, Any], dict[str, A
         "info_keys": sorted(info),
     }
     return observation, status
+
+
+def take_proportional_step(
+    env: Any,
+    target: np.ndarray,
+    *,
+    ratio: np.ndarray | tuple[float, float, float] = (0.02, 0.02, 0.6),
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Take one coupled translation/rotation step toward a caller-supplied target."""
+    unwrapped = env.unwrapped
+    before_command = current_command(unwrapped)
+    before_realized = current_realized_pose(unwrapped)
+    planned = plan_proportional_target_action(
+        before_realized,
+        target,
+        current_rotation(unwrapped),
+        ratio=ratio,
+        action_scale=tensor_row(unwrapped.action_scale),
+    )
+    action = torch.as_tensor(
+        planned.normalized_action.reshape(1, 3),
+        dtype=torch.float32,
+        device=unwrapped.device,
+    )
+    observation, reward, terminated, truncated, info = env.step(action)
+    after_command = current_command(unwrapped)
+    after_realized = current_realized_pose(unwrapped)
+    command_range = unwrapped.US_slicer.x_z_range.detach().cpu().to(torch.float64).numpy()
+    assessment = assess_native_command(
+        before_command,
+        after_command,
+        planned,
+        target,
+        command_range[0],
+        command_range[1],
+        position_mapping_tolerance_index=POSITION_MAPPING_TOLERANCE_INDEX,
+        angle_mapping_tolerance_rad=ANGLE_MAPPING_TOLERANCE_RAD,
+    )
+    finite = bool(
+        np.all(np.isfinite(after_command))
+        and np.all(np.isfinite(after_realized))
+        and bool(torch.isfinite(observation["policy"]).all().item())
+        and bool(torch.isfinite(reward).all().item())
+    )
+    position_error_mm, orientation_error_deg = tracking_errors(unwrapped, target)
+    status = {
+        "normalized_action": planned.normalized_action.tolist(),
+        "controller_ratio": np.asarray(ratio, dtype=np.float64).tolist(),
+        "before_command": before_command.tolist(),
+        "after_command": after_command.tolist(),
+        "before_realized_pose": before_realized.tolist(),
+        "after_realized_pose": after_realized.tolist(),
+        "command_clamped": assessment.native_clamped,
+        "command_position_clamped": assessment.position_clamped,
+        "command_angle_clamped": assessment.angle_clamped,
+        "command_position_mapping_error_index": assessment.position_mapping_error_index,
+        "command_angle_mapping_error_rad": assessment.angle_mapping_error_rad,
+        "command_mapping_valid": assessment.mapping_valid,
+        "command_progressed": assessment.progressed_toward_target,
+        "finite": finite,
+        "surface_proxy_ok": surface_proxy_ok(unwrapped),
+        "native_no_collide": bool(unwrapped.US_slicer.no_collide[0].item()),
+        "target_position_error_mm": position_error_mm,
+        "target_orientation_error_deg": orientation_error_deg,
+        "terminated": bool(terminated[0].item()),
+        "truncated": bool(truncated[0].item()),
+        "info_keys": sorted(info),
+    }
+    return observation, status
+
+
+def move_proportional_target(
+    env: Any,
+    controller_target: np.ndarray,
+    acceptance_target: np.ndarray,
+    *,
+    maximum_steps: int,
+    maximum_position_error_mm: float,
+    maximum_orientation_error_deg: float,
+    ratio: np.ndarray | tuple[float, float, float] = (0.02, 0.02, 0.6),
+) -> list[dict[str, Any]]:
+    """Run bounded coupled feedback while allowing only the declared angle ceiling clamp."""
+    trajectory: list[dict[str, Any]] = []
+    for step in range(maximum_steps):
+        position_error_mm, orientation_error_deg = tracking_errors(
+            env.unwrapped, acceptance_target
+        )
+        if (
+            position_error_mm <= maximum_position_error_mm
+            and orientation_error_deg <= maximum_orientation_error_deg
+        ):
+            return trajectory
+        _, status = take_proportional_step(env, controller_target, ratio=ratio)
+        status["coupled_step"] = step + 1
+        status["controller_target"] = controller_target.tolist()
+        status["acceptance_target"] = acceptance_target.tolist()
+        trajectory.append(status)
+        if (
+            not status["finite"]
+            or status["command_position_clamped"]
+            or not status["command_mapping_valid"]
+            or not status["command_progressed"]
+            or not status["surface_proxy_ok"]
+            or status["terminated"]
+            or status["truncated"]
+        ):
+            raise RuntimeError(f"coupled physical movement failed: {status}")
+    position_error_mm, orientation_error_deg = tracking_errors(
+        env.unwrapped, acceptance_target
+    )
+    if (
+        position_error_mm <= maximum_position_error_mm
+        and orientation_error_deg <= maximum_orientation_error_deg
+    ):
+        return trajectory
+    raise TimeoutError(
+        f"coupled pose did not converge after {maximum_steps} steps: "
+        f"position={position_error_mm}, orientation={orientation_error_deg}"
+    )
 
 
 def move_to_pose(

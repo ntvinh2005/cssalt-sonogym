@@ -137,6 +137,8 @@ class NativeCommandAssessment:
     position_mapping_error_index: float
     angle_mapping_error_rad: float
     mapping_valid: bool
+    position_clamped: bool
+    angle_clamped: bool
     native_clamped: bool
     progressed_toward_target: bool
 
@@ -172,9 +174,13 @@ def assess_native_command(
     expected_unclamped[:2] += planned.predicted_patient_delta_index
     expected_unclamped[2] += planned.predicted_angle_delta_rad
     expected = np.clip(expected_unclamped, minimum, maximum)
-    native_clamped = not bool(
-        np.allclose(expected_unclamped, expected, atol=1e-9, rtol=0.0)
+    position_clamped = not bool(
+        np.allclose(expected_unclamped[:2], expected[:2], atol=1e-9, rtol=0.0)
     )
+    angle_clamped = not bool(
+        np.isclose(expected_unclamped[2], expected[2], atol=1e-9, rtol=0.0)
+    )
+    native_clamped = bool(position_clamped or angle_clamped)
     position_error = float(np.max(np.abs(after[:2] - expected[:2])))
     angle_error = abs(float(wrap_to_pi(after[2] - expected[2])))
     mapping_valid = bool(
@@ -195,6 +201,8 @@ def assess_native_command(
         position_mapping_error_index=position_error,
         angle_mapping_error_rad=angle_error,
         mapping_valid=mapping_valid,
+        position_clamped=position_clamped,
+        angle_clamped=angle_clamped,
         native_clamped=native_clamped,
         progressed_toward_target=progressed,
     )
@@ -264,6 +272,52 @@ def plan_native_action(
         normalized_action=normalized,
         predicted_patient_delta_index=basis @ probe_delta,
         predicted_angle_delta_rad=applied_angle,
+    )
+
+
+def plan_proportional_target_action(
+    current_pose: object,
+    target_pose: object,
+    human_to_probe_rotation: object,
+    *,
+    ratio: object = (0.02, 0.02, 0.6),
+    action_scale: object = (2.0, 2.0, 0.1),
+) -> PlannedNativeAction:
+    """Reproduce SonoGym's coupled proportional expert action for a generic target.
+
+    The caller supplies the target pose.  This pure planner deliberately has no access to
+    ``goal_cmd_pose`` or any other evaluator-only field.  Translation error is projected from
+    patient x-z into the current probe frame, then all three components are scaled and clipped
+    exactly as :class:`ExpertGuidance` does before the environment applies ``action_scale``.
+    """
+    current = _finite_array(current_pose, (3,), "current_pose")
+    target = _finite_array(target_pose, (3,), "target_pose")
+    rotation = _finite_array(
+        human_to_probe_rotation, (3, 3), "human_to_probe_rotation"
+    )
+    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-5):
+        raise ValueError("human_to_probe_rotation must be orthonormal")
+    gains = _finite_array(ratio, (3,), "ratio")
+    scale = _finite_array(action_scale, (3,), "action_scale")
+    if np.any(gains <= 0.0) or np.any(scale <= 0.0):
+        raise ValueError("ratio and action_scale must be positive")
+
+    patient_error = np.asarray(
+        [target[0] - current[0], 0.0, target[1] - current[1]], dtype=np.float64
+    )
+    probe_error = rotation.T @ patient_error
+    angular_error = float(wrap_to_pi(target[2] - current[2]))
+    normalized = np.asarray(
+        [probe_error[0] * gains[0], probe_error[1] * gains[1], angular_error * gains[2]],
+        dtype=np.float64,
+    )
+    normalized = np.clip(normalized, -scale, scale)
+    applied = normalized * scale
+    basis = rotation[np.ix_([0, 2], [0, 1])]
+    return PlannedNativeAction(
+        normalized_action=normalized,
+        predicted_patient_delta_index=basis @ applied[:2],
+        predicted_angle_delta_rad=float(applied[2]),
     )
 
 

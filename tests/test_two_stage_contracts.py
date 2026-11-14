@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import math
+import inspect
 import sys
 import unittest
 from pathlib import Path
@@ -38,6 +39,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     indices_to_mm,
     mm_to_indices,
     plan_native_action,
+    plan_proportional_target_action,
     pose_within_tolerance,
     validate_planar_rotation,
     wrap_to_pi,
@@ -207,6 +209,28 @@ class CoordinateTests(unittest.TestCase):
         applied = bounded.normalized_action * np.asarray([2.0, 2.0, 0.1])
         self.assertTrue(np.all(np.abs(applied) <= np.asarray([4.0, 4.0, 0.2]) + 1e-12))
 
+    def test_proportional_planner_matches_coupled_expert_math(self) -> None:
+        rotation = np.asarray(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, -1.0],
+                [0.0, 1.0, 0.0],
+            ]
+        )
+        planned = plan_proportional_target_action(
+            current_pose=[10.0, 20.0, 2.0],
+            target_pose=[14.0, 15.0, 3.14],
+            human_to_probe_rotation=rotation,
+        )
+        np.testing.assert_allclose(planned.normalized_action, [0.08, -0.10, 0.10])
+        np.testing.assert_allclose(planned.predicted_patient_delta_index, [0.16, -0.20])
+        self.assertAlmostEqual(planned.predicted_angle_delta_rad, 0.01)
+
+    def test_proportional_planner_has_no_evaluator_goal_interface(self) -> None:
+        parameters = inspect.signature(plan_proportional_target_action).parameters
+        self.assertIn("target_pose", parameters)
+        self.assertNotIn("goal_cmd_pose", parameters)
+
     def test_command_assessment_separates_mapping_error_from_workspace_clamp(self) -> None:
         planned = PlannedNativeAction(
             normalized_action=np.asarray([1.0, 0.0, 0.0]),
@@ -223,6 +247,8 @@ class CoordinateTests(unittest.TestCase):
         )
         self.assertTrue(assessment.mapping_valid)
         self.assertFalse(assessment.native_clamped)
+        self.assertFalse(assessment.position_clamped)
+        self.assertFalse(assessment.angle_clamped)
         self.assertTrue(assessment.progressed_toward_target)
         wider = assess_native_command(
             before_command=[165.0, 179.0, 2.8],
@@ -258,7 +284,26 @@ class CoordinateTests(unittest.TestCase):
             command_maximum=[180.0, 200.0, 3.0],
         )
         self.assertTrue(clamped.native_clamped)
+        self.assertTrue(clamped.position_clamped)
+        self.assertFalse(clamped.angle_clamped)
         self.assertTrue(clamped.mapping_valid)
+
+        angle_clamped = assess_native_command(
+            before_command=[132.0, 139.0, 2.995],
+            after_command=[132.0, 139.0, 3.0],
+            planned=PlannedNativeAction(
+                normalized_action=np.asarray([0.0, 0.0, 0.1]),
+                predicted_patient_delta_index=np.asarray([0.0, 0.0]),
+                predicted_angle_delta_rad=0.01,
+            ),
+            target_command=[132.0, 139.0, 3.14],
+            command_minimum=[100.0, 70.0, 1.0],
+            command_maximum=[180.0, 200.0, 3.0],
+        )
+        self.assertTrue(angle_clamped.native_clamped)
+        self.assertFalse(angle_clamped.position_clamped)
+        self.assertTrue(angle_clamped.angle_clamped)
+        self.assertTrue(angle_clamped.mapping_valid)
 
     def test_command_target_uses_realized_pose_error(self) -> None:
         corrected = command_target_from_realized_error(

@@ -51,11 +51,13 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_settling import (  # 
 from stage2_sim import (  # noqa: E402
     clean_ultrasound,
     current_realized_pose,
+    move_proportional_target,
     move_orientation_only,
     move_to_pose,
     raw_label_slice,
     realized_feedback_target,
     surface_proxy_ok,
+    take_proportional_step,
     take_step,
     tensor_row,
 )
@@ -65,6 +67,7 @@ PROTOCOL_IDS = {
     "sonogym-stage2-orientation-smoke-v1",
     "sonogym-stage2-orientation-smoke-v2",
     "sonogym-stage2-orientation-smoke-v3",
+    "sonogym-stage2-coupled-smoke-v4",
 }
 
 
@@ -128,8 +131,27 @@ def main() -> int:
             [goal[0], goal[1], float(protocol["motion"]["requested_angle_rad"])],
             dtype=np.float64,
         )
+        controller_target = requested.copy()
+        if protocol["protocol_id"] == "sonogym-stage2-coupled-smoke-v4":
+            controller_target[2] = float(protocol["motion"]["controller_target_angle_rad"])
         orientation_trajectory: list[dict[str, Any]] = []
-        if protocol["protocol_id"] in {
+        coupled_trajectory: list[dict[str, Any]] = []
+        if protocol["protocol_id"] == "sonogym-stage2-coupled-smoke-v4":
+            coupled_trajectory = move_proportional_target(
+                env,
+                controller_target,
+                requested,
+                maximum_steps=int(protocol["motion"]["maximum_coupled_steps"]),
+                maximum_position_error_mm=float(
+                    protocol["criteria"]["maximum_command_position_error_mm"]
+                ),
+                maximum_orientation_error_deg=float(
+                    protocol["criteria"]["maximum_command_orientation_error_deg"]
+                ),
+                ratio=tuple(float(value) for value in protocol["motion"]["controller_ratio"]),
+            )
+            action_rows.extend(coupled_trajectory)
+        elif protocol["protocol_id"] in {
             "sonogym-stage2-orientation-smoke-v2",
             "sonogym-stage2-orientation-smoke-v3",
         }:
@@ -142,23 +164,25 @@ def main() -> int:
                 ),
             )
             action_rows.extend(orientation_trajectory)
-        trajectory = move_to_pose(
-            env,
-            requested,
-            maximum_steps=int(
-                protocol["motion"].get(
-                    "maximum_positioning_steps",
-                    protocol["motion"].get("maximum_settling_steps"),
-                )
-            ),
-            maximum_position_error_mm=float(
-                protocol["criteria"]["maximum_command_position_error_mm"]
-            ),
-            maximum_orientation_error_deg=float(
-                protocol["criteria"]["maximum_command_orientation_error_deg"]
-            ),
-        )
-        action_rows.extend(trajectory)
+        trajectory: list[dict[str, Any]] = []
+        if protocol["protocol_id"] != "sonogym-stage2-coupled-smoke-v4":
+            trajectory = move_to_pose(
+                env,
+                requested,
+                maximum_steps=int(
+                    protocol["motion"].get(
+                        "maximum_positioning_steps",
+                        protocol["motion"].get("maximum_settling_steps"),
+                    )
+                ),
+                maximum_position_error_mm=float(
+                    protocol["criteria"]["maximum_command_position_error_mm"]
+                ),
+                maximum_orientation_error_deg=float(
+                    protocol["criteria"]["maximum_command_orientation_error_deg"]
+                ),
+            )
+            action_rows.extend(trajectory)
         raw_path = (
             Path(args.assets_data_dir)
             / "HumanModels"
@@ -170,8 +194,17 @@ def main() -> int:
         criteria = SettlingCriteria(**protocol["criteria"])
         previous_pose = current_realized_pose(unwrapped).copy()
         for frame_sequence in range(criteria.required_frame_count):
-            feedback_target = realized_feedback_target(unwrapped, requested)
-            _, status = take_step(env, feedback_target)
+            if protocol["protocol_id"] == "sonogym-stage2-coupled-smoke-v4":
+                _, status = take_proportional_step(
+                    env,
+                    controller_target,
+                    ratio=tuple(
+                        float(value) for value in protocol["motion"]["controller_ratio"]
+                    ),
+                )
+            else:
+                feedback_target = realized_feedback_target(unwrapped, requested)
+                _, status = take_step(env, feedback_target)
             status["frame_sequence"] = frame_sequence
             action_rows.append(status)
             pose = current_realized_pose(unwrapped)
@@ -180,7 +213,7 @@ def main() -> int:
             frame_hash = ultrasound_sha256(image)
             technical = bool(
                 status["finite"]
-                and not status["command_clamped"]
+                and not status["command_position_clamped"]
                 and status["command_mapping_valid"]
                 and status["surface_proxy_ok"]
                 and not status["terminated"]
@@ -207,8 +240,10 @@ def main() -> int:
                 "action_accepted": technical,
                 "action_completed": technical,
                 "action_clamped": bool(status["command_clamped"]),
+                "action_position_clamped": bool(status["command_position_clamped"]),
+                "action_angle_clamped": bool(status["command_angle_clamped"]),
                 "contact_ok": surface_proxy_ok(unwrapped),
-                "workspace_ok": not bool(status["command_clamped"]),
+                "workspace_ok": not bool(status["command_position_clamped"]),
                 "image_valid": technical,
                 "image_archive_index": frame_sequence,
             }
@@ -238,8 +273,12 @@ def main() -> int:
             decision=metrics["decision"],
             orientation_action_steps=len(orientation_trajectory),
             positioning_action_steps=len(trajectory),
-            settling_action_steps=len(orientation_trajectory) + len(trajectory),
+            coupled_action_steps=len(coupled_trajectory),
+            settling_action_steps=(
+                len(orientation_trajectory) + len(trajectory) + len(coupled_trajectory)
+            ),
             requested_command_pose=requested.tolist(),
+            controller_target_pose=controller_target.tolist(),
             goal_cmd_pose_evaluator_only=goal.tolist(),
             metrics=metrics,
         )
