@@ -43,6 +43,7 @@ PROTOCOL_IDS = frozenset(
         "sonogym-stage2-dataset-v1",
         "sonogym-stage2-dataset-v2",
         "sonogym-stage2-dataset-v3",
+        "sonogym-stage2-dataset-v12",
     }
 )
 

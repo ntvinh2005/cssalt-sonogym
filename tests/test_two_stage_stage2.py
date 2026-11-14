@@ -16,7 +16,9 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 EVALUATION_ROOT = (
     REPOSITORY_ROOT / "source" / "spinal_surgery" / "spinal_surgery" / "evaluation"
 )
+WORKFLOW_ROOT = REPOSITORY_ROOT / "workflows" / "two_stage_navigation"
 sys.path.insert(0, str(EVALUATION_ROOT))
+sys.path.insert(0, str(WORKFLOW_ROOT))
 PROTOCOL = (
     REPOSITORY_ROOT
     / "experiments"
@@ -47,6 +49,7 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
     select_best_view,
     supervised_targets,
 )
+from train_stage2 import PROTOCOL_IDS as TRAIN_STAGE2_PROTOCOL_IDS  # noqa: E402
 
 
 def image() -> np.ndarray:
@@ -333,6 +336,7 @@ class Stage2ProtocolTests(unittest.TestCase):
         )
         self.assertEqual(twelfth["sampling"]["expected_total_trajectories"], 48)
         self.assertEqual(twelfth["sampling"]["maximum_total_action_steps_per_session"], 4000)
+        self.assertIn("sonogym-stage2-dataset-v12", TRAIN_STAGE2_PROTOCOL_IDS)
 
 
 class Stage2LabelTests(unittest.TestCase):
