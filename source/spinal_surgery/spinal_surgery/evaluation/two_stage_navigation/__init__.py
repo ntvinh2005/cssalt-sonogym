@@ -23,6 +23,7 @@ from .stage2_models import (
     select_best_view,
     supervised_targets,
 )
+from .stage2_settling import SettlingCriteria, evaluate_settled_frames
 
 __all__ = [
     "ActorFrame",
@@ -39,9 +40,11 @@ __all__ = [
     "SpatialEvidenceMap",
     "ScoredView",
     "Stage2LabelConfig",
+    "SettlingCriteria",
     "select_ordered_event_path",
     "extract_patch_feature",
     "extract_stage2_feature",
+    "evaluate_settled_frames",
     "fresh_confirmation_passes",
     "normalize_ultrasound",
     "reconstruct_landmark",
