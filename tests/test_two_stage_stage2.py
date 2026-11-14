@@ -29,6 +29,7 @@ PROTOCOL_V4 = PROTOCOL.with_name("stage2_dataset_protocol_v4.yaml")
 PROTOCOL_V5 = PROTOCOL.with_name("stage2_dataset_protocol_v5.yaml")
 PROTOCOL_V6 = PROTOCOL.with_name("stage2_dataset_protocol_v6.yaml")
 PROTOCOL_V7 = PROTOCOL.with_name("stage2_dataset_protocol_v7.yaml")
+PROTOCOL_V8 = PROTOCOL.with_name("stage2_dataset_protocol_v8.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -216,6 +217,18 @@ class Stage2ProtocolTests(unittest.TestCase):
         for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
             self.assertEqual(sixth["resource_bound"][key], seventh["resource_bound"][key])
         self.assertIn("trajectory_boundaries_and_seeds", seventh["amendment"]["unchanged_design"])
+
+    def test_v8_only_repairs_segmented_capture_dispatch(self) -> None:
+        expected = PROTOCOL_V8.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V8.read_bytes()).hexdigest(), expected)
+        seventh = yaml.safe_load(PROTOCOL_V7.read_text(encoding="utf-8"))
+        eighth = yaml.safe_load(PROTOCOL_V8.read_text(encoding="utf-8"))
+        self.assertEqual(eighth["amendment"]["evidence_job"], 51339010)
+        for key in ("sessions", "labels", "features", "model", "development_gate", "sampling"):
+            self.assertEqual(seventh[key], eighth[key])
+        for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
+            self.assertEqual(seventh["resource_bound"][key], eighth["resource_bound"][key])
+        self.assertIn("task_timeout_and_dynamics", eighth["amendment"]["unchanged_design"])
 
 
 class Stage2LabelTests(unittest.TestCase):

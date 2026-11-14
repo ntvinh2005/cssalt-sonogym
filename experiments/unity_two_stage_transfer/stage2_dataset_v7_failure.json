@@ -1,0 +1,35 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v1",
+  "decision": "TECHNICAL_ERROR_NOT_DATA_READY",
+  "job": {
+    "job_id": 51339010,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "elapsed": "00:00:48",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "38652c26dc2b40416666a41a243a13492cb352bc",
+  "protocol_sha256": "56f0a0d3ba04e5eae2daa0671f862e370944f379fabbd5ebe51d0e9ed881248e",
+  "failure": {
+    "session_id": "s2tr_00",
+    "frame_sequence_in_progress": 37,
+    "action_rows_preserved": 599,
+    "trigger": "protocol v7 did not activate segmented trajectory boundaries",
+    "evidence": "The failure reproduced v4 exactly at the 600-step timeout: frame 37, action row 599, truncated=true, and the same post-reset pose discontinuity.",
+    "interpretation": "Coupled dispatch was correct, but a remaining v5-only segmentation check prevented the frozen frame-20 reset. No complete dataset archive was produced."
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 55,
+    "maximum_resident_memory_kib": 3620020,
+    "timed_session_elapsed_seconds": 41.73,
+    "artifact_bytes": 809578
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v7/51339010"
+}
