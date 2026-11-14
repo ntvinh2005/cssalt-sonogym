@@ -53,6 +53,7 @@ from stage2_sim import (  # noqa: E402
     clean_ultrasound,
     current_command,
     current_realized_pose,
+    move_proportional_target,
     move_to_pose,
     raw_label_slice,
     surface_proxy_ok,
@@ -65,6 +66,7 @@ PROTOCOL_IDS = frozenset(
         "sonogym-stage2-dataset-v1",
         "sonogym-stage2-dataset-v2",
         "sonogym-stage2-dataset-v3",
+        "sonogym-stage2-dataset-v4",
     }
 )
 
@@ -206,19 +208,38 @@ def main() -> int:
                     else "maximum_action_steps_per_waypoint"
                 ]
             )
-            trajectory = move_to_pose(
-                env,
-                waypoint,
-                maximum_steps=maximum_steps,
-                maximum_position_error_mm=position_tolerance,
-                maximum_orientation_error_deg=orientation_tolerance,
-            )
+            action_start = len(action_rows)
+            controller_target = waypoint.copy()
+            if protocol["protocol_id"] == "sonogym-stage2-dataset-v4":
+                controller = sampling["physical_controller"]
+                if waypoint[2] >= float(
+                    controller["ceiling_assisted_minimum_requested_angle_rad"]
+                ):
+                    controller_target[2] = float(controller["controller_target_angle_rad"])
+                trajectory = move_proportional_target(
+                    env,
+                    controller_target,
+                    waypoint,
+                    maximum_steps=maximum_steps,
+                    maximum_position_error_mm=position_tolerance,
+                    maximum_orientation_error_deg=orientation_tolerance,
+                    ratio=tuple(float(value) for value in controller["ratio"]),
+                    trajectory_sink=action_rows,
+                )
+            else:
+                trajectory = move_to_pose(
+                    env,
+                    waypoint,
+                    maximum_steps=maximum_steps,
+                    maximum_position_error_mm=position_tolerance,
+                    maximum_orientation_error_deg=orientation_tolerance,
+                )
+                action_rows.extend(trajectory)
             total_steps += len(trajectory)
             if total_steps > int(sampling["maximum_total_action_steps_per_session"]):
                 raise RuntimeError("Stage 2 dataset action budget exceeded")
-            for row in trajectory:
+            for row in action_rows[action_start:]:
                 row["frame_sequence"] = frame_sequence
-                action_rows.append(row)
 
             image = clean_ultrasound(unwrapped)
             raw = raw_label_slice(unwrapped, raw_volume)
@@ -227,8 +248,15 @@ def main() -> int:
             delta_mm = (current_pose[:2] - previous_realized[:2]) * 1.5
             delta_angle = float(wrap_to_pi(current_pose[2] - previous_realized[2]))
             transition_valid = bool(
-                all(bool(row["finite"]) and bool(row["surface_proxy_ok"]) for row in trajectory)
-                and all(not bool(row["command_clamped"]) for row in trajectory)
+                all(
+                    bool(row["finite"])
+                    and bool(row["surface_proxy_ok"])
+                    and bool(row["command_mapping_valid"])
+                    and not bool(row["terminated"])
+                    and not bool(row["truncated"])
+                    for row in trajectory
+                )
+                and all(not bool(row["command_position_clamped"]) for row in trajectory)
             )
             technical_valid = bool(
                 transition_valid
@@ -263,8 +291,16 @@ def main() -> int:
                 "action_accepted": transition_valid,
                 "action_completed": transition_valid,
                 "action_clamped": any(bool(row["command_clamped"]) for row in trajectory),
+                "action_position_clamped": any(
+                    bool(row["command_position_clamped"]) for row in trajectory
+                ),
+                "action_angle_clamped": any(
+                    bool(row["command_angle_clamped"]) for row in trajectory
+                ),
                 "contact_ok": surface_proxy_ok(unwrapped),
-                "workspace_ok": all(not bool(row["command_clamped"]) for row in trajectory),
+                "workspace_ok": all(
+                    not bool(row["command_position_clamped"]) for row in trajectory
+                ),
                 "image_valid": technical_valid,
             }
             assert_no_privileged_fields(public_row)
@@ -278,6 +314,8 @@ def main() -> int:
                     "patient_id": "s0010",
                     "command_pose_index": current_command(unwrapped).tolist(),
                     "realized_pose_index": current_pose.tolist(),
+                    "requested_waypoint_pose_index": waypoint.tolist(),
+                    "controller_target_pose_index": controller_target.tolist(),
                     "goal_cmd_pose": goal.tolist(),
                     "position_error_mm": position_error_mm,
                     "orientation_error_deg": orientation_error_deg,
