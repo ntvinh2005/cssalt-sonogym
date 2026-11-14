@@ -39,7 +39,11 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
 
 
 PROTOCOL_IDS = frozenset(
-    {"sonogym-stage2-dataset-v1", "sonogym-stage2-dataset-v2"}
+    {
+        "sonogym-stage2-dataset-v1",
+        "sonogym-stage2-dataset-v2",
+        "sonogym-stage2-dataset-v3",
+    }
 )
 
 

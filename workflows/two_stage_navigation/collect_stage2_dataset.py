@@ -61,7 +61,11 @@ from stage2_sim import (  # noqa: E402
 
 
 PROTOCOL_IDS = frozenset(
-    {"sonogym-stage2-dataset-v1", "sonogym-stage2-dataset-v2"}
+    {
+        "sonogym-stage2-dataset-v1",
+        "sonogym-stage2-dataset-v2",
+        "sonogym-stage2-dataset-v3",
+    }
 )
 
 
@@ -320,6 +324,8 @@ def main() -> int:
         return 1
     finally:
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        if action_rows:
+            write_jsonl(privileged_dir / "actions_partial.jsonl", action_rows)
         write_json(output / "summary.json", summary)
         if env is not None:
             env.close()

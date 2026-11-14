@@ -24,6 +24,7 @@ PROTOCOL = (
     / "stage2_dataset_protocol_v1.yaml"
 )
 PROTOCOL_V2 = PROTOCOL.with_name("stage2_dataset_protocol_v2.yaml")
+PROTOCOL_V3 = PROTOCOL.with_name("stage2_dataset_protocol_v3.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -127,6 +128,24 @@ class Stage2ProtocolTests(unittest.TestCase):
             first["sampling"]["maximum_total_action_steps_per_session"],
             second["sampling"]["maximum_total_action_steps_per_session"],
         )
+
+    def test_v3_is_the_final_bounded_convergence_retry(self) -> None:
+        expected = PROTOCOL_V3.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V3.read_bytes()).hexdigest(), expected)
+        second = yaml.safe_load(PROTOCOL_V2.read_text(encoding="utf-8"))
+        third = yaml.safe_load(PROTOCOL_V3.read_text(encoding="utf-8"))
+        self.assertEqual(third["amendment"]["evidence_job"], 51245393)
+        self.assertIn("final retry", third["amendment"]["retry_policy"])
+        self.assertEqual(second["sampling"]["maximum_action_steps_per_waypoint"], 16)
+        self.assertEqual(third["sampling"]["maximum_action_steps_per_waypoint"], 24)
+        for key in (
+            "sessions",
+            "labels",
+            "features",
+            "model",
+            "development_gate",
+        ):
+            self.assertEqual(second[key], third[key])
 
 
 class Stage2LabelTests(unittest.TestCase):

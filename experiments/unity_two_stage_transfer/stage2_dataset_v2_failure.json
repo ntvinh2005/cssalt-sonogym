@@ -1,0 +1,38 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v1",
+  "decision": "TECHNICAL_FAILURE_BEFORE_DATASET",
+  "job": {
+    "job_id": 51245393,
+    "account": "anest-dept",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0",
+    "elapsed_seconds": 43,
+    "cpu_cores": 4,
+    "memory_requested_gb": 30,
+    "gpu_count": 1,
+    "gpu_model": "NVIDIA L4",
+    "driver_version": "580.178.04"
+  },
+  "protocol": {
+    "id": "sonogym-stage2-dataset-v2",
+    "sha256": "f420938b3d0d05190ee1b35ead8dceca128739864420993d6ac94fd5952b27c8"
+  },
+  "failure": {
+    "session_id": "s2tr_00",
+    "stage": "physical_waypoint_convergence",
+    "maximum_action_steps": 16,
+    "final_position_error_mm": 1.5999197991511402,
+    "final_orientation_error_deg": 5.103181848941489,
+    "required_position_error_mm": 5.0,
+    "required_orientation_error_deg": 5.0,
+    "complete_dataset_frames_saved": 0,
+    "perception_evaluated": false
+  },
+  "retry": {
+    "protocol_id": "sonogym-stage2-dataset-v3",
+    "only_changed_execution_limit": "maximum_action_steps_per_waypoint: 16 -> 24",
+    "scientific_design_changed": false,
+    "final_retry_for_this_failure_mode": true
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v2/51245393"
+}
