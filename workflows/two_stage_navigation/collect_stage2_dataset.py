@@ -43,7 +43,10 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
     assert_no_privileged_fields,
     ultrasound_sha256,
 )
-from spinal_surgery.evaluation.two_stage_navigation.coordinates import wrap_to_pi  # noqa: E402
+from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa: E402
+    uses_coupled_stage2_dataset_controller,
+    wrap_to_pi,
+)
 from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # noqa: E402
     Stage2LabelConfig,
     supervised_targets,
@@ -240,7 +243,7 @@ def main() -> int:
             )
             action_start = len(action_rows)
             controller_target = waypoint.copy()
-            if protocol["protocol_id"] == "sonogym-stage2-dataset-v4":
+            if uses_coupled_stage2_dataset_controller(protocol["protocol_id"]):
                 controller = sampling["physical_controller"]
                 if waypoint[2] >= float(
                     controller["ceiling_assisted_minimum_requested_angle_rad"]

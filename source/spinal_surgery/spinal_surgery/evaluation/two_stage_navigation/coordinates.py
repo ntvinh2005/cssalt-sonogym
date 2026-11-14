@@ -14,6 +14,13 @@ import numpy as np
 
 
 LABEL_RESOLUTION_MM = 1.5
+COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
+    {
+        "sonogym-stage2-dataset-v4",
+        "sonogym-stage2-dataset-v5",
+        "sonogym-stage2-dataset-v6",
+    }
+)
 
 
 def _finite_array(value: object, shape: tuple[int, ...], name: str) -> np.ndarray:
@@ -66,6 +73,13 @@ def pose_within_tolerance(
         position_error_mm <= maximum_position_error_mm
         and orientation_error_deg <= maximum_orientation_error_deg
     )
+
+
+def uses_coupled_stage2_dataset_controller(protocol_id: str) -> bool:
+    """Return whether a frozen Stage 2 dataset protocol uses coupled feedback."""
+    if not isinstance(protocol_id, str) or not protocol_id:
+        raise ValueError("protocol_id must be a non-empty string")
+    return protocol_id in COUPLED_STAGE2_DATASET_PROTOCOLS
 
 
 @dataclass(frozen=True)

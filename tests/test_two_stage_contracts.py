@@ -41,6 +41,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     plan_native_action,
     plan_proportional_target_action,
     pose_within_tolerance,
+    uses_coupled_stage2_dataset_controller,
     validate_planar_rotation,
     wrap_to_pi,
 )
@@ -140,6 +141,14 @@ class ActorContractTests(unittest.TestCase):
 
 
 class CoordinateTests(unittest.TestCase):
+    def test_all_segmented_dataset_protocols_use_coupled_control(self) -> None:
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v4"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v5"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v6"))
+        self.assertFalse(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v3"))
+        with self.assertRaises(ValueError):
+            uses_coupled_stage2_dataset_controller("")
+
     def test_pose_tolerance_uses_the_declared_protocol_limits(self) -> None:
         self.assertTrue(pose_within_tolerance(1.906, 3.718, 5.0, 5.0))
         self.assertFalse(pose_within_tolerance(1.906, 3.718, 3.0, 3.0))
