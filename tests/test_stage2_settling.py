@@ -22,6 +22,7 @@ PROTOCOL = (
     / "unity_two_stage_transfer"
     / "stage2_orientation_smoke_protocol_v1.yaml"
 )
+PROTOCOL_V2 = PROTOCOL.with_name("stage2_orientation_smoke_protocol_v2.yaml")
 
 from two_stage_navigation.stage2_settling import (  # noqa: E402
     SettlingCriteria,
@@ -105,6 +106,23 @@ class SettlingProtocolTests(unittest.TestCase):
         forbidden = set(protocol["information_boundaries"]["actor_record_forbidden"])
         self.assertIn("raw_labels", forbidden)
         self.assertIn("goal_cmd_pose", forbidden)
+
+    def test_v2_changes_motion_sequence_but_not_acceptance_criteria(self) -> None:
+        expected = PROTOCOL_V2.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V2.read_bytes()).hexdigest(), expected)
+        first = yaml.safe_load(PROTOCOL.read_text(encoding="utf-8"))
+        second = yaml.safe_load(PROTOCOL_V2.read_text(encoding="utf-8"))
+        self.assertEqual(second["amendment"]["evidence_job"], 51274046)
+        self.assertEqual(first["session"], second["session"])
+        self.assertEqual(first["criteria"], second["criteria"])
+        self.assertEqual(first["resource_bound"]["account"], second["resource_bound"]["account"])
+        self.assertEqual(first["resource_bound"]["gpu_count"], second["resource_bound"]["gpu_count"])
+        self.assertEqual(first["resource_bound"]["cpu_cores"], second["resource_bound"]["cpu_cores"])
+        self.assertEqual(first["resource_bound"]["memory"], second["resource_bound"]["memory"])
+        self.assertEqual(first["resource_bound"]["walltime"], second["resource_bound"]["walltime"])
+        self.assertEqual(second["motion"]["maximum_orientation_steps"], 120)
+        self.assertEqual(second["motion"]["maximum_positioning_steps"], 120)
+        self.assertIn("single researcher-approved retry", second["amendment"]["retry_policy"])
 
 
 if __name__ == "__main__":
