@@ -44,6 +44,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
     ultrasound_sha256,
 )
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa: E402
+    is_supported_stage2_dataset_protocol,
     uses_coupled_stage2_dataset_controller,
     wrap_to_pi,
 )
@@ -61,17 +62,6 @@ from stage2_sim import (  # noqa: E402
     raw_label_slice,
     surface_proxy_ok,
     tensor_row,
-)
-
-
-PROTOCOL_IDS = frozenset(
-    {
-        "sonogym-stage2-dataset-v1",
-        "sonogym-stage2-dataset-v2",
-        "sonogym-stage2-dataset-v3",
-        "sonogym-stage2-dataset-v4",
-        "sonogym-stage2-dataset-v5",
-    }
 )
 
 
@@ -101,7 +91,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 def load_protocol() -> tuple[dict[str, Any], dict[str, Any], Path]:
     path = Path(args.protocol).resolve()
     protocol = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] not in PROTOCOL_IDS:
+    if not is_supported_stage2_dataset_protocol(protocol["protocol_id"]):
         raise RuntimeError("unexpected Stage 2 dataset protocol")
     seal = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
     if file_sha256(path) != seal:

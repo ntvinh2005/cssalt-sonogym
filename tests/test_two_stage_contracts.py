@@ -37,6 +37,7 @@ from two_stage_navigation.coordinates import (  # noqa: E402
     command_target_from_realized_error,
     command_with_replaced_angle,
     indices_to_mm,
+    is_supported_stage2_dataset_protocol,
     mm_to_indices,
     plan_native_action,
     plan_proportional_target_action,
@@ -145,9 +146,15 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v4"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v5"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v6"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v7"))
         self.assertFalse(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v3"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v6"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v7"))
+        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v8"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
+        with self.assertRaises(ValueError):
+            is_supported_stage2_dataset_protocol("")
 
     def test_pose_tolerance_uses_the_declared_protocol_limits(self) -> None:
         self.assertTrue(pose_within_tolerance(1.906, 3.718, 5.0, 5.0))
