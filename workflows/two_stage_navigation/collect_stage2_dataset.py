@@ -60,7 +60,9 @@ from stage2_sim import (  # noqa: E402
 )
 
 
-PROTOCOL_ID = "sonogym-stage2-dataset-v1"
+PROTOCOL_IDS = frozenset(
+    {"sonogym-stage2-dataset-v1", "sonogym-stage2-dataset-v2"}
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -89,7 +91,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 def load_protocol() -> tuple[dict[str, Any], dict[str, Any], Path]:
     path = Path(args.protocol).resolve()
     protocol = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != PROTOCOL_ID:
+    if protocol["protocol_id"] not in PROTOCOL_IDS:
         raise RuntimeError("unexpected Stage 2 dataset protocol")
     seal = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
     if file_sha256(path) != seal:
@@ -137,7 +139,7 @@ def main() -> int:
     summary: dict[str, Any] = {
         "schema": "sonogym-stage2-dataset-session-summary-v1",
         "status": "FAILED",
-        "protocol_id": PROTOCOL_ID,
+        "protocol_id": protocol["protocol_id"],
         "protocol_sha256": file_sha256(protocol_path),
         "session_id": session["session_id"],
         "split": session["split"],

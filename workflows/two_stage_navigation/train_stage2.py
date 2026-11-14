@@ -38,7 +38,9 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
 )
 
 
-PROTOCOL_ID = "sonogym-stage2-dataset-v1"
+PROTOCOL_IDS = frozenset(
+    {"sonogym-stage2-dataset-v1", "sonogym-stage2-dataset-v2"}
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -182,7 +184,7 @@ def main() -> int:
     if protocol_hash != expected_hash:
         raise RuntimeError("Stage 2 protocol seal mismatch")
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != PROTOCOL_ID:
+    if protocol["protocol_id"] not in PROTOCOL_IDS:
         raise RuntimeError("unexpected Stage 2 protocol")
     label = protocol["labels"]
     label_config = Stage2LabelConfig(

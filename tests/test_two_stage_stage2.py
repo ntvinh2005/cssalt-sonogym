@@ -23,6 +23,7 @@ PROTOCOL = (
     / "unity_two_stage_transfer"
     / "stage2_dataset_protocol_v1.yaml"
 )
+PROTOCOL_V2 = PROTOCOL.with_name("stage2_dataset_protocol_v2.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -105,6 +106,27 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertIn("goal_cmd_pose", forbidden)
         self.assertIn("command_pose_index", forbidden)
         self.assertIn("raw_labels", forbidden)
+
+    def test_v2_changes_only_the_documented_convergence_bound(self) -> None:
+        expected = PROTOCOL_V2.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V2.read_bytes()).hexdigest(), expected)
+        first = yaml.safe_load(PROTOCOL.read_text(encoding="utf-8"))
+        second = yaml.safe_load(PROTOCOL_V2.read_text(encoding="utf-8"))
+        self.assertEqual(second["amendment"]["evidence_job"], 51231922)
+        self.assertEqual(first["sampling"]["maximum_action_steps_per_waypoint"], 8)
+        self.assertEqual(second["sampling"]["maximum_action_steps_per_waypoint"], 16)
+        for key in (
+            "sessions",
+            "labels",
+            "features",
+            "model",
+            "development_gate",
+        ):
+            self.assertEqual(first[key], second[key])
+        self.assertEqual(
+            first["sampling"]["maximum_total_action_steps_per_session"],
+            second["sampling"]["maximum_total_action_steps_per_session"],
+        )
 
 
 class Stage2LabelTests(unittest.TestCase):
