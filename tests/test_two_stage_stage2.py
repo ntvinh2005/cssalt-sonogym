@@ -31,6 +31,7 @@ PROTOCOL_V6 = PROTOCOL.with_name("stage2_dataset_protocol_v6.yaml")
 PROTOCOL_V7 = PROTOCOL.with_name("stage2_dataset_protocol_v7.yaml")
 PROTOCOL_V8 = PROTOCOL.with_name("stage2_dataset_protocol_v8.yaml")
 PROTOCOL_V9 = PROTOCOL.with_name("stage2_dataset_protocol_v9.yaml")
+PROTOCOL_V10 = PROTOCOL.with_name("stage2_dataset_protocol_v10.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -242,6 +243,37 @@ class Stage2ProtocolTests(unittest.TestCase):
         for key in ("account", "gpu_count", "cpu_cores", "memory", "walltime"):
             self.assertEqual(eighth["resource_bound"][key], ninth["resource_bound"][key])
         self.assertIn("initial_and_ordinary_action_bounds", ninth["amendment"]["unchanged_design"])
+
+    def test_v10_settles_high_angle_and_extends_only_ordinary_motion_bound(self) -> None:
+        expected = PROTOCOL_V10.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V10.read_bytes()).hexdigest(), expected)
+        ninth = yaml.safe_load(PROTOCOL_V9.read_text(encoding="utf-8"))
+        tenth = yaml.safe_load(PROTOCOL_V10.read_text(encoding="utf-8"))
+        self.assertEqual(tenth["amendment"]["evidence_job"], 51341988)
+        for key in ("sessions", "labels", "features", "model", "development_gate"):
+            self.assertEqual(ninth[key], tenth[key])
+        for key in (
+            "goal_relative_x_offsets_index",
+            "goal_relative_z_offsets_index",
+            "command_angles_rad",
+            "expected_frames_per_session",
+            "trajectory_start_frames",
+            "trajectory_seed_stride",
+            "expected_trajectories_per_session",
+            "expected_total_trajectories",
+            "maximum_initial_positioning_steps",
+            "maximum_total_action_steps_per_session",
+            "physical_tracking_position_tolerance_mm",
+            "physical_tracking_orientation_tolerance_deg",
+        ):
+            self.assertEqual(ninth["sampling"][key], tenth["sampling"][key])
+        self.assertEqual(ninth["sampling"]["maximum_action_steps_per_waypoint"], 60)
+        self.assertEqual(tenth["sampling"]["maximum_action_steps_per_waypoint"], 90)
+        self.assertTrue(
+            tenth["sampling"]["physical_controller"][
+                "accept_against_evaluator_goal_angle"
+            ]
+        )
 
 
 class Stage2LabelTests(unittest.TestCase):

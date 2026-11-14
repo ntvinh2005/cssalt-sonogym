@@ -154,7 +154,6 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v6"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v7"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v8"))
-        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v10"))
         self.assertFalse(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v4"))
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v5"))
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v7"))
@@ -162,6 +161,10 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v9"))
         self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v9"))
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v9"))
+        self.assertTrue(uses_segmented_stage2_dataset_capture("sonogym-stage2-dataset-v10"))
+        self.assertTrue(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v10"))
+        self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v10"))
+        self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v11"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
         with self.assertRaises(ValueError):

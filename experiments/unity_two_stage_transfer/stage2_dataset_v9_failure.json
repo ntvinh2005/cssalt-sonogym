@@ -1,0 +1,44 @@
+{
+  "schema": "sonogym-stage2-dataset-failure-v1",
+  "decision": "TECHNICAL_ERROR_NOT_DATA_READY",
+  "job": {
+    "job_id": 51341988,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "walltime_limit": "00:30:00",
+    "elapsed": "00:01:11",
+    "slurm_state": "FAILED",
+    "exit_code": "2:0"
+  },
+  "source_commit": "602486b8d968061ee67e9cf914c18cc2ce7dba34",
+  "protocol_sha256": "3aa5380476a44bef217d82b1c6dabeb47c3e9023aad729c12af870a3c6e62598",
+  "failure": {
+    "session_id": "s2tr_01",
+    "position_error_mm": 0.6357367799005395,
+    "orientation_error_deg": 5.543982040614188,
+    "trigger": "an ordinary waypoint exhausted the 60-step bound 0.543982 degrees outside the frozen 5-degree tracking tolerance",
+    "evidence": "The preceding s2tr_00 session completed 75 frames and four reset-separated trajectories. Its best-quality frame was 1.225896 mm from the evaluator target with 0.221833 L4 fraction but remained 10.269695 degrees from the evaluator goal angle.",
+    "interpretation": "The ordinary movement bound was marginal, and the ceiling-assisted highest-angle stratum stopped against its requested 2.985-radian waypoint before entering the unchanged 10-degree validity region around the 3.14-radian evaluator goal."
+  },
+  "partial_data": {
+    "completed_sessions": 1,
+    "completed_frames": 75,
+    "completed_trajectories": 4,
+    "valid_frames": 0,
+    "technical_image_valid_frames": 75,
+    "maximum_l4_visible_fraction": 0.2644666666666667,
+    "minimum_position_error_mm": 1.225896228764653,
+    "minimum_orientation_error_deg": 7.583313148655037
+  },
+  "resource_observation": {
+    "peak_gpu_memory_mib": 5009,
+    "peak_gpu_utilization_percent": 49,
+    "maximum_resident_memory_kib": 3617276,
+    "artifact_bytes": 12442561
+  },
+  "external_artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v9/51341988"
+}
