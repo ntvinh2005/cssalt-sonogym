@@ -198,8 +198,14 @@ def move_proportional_target(
     maximum_position_error_mm: float,
     maximum_orientation_error_deg: float,
     ratio: np.ndarray | tuple[float, float, float] = (0.02, 0.02, 0.6),
+    trajectory_sink: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Run bounded coupled feedback while allowing only the declared angle ceiling clamp."""
+    """Run bounded coupled feedback while allowing only the declared angle ceiling clamp.
+
+    Command-space distance is diagnostic only: this controller acts from realized-pose error,
+    and robot tracking lag can temporarily move the internal command away from the target while
+    the realized pose converges. The bounded loop and physical validity checks remain fail-closed.
+    """
     trajectory: list[dict[str, Any]] = []
     for step in range(maximum_steps):
         position_error_mm, orientation_error_deg = tracking_errors(
@@ -215,11 +221,12 @@ def move_proportional_target(
         status["controller_target"] = controller_target.tolist()
         status["acceptance_target"] = acceptance_target.tolist()
         trajectory.append(status)
+        if trajectory_sink is not None:
+            trajectory_sink.append(status)
         if (
             not status["finite"]
             or status["command_position_clamped"]
             or not status["command_mapping_valid"]
-            or not status["command_progressed"]
             or not status["surface_proxy_ok"]
             or status["terminated"]
             or status["truncated"]

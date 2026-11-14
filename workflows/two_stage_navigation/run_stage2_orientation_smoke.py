@@ -68,6 +68,7 @@ PROTOCOL_IDS = {
     "sonogym-stage2-orientation-smoke-v2",
     "sonogym-stage2-orientation-smoke-v3",
     "sonogym-stage2-coupled-smoke-v4",
+    "sonogym-stage2-coupled-smoke-v5",
 }
 
 
@@ -132,11 +133,17 @@ def main() -> int:
             dtype=np.float64,
         )
         controller_target = requested.copy()
-        if protocol["protocol_id"] == "sonogym-stage2-coupled-smoke-v4":
+        if protocol["protocol_id"] in {
+            "sonogym-stage2-coupled-smoke-v4",
+            "sonogym-stage2-coupled-smoke-v5",
+        }:
             controller_target[2] = float(protocol["motion"]["controller_target_angle_rad"])
         orientation_trajectory: list[dict[str, Any]] = []
         coupled_trajectory: list[dict[str, Any]] = []
-        if protocol["protocol_id"] == "sonogym-stage2-coupled-smoke-v4":
+        if protocol["protocol_id"] in {
+            "sonogym-stage2-coupled-smoke-v4",
+            "sonogym-stage2-coupled-smoke-v5",
+        }:
             coupled_trajectory = move_proportional_target(
                 env,
                 controller_target,
@@ -149,8 +156,8 @@ def main() -> int:
                     protocol["criteria"]["maximum_command_orientation_error_deg"]
                 ),
                 ratio=tuple(float(value) for value in protocol["motion"]["controller_ratio"]),
+                trajectory_sink=action_rows,
             )
-            action_rows.extend(coupled_trajectory)
         elif protocol["protocol_id"] in {
             "sonogym-stage2-orientation-smoke-v2",
             "sonogym-stage2-orientation-smoke-v3",
@@ -165,7 +172,10 @@ def main() -> int:
             )
             action_rows.extend(orientation_trajectory)
         trajectory: list[dict[str, Any]] = []
-        if protocol["protocol_id"] != "sonogym-stage2-coupled-smoke-v4":
+        if protocol["protocol_id"] not in {
+            "sonogym-stage2-coupled-smoke-v4",
+            "sonogym-stage2-coupled-smoke-v5",
+        }:
             trajectory = move_to_pose(
                 env,
                 requested,
@@ -194,7 +204,10 @@ def main() -> int:
         criteria = SettlingCriteria(**protocol["criteria"])
         previous_pose = current_realized_pose(unwrapped).copy()
         for frame_sequence in range(criteria.required_frame_count):
-            if protocol["protocol_id"] == "sonogym-stage2-coupled-smoke-v4":
+            if protocol["protocol_id"] in {
+                "sonogym-stage2-coupled-smoke-v4",
+                "sonogym-stage2-coupled-smoke-v5",
+            }:
                 _, status = take_proportional_step(
                     env,
                     controller_target,
