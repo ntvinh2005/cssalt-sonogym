@@ -36,7 +36,12 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
 )
 
 
-PROTOCOL_ID = "sonogym-stage2-threshold-calibration-v17"
+PROTOCOL_IDS = frozenset(
+    {
+        "sonogym-stage2-threshold-calibration-v17",
+        "sonogym-stage2-threshold-calibration-v18",
+    }
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -98,7 +103,7 @@ def main() -> int:
     if protocol_hash != expected_hash:
         raise RuntimeError("threshold-calibration protocol seal mismatch")
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != PROTOCOL_ID:
+    if protocol["protocol_id"] not in PROTOCOL_IDS:
         raise RuntimeError("unexpected threshold-calibration protocol")
 
     frozen = protocol["frozen_model"]
@@ -127,6 +132,7 @@ def main() -> int:
     labels: list[int] = []
     hashes: list[str] = []
     session_names: list[str] = []
+    source_names: list[str] = []
     source_hashes: dict[str, set[str]] = {}
     session_counts: dict[str, int] = {}
     for source in protocol["calibration_sources"]:
@@ -163,6 +169,7 @@ def main() -> int:
                 labels.append(label)
                 hashes.append(identity[2])
                 session_names.append(str(session_id))
+                source_names.append(source_id)
                 current_source_hashes.add(identity[2])
         source_hashes[source_id] = current_source_hashes
 
@@ -180,6 +187,7 @@ def main() -> int:
     if not np.all(np.isfinite(probabilities)):
         raise RuntimeError("nonfinite classifier probabilities")
     session_array = np.asarray(session_names, dtype=object)
+    source_array = np.asarray(source_names, dtype=object)
 
     first_hash_indices: list[int] = []
     seen_hashes: set[str] = set()
@@ -203,20 +211,55 @@ def main() -> int:
             )
             for session_id in sorted(session_counts)
         }
+        per_source = {}
+        for source_id in source_ids:
+            source_mask = source_array == source_id
+            source_unique_indices = unique_indices[source_mask[unique_indices]]
+            per_source[source_id] = {
+                "frame_metrics": binary_metrics(
+                    label_array[source_mask], probabilities[source_mask] >= threshold
+                ),
+                "unique_hash_metrics": binary_metrics(
+                    label_array[source_unique_indices],
+                    probabilities[source_unique_indices] >= threshold,
+                ),
+            }
+        source_constraints_pass = all(
+            row["frame_metrics"]["precision"]
+            >= float(rule.get("minimum_per_source_precision", 0.0))
+            and row["frame_metrics"]["recall"]
+            >= float(rule.get("minimum_per_source_recall", 0.0))
+            and row["unique_hash_metrics"]["precision"]
+            >= float(rule.get("minimum_per_source_unique_hash_precision", 0.0))
+            and row["unique_hash_metrics"]["recall"]
+            >= float(rule.get("minimum_per_source_unique_hash_recall", 0.0))
+            for row in per_source.values()
+        )
         if (
             frame_metrics["precision"] >= float(rule["minimum_pooled_precision"])
             and unique_metrics["precision"] >= float(rule["minimum_unique_hash_precision"])
             and all(row["true_positive"] > 0 for row in per_session.values())
+            and source_constraints_pass
         ):
             recalls = [float(row["recall"]) for row in per_session.values()]
+            source_recalls = [
+                float(row["frame_metrics"]["recall"]) for row in per_source.values()
+            ]
+            source_unique_recalls = [
+                float(row["unique_hash_metrics"]["recall"])
+                for row in per_source.values()
+            ]
             candidates.append(
                 {
                     "threshold": threshold,
                     "frame_metrics": frame_metrics,
                     "unique_hash_metrics": unique_metrics,
                     "per_session_metrics": per_session,
+                    "per_source_metrics": per_source,
                     "minimum_session_recall": min(recalls),
                     "median_session_recall": float(statistics.median(recalls)),
+                    "minimum_source_recall": min(source_recalls),
+                    "minimum_source_unique_hash_recall": min(source_unique_recalls),
                 }
             )
     if not candidates:
@@ -224,6 +267,8 @@ def main() -> int:
     selected = max(
         candidates,
         key=lambda row: (
+            row["minimum_source_recall"],
+            row["minimum_source_unique_hash_recall"],
             row["minimum_session_recall"],
             row["median_session_recall"],
             row["frame_metrics"]["recall"],

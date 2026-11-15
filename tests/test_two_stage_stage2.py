@@ -42,6 +42,7 @@ PROTOCOL_V15 = PROTOCOL.with_name("stage2_dataset_protocol_v15.yaml")
 CONFIRMATION_V16 = PROTOCOL.with_name("stage2_confirmation_protocol_v16.yaml")
 CALIBRATION_V17 = PROTOCOL.with_name("stage2_threshold_calibration_protocol_v17.yaml")
 CONFIRMATION_V17 = PROTOCOL.with_name("stage2_confirmation_protocol_v17.yaml")
+CALIBRATION_V18 = PROTOCOL.with_name("stage2_threshold_calibration_protocol_v18.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -515,6 +516,22 @@ class Stage2ProtocolTests(unittest.TestCase):
             frozen["threshold_calibration"]["report_sha256"],
             "aebc0870cecb1872a9d18cd80525241f260f49e93f2d9978f9ad0f6b86f15a1a",
         )
+
+    def test_v18_calibration_requires_every_source_to_pass(self) -> None:
+        expected = CALIBRATION_V18.with_suffix(".sha256").read_text(
+            encoding="utf-8"
+        ).split()[0]
+        self.assertEqual(hashlib.sha256(CALIBRATION_V18.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(CALIBRATION_V18.read_text(encoding="utf-8"))
+        self.assertEqual(
+            protocol["protocol_id"], "sonogym-stage2-threshold-calibration-v18"
+        )
+        self.assertEqual(len(protocol["calibration_sources"]), 3)
+        rule = protocol["selection_rule"]
+        self.assertEqual(rule["minimum_per_source_precision"], 0.95)
+        self.assertEqual(rule["minimum_per_source_recall"], 0.80)
+        self.assertEqual(rule["minimum_per_source_unique_hash_precision"], 0.95)
+        self.assertEqual(rule["minimum_per_source_unique_hash_recall"], 0.80)
 
 
 class Stage2LabelTests(unittest.TestCase):

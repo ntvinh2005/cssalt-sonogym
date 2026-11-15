@@ -1,0 +1,69 @@
+{
+  "schema": "sonogym-stage2-confirmation-v17-result-v1",
+  "decision": "CONFIRMATION_NO_GO",
+  "source_commit": "f1f1e5d",
+  "protocol_sha256": "79e5fe83ff3f99eff199d7f4e4e401fe2b67aa6784ab54caeae351995dc46318",
+  "capture": {
+    "job_id": 51400282,
+    "account": "anest-dept",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "elapsed": "00:02:20",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "session_count": 4,
+    "trajectory_count": 32,
+    "frame_count": 300,
+    "distinct_frame_hash_count": 136,
+    "maximum_session_resident_memory_kib": 3622196,
+    "output_bytes": 42820073,
+    "capture_summary_sha256": "4df533ad249b16c70156d4068a255390063e0948cd6dadceec3dae91ee79246e"
+  },
+  "evaluation": {
+    "job_id": 51400928,
+    "account": "anest-dept",
+    "gpu_count": 0,
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "elapsed": "00:00:08",
+    "application_wall_seconds": 2.58,
+    "maximum_resident_memory_kib": 133236,
+    "state": "FAILED",
+    "exit_code": "3:0",
+    "exit_interpretation": "Exit 3 is the declared scientific confirmation-gate failure.",
+    "model_retrained": false,
+    "threshold": 0.4,
+    "reference_capture_count": 2,
+    "reference_hash_overlap_count": 0,
+    "validity_precision": 0.8791208791208791,
+    "validity_recall": 0.9696969696969697,
+    "true_positive": 160,
+    "false_positive": 22,
+    "false_negative": 5,
+    "true_negative": 113,
+    "quality_spearman": 0.8502801779127523,
+    "quality_mse": 0.009441372249068249,
+    "quality_training_mean_constant_mse": 0.032096877694129944,
+    "confirmation_report_sha256": "63c20b4844c11f6a0925ad0306502e2b413540f537fa8f82fc3a63765fad4375"
+  },
+  "read_only_diagnosis": {
+    "threshold_0_55_precision": 0.9627329192546584,
+    "threshold_0_55_recall": 0.9393939393939394,
+    "threshold_change_applied": false,
+    "diagnosis_sha256": "5e152626ebb9cbcb9850cd93621c5196cc0633c80452453ecf73f9c7754cd530",
+    "frame_diagnostics_sha256": "d6cd2fc14ef18b00cae2cf4628f174e8ed65cf243cae206c7c4b1ce68ef758f8",
+    "interpretation": "The pooled V17 calibration rule selected a threshold that met aggregate calibration precision but did not constrain precision separately by acquisition source. The unchanged quality regressor remained stable."
+  },
+  "artifacts": {
+    "capture_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v17/51400282",
+    "evaluation_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_evaluation_v17/51400928"
+  },
+  "boundary": {
+    "v16_no_go_preserved": true,
+    "v17_no_go_preserved": true,
+    "closed_loop_executed": false,
+    "threshold_or_gate_changed_after_confirmation": false
+  }
+}
