@@ -39,7 +39,9 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
 )
 
 
-PROTOCOL_ID = "sonogym-stage2-confirmation-v16"
+PROTOCOL_IDS = frozenset(
+    {"sonogym-stage2-confirmation-v16", "sonogym-stage2-confirmation-v17"}
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -134,7 +136,7 @@ def main() -> int:
     if protocol_hash != expected_hash:
         raise RuntimeError("Stage 2 confirmation protocol seal mismatch")
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != PROTOCOL_ID:
+    if protocol["protocol_id"] not in PROTOCOL_IDS:
         raise RuntimeError("unexpected Stage 2 confirmation protocol")
 
     frozen = protocol["model_confirmation"]
@@ -147,12 +149,27 @@ def main() -> int:
         raise RuntimeError("model classifier target mismatch")
     if not bool(bundle.get("development_gate_passed")):
         raise RuntimeError("model bundle did not pass its development gate")
-    if not math.isclose(
-        float(bundle["validity_threshold"]),
-        float(frozen["validity_probability_threshold"]),
-        abs_tol=1e-15,
-    ):
-        raise RuntimeError("model validity threshold mismatch")
+    calibration = frozen.get("threshold_calibration")
+    if calibration is None:
+        if not math.isclose(
+            float(bundle["validity_threshold"]),
+            float(frozen["validity_probability_threshold"]),
+            abs_tol=1e-15,
+        ):
+            raise RuntimeError("model validity threshold mismatch")
+    else:
+        calibration_path = Path(calibration["report"])
+        if file_sha256(calibration_path) != calibration["report_sha256"]:
+            raise RuntimeError("threshold-calibration report hash mismatch")
+        calibration_report = json.loads(calibration_path.read_text(encoding="utf-8"))
+        if calibration_report.get("decision") != "CALIBRATION_PASS":
+            raise RuntimeError("threshold calibration did not pass")
+        if not math.isclose(
+            float(calibration_report["selected"]["threshold"]),
+            float(frozen["validity_probability_threshold"]),
+            abs_tol=1e-15,
+        ):
+            raise RuntimeError("recalibrated validity threshold mismatch")
     if int(bundle["feature_width"]) != int(protocol["features"]["feature_width"]):
         raise RuntimeError("model feature width mismatch")
 
@@ -184,7 +201,14 @@ def main() -> int:
     if 1 not in class_columns:
         raise RuntimeError("validity classifier has no positive class")
 
-    old_hashes = reference_hashes(args.reference_capture_root)
+    declared_reference_roots = frozen.get("reference_capture_roots")
+    if declared_reference_roots is None:
+        declared_reference_roots = [str(args.reference_capture_root)]
+    elif str(args.reference_capture_root) != str(Path(declared_reference_roots[0])):
+        raise RuntimeError("primary reference capture root mismatch")
+    old_hashes: set[str] = set()
+    for reference_root in declared_reference_roots:
+        old_hashes.update(reference_hashes(Path(reference_root)))
     features: list[np.ndarray] = []
     image_validity: list[int] = []
     evaluator_validity: list[int] = []
@@ -296,6 +320,7 @@ def main() -> int:
         "frame_count": len(features),
         "distinct_frame_hash_count": len(set(hashes)),
         "reference_hash_overlap_count": 0,
+        "reference_capture_count": len(declared_reference_roots),
         "classifier_target_positive_count": int(np.count_nonzero(image_validity_array)),
         "geometric_evaluator_positive_count": int(
             np.count_nonzero(evaluator_validity_array)

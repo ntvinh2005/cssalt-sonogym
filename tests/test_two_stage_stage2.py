@@ -41,6 +41,7 @@ PROTOCOL_V14 = PROTOCOL.with_name("stage2_dataset_protocol_v14.yaml")
 PROTOCOL_V15 = PROTOCOL.with_name("stage2_dataset_protocol_v15.yaml")
 CONFIRMATION_V16 = PROTOCOL.with_name("stage2_confirmation_protocol_v16.yaml")
 CALIBRATION_V17 = PROTOCOL.with_name("stage2_threshold_calibration_protocol_v17.yaml")
+CONFIRMATION_V17 = PROTOCOL.with_name("stage2_confirmation_protocol_v17.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -493,6 +494,27 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertEqual(protocol["selection_rule"]["minimum_session_recall"], 0.70)
         self.assertEqual(protocol["selection_rule"]["minimum_median_session_recall"], 0.80)
         self.assertEqual(protocol["frozen_model"]["retraining"], "forbidden")
+
+    def test_v17_confirmation_freezes_recalibration_and_new_sessions(self) -> None:
+        expected = CONFIRMATION_V17.with_suffix(".sha256").read_text(
+            encoding="utf-8"
+        ).split()[0]
+        self.assertEqual(hashlib.sha256(CONFIRMATION_V17.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(CONFIRMATION_V17.read_text(encoding="utf-8"))
+        self.assertEqual(protocol["protocol_id"], "sonogym-stage2-confirmation-v17")
+        self.assertEqual(len(protocol["sessions"]), 4)
+        self.assertEqual(len({row["seed"] for row in protocol["sessions"]}), 4)
+        self.assertTrue(
+            all(str(row["session_id"]).startswith("s2v17cf_") for row in protocol["sessions"])
+        )
+        frozen = protocol["model_confirmation"]
+        self.assertEqual(frozen["validity_probability_threshold"], 0.40)
+        self.assertEqual(len(frozen["reference_capture_roots"]), 2)
+        self.assertFalse(frozen["threshold_calibration"]["model_retrained"])
+        self.assertEqual(
+            frozen["threshold_calibration"]["report_sha256"],
+            "aebc0870cecb1872a9d18cd80525241f260f49e93f2d9978f9ad0f6b86f15a1a",
+        )
 
 
 class Stage2LabelTests(unittest.TestCase):

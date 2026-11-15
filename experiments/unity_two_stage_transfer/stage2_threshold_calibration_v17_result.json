@@ -1,0 +1,42 @@
+{
+  "schema": "sonogym-stage2-threshold-calibration-v17-result-v1",
+  "decision": "CALIBRATION_PASS",
+  "source_commit": "7582e40",
+  "protocol_sha256": "9a127b70d0a21724658d78fd68a1e18a40898ac371d8a193f8f32e736360b020",
+  "job": {
+    "job_id": 51399160,
+    "account": "anest-dept",
+    "gpu_count": 0,
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "elapsed": "00:00:07",
+    "application_wall_seconds": 2.33,
+    "maximum_resident_memory_kib": 133064,
+    "state": "COMPLETED",
+    "exit_code": "0:0"
+  },
+  "model_bundle_sha256": "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672",
+  "model_retrained": false,
+  "calibration": {
+    "source_count": 2,
+    "session_count": 6,
+    "frame_count": 450,
+    "distinct_frame_hash_count": 193,
+    "cross_source_hash_overlap_count": 0,
+    "selected_threshold": 0.4,
+    "pooled_precision": 0.9646643109540636,
+    "pooled_recall": 0.975,
+    "unique_hash_precision": 0.9541284403669725,
+    "unique_hash_recall": 0.9541284403669725,
+    "minimum_session_recall": 0.9591836734693877,
+    "median_session_recall": 0.9741222760290557
+  },
+  "calibration_report_sha256": "aebc0870cecb1872a9d18cd80525241f260f49e93f2d9978f9ad0f6b86f15a1a",
+  "artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_threshold_calibration_v17/51399160",
+  "boundary": {
+    "v16_no_go_preserved": true,
+    "future_confirmation_data_used": false,
+    "closed_loop_authorized": false,
+    "threshold_valid_only_for_new_v17_confirmation": true
+  }
+}
