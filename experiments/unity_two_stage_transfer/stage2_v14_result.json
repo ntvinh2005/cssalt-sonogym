@@ -1,0 +1,101 @@
+{
+  "schema": "sonogym-stage2-v14-result-v1",
+  "decision": "DEVELOPMENT_NO_GO",
+  "source_commit": "0c2470847700c573a15497bfde6af59be2a05ca3",
+  "protocol_sha256": "3525f4223133adb8235d438ab9cec0a1b5d26d13740f0c4aef889c0b84588ab8",
+  "precursor_technical_failure": {
+    "job_id": 51374942,
+    "source_commit": "09b7373246101b4289a8efcf57d4933e14797d1d",
+    "state": "FAILED",
+    "exit_code": "2:0",
+    "elapsed": "00:00:51",
+    "cause": "The first targeted session was rejected by the legacy requirement that at least half of its 75 frames have distinct hashes before the new split-level coverage gate could run.",
+    "scientific_gate_evaluated": false
+  },
+  "capture": {
+    "job_id": 51377943,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "cpu_cores": 4,
+    "requested_memory": "30G",
+    "start": "2026-11-14T19:44:23-05:00",
+    "end": "2026-11-14T19:47:38-05:00",
+    "elapsed": "00:03:15",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "frame_count": 450,
+    "trajectory_count": 48,
+    "distinct_frame_hash_count": 197,
+    "positive_frame_counts": {
+      "train": 196,
+      "calibration": 48,
+      "development_evaluation": 46
+    },
+    "unique_positive_hash_counts": {
+      "train": 79,
+      "calibration": 21,
+      "development_evaluation": 20
+    },
+    "positive_trajectory_counts": {
+      "train": 32,
+      "calibration": 8,
+      "development_evaluation": 8
+    },
+    "dataset_gate_passed": true,
+    "peak_gpu_memory_mib": 5009,
+    "peak_gpu_utilization_percent": 61,
+    "maximum_resident_memory_kib": 3368292,
+    "output_bytes": 63588359,
+    "capture_summary_sha256": "5b1498c458f632cd255244b6750659e4cdb6af53b19884741707e4ed3b2fe285"
+  },
+  "development": {
+    "job_id": 51378486,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "gpu_count": 0,
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "elapsed": "00:00:14",
+    "state": "FAILED",
+    "exit_code": "3:0",
+    "exit_interpretation": "Exit 3 is the declared scientific development-gate failure.",
+    "validity_threshold": 0.8138888888888889,
+    "calibration_precision": 1.0,
+    "calibration_recall": 0.16666666666666666,
+    "development_precision": 0.5555555555555556,
+    "development_recall": 0.10869565217391304,
+    "development_true_positive": 5,
+    "development_false_positive": 4,
+    "development_false_negative": 41,
+    "development_true_negative": 25,
+    "quality_spearman": 0.6757442682787725,
+    "quality_mse": 0.009887886986988505,
+    "quality_training_mean_constant_mse": 0.029081573709845543,
+    "maximum_resident_memory_kib": 119472,
+    "development_report_sha256": "1786b384c0dd9786d978ffe0b2065c7bc519bf889673ee92e25b3a7d1b377270",
+    "model_bundle_sha256": "6f3cbb579f740e5c04414e4b882edb6a9c5f70187f21e2a7558ee978b653c641",
+    "model_bundle_closed_loop_eligible": false
+  },
+  "diagnosis": {
+    "development_positive_unique_hash_count": 20,
+    "development_true_positive_unique_hash_count": 3,
+    "development_unique_hash_recall": 0.15,
+    "one_sample_per_hash_development_precision": 0.8,
+    "one_sample_per_hash_development_recall": 0.4,
+    "exact_image_hash_label_conflicts": 0,
+    "exact_feature_vector_label_conflicts": 0,
+    "boundary_false_positive_orientation_errors_deg": [10.067753478112156, 10.435572825295681],
+    "interpretation": "Additional positive coverage did not resolve validity classification. Frames just outside the hard 10-degree evaluator boundary are visually similar to valid frames, so the frozen image-only classifier cannot satisfy the simultaneous precision and recall gates. The continuous quality regressor remains informative.",
+    "diagnosis_sha256": "0eba1ef9873813999b7643e31569b5535576a5d3505894cf976a43ae576feabf"
+  },
+  "artifacts": {
+    "capture_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943",
+    "development_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v14/51378486",
+    "review_zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/sonogym_stage2_dataset_review_20261114_job51377943.zip",
+    "review_zip_sha256": "e5b5e37184529780310ae031586e12022617c0d08763998b26c10a3b700f8214",
+    "review_zip_bytes": 2763005
+  },
+  "boundary": "No threshold, label, feature, model hyperparameter or development gate was changed after capture. Closed-loop evaluation remains NOT_RUN."
+}

@@ -38,6 +38,7 @@ PROTOCOL_V11 = PROTOCOL.with_name("stage2_dataset_protocol_v11.yaml")
 PROTOCOL_V12 = PROTOCOL.with_name("stage2_dataset_protocol_v12.yaml")
 PROTOCOL_V13 = PROTOCOL.with_name("stage2_dataset_protocol_v13.yaml")
 PROTOCOL_V14 = PROTOCOL.with_name("stage2_dataset_protocol_v14.yaml")
+PROTOCOL_V15 = PROTOCOL.with_name("stage2_dataset_protocol_v15.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -46,8 +47,10 @@ from two_stage_navigation.stage2_features import (  # noqa: E402
 )
 from two_stage_navigation.stage2_models import (  # noqa: E402
     ScoredView,
+    Stage2ImageValidityConfig,
     Stage2LabelConfig,
     fresh_confirmation_passes,
+    image_validity_target,
     select_best_view,
     supervised_targets,
 )
@@ -430,6 +433,24 @@ class Stage2ProtocolTests(unittest.TestCase):
             self.assertEqual(thirteenth["dataset_gate"][key], fourteenth["dataset_gate"][key])
         self.assertIn("sonogym-stage2-dataset-v14", TRAIN_STAGE2_PROTOCOL_IDS)
 
+    def test_v15_changes_classifier_target_without_changing_evaluator_success(self) -> None:
+        expected = PROTOCOL_V15.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V15.read_bytes()).hexdigest(), expected)
+        fourteenth = yaml.safe_load(PROTOCOL_V14.read_text(encoding="utf-8"))
+        fifteenth = yaml.safe_load(PROTOCOL_V15.read_text(encoding="utf-8"))
+        self.assertEqual(fifteenth["amendment"]["evidence_job"], 51378486)
+        for key in ("scope", "information_boundaries", "labels", "features", "sampling", "sessions"):
+            self.assertEqual(fourteenth[key], fifteenth[key])
+        self.assertEqual(
+            fifteenth["model"]["classifier_target"],
+            {
+                "name": "l4_image_visibility",
+                "minimum_l4_visible_fraction": 0.20,
+                "training_ambiguous_half_width": 0.02,
+            },
+        )
+        self.assertIn("sonogym-stage2-dataset-v15", TRAIN_STAGE2_PROTOCOL_IDS)
+
 
 class Stage2LabelTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -481,6 +502,36 @@ class Stage2LabelTests(unittest.TestCase):
             config=self.config,
         )
         self.assertGreater(near, far)
+
+    def test_image_validity_uses_visibility_not_privileged_pose_error(self) -> None:
+        config = Stage2ImageValidityConfig(
+            minimum_l4_visible_fraction=0.20,
+            training_ambiguous_half_width=0.02,
+        )
+        self.assertEqual(
+            image_validity_target(
+                technical_image_valid=True,
+                l4_visible_fraction=0.25,
+                config=config,
+            ),
+            (1, True),
+        )
+        self.assertEqual(
+            image_validity_target(
+                technical_image_valid=True,
+                l4_visible_fraction=0.19,
+                config=config,
+            ),
+            (0, False),
+        )
+        self.assertEqual(
+            image_validity_target(
+                technical_image_valid=False,
+                l4_visible_fraction=0.25,
+                config=config,
+            ),
+            (0, True),
+        )
 
 
 class Stage2SelectionTests(unittest.TestCase):

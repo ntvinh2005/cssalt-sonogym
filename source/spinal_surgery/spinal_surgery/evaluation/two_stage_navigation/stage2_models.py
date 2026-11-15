@@ -31,6 +31,50 @@ class Stage2LabelConfig:
             raise ValueError("visibility normalization must cover the validity threshold")
 
 
+@dataclass(frozen=True)
+class Stage2ImageValidityConfig:
+    """Offline image-view label that does not pretend pixels encode exact pose error."""
+
+    minimum_l4_visible_fraction: float = 0.20
+    training_ambiguous_half_width: float = 0.02
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.minimum_l4_visible_fraction) or not (
+            0.0 < self.minimum_l4_visible_fraction <= 1.0
+        ):
+            raise ValueError("image-validity visibility threshold must be in (0, 1]")
+        if not math.isfinite(self.training_ambiguous_half_width) or not (
+            0.0 <= self.training_ambiguous_half_width < self.minimum_l4_visible_fraction
+        ):
+            raise ValueError("image-validity ambiguous half-width is invalid")
+        if self.minimum_l4_visible_fraction + self.training_ambiguous_half_width > 1.0:
+            raise ValueError("image-validity ambiguous band exceeds one")
+
+
+def image_validity_target(
+    *,
+    technical_image_valid: bool,
+    l4_visible_fraction: float,
+    config: Stage2ImageValidityConfig,
+) -> tuple[int, bool]:
+    """Return the target-view class and whether it is unambiguous for fitting.
+
+    The exact threshold remains the development-evaluation target. Only training
+    samples inside the declared visibility band are excluded. Privileged geometry
+    is deliberately absent from this classifier target.
+    """
+    if not math.isfinite(l4_visible_fraction) or not 0.0 <= l4_visible_fraction <= 1.0:
+        raise ValueError("l4_visible_fraction must be finite and in [0, 1]")
+    target = int(
+        technical_image_valid
+        and l4_visible_fraction >= config.minimum_l4_visible_fraction
+    )
+    if not technical_image_valid:
+        return target, True
+    distance = abs(l4_visible_fraction - config.minimum_l4_visible_fraction)
+    return target, bool(distance > config.training_ambiguous_half_width)
+
+
 def supervised_targets(
     *,
     technical_image_valid: bool,

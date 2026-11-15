@@ -33,7 +33,9 @@ from two_stage_navigation.contracts import (  # noqa: E402
 )
 from two_stage_navigation.stage2_features import extract_stage2_feature  # noqa: E402
 from two_stage_navigation.stage2_models import (  # noqa: E402
+    Stage2ImageValidityConfig,
     Stage2LabelConfig,
+    image_validity_target,
     supervised_targets,
 )
 
@@ -46,6 +48,7 @@ PROTOCOL_IDS = frozenset(
         "sonogym-stage2-dataset-v12",
         "sonogym-stage2-dataset-v13",
         "sonogym-stage2-dataset-v14",
+        "sonogym-stage2-dataset-v15",
     }
 )
 
@@ -121,6 +124,7 @@ def load_session(
     capture_root: Path,
     session: dict[str, Any],
     label_config: Stage2LabelConfig,
+    image_validity_config: Stage2ImageValidityConfig | None,
 ) -> dict[str, Any]:
     session_id = str(session["session_id"])
     root = capture_root / "sessions" / session_id
@@ -135,6 +139,8 @@ def load_session(
         raise RuntimeError(f"unexpected sample count in {session_id}")
     features = []
     validity = []
+    classifier_validity = []
+    classifier_training_eligible = []
     quality = []
     hashes = []
     for index, (actor, annotation, image) in enumerate(zip(public, privileged, images)):
@@ -163,6 +169,17 @@ def load_session(
             raise RuntimeError(f"stored label mismatch in {session_id}:{index}")
         features.append(extract_stage2_feature(image))
         validity.append(expected_validity)
+        if image_validity_config is None:
+            classifier_target = expected_validity
+            training_eligible = True
+        else:
+            classifier_target, training_eligible = image_validity_target(
+                technical_image_valid=bool(annotation["technical_image_valid"]),
+                l4_visible_fraction=float(annotation["l4_visible_fraction"]),
+                config=image_validity_config,
+            )
+        classifier_validity.append(classifier_target)
+        classifier_training_eligible.append(training_eligible)
         quality.append(expected_quality)
         hashes.append(identity[2])
     return {
@@ -170,6 +187,10 @@ def load_session(
         "split": str(session["split"]),
         "features": np.stack(features).astype(np.float32),
         "validity": np.asarray(validity, dtype=np.int8),
+        "classifier_validity": np.asarray(classifier_validity, dtype=np.int8),
+        "classifier_training_eligible": np.asarray(
+            classifier_training_eligible, dtype=bool
+        ),
         "quality": np.asarray(quality, dtype=np.float32),
         "hashes": hashes,
     }
@@ -200,7 +221,23 @@ def main() -> int:
         minimum_l4_visible_fraction=float(label["validity"]["minimum_l4_visible_fraction"]),
         visibility_normalization_fraction=float(label["quality"]["visibility_normalization_fraction"]),
     )
-    sessions = [load_session(args.capture_root, row, label_config) for row in protocol["sessions"]]
+    classifier_target = protocol["model"].get("classifier_target")
+    image_validity_config = None
+    if classifier_target is not None:
+        if classifier_target.get("name") != "l4_image_visibility":
+            raise RuntimeError("unsupported Stage 2 classifier target")
+        image_validity_config = Stage2ImageValidityConfig(
+            minimum_l4_visible_fraction=float(
+                classifier_target["minimum_l4_visible_fraction"]
+            ),
+            training_ambiguous_half_width=float(
+                classifier_target["training_ambiguous_half_width"]
+            ),
+        )
+    sessions = [
+        load_session(args.capture_root, row, label_config, image_validity_config)
+        for row in protocol["sessions"]
+    ]
     training = [row for row in sessions if row["split"] == "train"]
     calibration = [row for row in sessions if row["split"] == "calibration"]
     development = [row for row in sessions if row["split"] == "development_evaluation"]
@@ -212,8 +249,14 @@ def main() -> int:
 
     model = protocol["model"]
     train_features = concatenate(training, "features")
-    train_validity = concatenate(training, "validity")
+    train_evaluator_validity = concatenate(training, "validity")
+    train_validity = concatenate(training, "classifier_validity")
+    train_classifier_mask = concatenate(training, "classifier_training_eligible").astype(bool)
     train_quality = concatenate(training, "quality")
+    if np.count_nonzero(train_classifier_mask) < 20:
+        raise RuntimeError("insufficient unambiguous classifier training examples")
+    if len(np.unique(train_validity[train_classifier_mask])) != 2:
+        raise RuntimeError("unambiguous classifier training examples lack both classes")
     classifier = ExtraTreesClassifier(
         n_estimators=int(model["n_estimators"]),
         max_depth=int(model["max_depth"]),
@@ -223,9 +266,10 @@ def main() -> int:
         n_jobs=int(model["n_jobs"]),
         random_state=int(model["random_seed"]),
     )
-    classifier.fit(train_features, train_validity)
+    classifier.fit(train_features[train_classifier_mask], train_validity[train_classifier_mask])
     calibration_features = concatenate(calibration, "features")
-    calibration_validity = concatenate(calibration, "validity")
+    calibration_evaluator_validity = concatenate(calibration, "validity")
+    calibration_validity = concatenate(calibration, "classifier_validity")
     threshold, calibration_metrics = select_threshold(
         calibration_validity,
         positive_probability(classifier, calibration_features),
@@ -246,7 +290,8 @@ def main() -> int:
     regressor.fit(train_features[regressor_mask], train_quality[regressor_mask])
 
     dev_features = concatenate(development, "features")
-    dev_validity = concatenate(development, "validity")
+    dev_evaluator_validity = concatenate(development, "validity")
+    dev_validity = concatenate(development, "classifier_validity")
     dev_quality = concatenate(development, "quality")
     dev_probability = positive_probability(classifier, dev_features)
     dev_metrics = binary_metrics(dev_validity, dev_probability >= threshold)
@@ -280,6 +325,14 @@ def main() -> int:
         "regressor": regressor,
         "validity_threshold": threshold,
         "label_config": label_config.__dict__,
+        "classifier_target": (
+            "geometric_evaluator_validity"
+            if image_validity_config is None
+            else "l4_image_visibility"
+        ),
+        "image_validity_config": (
+            None if image_validity_config is None else image_validity_config.__dict__
+        ),
         "feature_width": int(protocol["features"]["feature_width"]),
         "training_session_ids": [row["session_id"] for row in training],
         "calibration_session_ids": [row["session_id"] for row in calibration],
@@ -301,9 +354,25 @@ def main() -> int:
             "development_evaluation": int(len(dev_validity)),
         },
         "split_positive_counts": {
+            "train": int(np.count_nonzero(train_evaluator_validity)),
+            "calibration": int(np.count_nonzero(calibration_evaluator_validity)),
+            "development_evaluation": int(np.count_nonzero(dev_evaluator_validity)),
+        },
+        "classifier_target": bundle["classifier_target"],
+        "classifier_target_positive_counts": {
             "train": int(np.count_nonzero(train_validity)),
             "calibration": int(np.count_nonzero(calibration_validity)),
             "development_evaluation": int(np.count_nonzero(dev_validity)),
+        },
+        "classifier_training_accounting": {
+            "eligible": int(np.count_nonzero(train_classifier_mask)),
+            "ambiguous_excluded": int(np.count_nonzero(~train_classifier_mask)),
+            "eligible_positive": int(
+                np.count_nonzero(train_validity[train_classifier_mask])
+            ),
+            "eligible_negative": int(
+                np.count_nonzero(~train_validity[train_classifier_mask].astype(bool))
+            ),
         },
         "validity_threshold": threshold,
         "calibration_metrics": calibration_metrics,
