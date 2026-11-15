@@ -379,8 +379,19 @@ def main() -> int:
             raw_images.append(raw.copy())
             previous_realized = current_pose
 
-        if len({row["frame_sha256"] for row in public_rows}) < len(public_rows) // 2:
-            raise RuntimeError("Stage 2 dataset contains insufficient distinct images")
+        distinct_frame_hash_count = len({row["frame_sha256"] for row in public_rows})
+        minimum_distinct_frame_hashes = int(
+            protocol.get("dataset_gate", {}).get(
+                "minimum_distinct_frame_hashes_per_session", len(public_rows) // 2
+            )
+        )
+        summary["distinct_frame_hash_count"] = distinct_frame_hash_count
+        summary["minimum_distinct_frame_hashes"] = minimum_distinct_frame_hashes
+        if distinct_frame_hash_count < minimum_distinct_frame_hashes:
+            raise RuntimeError(
+                "Stage 2 dataset contains insufficient distinct images: "
+                f"{distinct_frame_hash_count} < {minimum_distinct_frame_hashes}"
+            )
         public_dir.mkdir(parents=True, exist_ok=True)
         privileged_dir.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(public_dir / "ultrasound.npz", ultrasound=np.stack(images))
@@ -393,7 +404,7 @@ def main() -> int:
             frame_count=len(public_rows),
             trajectory_count=len(trajectory_start_frames),
             valid_frame_count=sum(int(row["validity_label"]) for row in privileged_rows),
-            distinct_frame_hash_count=len({row["frame_sha256"] for row in public_rows}),
+            distinct_frame_hash_count=distinct_frame_hash_count,
             total_action_steps=total_steps,
             public_manifest="public/frames.jsonl",
             privileged_manifest="privileged/annotations.jsonl",

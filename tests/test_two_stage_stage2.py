@@ -37,6 +37,7 @@ PROTOCOL_V10 = PROTOCOL.with_name("stage2_dataset_protocol_v10.yaml")
 PROTOCOL_V11 = PROTOCOL.with_name("stage2_dataset_protocol_v11.yaml")
 PROTOCOL_V12 = PROTOCOL.with_name("stage2_dataset_protocol_v12.yaml")
 PROTOCOL_V13 = PROTOCOL.with_name("stage2_dataset_protocol_v13.yaml")
+PROTOCOL_V14 = PROTOCOL.with_name("stage2_dataset_protocol_v14.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -403,6 +404,31 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertTrue(dataset_gate_passes(gate, hashes, trajectories))
         hashes["development_evaluation"].pop()
         self.assertFalse(dataset_gate_passes(gate, hashes, trajectories))
+
+    def test_v14_changes_only_the_per_session_distinct_image_precondition(self) -> None:
+        expected = PROTOCOL_V14.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V14.read_bytes()).hexdigest(), expected)
+        thirteenth = yaml.safe_load(PROTOCOL_V13.read_text(encoding="utf-8"))
+        fourteenth = yaml.safe_load(PROTOCOL_V14.read_text(encoding="utf-8"))
+        self.assertEqual(fourteenth["amendment"]["evidence_job"], 51374942)
+        for key in (
+            "scope",
+            "information_boundaries",
+            "labels",
+            "features",
+            "model",
+            "development_gate",
+            "sampling",
+            "sessions",
+        ):
+            self.assertEqual(thirteenth[key], fourteenth[key])
+        self.assertEqual(
+            fourteenth["dataset_gate"]["minimum_distinct_frame_hashes_per_session"],
+            20,
+        )
+        for key in ("minimum_unique_positive_hashes", "minimum_positive_trajectories"):
+            self.assertEqual(thirteenth["dataset_gate"][key], fourteenth["dataset_gate"][key])
+        self.assertIn("sonogym-stage2-dataset-v14", TRAIN_STAGE2_PROTOCOL_IDS)
 
 
 class Stage2LabelTests(unittest.TestCase):
