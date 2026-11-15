@@ -4,7 +4,7 @@ This report tests whether the fixed-`s0010` simulator can supply the labeled loc
 
 ## Result
 
-**DEVELOPMENT_NO_GO: capture produced 450 labeled frames and 58 positives, but the validity classifier reached 0.50 development recall against the frozen 0.80 gate.**
+**DEVELOPMENT_PASS after target-contract repair: targeted capture supplied independent positive support, and an image-observable L4-view classifier reached 1.00 precision and 0.8929 recall while the unchanged quality regressor passed. Closed-loop evaluation remains NOT_RUN.**
 
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
@@ -14,8 +14,16 @@ This report tests whether the fixed-`s0010` simulator can supply the labeled loc
 | 4 | extended orientation-only physical convergence | same criteria as step 3; orientation bound extended to 300 using Phase 5A evidence | 3.7384630610714593 degrees after 300 / 300 steps; only 0.0090704912177767 degree improvement; 0 / 10 frames acquired | FAIL |
 | 5 | coupled six-session dataset acquisition | 6 / 6 sessions; 450 joined frames; positive and negative support; public/privileged one-to-one | 6 / 6; 450 frames; 58 positives; one-to-one true | PASS |
 | 6 | supervised development evaluation | precision at least 0.95; recall at least 0.80; Spearman at least 0.30; regressor MSE below the training-mean constant | 1.00 precision; 0.50 recall; 0.7634 Spearman; 0.00785 versus 0.02418 MSE | NO_GO |
+| 7 | targeted independent-positive coverage | unique geometric-valid hashes at least 60 / 20 / 20 and positive trajectories at least 8 / 4 / 4 | 79 / 21 / 20 hashes and 32 / 8 / 8 trajectories | PASS |
+| 8 | unchanged geometric-validity classifier on targeted capture | precision at least 0.95; recall at least 0.80 | 0.5556 precision; 0.1087 recall | NO_GO |
+| 9 | image-observable validity plus unchanged quality model | validity precision at least 0.95 and recall at least 0.80; quality criteria unchanged | 1.00 precision; 0.8929 recall; 0.6757 Spearman; 0.00989 versus 0.02908 MSE | DEVELOPMENT_PASS |
 
-The frozen 10 mm / 10 degree validity definition was not relaxed. The reviewed dataset opened supervised fitting; the failed recall gate kept closed-loop evaluation closed.
+The frozen 10 mm / 10 degree geometric success definition was not relaxed. V14 demonstrated
+that pixels could not reproduce its sharp orientation boundary. V15 therefore separates the
+Unity-style image-validity classifier from independent geometric evaluation: the classifier
+predicts whether the L4 view has sufficient image support, while the continuous quality model
+ranks candidates. This repair was selected using development evidence, so it requires a new
+frozen confirmation before closed-loop execution can support a scientific claim.
 
 ## 1. Physical acquisition — can the frozen local grid produce trainable positive and negative views?
 
@@ -429,7 +437,8 @@ sbatch --account=anest-dept --qos=anest-dept --partition=hpg-default \
   --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env \
   hpg/jobs/two_stage_stage2_train_v12.sbatch
 
-/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/envs/stage1-python/bin/python \
+export PYTHONPATH=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/envs/stage1-python:$PWD/source/spinal_surgery/spinal_surgery/evaluation
+/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/envs/sonogym/bin/python \
   workflows/two_stage_navigation/train_stage2.py \
   --protocol experiments/unity_two_stage_transfer/stage2_dataset_protocol_v12.yaml \
   --capture-root /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v12/51359047 \
@@ -485,3 +494,147 @@ development result only and is not eligible for closed-loop execution.
 | [development result digest](../../experiments/unity_two_stage_transfer/stage2_development_v12_result.sha256) | result-manifest SHA-256 |
 | external development report | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v12/51367445/results/development_report.json` |
 | external model bundle | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v12/51367445/results/stage2_models.joblib` |
+
+## 7. Targeted capture — did additional positive morphology resolve data coverage?
+
+`workflows/two_stage_navigation/collect_stage2_dataset.py`, run by
+`hpg/jobs/two_stage_stage2_dataset_v14.sbatch`. Protocol v14 concentrated the same physical
+sampling mechanism around the positive region while preserving labels, features, model families,
+development gates, information boundaries, action semantics, and simulator dynamics.
+
+**Criterion.** Each session required at least 20 distinct frame hashes. Train, calibration, and
+development required at least 60 / 20 / 20 unique geometric-valid hashes and at least 8 / 4 / 4
+positive trajectories, respectively. Public and privileged records still had to join one-to-one.
+
+### 7.1 Method and setup
+
+- Four train, one calibration, and one development session remained trajectory-separated.
+- The capture used one real SonoGym environment and its real IK/action path.
+- Job `51374942` is preserved as a technical precursor failure: the legacy half-of-session hash
+  heuristic stopped it before any scientific gate. V14 replaced only that precondition with the
+  declared per-session minimum of 20.
+- No model was fitted by the GPU job.
+
+~~~bash
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-turin \
+  --constraint=l4 --gres=gpu:l4:1 --nodes=1 --ntasks=1 \
+  --cpus-per-task=4 --mem=30G --time=00:30:00 \
+  --job-name=sg-stage2-data14 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-stage2-data14-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env \
+  hpg/jobs/two_stage_stage2_dataset_v14.sbatch
+~~~
+
+### 7.2 Results
+
+| measurement | required | measured | verdict |
+|---|---:|---:|---|
+| complete sessions / trajectories / frames | 6 / 48 / 450 | 6 / 48 / 450 | PASS |
+| unique positive hashes, train / calibration / development | 60 / 20 / 20 | 79 / 21 / 20 | PASS |
+| positive trajectories, train / calibration / development | 8 / 4 / 4 | 32 / 8 / 8 | PASS |
+| public/privileged join | one-to-one | 450 / 450 | PASS |
+
+**Verdict: PASS / DATA_READY.** Job `51377943` completed with exit `0:0` in 3:15 on
+one NVIDIA L4, four CPUs, and a 30 GB request. Sampled peak GPU memory was 5,009 MiB, peak
+utilization was 61%, and maximum resident memory was 3,368,292 KiB. The capture added
+63,588,359 bytes. This proves coverage only, not classifier or closed-loop performance.
+
+### 7.3 Files
+
+| file | contents |
+|---|---|
+| [v14 protocol](../../experiments/unity_two_stage_transfer/stage2_dataset_protocol_v14.yaml) | sealed targeted capture and unchanged model gate |
+| [v14 result](../../experiments/unity_two_stage_transfer/stage2_v14_result.json) | capture, V14 fit, diagnosis, resources, and boundaries |
+| external capture | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943` |
+| reviewer ZIP | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/sonogym_stage2_dataset_review_20261114_job51377943.zip` |
+
+## 8. V14 development — did more positive coverage repair geometric-validity recognition?
+
+The unchanged V14 fit again used `workflows/two_stage_navigation/train_stage2.py`. Its classifier
+target was still the conjunction of exact 10 mm position, exact 10 degree orientation, image
+validity, and L4 visibility. The quality target and both model families were unchanged.
+
+**Criterion.** Validity precision at least 0.95 and recall at least 0.80; quality Spearman at
+least 0.30 and MSE below the training-mean constant.
+
+### 8.1 Results
+
+| measurement | criterion | measured | verdict |
+|---|---:|---:|---|
+| calibration precision / recall | at least 0.95 / 0.80 | 1.00 / 0.1667 | FAIL |
+| development precision / recall | at least 0.95 / 0.80 | 0.5556 / 0.1087 | FAIL |
+| quality Spearman | at least 0.30 | 0.6757 | PASS |
+| quality MSE | below 0.02908 | 0.00989 | PASS |
+
+**Verdict: DEVELOPMENT_NO_GO.** CPU job `51378486` returned the declared scientific-failure
+exit `3:0` in 14 seconds. It used four CPUs, a 16 GB request, and 119,472 KiB maximum resident
+memory. No threshold change could satisfy both validity gates.
+
+Read-only diagnosis found no exact image-hash or feature-vector label conflicts, but the two
+highest-confidence development false-positive image hashes were only just outside the geometric
+orientation boundary at 10.0678 and 10.4356 degrees. One-sample-per-hash evaluation still gave
+only 0.80 precision and 0.40 recall. This rejected the hypothesis that more repeated positive
+coverage alone could fix the classifier. The continuous quality model remained informative.
+
+### 8.2 Files
+
+| file | contents |
+|---|---|
+| [V14 combined result](../../experiments/unity_two_stage_transfer/stage2_v14_result.json) | immutable metrics and diagnosis |
+| external development | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v14/51378486` |
+| external diagnosis | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v14/51378486/diagnostics` |
+
+## 9. Target-contract repair — can image validity be separated from exact pose success?
+
+Protocol v15 keeps geometric success at 10 mm / 10 degrees for independent evaluation. The
+classifier instead predicts an image-observable target: a technically valid frame with L4 raw
+label fraction at least 0.20 during offline annotation. The actor still receives only ultrasound
+pixels. A predeclared 0.18--0.22 band is excluded from classifier fitting, while calibration and
+development score every frame against the exact 0.20 target. The unchanged quality regressor
+continues to encode continuous visibility and geometric proximity for candidate ranking.
+
+**Criterion.** The same numerical development gate applies: classifier precision at least 0.95
+and recall at least 0.80; quality Spearman at least 0.30 and MSE below the constant baseline.
+
+### 9.1 Setup
+
+~~~bash
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-default \
+  --nodes=1 --ntasks=1 --cpus-per-task=4 --mem=16G --time=00:30:00 \
+  --job-name=sg-stage2-train15 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-stage2-train15-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env,STAGE2_CAPTURE_JOB_ID=51377943 \
+  hpg/jobs/two_stage_stage2_train_v15.sbatch
+~~~
+
+The fit used 276 unambiguous training frames: 153 positives and 123 negatives; 24 boundary
+frames were excluded only from fitting. All 75 calibration and 75 development frames remained
+in evaluation.
+
+### 9.2 Results
+
+| measurement | criterion | measured | verdict |
+|---|---:|---:|---|
+| calibration validity precision / recall | at least 0.95 / 0.80 | 1.00 / 0.8333 | PASS |
+| development validity precision / recall | at least 0.95 / 0.80 | 1.00 / 0.8929 | PASS |
+| development quality Spearman | at least 0.30 | 0.6757 | PASS |
+| development quality MSE | below 0.02908 | 0.00989 | PASS |
+
+**Verdict: DEVELOPMENT_PASS.** Job `51380423` completed with exit `0:0` in 13 seconds; the
+application used 6.61 wall seconds and 118,020 KiB maximum resident memory. The model bundle was
+loaded successfully and its protocol, target, threshold, and feature width matched the report.
+
+This establishes that the label-contract problem is repairable on the inspected fixed-`s0010`
+development dataset. It does not establish independent confirmation, closed-loop search,
+patient-held-out generalization, or geometric target attainment. Because V15 was selected after
+V14 diagnosis, the next scientific step must freeze it and confirm perception on new sessions
+before any closed-loop success claim.
+
+### 9.3 Files
+
+| file | contents |
+|---|---|
+| [v15 protocol](../../experiments/unity_two_stage_transfer/stage2_dataset_protocol_v15.yaml) | sealed classifier target, ambiguity band, unchanged evaluator, and CPU bound |
+| [v15 result](../../experiments/unity_two_stage_transfer/stage2_development_v15_result.json) | metrics, resources, hashes, and interpretation |
+| external report | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/development_report.json` |
+| external model bundle | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/stage2_models.joblib` |

@@ -1,8 +1,8 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_CONFIRMATION_FAIL**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_DEVELOPMENT_PASS**
 
-Updated: 2026-11-13 (America/New_York)
+Updated: 2026-11-14 (America/New_York)
 
 ## Phase 5C Stage 1 confirmation outcome
 
@@ -293,20 +293,28 @@ This establishes fixed-anatomy seven-landmark confirmation within the tested sca
 does not establish patient-held-out generalization, Stage 2 best-view acquisition, or clinical
 MBB performance. Phase 2 has not started.
 
-The reviewed coupled-motion Stage 2 capture is complete. GPU job `51359047` (`anest-dept`, one
-L4, four CPUs, 30 GB) produced all six sessions, 48 trajectories, and 450 joined frames in 4:28,
-including 58 validity positives distributed as 40 train, 10 calibration, and 8 development.
-Actor-visible ultrasound/motion records and privileged offline labels joined one-to-one. The
-result is `DATA_READY`; it supersedes the earlier capture block without changing the frozen
-10 mm / 10 degree validity definition.
+Stage 2 targeted capture job `51377943` (`anest-dept`, one L4, four CPUs, 30 GB) completed all
+six sessions, 48 trajectories, and 450 joined frames in 3:15. It passed the preregistered
+independent-positive coverage gates with 79 / 21 / 20 unique positive hashes and 32 / 8 / 8
+positive trajectories in train / calibration / development. Public ultrasound/motion records
+and privileged offline labels joined one-to-one. Precursor job `51374942` is preserved as a
+technical failure of a legacy distinct-hash heuristic, not a scientific result.
 
-CPU job `51367445` then fitted the frozen ExtraTrees validity classifier and quality regressor.
-The result is `DEVELOPMENT_NO_GO`: development validity precision was 1.00 but recall was 0.50
-against the 0.80 gate. The quality regressor passed with Spearman 0.7634 and MSE 0.00785 versus
-the 0.02418 training-mean constant baseline. Closed-loop Stage 2 evaluation is therefore
-`NOT_RUN`; the bundle must not be used for coarse/fine/micro search. The next action requires
-researcher approval of a bounded false-negative morphology/coverage follow-up. Do not tune the
-threshold or submit another GPU job automatically.
+The unchanged V14 geometric-validity classifier then failed more strongly on CPU job `51378486`:
+development precision was 0.5556 and recall 0.1087. Its quality regressor still passed with
+Spearman 0.6757 and MSE 0.00989 versus the 0.02908 constant baseline. Diagnosis found that high-
+confidence false positives at 10.0678 and 10.4356 degrees were visually continuous with frames
+inside the hard 10-degree evaluator boundary. Additional repeated positive coverage therefore
+did not repair the mismatch between an image-only classifier and an exact geometric threshold.
+
+After researcher approval, V15 separated image-observable validity from independent geometric
+success without changing the 10 mm / 10 degree evaluator. The classifier target is a technically
+valid L4 view with raw-label image fraction at least 0.20; only the predeclared 0.18--0.22 band
+is excluded from fitting. CPU job `51380423` completed `0:0` in 13 seconds and returned
+`DEVELOPMENT_PASS`: development precision 1.00, recall 0.8929, quality Spearman 0.6757, and
+quality MSE 0.00989 below 0.02908. This is fixed-`s0010`, post-diagnosis development evidence.
+Closed-loop Stage 2 remains `NOT_RUN`; the next scientific action is a newly frozen independent
+perception confirmation before coarse/fine/micro search. No new GPU capture was run for V15.
 
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
 by successful capture job 50908807.

@@ -1,0 +1,82 @@
+{
+  "schema": "sonogym-stage2-development-v15-result-v1",
+  "decision": "DEVELOPMENT_PASS",
+  "source_commit": "7a75ae3290299b190190eb61ae944725b2b96342",
+  "protocol_sha256": "bc6215311127b140db85f086cb38d7042ccba2d2a70fb9ccc16577a1074c0646",
+  "capture": {
+    "job_id": 51377943,
+    "frame_count": 450,
+    "session_count": 6,
+    "trajectory_count": 48,
+    "patient_count": 1
+  },
+  "development_job": {
+    "job_id": 51380423,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "gpu_count": 0,
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "start": "2026-11-14T20:13:19-05:00",
+    "end": "2026-11-14T20:13:32-05:00",
+    "elapsed": "00:00:13",
+    "application_wall_seconds": 6.61,
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "maximum_resident_memory_kib": 118020,
+    "output_bytes": 1955830
+  },
+  "classifier": {
+    "target": "technical image validity and L4 visible fraction at least 0.20",
+    "privileged_pose_error_used_as_input": false,
+    "training_ambiguous_visibility_band": [
+      0.18,
+      0.22
+    ],
+    "training_eligible": 276,
+    "training_ambiguous_excluded": 24,
+    "training_eligible_positive": 153,
+    "training_eligible_negative": 123,
+    "threshold": 0.6833333333333333,
+    "calibration_precision": 1.0,
+    "calibration_recall": 0.8333333333333334,
+    "development_precision": 1.0,
+    "development_recall": 0.8928571428571429,
+    "development_true_positive": 50,
+    "development_false_positive": 0,
+    "development_false_negative": 6,
+    "development_true_negative": 19,
+    "gate_passed": true
+  },
+  "quality_regressor": {
+    "target_changed_from_v14": false,
+    "development_support": 75,
+    "development_spearman": 0.6757442682787725,
+    "development_mse": 0.009887886986988505,
+    "training_mean_constant_mse": 0.029081573709845543,
+    "gate_passed": true
+  },
+  "geometric_evaluator": {
+    "changed_from_v14": false,
+    "maximum_position_error_mm": 10.0,
+    "maximum_orientation_error_deg": 10.0,
+    "minimum_l4_visible_fraction": 0.05,
+    "used_only_for_offline_quality_labels_and_independent_evaluation": true
+  },
+  "artifacts": {
+    "root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423",
+    "development_report_sha256": "00872b77e0a1bed9ac6b394ac125e87b01074852e228c56b5efee9f7a3033236",
+    "model_bundle_sha256": "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672",
+    "model_bundle_load_verified": true
+  },
+  "boundary": {
+    "development_only": true,
+    "selected_after_v14_diagnosis": true,
+    "fixed_anatomy_only": true,
+    "patient_generalization_established": false,
+    "closed_loop_established": false,
+    "closed_loop_executed": false,
+    "new_gpu_capture_executed": false
+  },
+  "interpretation": "The repair is technically viable: separating image-observable validity from the exact geometric evaluator boundary clears the frozen development precision, recall and quality gates. Because the target was selected after inspecting V14 development data, this is not independent confirmation and does not authorize a scientific closed-loop claim."
+}
