@@ -43,6 +43,7 @@ CONFIRMATION_V16 = PROTOCOL.with_name("stage2_confirmation_protocol_v16.yaml")
 CALIBRATION_V17 = PROTOCOL.with_name("stage2_threshold_calibration_protocol_v17.yaml")
 CONFIRMATION_V17 = PROTOCOL.with_name("stage2_confirmation_protocol_v17.yaml")
 CALIBRATION_V18 = PROTOCOL.with_name("stage2_threshold_calibration_protocol_v18.yaml")
+CONFIRMATION_V18 = PROTOCOL.with_name("stage2_confirmation_protocol_v18.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -532,6 +533,28 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertEqual(rule["minimum_per_source_recall"], 0.80)
         self.assertEqual(rule["minimum_per_source_unique_hash_precision"], 0.95)
         self.assertEqual(rule["minimum_per_source_unique_hash_recall"], 0.80)
+
+    def test_v18_confirmation_is_final_and_uses_three_reference_captures(self) -> None:
+        expected = CONFIRMATION_V18.with_suffix(".sha256").read_text(
+            encoding="utf-8"
+        ).split()[0]
+        self.assertEqual(hashlib.sha256(CONFIRMATION_V18.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(CONFIRMATION_V18.read_text(encoding="utf-8"))
+        self.assertEqual(protocol["protocol_id"], "sonogym-stage2-confirmation-v18")
+        self.assertEqual(len(protocol["sessions"]), 4)
+        self.assertTrue(
+            all(str(row["session_id"]).startswith("s2v18cf_") for row in protocol["sessions"])
+        )
+        frozen = protocol["model_confirmation"]
+        self.assertEqual(frozen["validity_probability_threshold"], 0.5666666666666667)
+        self.assertEqual(len(frozen["reference_capture_roots"]), 3)
+        self.assertEqual(
+            frozen["threshold_calibration"]["report_sha256"],
+            "4c50e19e0715dbc543ce5b44113bcc04d94e2c7dc1c169132814616502aa571c",
+        )
+        self.assertTrue(
+            any("do not launch V19" in rule for rule in protocol["change_policy"])
+        )
 
 
 class Stage2LabelTests(unittest.TestCase):

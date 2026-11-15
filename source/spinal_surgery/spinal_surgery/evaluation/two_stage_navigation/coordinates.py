@@ -16,13 +16,25 @@ import numpy as np
 LABEL_RESOLUTION_MM = 1.5
 STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(1, 15)
-) | {"sonogym-stage2-confirmation-v16", "sonogym-stage2-confirmation-v17"}
+) | {
+    "sonogym-stage2-confirmation-v16",
+    "sonogym-stage2-confirmation-v17",
+    "sonogym-stage2-confirmation-v18",
+}
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(4, 15)
-) | {"sonogym-stage2-confirmation-v16", "sonogym-stage2-confirmation-v17"}
+) | {
+    "sonogym-stage2-confirmation-v16",
+    "sonogym-stage2-confirmation-v17",
+    "sonogym-stage2-confirmation-v18",
+}
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(5, 15)
-) | {"sonogym-stage2-confirmation-v16", "sonogym-stage2-confirmation-v17"}
+) | {
+    "sonogym-stage2-confirmation-v16",
+    "sonogym-stage2-confirmation-v17",
+    "sonogym-stage2-confirmation-v18",
+}
 
 
 def _finite_array(value: object, shape: tuple[int, ...], name: str) -> np.ndarray:
