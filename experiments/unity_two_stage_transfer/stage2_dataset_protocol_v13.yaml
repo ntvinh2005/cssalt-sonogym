@@ -1,0 +1,178 @@
+protocol_id: sonogym-stage2-dataset-v13
+status: PRE_GPU_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-stage2-dataset-v12
+  prior_sha256: cb0c60de6546440bb69a08bdaaa8f8abc580de22e856067a0e4720066bb38862
+  evidence_job: 51367445
+  reason: >-
+    The V12 validity classifier passed precision but reached only 0.50 development recall.
+    Read-only diagnosis found 29 unique positive training hashes, six calibration-positive
+    hashes and six development-positive hashes; duplicate removal did not improve recall.
+    Preserve the labels, features, models and development gates while concentrating the same
+    75-waypoint budget on the geometry-supported positive region and enforcing unique-positive
+    coverage before fitting.
+  changed_fields:
+    - protocol_id
+    - source
+    - purpose
+    - sampling.goal_relative_x_offsets_index
+    - sampling.goal_relative_z_offsets_index
+    - sampling.command_angles_rad
+    - sessions
+    - dataset_gate
+    - resource_bound.output_root
+  unchanged_design:
+    - task_patient_ultrasound_mode
+    - public_and_privileged_information_boundaries
+    - label_and_quality_definitions
+    - image_features_and_models
+    - development_gates
+    - physical_controller_and_all_action_bounds
+    - trajectory_segmentation_and_native_task_timeout
+    - scheduler_resources_and_walltime
+  retry_policy: >-
+    Execute one bounded capture. Preserve a DATA_NO_GO result and stop if any unique-positive
+    coverage requirement fails. DATA_READY permits the unchanged supervised fit but does not
+    authorize closed-loop evaluation.
+purpose: >-
+  Collect trajectory-separated fixed-s0010 views with enough independent positive morphology
+  to refit the unchanged image-only validity classifier and quality regressor. Privileged target
+  geometry is restricted to offline waypoint generation and labels.
+source:
+  design_base_commit: d6183c801d0a10a777a2df092ea23a8b2f44d4de
+  prior_capture_job: 51359047
+  prior_development_job: 51367445
+  diagnosis_artifact_sha256: 822745a57d6c1929f419cb629ad083ee18369125f4e7d6f7b2330fdb6da40e58
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+scope:
+  task: Isaac-robot-US-guidance-v0
+  ultrasound_mode: conv
+  patient_id: s0010
+  simulator_environments: 1
+  ppo_changes: forbidden
+  task_reward_action_dynamics_changes: forbidden
+  phase5a_protocol_changes: forbidden
+information_boundaries:
+  actor_record_allowed:
+    - clean_ultrasound_pixels
+    - frame_sha256
+    - frame_and_producer_sequence
+    - actually_executed_relative_motion
+    - action_acceptance_completion_and_separate_clamp_status
+    - contact_workspace_image_validity_booleans
+  actor_record_forbidden:
+    - patient_id
+    - raw_labels
+    - segmentation
+    - vertebra_mesh_identity
+    - absolute_patient_pose
+    - command_pose_index
+    - controller_target_pose_index
+    - requested_waypoint_pose_index
+    - goal_cmd_pose
+    - target_distance
+    - reward
+    - evaluator_score
+  privileged_collection_only:
+    - patient_id
+    - raw_l4_label_28
+    - command_realized_waypoint_and_controller_pose
+    - goal_cmd_pose
+    - position_and_orientation_error
+    - trajectory_seed
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 10.0
+    maximum_orientation_error_deg: 10.0
+    minimum_l4_visible_fraction: 0.05
+  quality:
+    visibility_normalization_fraction: 0.20
+    rule: >-
+      min(l4_visible_fraction / 0.20, 1) multiplied by exp(-0.5*(position_error_mm/10)^2
+      -0.5*(orientation_error_deg/10)^2), or zero for a technically invalid frame.
+features:
+  percentile_normalization: [1.0, 99.0]
+  intensity_shape: [32, 32]
+  absolute_gradient_shapes: [[16, 16], [16, 16]]
+  feature_width: 1536
+model:
+  family: ExtraTrees
+  n_estimators: 360
+  max_depth: 28
+  min_samples_leaf: 1
+  max_features: 0.5
+  classifier_class_weight: balanced
+  n_jobs: 4
+  random_seed: 20261115
+  threshold_selection: >-
+    Highest calibration recall among thresholds with precision at least 0.95;
+    abstain if no threshold qualifies.
+  regressor_training_minimum_quality: 0.02
+development_gate:
+  minimum_validity_precision: 0.95
+  minimum_validity_recall: 0.80
+  minimum_quality_spearman: 0.30
+  require_quality_mse_below_training_mean_constant: true
+  no_locked_or_patient_generalization_claim: true
+dataset_gate:
+  minimum_unique_positive_hashes:
+    train: 60
+    calibration: 20
+    development_evaluation: 20
+  minimum_positive_trajectories:
+    train: 8
+    calibration: 4
+    development_evaluation: 4
+sampling:
+  goal_relative_x_offsets_index: [-4.0, -2.0, 0.0, 2.0, 4.0]
+  goal_relative_z_offsets_index: [0.0, 1.0, 2.0, 3.0, 4.0]
+  command_angles_rad: [2.9, 2.95, 3.0]
+  expected_frames_per_session: 75
+  trajectory_start_frames: [0, 10, 20, 30, 40, 50, 60, 70]
+  trajectory_seed_stride: 1000
+  expected_trajectories_per_session: 8
+  expected_total_trajectories: 48
+  physical_controller:
+    name: coupled_proportional_target
+    ratio: [0.02, 0.02, 0.6]
+    ceiling_assisted_minimum_requested_angle_rad: 2.98
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: true
+    capture_angle_ceiling_limited_samples: true
+    ceiling_assist_rule: >-
+      For the highest-angle stratum only, control and settle toward the unchanged evaluator goal
+      angle so the native 3.0-radian ceiling compensates physical lag. Lower angle strata use
+      their requested angles and the unchanged 5-degree physical tracking tolerance.
+    ceiling_limited_capture_rule: >-
+      After the bounded movement loop, capture a candidate only when position is within 5 mm,
+      the native angle command is clamped, the position command is not clamped, and every action
+      remains finite, mapping-valid, surface-valid and nonterminal. The unchanged evaluator label
+      determines whether the captured candidate is valid or invalid.
+  maximum_initial_positioning_steps: 300
+  maximum_action_steps_per_waypoint: 90
+  maximum_total_action_steps_per_session: 4000
+  physical_tracking_position_tolerance_mm: 5.0
+  physical_tracking_orientation_tolerance_deg: 5.0
+sessions:
+  - {session_id: s2v13tr_00, split: train, seed: 2026111700, x_jitter_index: -0.60, z_jitter_index: 0.30, angle_jitter_rad: -0.012}
+  - {session_id: s2v13tr_01, split: train, seed: 2026111701, x_jitter_index: -0.20, z_jitter_index: -0.40, angle_jitter_rad: -0.008}
+  - {session_id: s2v13tr_02, split: train, seed: 2026111702, x_jitter_index: 0.20, z_jitter_index: 0.40, angle_jitter_rad: -0.004}
+  - {session_id: s2v13tr_03, split: train, seed: 2026111703, x_jitter_index: 0.60, z_jitter_index: -0.30, angle_jitter_rad: 0.000}
+  - {session_id: s2v13cal_00, split: calibration, seed: 2026111704, x_jitter_index: -0.40, z_jitter_index: -0.20, angle_jitter_rad: -0.010}
+  - {session_id: s2v13dev_00, split: development_evaluation, seed: 2026111705, x_jitter_index: 0.40, z_jitter_index: 0.20, angle_jitter_rad: -0.002}
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  one_job_at_a_time: true
+  maximum_storage_growth_gb: 0.5
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v13
+change_policy:
+  - Do not change trajectories, labels, thresholds, features, models or gates after GPU capture.
+  - Preserve DATA_NO_GO and do not fit models unless every dataset coverage gate passes.
+  - A supervised DEVELOPMENT_PASS does not authorize closed-loop execution.

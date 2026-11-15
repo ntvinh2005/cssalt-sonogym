@@ -36,6 +36,7 @@ PROTOCOL_V9 = PROTOCOL.with_name("stage2_dataset_protocol_v9.yaml")
 PROTOCOL_V10 = PROTOCOL.with_name("stage2_dataset_protocol_v10.yaml")
 PROTOCOL_V11 = PROTOCOL.with_name("stage2_dataset_protocol_v11.yaml")
 PROTOCOL_V12 = PROTOCOL.with_name("stage2_dataset_protocol_v12.yaml")
+PROTOCOL_V13 = PROTOCOL.with_name("stage2_dataset_protocol_v13.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -50,6 +51,7 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
     supervised_targets,
 )
 from train_stage2 import PROTOCOL_IDS as TRAIN_STAGE2_PROTOCOL_IDS  # noqa: E402
+from summarize_stage2_dataset import dataset_gate_passes  # noqa: E402
 
 
 def image() -> np.ndarray:
@@ -337,6 +339,70 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertEqual(twelfth["sampling"]["expected_total_trajectories"], 48)
         self.assertEqual(twelfth["sampling"]["maximum_total_action_steps_per_session"], 4000)
         self.assertIn("sonogym-stage2-dataset-v12", TRAIN_STAGE2_PROTOCOL_IDS)
+
+    def test_v13_focuses_positive_coverage_without_changing_labels_or_models(self) -> None:
+        expected = PROTOCOL_V13.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V13.read_bytes()).hexdigest(), expected)
+        twelfth = yaml.safe_load(PROTOCOL_V12.read_text(encoding="utf-8"))
+        thirteenth = yaml.safe_load(PROTOCOL_V13.read_text(encoding="utf-8"))
+        self.assertEqual(thirteenth["amendment"]["evidence_job"], 51367445)
+        for key in ("labels", "features", "model", "development_gate"):
+            self.assertEqual(twelfth[key], thirteenth[key])
+        self.assertEqual(
+            thirteenth["sampling"]["goal_relative_x_offsets_index"],
+            [-4.0, -2.0, 0.0, 2.0, 4.0],
+        )
+        self.assertEqual(
+            thirteenth["sampling"]["goal_relative_z_offsets_index"],
+            [0.0, 1.0, 2.0, 3.0, 4.0],
+        )
+        self.assertEqual(
+            thirteenth["sampling"]["command_angles_rad"], [2.9, 2.95, 3.0]
+        )
+        self.assertEqual(
+            thirteenth["dataset_gate"]["minimum_unique_positive_hashes"],
+            {"train": 60, "calibration": 20, "development_evaluation": 20},
+        )
+        assisted_minimum = thirteenth["sampling"]["physical_controller"][
+            "ceiling_assisted_minimum_requested_angle_rad"
+        ]
+        for session in thirteenth["sessions"]:
+            self.assertGreaterEqual(
+                max(thirteenth["sampling"]["command_angles_rad"])
+                + session["angle_jitter_rad"],
+                assisted_minimum,
+            )
+            self.assertLess(
+                sorted(thirteenth["sampling"]["command_angles_rad"])[-2]
+                + session["angle_jitter_rad"],
+                assisted_minimum,
+            )
+            maximum_radius_index = max(
+                np.hypot(
+                    x + session["x_jitter_index"],
+                    z + session["z_jitter_index"],
+                )
+                for x in thirteenth["sampling"]["goal_relative_x_offsets_index"]
+                for z in thirteenth["sampling"]["goal_relative_z_offsets_index"]
+            )
+            self.assertLess(maximum_radius_index * 1.5, 10.0)
+        self.assertIn("sonogym-stage2-dataset-v13", TRAIN_STAGE2_PROTOCOL_IDS)
+
+    def test_v13_dataset_gate_requires_hash_and_trajectory_coverage(self) -> None:
+        gate = yaml.safe_load(PROTOCOL_V13.read_text(encoding="utf-8"))["dataset_gate"]
+        hashes = {
+            "train": {f"t{index}" for index in range(60)},
+            "calibration": {f"c{index}" for index in range(20)},
+            "development_evaluation": {f"d{index}" for index in range(20)},
+        }
+        trajectories = {
+            "train": {f"t{index}" for index in range(8)},
+            "calibration": {f"c{index}" for index in range(4)},
+            "development_evaluation": {f"d{index}" for index in range(4)},
+        }
+        self.assertTrue(dataset_gate_passes(gate, hashes, trajectories))
+        hashes["development_evaluation"].pop()
+        self.assertFalse(dataset_gate_passes(gate, hashes, trajectories))
 
 
 class Stage2LabelTests(unittest.TestCase):
