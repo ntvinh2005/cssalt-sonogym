@@ -1,6 +1,6 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_DEVELOPMENT_PASS**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO**
 
 Updated: 2026-11-14 (America/New_York)
 
@@ -315,6 +315,21 @@ is excluded from fitting. CPU job `51380423` completed `0:0` in 13 seconds and r
 quality MSE 0.00989 below 0.02908. This is fixed-`s0010`, post-diagnosis development evidence.
 Closed-loop Stage 2 remains `NOT_RUN`; the next scientific action is a newly frozen independent
 perception confirmation before coarse/fine/micro search. No new GPU capture was run for V15.
+
+That independent V16 confirmation is now complete and is **CONFIRMATION_NO_GO**. GPU job
+`51387027` (`anest-dept`, one L4, four CPUs, 30 GB) completed four new sessions, 32 trajectories,
+and 300 frames in 2:29 with zero V14 image-hash overlap. CPU evaluator job `51387434` loaded the
+unchanged V15 bundle and threshold without retraining. Precision remained 1.00, but recall was
+0.6824 against the frozen 0.80 gate. Quality ranking confirmed strongly with Spearman 0.8644 and
+MSE 0.00776 below the 0.02889 frozen-constant baseline.
+
+Read-only diagnosis found 1.00 precision and 0.7031 recall after deduplicating image hashes, so
+repeated frames do not explain the failure. A post-hoc 0.60 threshold would have met both
+classification gates on V16, but it was not applied and cannot change the NO_GO decision. The
+current blocker is session-unstable threshold calibration, not simulator execution or quality
+regression. Closed-loop remains `NOT_RUN`. Any repair must use an explicitly reviewed
+multi-session calibration protocol and a separate future confirmation set; do not silently tune
+on V16 or launch another GPU capture.
 
 The blocked G0/G1 record below is retained as historical recovery evidence and is superseded
 by successful capture job 50908807.

@@ -4,7 +4,7 @@ This report tests whether the fixed-`s0010` simulator can supply the labeled loc
 
 ## Result
 
-**DEVELOPMENT_PASS after target-contract repair: targeted capture supplied independent positive support, and an image-observable L4-view classifier reached 1.00 precision and 0.8929 recall while the unchanged quality regressor passed. Closed-loop evaluation remains NOT_RUN.**
+**CONFIRMATION_NO_GO: the V15 target-contract repair passed development, but its frozen threshold reached only 0.6824 recall on four new V16 sessions against the 0.80 gate. The unchanged quality regressor confirmed strongly; closed-loop evaluation remains NOT_RUN.**
 
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
@@ -17,6 +17,7 @@ This report tests whether the fixed-`s0010` simulator can supply the labeled loc
 | 7 | targeted independent-positive coverage | unique geometric-valid hashes at least 60 / 20 / 20 and positive trajectories at least 8 / 4 / 4 | 79 / 21 / 20 hashes and 32 / 8 / 8 trajectories | PASS |
 | 8 | unchanged geometric-validity classifier on targeted capture | precision at least 0.95; recall at least 0.80 | 0.5556 precision; 0.1087 recall | NO_GO |
 | 9 | image-observable validity plus unchanged quality model | validity precision at least 0.95 and recall at least 0.80; quality criteria unchanged | 1.00 precision; 0.8929 recall; 0.6757 Spearman; 0.00989 versus 0.02908 MSE | DEVELOPMENT_PASS |
+| 10 | frozen-model, new-session confirmation | no hash overlap or retraining; same precision, recall, Spearman, and MSE gates | zero overlap; 1.00 precision; 0.6824 recall; 0.8644 Spearman; 0.00776 versus 0.02889 MSE | CONFIRMATION_NO_GO |
 
 The frozen 10 mm / 10 degree geometric success definition was not relaxed. V14 demonstrated
 that pixels could not reproduce its sharp orientation boundary. V15 therefore separates the
@@ -638,3 +639,76 @@ before any closed-loop success claim.
 | [v15 result](../../experiments/unity_two_stage_transfer/stage2_development_v15_result.json) | metrics, resources, hashes, and interpretation |
 | external report | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/development_report.json` |
 | external model bundle | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/stage2_models.joblib` |
+
+## 10. Independent session confirmation — does the frozen V15 perception gate generalize?
+
+Protocol v16 froze the V15 model bundle, its SHA-256, the 0.6833333333 validity threshold, four
+new session seeds/jitters, the exact feature and label contracts, and the unchanged numerical
+gates before GPU capture. The confirmation evaluator refused reference-image hash overlap and
+did not fit, calibrate, or select any parameter.
+
+**Criterion.** Zero frame-hash overlap with V14; validity precision at least 0.95 and recall at
+least 0.80; quality Spearman at least 0.30 and MSE below the frozen training-mean constant.
+
+### 10.1 Setup
+
+~~~bash
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-turin \
+  --constraint=l4 --gres=gpu:l4:1 --nodes=1 --ntasks=1 \
+  --cpus-per-task=4 --mem=30G --time=00:30:00 \
+  --job-name=sg-stage2-cf16 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-stage2-cf16-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env \
+  hpg/jobs/two_stage_stage2_confirmation_v16.sbatch
+
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-default \
+  --nodes=1 --ntasks=1 --cpus-per-task=4 --mem=16G --time=00:30:00 \
+  --job-name=sg-stage2-eval16 \
+  --output=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/slurm/sg-stage2-eval16-%j.out \
+  --export=ALL,SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/.sonogym.env,STAGE2_CONFIRMATION_CAPTURE_JOB_ID=51387027 \
+  hpg/jobs/two_stage_stage2_confirm_v16.sbatch
+~~~
+
+Capture job `51387027` completed `0:0` in 2:29 with four sessions, 32 trajectories, 300 joined
+frames, and 125 distinct image hashes. All four session-level distinct-hash checks passed.
+Evaluator job `51387434` used the frozen checkpoint without retraining and returned the declared
+scientific-gate failure exit `3:0` in eight seconds.
+
+### 10.2 Results
+
+| measurement | criterion | measured | verdict |
+|---|---:|---:|---|
+| V14 reference hash overlap | exactly 0 | 0 | PASS |
+| confirmation validity precision | at least 0.95 | 1.00 | PASS |
+| confirmation validity recall | at least 0.80 | 0.6824 | FAIL |
+| confirmation quality Spearman | at least 0.30 | 0.8644 | PASS |
+| confirmation quality MSE | below 0.02889 | 0.00776 | PASS |
+
+**Verdict: CONFIRMATION_NO_GO.** The classifier produced 116 true positives, zero false
+positives, 54 false negatives, and 130 true negatives. Unique-image evaluation still gave
+precision 1.00 and recall 0.7031, so repeated identical frames do not explain the failure.
+Session recall ranged from 0.5254 to 0.7959; no session independently cleared the 0.80 gate.
+
+Post-hoc diagnosis showed that threshold 0.60 would have produced precision 0.9733 and recall
+0.8588 on V16, while the frozen threshold was 0.6833. This indicates an over-conservative,
+session-unstable calibration threshold rather than a failed quality ranking model. The threshold
+was not changed and this diagnostic cannot overturn the confirmation failure.
+
+### 10.3 Interpretation and boundary
+
+- The V15 image-validity target remains observable, but one V15 calibration session was
+  insufficient to freeze a robust operating threshold.
+- The quality regressor generalized better than in development and remains scientifically useful.
+- No technical retry, threshold tuning, model fitting, new capture, or closed-loop evaluation was
+  performed after the failure.
+- The smallest valid repair is multi-session calibration with session-robust threshold selection,
+  followed by another genuinely new frozen confirmation set. V16 must remain recorded as NO_GO.
+
+### 10.4 Files
+
+| file | contents |
+|---|---|
+| [v16 protocol](../../experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v16.yaml) | preregistered sessions, frozen checkpoint, thresholds, gates, and resources |
+| [v16 result](../../experiments/unity_two_stage_transfer/stage2_confirmation_v16_result.json) | immutable job, metric, diagnostic, and resource evidence |
+| external capture | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v16/51387027` |
+| external evaluation | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_evaluation_v16/51387434` |
