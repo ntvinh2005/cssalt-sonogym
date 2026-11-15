@@ -2,7 +2,34 @@
 
 Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO**
 
-Updated: 2026-11-14 (America/New_York)
+Updated: 2026-11-15 (America/New_York)
+
+## Phase 5C Stage 2 final confirmation outcome
+
+The final preregistered V18 single-frame validity-classifier confirmation is
+**CONFIRMATION_NO_GO**. Capture job `51402759` completed `0:0` on account `anest-dept` using
+one NVIDIA L4, four CPUs, and a 30 GB request. It produced four new sessions, 32 trajectories,
+300 frames, and 126 distinct image hashes. Evaluator job `51409933` used the unchanged model and
+frozen 0.5666666667 threshold; its exit `3:0` is the declared scientific gate failure, not a
+runtime crash.
+
+Frame-level validity precision was 0.9496855 against the frozen 0.95 requirement; recall was
+0.8934911. Quality ranking remained strong with Spearman 0.8525381 and MSE 0.0082874 below the
+0.0284061 constant baseline. No reference-image hash overlapped. Precision must not be rounded
+into a pass. Read-only diagnosis showed that seven of eight false positives came from one
+session, while unique-hash precision was exactly 0.95. This supports image observability and
+quality ranking but rejects the frozen single-frame binary operating point as sufficiently
+session-stable.
+
+The sealed V18 protocol prohibits a V19 retry after failure. Closed-loop coarse/fine/micro
+search and a full Stage 2 demo therefore remain `NOT_RUN`. The next step requires researcher
+review of a material actor-contract redesign, such as temporal fresh-frame confirmation while
+retaining the stable quality regressor; it is not another threshold adjustment or capture.
+
+- Detailed report: `docs/research/sonogym_s0010_stage2_dataset_pilot.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_confirmation_v18_result.json`.
+- Capture: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v18/51402759/`.
+- Evaluation and diagnostics: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_evaluation_v18/51409933/`.
 
 ## Phase 5C Stage 1 confirmation outcome
 

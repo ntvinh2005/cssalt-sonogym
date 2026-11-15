@@ -712,3 +712,94 @@ was not changed and this diagnostic cannot overturn the confirmation failure.
 | [v16 result](../../experiments/unity_two_stage_transfer/stage2_confirmation_v16_result.json) | immutable job, metric, diagnostic, and resource evidence |
 | external capture | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v16/51387027` |
 | external evaluation | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_evaluation_v16/51387434` |
+
+## 11. Multi-session pooled calibration and V17 confirmation
+
+V17 followed the V16 diagnosis without changing the model, feature contract, label target, or
+scientific gates. CPU job `51399160` pooled calibration observations from the existing V14 and
+V16 sources and selected threshold 0.40. A newly sealed V17 protocol then required four new
+sessions and zero image-hash overlap with both reference captures.
+
+GPU capture job `51400282` completed 300 frames over 32 trajectories. CPU evaluator job
+`51400928` loaded the unchanged model and returned the declared scientific-failure exit `3:0`.
+
+| measurement | criterion | measured | verdict |
+|---|---:|---:|---|
+| reference image-hash overlap | exactly 0 | 0 | PASS |
+| confirmation validity precision | at least 0.95 | 0.8791 | FAIL |
+| confirmation validity recall | at least 0.80 | 0.9697 | PASS |
+| confirmation quality Spearman | at least 0.30 | 0.8503 | PASS |
+| confirmation quality MSE | below 0.03210 | 0.00944 | PASS |
+
+**Verdict: CONFIRMATION_NO_GO.** Pooled calibration repaired recall but chose an overly
+permissive threshold. Read-only diagnosis found that threshold 0.55 would have yielded precision
+0.9627 and recall 0.9394 on V17, but that post-hoc value was not applied. The result motivated a
+source-stratified calibration rule rather than another manual threshold choice.
+
+Relevant records are the
+[V17 result](../../experiments/unity_two_stage_transfer/stage2_confirmation_v17_result.json),
+external capture `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v17/51400282`,
+and external evaluation `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_evaluation_v17/51400928`.
+
+## 12. Source-stratified calibration and final V18 confirmation
+
+CPU calibration job `51402036` evaluated three acquisition sources, ten sessions, 750 frames,
+and 329 unique image hashes. Its frozen rule selected threshold 0.5666666667. Pooled precision
+and recall were 0.9696 and 0.9303; the minimum source precision and recall were 0.9627 and 0.9000.
+The sealed V18 protocol declared this the final binary-classifier confirmation: failure would not
+authorize V19 or closed-loop execution.
+
+### 12.1 Capture and confirmation
+
+GPU job `51402759` ran on one NVIDIA L4 with driver 580.178.04, four CPUs, and a 30 GB memory
+request. It completed in 2:34 with exit `0:0`, producing four new sessions, 32 trajectories, 300
+joined frames, and 126 distinct image hashes. Sampled peak GPU use was 5,005 MiB and 55%; Slurm
+reported maximum resident memory of 808.5 MiB. The capture added 42,665,386 bytes.
+
+CPU evaluator job `51409933` used four CPUs and a 16 GB request. It loaded the unchanged model,
+performed no fitting, and returned the declared gate-failure exit `3:0` after seven seconds.
+
+| measurement | criterion | measured | verdict |
+|---|---:|---:|---|
+| overlap with three reference captures | exactly 0 | 0 | PASS |
+| confirmation validity precision | at least 0.95 | 0.9496855 | **FAIL** |
+| confirmation validity recall | at least 0.80 | 0.8934911 | PASS |
+| confirmation quality Spearman | at least 0.30 | 0.8525381 | PASS |
+| confirmation quality MSE | below 0.0284061 | 0.0082874 | PASS |
+
+**Final verdict: CONFIRMATION_NO_GO.** The frame-level confusion matrix was 151 true positives,
+8 false positives, 18 false negatives, and 123 true negatives. Precision is below 0.95 by about
+0.0003145 and must not be rounded into a pass. At the unique-image-hash level, precision was
+exactly 0.95 and recall 0.890625, but the preregistered gate was frame-level.
+
+### 12.2 Read-only failure analysis and execution boundary
+
+Seven of eight false positives occurred in session `s2v18cf_01`, whose precision was 0.86;
+the other session precisions were 0.963, 1.0, and 1.0. The continuous quality model remained
+stable across all three confirmations. A post-hoc threshold of 0.4611111 would have produced
+precision 0.95238 and recall 0.94675, but this diagnostic is not a valid threshold selection and
+does not change V18.
+
+These results support three bounded conclusions:
+
+- SonoGym ultrasound contains repeatable image information for validity and continuous quality
+  ranking on fixed patient `s0010`.
+- A single-frame binary threshold is not stable enough across acquisition sessions under the
+  frozen 0.95 precision gate.
+- Full coarse/fine/micro closed-loop Stage 2 and its demo remain `NOT_RUN`; running them after the
+  failed final confirmation would violate the sealed protocol.
+
+The next change is therefore a research-design decision, not another confirmation retry. A
+reasonable candidate is a temporal fresh-frame confirmation contract that retains the stable
+quality regressor for ranking and requires consistent evidence across independent acquisitions.
+That materially changes actor decision semantics and requires researcher approval and a new
+protocol before implementation.
+
+### 12.3 Files
+
+| file | contents |
+|---|---|
+| [V18 protocol](../../experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v18.yaml) | final frozen confirmation, gates, and no-V19 boundary |
+| [V18 result](../../experiments/unity_two_stage_transfer/stage2_confirmation_v18_result.json) | immutable jobs, metrics, diagnosis, resources, hashes, and boundary |
+| external capture | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v18/51402759` |
+| external evaluation | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_evaluation_v18/51409933` |
