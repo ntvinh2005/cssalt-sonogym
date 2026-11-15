@@ -39,6 +39,7 @@ PROTOCOL_V12 = PROTOCOL.with_name("stage2_dataset_protocol_v12.yaml")
 PROTOCOL_V13 = PROTOCOL.with_name("stage2_dataset_protocol_v13.yaml")
 PROTOCOL_V14 = PROTOCOL.with_name("stage2_dataset_protocol_v14.yaml")
 PROTOCOL_V15 = PROTOCOL.with_name("stage2_dataset_protocol_v15.yaml")
+CONFIRMATION_V16 = PROTOCOL.with_name("stage2_confirmation_protocol_v16.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -55,6 +56,7 @@ from two_stage_navigation.stage2_models import (  # noqa: E402
     supervised_targets,
 )
 from train_stage2 import PROTOCOL_IDS as TRAIN_STAGE2_PROTOCOL_IDS  # noqa: E402
+from evaluate_stage2_confirmation import confirmation_gate_passes  # noqa: E402
 from summarize_stage2_dataset import dataset_gate_passes  # noqa: E402
 
 
@@ -451,6 +453,26 @@ class Stage2ProtocolTests(unittest.TestCase):
         )
         self.assertIn("sonogym-stage2-dataset-v15", TRAIN_STAGE2_PROTOCOL_IDS)
 
+    def test_v16_freezes_new_sessions_and_the_v15_bundle(self) -> None:
+        expected = CONFIRMATION_V16.with_suffix(".sha256").read_text(
+            encoding="utf-8"
+        ).split()[0]
+        self.assertEqual(hashlib.sha256(CONFIRMATION_V16.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(CONFIRMATION_V16.read_text(encoding="utf-8"))
+        self.assertEqual(protocol["protocol_id"], "sonogym-stage2-confirmation-v16")
+        self.assertEqual(len(protocol["sessions"]), 4)
+        self.assertEqual({row["split"] for row in protocol["sessions"]}, {"confirmation"})
+        self.assertEqual(len({row["seed"] for row in protocol["sessions"]}), 4)
+        self.assertEqual(protocol["sampling"]["expected_total_trajectories"], 32)
+        frozen = protocol["model_confirmation"]
+        self.assertEqual(
+            frozen["model_bundle_sha256"],
+            "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672",
+        )
+        self.assertTrue(frozen["no_retraining"])
+        self.assertTrue(frozen["require_zero_reference_image_hash_overlap"])
+        self.assertEqual(frozen["validity_probability_threshold"], 0.6833333333333333)
+
 
 class Stage2LabelTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -571,6 +593,21 @@ class Stage2SelectionTests(unittest.TestCase):
                 threshold=0.5,
                 maximum_quality_drop=0.1,
                 required_count=2,
+            )
+        )
+
+    def test_confirmation_gate_requires_every_frozen_condition(self) -> None:
+        gate = {
+            "minimum_validity_precision": 0.95,
+            "minimum_validity_recall": 0.80,
+            "minimum_quality_spearman": 0.30,
+        }
+        metrics = {"precision": 0.96, "recall": 0.81}
+        self.assertTrue(confirmation_gate_passes(metrics, 0.31, 0.01, 0.02, gate))
+        self.assertFalse(confirmation_gate_passes(metrics, 0.31, 0.02, 0.02, gate))
+        self.assertFalse(
+            confirmation_gate_passes(
+                {"precision": 1.0, "recall": 0.79}, 0.31, 0.01, 0.02, gate
             )
         )
 
