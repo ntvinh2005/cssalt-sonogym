@@ -40,6 +40,7 @@ PROTOCOL_V13 = PROTOCOL.with_name("stage2_dataset_protocol_v13.yaml")
 PROTOCOL_V14 = PROTOCOL.with_name("stage2_dataset_protocol_v14.yaml")
 PROTOCOL_V15 = PROTOCOL.with_name("stage2_dataset_protocol_v15.yaml")
 CONFIRMATION_V16 = PROTOCOL.with_name("stage2_confirmation_protocol_v16.yaml")
+CALIBRATION_V17 = PROTOCOL.with_name("stage2_threshold_calibration_protocol_v17.yaml")
 
 from two_stage_navigation.stage2_features import (  # noqa: E402
     FEATURE_WIDTH,
@@ -472,6 +473,26 @@ class Stage2ProtocolTests(unittest.TestCase):
         self.assertTrue(frozen["no_retraining"])
         self.assertTrue(frozen["require_zero_reference_image_hash_overlap"])
         self.assertEqual(frozen["validity_probability_threshold"], 0.6833333333333333)
+
+    def test_v17_threshold_calibration_is_multisession_and_model_frozen(self) -> None:
+        expected = CALIBRATION_V17.with_suffix(".sha256").read_text(
+            encoding="utf-8"
+        ).split()[0]
+        self.assertEqual(hashlib.sha256(CALIBRATION_V17.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(CALIBRATION_V17.read_text(encoding="utf-8"))
+        self.assertEqual(
+            protocol["protocol_id"], "sonogym-stage2-threshold-calibration-v17"
+        )
+        self.assertEqual(
+            sum(len(source["session_ids"]) for source in protocol["calibration_sources"]),
+            6,
+        )
+        self.assertEqual(len(protocol["calibration_sources"]), 2)
+        self.assertEqual(protocol["selection_rule"]["minimum_pooled_precision"], 0.95)
+        self.assertEqual(protocol["selection_rule"]["minimum_unique_hash_precision"], 0.95)
+        self.assertEqual(protocol["selection_rule"]["minimum_session_recall"], 0.70)
+        self.assertEqual(protocol["selection_rule"]["minimum_median_session_recall"], 0.80)
+        self.assertEqual(protocol["frozen_model"]["retraining"], "forbidden")
 
 
 class Stage2LabelTests(unittest.TestCase):

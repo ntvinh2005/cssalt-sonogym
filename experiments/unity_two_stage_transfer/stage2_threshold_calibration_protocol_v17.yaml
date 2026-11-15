@@ -1,0 +1,62 @@
+protocol_id: sonogym-stage2-threshold-calibration-v17
+status: PRE_CPU_FROZEN
+purpose: >-
+  Reclassify the preserved V16 NO_GO data as calibration evidence and select one session-robust
+  operating threshold for the unchanged V15 ExtraTrees classifier before collecting any V17
+  confirmation data. The model, image target, features and final confirmation gates stay fixed.
+source:
+  design_base_commit: b2ff42c4a2a45b9bb1b2cc71228b466ed23d703e
+  v15_development_job: 51380423
+  v16_capture_job: 51387027
+  v16_evaluation_job: 51387434
+  v16_result_sha256: 8137def294d0d099c8f72c6d7ab155f094a3448dff1b895ff849b5afe5f63458
+frozen_model:
+  bundle: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/stage2_models.joblib
+  bundle_sha256: 7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672
+  source_protocol_sha256: bc6215311127b140db85f086cb38d7042ccba2d2a70fb9ccc16577a1074c0646
+  retraining: forbidden
+classifier_target:
+  name: l4_image_visibility
+  minimum_l4_visible_fraction: 0.20
+  training_ambiguous_half_width: 0.02
+calibration_sources:
+  - source_id: v14_heldout_development
+    capture_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943
+    session_ids: [s2v13cal_00, s2v13dev_00]
+    frames_per_session: 75
+  - source_id: v16_preserved_no_go
+    capture_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v16/51387027
+    session_ids: [s2v16cf_00, s2v16cf_01, s2v16cf_02, s2v16cf_03]
+    frames_per_session: 75
+selection_rule:
+  candidates: unique_frozen_classifier_probabilities
+  minimum_pooled_precision: 0.95
+  minimum_unique_hash_precision: 0.95
+  require_at_least_one_true_positive_per_session: true
+  ranking:
+    - maximize_minimum_session_recall
+    - maximize_median_session_recall
+    - maximize_pooled_recall
+    - maximize_unique_hash_recall
+    - maximize_threshold
+  minimum_pooled_recall: 0.80
+  minimum_unique_hash_recall: 0.80
+  minimum_session_recall: 0.70
+  minimum_median_session_recall: 0.80
+future_confirmation_gate:
+  minimum_validity_precision: 0.95
+  minimum_validity_recall: 0.80
+  minimum_quality_spearman: 0.30
+  require_quality_mse_below_training_mean_constant: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 0
+  cpu_cores: 4
+  memory: 16gb
+  walltime: "00:30:00"
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_threshold_calibration_v17
+change_policy:
+  - Do not change sources, target, rule, model or acceptance criteria after this seal.
+  - Preserve CALIBRATION_NO_GO if no threshold clears every frozen requirement.
+  - A selected threshold may be used only in a separately sealed new-session V17 confirmation.
+  - Do not claim that recalibration changes the preserved V16 CONFIRMATION_NO_GO result.
