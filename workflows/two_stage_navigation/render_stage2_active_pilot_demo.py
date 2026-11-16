@@ -128,11 +128,34 @@ def render_frame(
 
     poses = [list(map(float, item["relative_pose"])) for item in rows[: index + 1]]
     all_poses = [list(map(float, item["relative_pose"])) for item in rows]
-    xs = [pose[0] for pose in all_poses]
-    zs = [pose[1] for pose in all_poses]
+    requested_poses = [
+        list(map(float, item.get("requested_relative_pose", item["relative_pose"])))
+        for item in rows
+    ]
+    xs = [pose[0] for pose in (*all_poses, *requested_poses)]
+    zs = [pose[1] for pose in (*all_poses, *requested_poses)]
     x_bounds = (min(xs) - 1.5, max(xs) + 1.5)
     z_bounds = (min(zs) - 1.5, max(zs) + 1.5)
     cv2.rectangle(canvas, (560, 130), (1130, 520), (85, 85, 85), 1)
+    coarse_targets = {
+        (round(pose[0], 6), round(pose[1], 6))
+        for pose, item in zip(requested_poses, rows)
+        if item["phase"] == "coarse"
+    }
+    for x_value, z_value in sorted(coarse_targets):
+        point = map_point([x_value, z_value, 0.0], x_bounds, z_bounds)
+        cv2.circle(canvas, point, 9, (230, 230, 230), 1, cv2.LINE_AA)
+    if coarse_targets:
+        grid = actor.get("physical_grid", {})
+        text(
+            canvas,
+            f"hollow circles = commanded 3x3 grid; 3 angles/cell | "
+            f"dx={grid.get('minimum_x_spacing_mm', 0):.1f} mm, "
+            f"dz={grid.get('minimum_z_spacing_mm', 0):.1f} mm",
+            (570, 153),
+            scale=0.35,
+            color=(205, 205, 205),
+        )
     text(canvas, "Home-relative spatial search map (mm)", (690, 548), scale=0.46)
     text(canvas, "x translation", (900, 575), scale=0.38, color=(170, 170, 170))
     text(canvas, "z", (540, 145), scale=0.38, color=(170, 170, 170))
@@ -154,8 +177,18 @@ def render_frame(
             quality_radius = max(2, int(round(3 + 5 * float(item["quality_prediction"]))))
             cv2.circle(canvas, point, quality_radius, point_color, 1, cv2.LINE_AA)
 
+    requested_current = requested_poses[index]
+    cv2.line(
+        canvas,
+        map_point(requested_current, x_bounds, z_bounds),
+        map_point(poses[-1], x_bounds, z_bounds),
+        (245, 245, 245),
+        1,
+        cv2.LINE_AA,
+    )
+
     selected_sequence = int(actor["selected_frame_sequence"])
-    if index >= 39:
+    if index >= selected_sequence:
         selected_point = map_point(
             list(map(float, rows[selected_sequence]["relative_pose"])), x_bounds, z_bounds
         )

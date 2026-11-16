@@ -31,6 +31,7 @@ app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 
 import gymnasium as gym  # noqa: E402
+import cv2  # noqa: E402
 import joblib  # noqa: E402
 import nibabel as nib  # noqa: E402
 import numpy as np  # noqa: E402
@@ -54,6 +55,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (
     serpentine_offsets,
     transition_is_valid,
     validate_confirmation_motion,
+    validate_physical_grid,
 )
 from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # noqa: E402
     ScoredView,
@@ -120,6 +122,64 @@ def load_sealed_yaml(path: Path) -> tuple[dict[str, Any], str]:
     return protocol, observed
 
 
+class RobotVideoRecorder:
+    """Stream the Isaac rendered camera to a compact, explicitly non-actor MP4."""
+
+    def __init__(self, env: Any, output: Path, config: dict[str, Any]) -> None:
+        self.env = env
+        self.output = output
+        self.fps = int(config["fps"])
+        self.action_stride = int(config["action_stride"])
+        self.writer: cv2.VideoWriter | None = None
+        self.action_count = 0
+        self.frame_count = 0
+        self.phase = "initial"
+        if self.fps <= 0 or self.action_stride <= 0:
+            raise ValueError("robot-video fps and action stride must be positive")
+
+    def set_phase(self, phase: str) -> None:
+        self.phase = phase
+
+    def capture(self, _status: dict[str, Any] | None = None, *, force: bool = False) -> None:
+        if not force:
+            self.action_count += 1
+            if self.action_count % self.action_stride:
+                return
+        frame = np.asarray(self.env.render())
+        if frame.ndim != 3 or frame.shape[2] not in {3, 4}:
+            raise RuntimeError(f"unexpected Isaac render shape: {frame.shape}")
+        rgb = frame[:, :, :3].astype(np.uint8, copy=False)
+        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        cv2.rectangle(bgr, (0, 0), (bgr.shape[1], 42), (10, 10, 10), -1)
+        cv2.putText(
+            bgr,
+            f"Isaac Sim rendered view | {self.phase} | physical action {self.action_count}",
+            (14, 28),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.62,
+            (235, 235, 235),
+            1,
+            cv2.LINE_AA,
+        )
+        if self.writer is None:
+            self.output.parent.mkdir(parents=True, exist_ok=True)
+            self.writer = cv2.VideoWriter(
+                str(self.output),
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                float(self.fps),
+                (bgr.shape[1], bgr.shape[0]),
+            )
+            if not self.writer.isOpened():
+                raise RuntimeError("OpenCV could not create the Isaac camera MP4")
+        self.writer.write(bgr)
+        self.frame_count += 1
+
+    def close(self) -> None:
+        if self.writer is not None:
+            self.writer.release()
+            self.writer = None
+
+
 def main() -> int:
     protocol_path = Path(args.protocol).resolve()
     protocol, protocol_hash = load_sealed_yaml(protocol_path)
@@ -135,6 +195,7 @@ def main() -> int:
         "seed": int(protocol["execution"]["seed"]),
     }
     env = None
+    robot_video: RobotVideoRecorder | None = None
     action_rows: list[dict[str, Any]] = []
     public_rows: list[dict[str, Any]] = []
     privileged_rows: list[dict[str, Any]] = []
@@ -176,17 +237,34 @@ def main() -> int:
             minimum_distinct_view_angle_deg=float(rule["minimum_distinct_view_angle_deg"]),
         )
 
+        visualization = protocol.get("visualization", {})
+        record_robot_video = bool(visualization.get("record_robot_video", False))
         env_cfg = parse_env_cfg(
             protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1
         )
         env_cfg.seed = int(protocol["execution"]["seed"])
-        env = gym.make(protocol["scope"]["task"], cfg=env_cfg, render_mode=None)
+        env = gym.make(
+            protocol["scope"]["task"],
+            cfg=env_cfg,
+            render_mode="rgb_array" if record_robot_video else None,
+        )
         observation, _ = env.reset(seed=int(protocol["execution"]["seed"]))
         unwrapped = env.unwrapped
         if tuple(observation["policy"].shape) != (1, 1, 200, 150):
             raise RuntimeError("unexpected policy observation shape")
         if unwrapped.US_slicer.sim_mode != "conv" or unwrapped.scene.num_envs != 1:
             raise RuntimeError("pilot requires one conv SonoGym environment")
+        if record_robot_video:
+            unwrapped.sim.set_camera_view(
+                eye=tuple(float(value) for value in visualization["camera_eye_world_m"]),
+                target=tuple(float(value) for value in visualization["camera_target_world_m"]),
+            )
+            robot_video = RobotVideoRecorder(
+                env,
+                output / "video" / "sonogym-robot-probe-patient.mp4",
+                visualization,
+            )
+            robot_video.capture(force=True)
 
         raw_path = (
             Path(args.assets_data_dir)
@@ -200,12 +278,21 @@ def main() -> int:
         search = protocol["search"]
         motion = protocol["motion"]
         label_resolution = float(protocol["geometry"]["label_resolution_mm"])
+        grid_spec = validate_physical_grid(
+            search["coarse_x_offsets_index"],
+            search["coarse_z_offsets_index"],
+            search["coarse_angle_offsets_rad"],
+            label_resolution_mm=label_resolution,
+            position_tolerance_mm=float(motion["coarse_position_tolerance_mm"]),
+            orientation_tolerance_deg=float(motion["coarse_orientation_tolerance_deg"]),
+        )
         confirmation_position_tolerance = float(
             motion.get("confirmation_position_tolerance_mm", motion["position_tolerance_mm"])
         )
         strict_confirmation_motion = protocol["protocol_id"] in {
             "sonogym-stage2-active-acquisition-pilot-v2",
             "sonogym-stage2-active-acquisition-pilot-v3",
+            "sonogym-stage2-active-acquisition-grid-demo-v4",
         }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(
@@ -227,8 +314,11 @@ def main() -> int:
             phase: str,
             *,
             position_tolerance_mm: float | None = None,
+            orientation_tolerance_deg: float | None = None,
         ) -> list[dict[str, Any]]:
             nonlocal total_action_steps
+            if robot_video is not None:
+                robot_video.set_phase(phase)
             controller_target = target.copy()
             if target[2] >= float(motion["ceiling_assisted_minimum_angle_rad"]):
                 controller_target[2] = float(motion["controller_target_angle_rad"])
@@ -248,9 +338,14 @@ def main() -> int:
                     if position_tolerance_mm is None
                     else position_tolerance_mm
                 ),
-                maximum_orientation_error_deg=float(motion["orientation_tolerance_deg"]),
+                maximum_orientation_error_deg=float(
+                    motion["orientation_tolerance_deg"]
+                    if orientation_tolerance_deg is None
+                    else orientation_tolerance_deg
+                ),
                 ratio=tuple(float(value) for value in motion["controller_ratio"]),
                 allow_angle_ceiling_saturation=bool(motion["allow_angle_ceiling_saturation"]),
+                step_callback=None if robot_video is None else robot_video.capture,
             )
             total_action_steps += len(trajectory)
             if total_action_steps > maximum_total_steps:
@@ -265,12 +360,14 @@ def main() -> int:
             phase: str,
             *,
             position_tolerance_mm: float | None = None,
+            orientation_tolerance_deg: float | None = None,
         ) -> tuple[ReplayObservation, ScoredView]:
             nonlocal previous_producer
             trajectory = move_only(
                 target,
                 phase,
                 position_tolerance_mm=position_tolerance_mm,
+                orientation_tolerance_deg=orientation_tolerance_deg,
             )
             transition_valid = transition_is_valid(trajectory)
             image = clean_ultrasound(unwrapped)
@@ -289,6 +386,7 @@ def main() -> int:
             probability, quality = score_ultrasound(image, classifier, regressor)
             frame_sequence = len(public_rows)
             relative_pose = relative_pose_from_start(realized, handoff, label_resolution)
+            requested_relative_pose = relative_pose_from_start(target, handoff, label_resolution)
             replay_row = ReplayObservation(
                 session_id=str(protocol["execution"]["session_id"]),
                 trajectory_id=str(protocol["execution"]["session_id"]),
@@ -320,6 +418,7 @@ def main() -> int:
                 "frame_sha256": frame_hash,
                 "phase": phase,
                 "relative_pose": list(relative_pose),
+                "requested_relative_pose": list(requested_relative_pose),
                 "validity_probability": probability,
                 "quality_prediction": quality,
                 "transition_valid": transition_valid,
@@ -360,20 +459,47 @@ def main() -> int:
             ),
         )
         for target in coarse:
-            acquire(target, "coarse")
+            acquire(
+                target,
+                "coarse",
+                position_tolerance_mm=float(motion["coarse_position_tolerance_mm"]),
+                orientation_tolerance_deg=float(motion["coarse_orientation_tolerance_deg"]),
+            )
+        coarse_rows = [row for row in public_rows if row["phase"] == "coarse"]
+        if len(coarse_rows) != int(search["expected_coarse_observations"]):
+            raise RuntimeError("coarse grid observation count mismatch")
+        if any(
+            not row["producer_advanced"]
+            or not row["image_valid"]
+            or int(row["action_step_count"]) <= 0
+            for row in coarse_rows
+        ):
+            raise RuntimeError("every coarse grid pose must execute and produce a fresh valid frame")
+        if len({row["frame_sha256"] for row in coarse_rows}) != len(coarse_rows):
+            raise RuntimeError("coarse grid did not produce one distinct image per pose")
 
         best = select_best_view(scored_views, threshold)
         if best is not None:
             best_sequence = int(best.candidate_id.split("-")[-1])
             fine_center = absolute_pose_by_frame[best_sequence]
             for target in offset_poses(fine_center, search["fine_offsets"]):
-                acquire(target, "fine")
+                acquire(
+                    target,
+                    "fine",
+                    position_tolerance_mm=float(motion["fine_position_tolerance_mm"]),
+                    orientation_tolerance_deg=float(motion["fine_orientation_tolerance_deg"]),
+                )
             best = select_best_view(scored_views, threshold)
         if best is not None:
             best_sequence = int(best.candidate_id.split("-")[-1])
             micro_center = absolute_pose_by_frame[best_sequence]
             for target in offset_poses(micro_center, search["micro_offsets"]):
-                acquire(target, "micro")
+                acquire(
+                    target,
+                    "micro",
+                    position_tolerance_mm=float(motion["micro_position_tolerance_mm"]),
+                    orientation_tolerance_deg=float(motion["micro_orientation_tolerance_deg"]),
+                )
 
         decision = replay_decision(
             observations,
@@ -456,6 +582,7 @@ def main() -> int:
             "return_orientation_error_deg": return_error_deg,
             "model_retrained": False,
             "decision_parameters_changed": False,
+            "physical_grid": grid_spec,
         }
         assert_no_privileged_fields(actor_result)
         public_dir.mkdir(parents=True, exist_ok=True)
@@ -473,6 +600,7 @@ def main() -> int:
             actor_result_sha256=actor_hash,
             frame_count=len(public_rows),
             action_step_count=total_action_steps,
+            robot_video_frame_count=0 if robot_video is None else robot_video.frame_count,
         )
         return 0
     except Exception as error:
@@ -480,12 +608,18 @@ def main() -> int:
         summary["traceback"] = traceback.format_exc()
         return 1
     finally:
+        if env is not None:
+            if robot_video is not None:
+                robot_video.capture(force=True)
+                robot_video.close()
+            env.close()
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        if robot_video is not None:
+            summary["robot_video_frame_count"] = robot_video.frame_count
+            summary["robot_video"] = str(robot_video.output)
         write_json(output / "summary.json", summary)
         if action_rows and not (privileged_dir / "actions.jsonl").exists():
             write_jsonl(privileged_dir / "actions_partial.jsonl", action_rows)
-        if env is not None:
-            env.close()
 
 
 if __name__ == "__main__":

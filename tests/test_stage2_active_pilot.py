@@ -23,6 +23,7 @@ from two_stage_navigation.stage2_active_pilot import (  # noqa: E402
     serpentine_offsets,
     transition_is_valid,
     validate_confirmation_motion,
+    validate_physical_grid,
 )
 
 
@@ -128,6 +129,30 @@ class ActivePilotTests(unittest.TestCase):
                 position_tolerance_mm=5.0,
             )
 
+    def test_physical_grid_spacing_exceeds_motion_tolerances(self) -> None:
+        result = validate_physical_grid(
+            [-14.0, -10.0, -6.0],
+            [-7.0, -3.0, 1.0],
+            [-0.05, 0.05, 0.15],
+            label_resolution_mm=1.5,
+            position_tolerance_mm=1.0,
+            orientation_tolerance_deg=1.0,
+        )
+        self.assertEqual(result["position_cell_count"], 9)
+        self.assertEqual(result["pose_cell_count"], 27)
+        self.assertAlmostEqual(result["minimum_x_spacing_mm"], 6.0)
+        self.assertAlmostEqual(result["minimum_z_spacing_mm"], 6.0)
+        self.assertAlmostEqual(result["minimum_angle_spacing_deg"], 5.7295779513)
+        with self.assertRaisesRegex(ValueError, "spacing"):
+            validate_physical_grid(
+                [-1.0, 0.0, 1.0],
+                [-1.0, 0.0, 1.0],
+                [-0.01, 0.0, 0.01],
+                label_resolution_mm=1.5,
+                position_tolerance_mm=5.0,
+                orientation_tolerance_deg=5.0,
+            )
+
     def test_only_reviewed_active_pilot_protocols_are_supported(self) -> None:
         self.assertEqual(
             ACTIVE_PILOT_PROTOCOL_IDS,
@@ -135,6 +160,7 @@ class ActivePilotTests(unittest.TestCase):
                 "sonogym-stage2-active-acquisition-pilot-v1",
                 "sonogym-stage2-active-acquisition-pilot-v2",
                 "sonogym-stage2-active-acquisition-pilot-v3",
+                "sonogym-stage2-active-acquisition-grid-demo-v4",
             },
         )
 

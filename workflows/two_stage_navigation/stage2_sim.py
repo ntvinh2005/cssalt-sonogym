@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -201,6 +201,7 @@ def move_proportional_target(
     ratio: np.ndarray | tuple[float, float, float] = (0.02, 0.02, 0.6),
     allow_angle_ceiling_saturation: bool = False,
     trajectory_sink: list[dict[str, Any]] | None = None,
+    step_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> list[dict[str, Any]]:
     """Run bounded coupled feedback while allowing only the declared angle ceiling clamp.
 
@@ -225,6 +226,8 @@ def move_proportional_target(
         trajectory.append(status)
         if trajectory_sink is not None:
             trajectory_sink.append(status)
+        if step_callback is not None:
+            step_callback(status)
         if (
             not status["finite"]
             or status["command_position_clamped"]

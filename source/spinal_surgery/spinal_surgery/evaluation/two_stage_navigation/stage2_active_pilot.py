@@ -15,8 +15,57 @@ ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
         "sonogym-stage2-active-acquisition-pilot-v1",
         "sonogym-stage2-active-acquisition-pilot-v2",
         "sonogym-stage2-active-acquisition-pilot-v3",
+        "sonogym-stage2-active-acquisition-grid-demo-v4",
     }
 )
+
+
+def validate_physical_grid(
+    x_values: Sequence[float],
+    z_values: Sequence[float],
+    angle_values: Sequence[float],
+    *,
+    label_resolution_mm: float,
+    position_tolerance_mm: float,
+    orientation_tolerance_deg: float,
+) -> dict[str, float | int]:
+    """Validate that adjacent declared grid cells exceed acquisition tolerances."""
+    axes = tuple(
+        tuple(float(value) for value in values)
+        for values in (x_values, z_values, angle_values)
+    )
+    if any(len(values) < 2 for values in axes):
+        raise ValueError("physical grid requires at least two values on every axis")
+    if not all(math.isfinite(value) for values in axes for value in values):
+        raise ValueError("physical grid values must be finite")
+    if (
+        label_resolution_mm <= 0.0
+        or position_tolerance_mm <= 0.0
+        or orientation_tolerance_deg <= 0.0
+    ):
+        raise ValueError("grid resolution and tolerances must be positive")
+    unique_x = sorted(set(axes[0]))
+    unique_z = sorted(set(axes[1]))
+    unique_angle = sorted(set(axes[2]))
+    x_spacing_mm = min(abs(b - a) for a, b in zip(unique_x, unique_x[1:]))
+    x_spacing_mm *= label_resolution_mm
+    z_spacing_mm = min(abs(b - a) for a, b in zip(unique_z, unique_z[1:]))
+    z_spacing_mm *= label_resolution_mm
+    angle_spacing_deg = min(
+        abs(b - a) for a, b in zip(unique_angle, unique_angle[1:])
+    )
+    angle_spacing_deg *= 180.0 / math.pi
+    if x_spacing_mm <= position_tolerance_mm or z_spacing_mm <= position_tolerance_mm:
+        raise ValueError("grid translation spacing must exceed movement tolerance")
+    if angle_spacing_deg <= orientation_tolerance_deg:
+        raise ValueError("grid angle spacing must exceed orientation tolerance")
+    return {
+        "position_cell_count": len(axes[0]) * len(axes[1]),
+        "pose_cell_count": len(axes[0]) * len(axes[1]) * len(axes[2]),
+        "minimum_x_spacing_mm": x_spacing_mm,
+        "minimum_z_spacing_mm": z_spacing_mm,
+        "minimum_angle_spacing_deg": angle_spacing_deg,
+    }
 
 
 def phase1_handoff_pose(
