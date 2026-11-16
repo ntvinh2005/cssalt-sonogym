@@ -72,7 +72,8 @@ def main() -> int:
         raise RuntimeError("unexpected protocol")
     actor_path = args.run_dir / "results" / "actor_result.json"
     actor_hash = file_sha256(actor_path)
-    expected_actor_hash = actor_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+    actor_seal_path = actor_path.with_suffix(actor_path.suffix + ".sha256")
+    expected_actor_hash = actor_seal_path.read_text(encoding="utf-8").split()[0]
     if actor_hash != expected_actor_hash:
         raise RuntimeError("actor result seal mismatch")
     actor = json.loads(actor_path.read_text(encoding="utf-8"))
