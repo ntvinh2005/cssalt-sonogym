@@ -55,6 +55,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (
     serpentine_offsets,
     transition_is_valid,
     validate_confirmation_motion,
+    validate_episode_horizon,
     validate_physical_grid,
 )
 from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # noqa: E402
@@ -243,6 +244,14 @@ def main() -> int:
             protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1
         )
         env_cfg.seed = int(protocol["execution"]["seed"])
+        motion = protocol["motion"]
+        if "episode_length_s" in motion:
+            declared_episode_length_s = float(motion["episode_length_s"])
+            validate_episode_horizon(
+                int(motion["maximum_total_action_steps"]),
+                declared_episode_length_s,
+            )
+            env_cfg.episode_length_s = declared_episode_length_s
         env = gym.make(
             protocol["scope"]["task"],
             cfg=env_cfg,
@@ -276,7 +285,6 @@ def main() -> int:
         raw_volume = np.asarray(nib.load(raw_path).dataobj, dtype=np.uint8)
         evaluator_goal = tensor_row(unwrapped.goal_cmd_pose).copy()
         search = protocol["search"]
-        motion = protocol["motion"]
         label_resolution = float(protocol["geometry"]["label_resolution_mm"])
         grid_spec = validate_physical_grid(
             search["coarse_x_offsets_index"],
@@ -293,6 +301,7 @@ def main() -> int:
             "sonogym-stage2-active-acquisition-pilot-v2",
             "sonogym-stage2-active-acquisition-pilot-v3",
             "sonogym-stage2-active-acquisition-grid-demo-v4",
+            "sonogym-stage2-active-acquisition-grid-demo-v4r1",
         }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(

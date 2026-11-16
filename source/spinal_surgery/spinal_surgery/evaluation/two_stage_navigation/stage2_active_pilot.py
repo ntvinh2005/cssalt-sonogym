@@ -16,8 +16,27 @@ ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
         "sonogym-stage2-active-acquisition-pilot-v2",
         "sonogym-stage2-active-acquisition-pilot-v3",
         "sonogym-stage2-active-acquisition-grid-demo-v4",
+        "sonogym-stage2-active-acquisition-grid-demo-v4r1",
     }
 )
+
+
+def validate_episode_horizon(
+    maximum_total_action_steps: int,
+    episode_length_s: float,
+    *,
+    action_rate_hz: float = 60.0,
+) -> int:
+    """Require one episode to cover the complete bounded active-search budget."""
+    values = (float(episode_length_s), float(action_rate_hz))
+    if maximum_total_action_steps <= 0 or not all(math.isfinite(value) for value in values):
+        raise ValueError("episode horizon inputs must be finite and positive")
+    if episode_length_s <= 0.0 or action_rate_hz <= 0.0:
+        raise ValueError("episode horizon inputs must be finite and positive")
+    maximum_episode_steps = int(math.floor(episode_length_s * action_rate_hz))
+    if maximum_episode_steps <= maximum_total_action_steps:
+        raise ValueError("episode horizon must exceed the total action budget")
+    return maximum_episode_steps
 
 
 def validate_physical_grid(

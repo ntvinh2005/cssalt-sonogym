@@ -23,6 +23,7 @@ from two_stage_navigation.stage2_active_pilot import (  # noqa: E402
     serpentine_offsets,
     transition_is_valid,
     validate_confirmation_motion,
+    validate_episode_horizon,
     validate_physical_grid,
 )
 
@@ -153,6 +154,11 @@ class ActivePilotTests(unittest.TestCase):
                 orientation_tolerance_deg=5.0,
             )
 
+    def test_episode_horizon_covers_full_continuous_search(self) -> None:
+        self.assertEqual(validate_episode_horizon(1800, 40.0), 2400)
+        with self.assertRaisesRegex(ValueError, "must exceed"):
+            validate_episode_horizon(1800, 30.0)
+
     def test_only_reviewed_active_pilot_protocols_are_supported(self) -> None:
         self.assertEqual(
             ACTIVE_PILOT_PROTOCOL_IDS,
@@ -161,6 +167,7 @@ class ActivePilotTests(unittest.TestCase):
                 "sonogym-stage2-active-acquisition-pilot-v2",
                 "sonogym-stage2-active-acquisition-pilot-v3",
                 "sonogym-stage2-active-acquisition-grid-demo-v4",
+                "sonogym-stage2-active-acquisition-grid-demo-v4r1",
             },
         )
 
