@@ -1,0 +1,176 @@
+protocol_id: sonogym-stage2-active-acquisition-orientation-refinement-v6r1
+status: PRE_GPU_FROZEN_TECHNICAL_RETRY
+purpose: >-
+  Sole technical retry of V6 job 51662670. Preserve every scientific and motion parameter while
+  repairing only replay-subset indexing: global frame identity remains unchanged and the replay-only
+  trajectory sequence is renumbered contiguously from zero. Not V19 or independent confirmation.
+source:
+  implementation_commit: a79135d899b6b94f219f3173d3b9c9f09a67f268
+  v6_technical_failure_job: 51662670
+  v6_protocol_sha256: f95679e8762f2aa3b6ce7a484453b1d9a492a03a7a671ef0ebfd2cd5f0ee90e0
+  v5_job: 51641034
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+scope:
+  task: Isaac-robot-US-guidance-v0
+  ultrasound_mode: conv
+  patient_id: s0010
+  simulator_environments: 1
+  continuous_episode_count: 1
+  v19: forbidden
+  independent_confirmation_claim: forbidden
+  ppo_training: forbidden
+  model_training_or_calibration: forbidden
+phase1_handoff:
+  actor_result: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage1_confirmation/51196094/results/actor_results.json
+  actor_result_sha256: 9d3532f06f15443d7a0d3ac7c32d67430c93de45f1fe8d61bbdbe8ac7c58c13e
+  session_id: cf_00
+  required_actor_status: SUCCESS
+  home_z_index: 195.0
+geometry:
+  label_resolution_mm: 1.5
+  ultrasound_image_size_pixels: [150, 200]
+  ultrasound_pixel_resolution_mm: 0.5
+  ultrasound_footprint_mm: [75.0, 100.0]
+  stage2_handoff_angle_rad: 2.85
+model:
+  bundle: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/stage2_models.joblib
+  bundle_sha256: 7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672
+  validity_probability_threshold: 0.5666666666666667
+  retraining: forbidden
+search:
+  coarse_x_offsets_index: [-14.0, -10.0, -6.0]
+  coarse_z_offsets_index: [-7.0, -3.0, 1.0]
+  coarse_angle_offsets_rad: [-0.10, 0.0, 0.10]
+  coarse_absolute_angles_rad: [2.75, 2.85, 2.95]
+  coarse_position_grid_shape: [3, 3]
+  coarse_angles_per_position: 3
+  coarse_translation_spacing_mm: [6.0, 6.0]
+  coarse_angle_spacing_rad: 0.1
+  coarse_traversal: serpentine
+  expected_coarse_observations: 27
+  require_nonzero_action_per_coarse_pose: true
+  require_producer_advance_per_coarse_pose: true
+  require_distinct_hash_per_coarse_pose: true
+  fine_offsets:
+    - [-1.0, 0.0, 0.0]
+    - [1.0, 0.0, 0.0]
+    - [0.0, -1.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, -0.04]
+    - [0.0, 0.0, 0.04]
+  micro_offsets:
+    - [-0.5, 0.0, 0.0]
+    - [0.5, 0.0, 0.0]
+    - [0.0, -0.5, 0.0]
+    - [0.0, 0.5, 0.0]
+    - [0.0, 0.0, -0.02]
+    - [0.0, 0.0, 0.02]
+  orientation_refinement:
+    offsets_deg: [-6.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0]
+    minimum_angle_rad: 2.70
+    maximum_angle_rad: 2.97
+    nominal_step_deg: 2.0
+    minimum_distinct_targets: 3
+    maximum_distinct_targets: 7
+    selection_inputs: [frozen_validity_probability, frozen_quality_prediction, executed_motion]
+    evaluator_coordinates: forbidden
+  confirmation_dither_offsets:
+    - [0.5, 0.0, 0.0]
+    - [-0.5, 0.0, 0.0]
+  required_fresh_confirmation_count: 2
+  maximum_search_observations_before_confirmation: 46
+decision:
+  validity_probability_threshold: 0.5666666666666667
+  maximum_neighbor_translation_mm: 4.5
+  maximum_neighbor_angle_deg: 6.0
+  maximum_quality_drop: 0.08
+  required_distinct_hash_observations: 3
+  minimum_distinct_view_translation_mm: 1.0
+  minimum_distinct_view_angle_deg: 1.0
+motion:
+  controller_ratio: [0.02, 0.02, 0.6]
+  ceiling_assisted_minimum_angle_rad: 2.98
+  controller_target_angle_rad: 3.14
+  allow_angle_ceiling_saturation: true
+  episode_length_s: 60.0
+  maximum_initial_positioning_steps: 300
+  maximum_steps_per_move: 150
+  maximum_total_action_steps: 3000
+  position_tolerance_mm: 5.0
+  orientation_tolerance_deg: 5.0
+  coarse_position_tolerance_mm: 1.0
+  coarse_orientation_tolerance_deg: 1.0
+  fine_position_tolerance_mm: 0.5
+  fine_orientation_tolerance_deg: 1.0
+  micro_position_tolerance_mm: 0.25
+  micro_orientation_tolerance_deg: 0.5
+  orientation_refinement_position_tolerance_mm: 0.5
+  orientation_refinement_orientation_tolerance_deg: 0.25
+  confirmation_position_tolerance_mm: 0.25
+confirmation_contract:
+  declared_dither_displacement_mm: 0.75
+  require_dither_greater_than_motion_tolerance: true
+  require_nonzero_outbound_action_steps: true
+  require_nonzero_return_action_steps: true
+  require_producer_advance: true
+  require_hash_distinct_from_selected_and_other_confirmations: true
+visualization:
+  record_robot_video: true
+  camera_eye_world_m: [1.8, -1.8, 1.6]
+  camera_target_world_m: [0.0, -0.35, 0.9]
+  framing_contract: full_available_patient_asset_plus_robot_and_probe
+  fps: 15
+  action_stride: 8
+execution:
+  session_id: s2active_orientation_refine_05_retry1
+  seed: 2026112100
+evaluation_gate:
+  minimum_supporting_viewpoints: 3
+  maximum_return_position_error_mm: 5.0
+  maximum_return_orientation_error_deg: 5.0
+  maximum_position_error_mm: 10.0
+  maximum_orientation_error_deg: 10.0
+  minimum_l4_visible_fraction: 0.20
+  require_actor_accept: true
+  require_two_fresh_confirmations: true
+  require_geometric_and_image_success: true
+information_boundary:
+  actor_allowed:
+    - sealed_phase1_actor_coordinate_and_declared_home
+    - clean_ultrasound_pixels
+    - frozen_image_validity_and_quality_predictions
+    - executed_relative_pose_and_action_feedback
+    - remembered_visited_pose_for_return
+    - declared_physical_orientation_limits
+  motion_only:
+    - robot_kinematics
+    - realized_probe_pose
+    - surface_contact_and_workspace
+  evaluator_only:
+    - goal_cmd_pose
+    - target_position_and_orientation_error
+    - raw_label_28
+    - l4_visible_fraction
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:20:00"
+  one_job_at_a_time: true
+  maximum_storage_growth_gb: 1.0
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_refinement_v6r1
+retry_policy: >-
+  This is the sole technical retry after job 51662670. No further retry is authorized. A
+  scientific DEVELOPMENT_NO_GO is final. All scientific, motion and evaluator parameters match V6.
+preserved_results:
+  V16: CONFIRMATION_NO_GO
+  V17: CONFIRMATION_NO_GO
+  V18: CONFIRMATION_NO_GO
+  temporal_replay: EXPLORATORY_NO_GO
+  active_acquisition_v3: DEVELOPMENT_PASS
+  active_grid_demo_v5: DEVELOPMENT_NO_GO
+  orientation_refinement_v6_job_51662670: TECHNICAL_FAIL_REPLAY_INDEX
+  FULL_STAGE2_CLOSED_LOOP: NOT_ESTABLISHED
