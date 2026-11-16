@@ -1,0 +1,133 @@
+{
+  "schema": "sonogym-stage2-temporal-replay-v1-result-v1",
+  "decision": "EXPLORATORY_NO_GO",
+  "source_commit": "ef7f5dba9b5c44097351d3ce110637d6859816f1",
+  "design_base_commit": "18979f7ef56e99ec94cb01663ef13d45ff9ba726",
+  "protocol_sha256": "f4e9cd385b4f1a83814c7b0ac2f5675ebd02dd3fd1511e4e830ea528f0a3fa28",
+  "model_bundle_sha256": "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672",
+  "historical_threshold": 0.5666666666666667,
+  "jobs": {
+    "technical_failure": {
+      "job_id": 51515957,
+      "state": "FAILED",
+      "exit_code": "1:0",
+      "elapsed": "00:00:11",
+      "interpretation": "Replay stopped before comparative metrics because valid zero-action records may keep producer_sequence unchanged. No scientific result was produced."
+    },
+    "completed_replay": {
+      "job_id": 51518820,
+      "account": "anest-dept",
+      "partition": "hpg-default",
+      "state": "COMPLETED",
+      "exit_code": "0:0",
+      "start": "2026-11-15T20:28:53-05:00",
+      "end": "2026-11-15T20:29:14-05:00",
+      "elapsed": "00:00:21",
+      "cpu_cores": 4,
+      "requested_memory": "16G",
+      "gpu_count": 0,
+      "replay_wall_seconds": 11.98,
+      "replay_maximum_resident_memory_kib": 352400,
+      "output_bytes_approximate": 1468006
+    }
+  },
+  "data": {
+    "patient_count": 1,
+    "patient_id": "s0010",
+    "source_count": 4,
+    "session_count": 18,
+    "trajectory_count": 144,
+    "frame_count": 1350,
+    "distinct_exact_hash_count_across_sources": 584,
+    "opened_confirmation_data": true
+  },
+  "tests": {
+    "temporal_decision": {
+      "passed": 19,
+      "failed": 0
+    },
+    "existing_stage2_regression": {
+      "passed": 34,
+      "failed": 0
+    },
+    "artifact_checksum_verification": "PASS",
+    "v18_files_modified": false
+  },
+  "frame_diagnostics": {
+    "true_positive": 726,
+    "false_positive": 21,
+    "false_negative": 52,
+    "true_negative": 551,
+    "precision": 0.9718875502008032,
+    "recall": 0.9331619537275064,
+    "quality_spearman": 0.8776610063439115,
+    "quality_mse": 0.0066272829147851365
+  },
+  "trajectory_policy_metrics": {
+    "baseline_a_single_frame": {
+      "accepted": 103,
+      "false_accepted": 3,
+      "abstained": 41,
+      "accepted_precision": 0.970873786407767,
+      "coverage": 0.7152777777777778
+    },
+    "baseline_b_quality_ranked_with_validity_gate": {
+      "accepted": 103,
+      "false_accepted": 2,
+      "abstained": 41,
+      "accepted_precision": 0.9805825242718447,
+      "coverage": 0.7152777777777778
+    },
+    "candidate_c_temporal": {
+      "accepted": 1,
+      "false_accepted": 0,
+      "abstained": 143,
+      "accepted_precision": 1.0,
+      "coverage": 0.006944444444444444
+    },
+    "candidate_d_multi_view": {
+      "accepted": 1,
+      "false_accepted": 0,
+      "abstained": 143,
+      "accepted_precision": 1.0,
+      "coverage": 0.006944444444444444
+    },
+    "diagnostic_quality_only": {
+      "accepted": 144,
+      "false_accepted": 37,
+      "abstained": 0,
+      "accepted_precision": 0.7430555555555556,
+      "coverage": 1.0
+    }
+  },
+  "scientific_gates": {
+    "D0_replay_integrity": "PASS",
+    "D1_causal_decision_validity": "PASS",
+    "D2_evidence_independence": "PASS",
+    "D3_diagnostic_improvement": "EXPLORATORY_NO_GO",
+    "D4_implementation_readiness": "PASS",
+    "D5_fresh_physical_confirmation": "NOT_RUN",
+    "D6_full_unity_equivalent_stage2": "NOT_RUN"
+  },
+  "preserved_verdicts": {
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO",
+    "FULL_STAGE2_CLOSED_LOOP": "NOT_RUN"
+  },
+  "artifacts": {
+    "output_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820",
+    "replay_report_sha256": "25425a26ecab863ff3f3cd44c3f475e2d0bad9a39c4469f9c48d83ad182c842a",
+    "trajectory_results_sha256": "f467162d51a3f4da11eae11c32265c7c5c16e93689204c4a8276bb882b844e32",
+    "frame_scores_sha256": "0dcd15ebc79e4ccd7cba32f1561aaa114e40617c50f7a61beae4ad456b62a346"
+  },
+  "boundary": {
+    "models_retrained_or_calibrated": false,
+    "threshold_changed": false,
+    "gpu_or_isaac_sim_used": false,
+    "v19_created_or_run": false,
+    "physical_return_to_best_tested": false,
+    "fresh_confirmation_tested": false,
+    "independent_confirmation_claimed": false
+  }
+}

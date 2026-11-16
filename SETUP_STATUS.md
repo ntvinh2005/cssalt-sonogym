@@ -1,8 +1,32 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO**
 
 Updated: 2026-11-15 (America/New_York)
+
+## Phase 5C Stage 2 temporal/multi-view CPU replay
+
+CPU job `51518820` completed `0:0` on `anest-dept` with four CPUs, 16 GB requested RAM, and
+zero GPUs. It causally replayed 1,350 opened frames from 18 sessions and 144 trajectories across
+V14 and V16--V18 using the unchanged V15 model bundle and historical V18 threshold. The focused
+suite passed 19 / 19 tests and the existing Stage 2 suite passed 34 / 34.
+
+The declared multi-view rule reduced false accepted candidates from 2 / 103 for quality-ranked
+validity-gated selection to 0 / 1, but accepted only 1 / 144 trajectories and abstained on
+143 / 144. It therefore received `EXPLORATORY_NO_GO`; zero errors at 0.6944% coverage is not a
+useful repair. Quality-guided validity-gated ranking remained useful (2 versus 3 false accepts at
+the same 103 / 144 coverage), while quality-only ranking was unsafe (37 / 144 false accepts).
+
+Replay integrity, causal information boundaries, evidence independence, and implementation
+readiness pass. Physical return-to-best, fresh post-return confirmation, and full coarse/fine/micro
+Stage 2 remain `NOT_RUN`. No GPU, V19, model fitting, threshold change, or simulator session was
+used. The next step requires explicit approval for one bounded development-only physical
+acquisition-contract pilot; it is not another confirmation retry.
+
+- Detailed report: `docs/research/sonogym_stage2_temporal_decision_replay.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_temporal_replay_v1_result.json`.
+- Successful CPU run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820/`.
+- Preserved technical failure: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51515957/`.
 
 ## Phase 5C Stage 2 final confirmation outcome
 
