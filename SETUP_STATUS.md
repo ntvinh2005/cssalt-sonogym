@@ -25,6 +25,7 @@ This is a fixed-anatomy engineering `DEVELOPMENT_PASS`, not V19 or independent g
 - Result manifest: `experiments/unity_two_stage_transfer/stage2_active_acquisition_pilot_v3_result.json`.
 - Run artifacts: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_active_acquisition_pilot_v3/51611658/`.
 - Demo: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658/`.
+- Review ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/sonogym_stage2_active_demo_20261116.zip` (SHA-256 `be9dd0d4ae20e89e9df6a6e1fc9607a87c510083e9e960e50bdef5b561fe9d4a`).
 
 ## Phase 5C Stage 2 active-acquisition development pilot
 

@@ -69,6 +69,7 @@ geometry appears only on the final frozen actor frame.
 |---|---|
 | video | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658/sonogym-stage2-active-acquisition-demo.mp4` |
 | final preview | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658/sonogym-stage2-active-acquisition-final.png` |
+| review ZIP | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/sonogym_stage2_active_demo_20261116.zip` |
 | selected candidate | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658/sonogym-stage2-selected-candidate.png` |
 | manifest | `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658/demo_manifest.json` |
 
@@ -76,6 +77,9 @@ Video SHA-256 is
 `d5b6e628d1d475447e0ded7d9b3986fb1766eb2f018019bebf18a9db522aba1e`. The video is a
 diagnostic rendering of observations and actor state; nonzero or visually plausible ultrasound
 pixels do not independently prove anatomical correctness.
+
+The ZIP passed `unzip -t` and has SHA-256
+`be9dd0d4ae20e89e9df6a6e1fc9607a87c510083e9e960e50bdef5b561fe9d4a`.
 
 ## Evidence boundary and next science
 
