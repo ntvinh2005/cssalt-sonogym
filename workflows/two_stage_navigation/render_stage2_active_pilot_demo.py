@@ -225,13 +225,16 @@ def render_frame(
 
     if index == len(rows) - 1:
         text(canvas, "ACTOR: ACCEPT", (535, 687), scale=0.55, color=(80, 235, 110), thickness=2)
+        evaluator_passed = evaluation["decision"] == "DEVELOPMENT_PASS"
+        evaluator_label = "PASS" if evaluator_passed else "NO_GO"
         text(
             canvas,
-            f"Evaluator-only after actor freeze: PASS  {evaluation['final_position_error_mm']:.2f} mm  "
+            f"Evaluator-only after actor freeze: {evaluator_label}  "
+            f"{evaluation['final_position_error_mm']:.2f} mm  "
             f"{evaluation['final_orientation_error_deg']:.2f} deg",
             (735, 687),
             scale=0.43,
-            color=(90, 210, 255),
+            color=(90, 210, 255) if evaluator_passed else (80, 170, 255),
         )
     else:
         text(
@@ -260,8 +263,11 @@ def main() -> int:
     evaluation_hash = validate_seal(evaluation_path)
     actor = read_json(actor_path)
     evaluation = read_json(evaluation_path)
-    if actor["outcome"] != "ACCEPT" or evaluation["decision"] != "DEVELOPMENT_PASS":
-        raise RuntimeError("refusing to render a non-passing development result")
+    if actor["outcome"] != "ACCEPT" or evaluation["decision"] not in {
+        "DEVELOPMENT_PASS",
+        "DEVELOPMENT_NO_GO",
+    }:
+        raise RuntimeError("renderer requires a completed actor ACCEPT development result")
 
     rows = read_jsonl(args.run_dir / "public" / "frames.jsonl")
     images = np.load(args.run_dir / "public" / "ultrasound.npz")["ultrasound"]
