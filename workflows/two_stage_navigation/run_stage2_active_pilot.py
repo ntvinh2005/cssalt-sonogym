@@ -203,9 +203,10 @@ def main() -> int:
         confirmation_position_tolerance = float(
             motion.get("confirmation_position_tolerance_mm", motion["position_tolerance_mm"])
         )
-        strict_confirmation_motion = (
-            protocol["protocol_id"] == "sonogym-stage2-active-acquisition-pilot-v2"
-        )
+        strict_confirmation_motion = protocol["protocol_id"] in {
+            "sonogym-stage2-active-acquisition-pilot-v2",
+            "sonogym-stage2-active-acquisition-pilot-v3",
+        }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(
                 search["confirmation_dither_offsets"],

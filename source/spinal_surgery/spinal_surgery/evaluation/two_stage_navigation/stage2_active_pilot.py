@@ -14,6 +14,7 @@ ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
     {
         "sonogym-stage2-active-acquisition-pilot-v1",
         "sonogym-stage2-active-acquisition-pilot-v2",
+        "sonogym-stage2-active-acquisition-pilot-v3",
     }
 )
 

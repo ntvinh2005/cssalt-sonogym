@@ -134,6 +134,7 @@ class ActivePilotTests(unittest.TestCase):
             {
                 "sonogym-stage2-active-acquisition-pilot-v1",
                 "sonogym-stage2-active-acquisition-pilot-v2",
+                "sonogym-stage2-active-acquisition-pilot-v3",
             },
         )
 

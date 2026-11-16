@@ -11,7 +11,7 @@ from typing import Any, Mapping
 
 import yaml
 
-from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (
+from two_stage_navigation.stage2_active_pilot import (
     ACTIVE_PILOT_PROTOCOL_IDS,
 )
 
