@@ -1,0 +1,105 @@
+{
+  "schema": "sonogym-stage2-contract-audit-v1-result-v1",
+  "decision": "OPTION_1_CONTRACT_CORRECTION_FIRST",
+  "source_commit": "5d34103e9f03fbc132a116381a3354a991bd1a38",
+  "protocol_sha256": "2487f0759609c60b0c2ad45cd1cc3862e68909e59ed535297fe9775fef9a0efb",
+  "job": {
+    "job_id": 51542236,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "start": "2026-11-16T00:11:50-05:00",
+    "end": "2026-11-16T00:12:02-05:00",
+    "elapsed": "00:00:12",
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "gpu_count": 0,
+    "audit_wall_seconds": 2.82,
+    "audit_maximum_resident_memory_kib": 108544,
+    "output_size": "1.1M"
+  },
+  "tests": {
+    "contract_diagnostic": {"passed": 7, "failed": 0},
+    "temporal_decision": {"passed": 19, "failed": 0},
+    "existing_stage2_regression": {"passed": 34, "failed": 0},
+    "artifact_checksums": "PASS",
+    "original_replay_reproduced": true,
+    "original_reproduction_mismatch_count": 0
+  },
+  "clamp_audit": {
+    "total_frames": 1350,
+    "no_clamp_frames": 1035,
+    "angle_only_clamp_frames": 315,
+    "position_only_clamp_frames": 0,
+    "both_position_and_angle_clamp_frames": 0,
+    "unaccepted_or_incomplete_frames": 0,
+    "accepted_angle_only_rejected_by_original_frames": 315,
+    "accepted_angle_only_rejected_by_original_distinct_source_hashes": 315,
+    "explicit_ceiling_limited_capture_frames": 2,
+    "trajectories_with_potentially_useful_clamp_rejected_evidence": 107
+  },
+  "freshness_audit": {
+    "nonadvancing_producer_frames": 766,
+    "nonadvancing_zero_action_frames": 766,
+    "nonadvancing_zero_movement_frames": 766,
+    "nonadvancing_identical_previous_hash_frames": 766,
+    "nonadvancing_nonzero_movement_frames": 0,
+    "fresh_same_pose_frames": 0,
+    "fresh_same_pose_distinct_hash_frames": 0,
+    "ten_frame_trajectories": 126,
+    "five_frame_trajectories": 18
+  },
+  "original_frozen": {
+    "temporal_accepts": 1,
+    "multi_view_accepts": 1,
+    "multi_view_false_accepts": 0,
+    "multi_view_coverage": 0.006944444444444444
+  },
+  "clamp_consistent_diagnostic": {
+    "temporal_accepts": 38,
+    "temporal_false_accepts": 0,
+    "multi_view_accepts": 31,
+    "multi_view_false_accepts": 0,
+    "multi_view_coverage": 0.2152777777777778,
+    "multi_view_accepts_by_source": {
+      "v14_development": 12,
+      "v16_confirmation_opened": 5,
+      "v17_confirmation_opened": 6,
+      "v18_confirmation_opened": 8
+    },
+    "opened_data_only": true,
+    "independent_confirmation": false
+  },
+  "materiality": {
+    "multi_view_absolute_accept_increase": 30,
+    "multi_view_coverage_percentage_point_increase": 20.833333333333336,
+    "prior_d3_half_baseline_minimum_accept_count": 52,
+    "prior_d3_count_condition_met": false,
+    "minimum_sources_with_acceptance": 3,
+    "sources_with_acceptance": 4,
+    "source_condition_met": true,
+    "interpretation": "The mismatch materially caused the 1/144 collapse but its diagnostic correction does not restore the previously declared minimum useful coverage. Correct the contract before any GPU work, then address active acquisition."
+  },
+  "preserved_results": {
+    "temporal_replay": "EXPLORATORY_NO_GO",
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO",
+    "FULL_STAGE2_CLOSED_LOOP": "NOT_RUN"
+  },
+  "artifacts": {
+    "output_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_audit_v1/51542236",
+    "contract_audit_report_sha256": "4fdcde17e9e0c0082e2c55391b377e25a8d6a42067167e0f294819fe6661f57a",
+    "trajectory_contract_diagnostics_sha256": "2e4bd8f73412a6703924e3d09506f4adbf4223fc8b189e880370fd1e087ad536",
+    "frame_clamp_audit_sha256": "6626d861db77c83de95088b33b80b4c91f20e931a70a081ec8acb0a5a1c13d9e"
+  },
+  "boundary": {
+    "deployed_actor_modified": false,
+    "model_or_threshold_modified": false,
+    "gpu_or_isaac_sim_used": false,
+    "new_capture_created": false,
+    "v19_created": false,
+    "follow_up_implemented": false
+  }
+}

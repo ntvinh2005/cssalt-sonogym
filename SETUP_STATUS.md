@@ -1,8 +1,32 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_AUDIT_OPTION_1**
 
-Updated: 2026-11-15 (America/New_York)
+Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 movement-contract audit
+
+CPU job `51542236` completed `0:0` on `anest-dept` with four CPUs, 16 GB requested RAM, and
+zero GPUs. It reproduced the frozen `1 / 144` replay exactly, then confirmed that the collector
+accepted 315 angle-only-clamped frames which replay rejected through the combined
+`action_clamped` flag. No position-clamped, rejected, incomplete, mapping-invalid, unsafe, or
+nonfinite frame was admitted.
+
+The narrow collector-consistent diagnostic increased temporal accepts from 1 / 144 to 38 / 144
+and multi-view accepts from 1 / 144 to 31 / 144, with zero false accepts on the opened data and
+acceptance in all four sources. This is a material root-cause effect but remains below the prior
+52-accept usefulness reference, so `EXPLORATORY_NO_GO` is unchanged. The required next action is
+Option 1: review and implement the narrow contract correction, then rerun opened CPU replay before
+any active-acquisition GPU pilot.
+
+The remaining data limitation is also demonstrated: 766 frames were unchanged-producer,
+zero-action, zero-motion, identical-hash duplicates; no existing frame is a fresh same-pose
+acquisition. The 144 trajectories are reset-separated 10/5-frame grid segments, not a continuous
+Unity-style active search.
+
+- Detailed report: `docs/research/sonogym_stage2_contract_audit.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_contract_audit_v1_result.json`.
+- External artifacts: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_audit_v1/51542236/`.
 
 ## Phase 5C Stage 2 temporal/multi-view CPU replay
 
