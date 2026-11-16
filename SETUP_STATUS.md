@@ -1,8 +1,32 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_AUDIT_OPTION_1**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 contract-corrected CPU replay
+
+CPU job `51550463` completed `0:0` on `anest-dept` with four CPUs, 16 GB requested RAM, and
+zero GPUs. The replay promoted the audited angle-ceiling exception into the explicit movement
+contract while retaining the original frozen behavior as the default. All 64 tests passed and
+the original replay had zero decision mismatches.
+
+On the same opened 1,350 frames and 144 trajectories, the explicit contract reproduced 38
+temporal accepts and 31 multi-view accepts with zero false accepts. Acceptance occurred in all
+four capture sources, but 31 remains below the unchanged 52-accept usefulness condition.
+The result therefore remains `EXPLORATORY_NO_GO`; no model, threshold, observation, GPU capture,
+V19 protocol, or simulator run was added.
+
+Job `51550144` is retained as a 10-second technical failure after all tests passed. Its source
+count assertion referenced the wrong output key; commit `72deeb8` corrected that one-line error
+without changing the sealed protocol or scientific parameters.
+
+- Detailed report: `docs/research/sonogym_stage2_contract_corrected_replay.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_contract_corrected_replay_v1_result.json`.
+- Successful artifacts: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_corrected_replay_v1/51550463/`.
+- Preserved failed run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_corrected_replay_v1/51550144/`.
+- Next approval: one bounded development-only continuous active-acquisition pilot; full Stage 2
+  closed loop remains `NOT_RUN`.
 
 ## Phase 5C Stage 2 movement-contract audit
 

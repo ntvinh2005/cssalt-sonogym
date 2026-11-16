@@ -1,0 +1,91 @@
+{
+  "schema": "sonogym-stage2-contract-corrected-replay-v1-result-v1",
+  "decision": "EXPLORATORY_NO_GO",
+  "contract_correction_reproduced": true,
+  "source_commit": "72deeb82c26b4324af5d5bef8e52b9acd00da99c",
+  "protocol_sha256": "6bf15d9bee4b13dc40fe0801792afdb72220c5a5a003e02772e49762b463452f",
+  "successful_job": {
+    "job_id": 51550463,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "start": "2026-11-16T01:25:09-05:00",
+    "end": "2026-11-16T01:25:19-05:00",
+    "elapsed": "00:00:10",
+    "cpu_cores": 4,
+    "requested_memory": "16G",
+    "gpu_count": 0,
+    "replay_wall_seconds": 1.82,
+    "replay_maximum_resident_memory_kib": 60416,
+    "output_size": "220K"
+  },
+  "technical_failure": {
+    "job_id": 51550144,
+    "state": "FAILED",
+    "exit_code": "1:0",
+    "elapsed": "00:00:10",
+    "cause": "source-count assertion used accepted_candidate_count instead of accepted_trajectory_count",
+    "fix_commit": "72deeb82c26b4324af5d5bef8e52b9acd00da99c",
+    "output_size": "100K"
+  },
+  "tests": {
+    "temporal_decision": {"passed": 23, "failed": 0},
+    "contract_diagnostic": {"passed": 7, "failed": 0},
+    "existing_stage2_regression": {"passed": 34, "failed": 0},
+    "artifact_checksums": "PASS",
+    "original_reproduction_mismatch_count": 0
+  },
+  "data": {
+    "frames": 1350,
+    "trajectories": 144,
+    "patient_anatomies": 1,
+    "opened_data_only": true
+  },
+  "temporal": {
+    "accepted_trajectories": 38,
+    "abstained_trajectories": 106,
+    "false_accepts": 0,
+    "acceptance_coverage": 0.2638888888888889
+  },
+  "multi_view": {
+    "accepted_trajectories": 31,
+    "abstained_trajectories": 113,
+    "false_accepts": 0,
+    "acceptance_coverage": 0.2152777777777778,
+    "accepts_by_source": {
+      "v14_development": 12,
+      "v16_confirmation_opened": 5,
+      "v17_confirmation_opened": 6,
+      "v18_confirmation_opened": 8
+    }
+  },
+  "interpretation": {
+    "minimum_useful_multi_view_accept_count": 52,
+    "count_condition_met": false,
+    "sources_with_acceptance": 4,
+    "minimum_sources_with_acceptance": 3,
+    "source_condition_met": true,
+    "next_step": "request approval for one bounded development-only continuous active-acquisition pilot"
+  },
+  "preserved_results": {
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO",
+    "temporal_replay": "EXPLORATORY_NO_GO",
+    "FULL_STAGE2_CLOSED_LOOP": "NOT_RUN"
+  },
+  "artifacts": {
+    "output_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_corrected_replay_v1/51550463",
+    "replay_report_sha256": "e83b7a333517b8938d42d09b892b46175948fd5aebbb166ae858850757c58fb3",
+    "trajectory_results_sha256": "c0d2be516305eac9de57971acf05f886202abc27daa4b7db16c759a1ae8bc588"
+  },
+  "boundary": {
+    "model_retrained": false,
+    "decision_parameters_changed": false,
+    "gpu_or_isaac_sim_used": false,
+    "new_capture_created": false,
+    "v19_created": false,
+    "active_acquisition_pilot_started": false
+  }
+}
