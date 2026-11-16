@@ -67,6 +67,7 @@ class ReplayObservation:
     quality: float
     transition_valid: bool
     image_valid: bool
+    producer_advanced: bool
 
     def __post_init__(self) -> None:
         if not self.session_id or not self.trajectory_id:
@@ -103,6 +104,7 @@ class ReplayObservation:
         relative_pose: tuple[float, float, float],
         validity_probability: float,
         quality: float,
+        producer_advanced: bool,
     ) -> "ReplayObservation":
         """Construct one replay observation after a fail-closed leakage check."""
         assert_no_privileged_fields(record)
@@ -125,6 +127,7 @@ class ReplayObservation:
             quality=float(quality),
             transition_valid=transition_valid,
             image_valid=bool(record["image_valid"]),
+            producer_advanced=bool(producer_advanced),
         )
 
 
@@ -195,11 +198,11 @@ def _validate_sequence(observations: Sequence[ReplayObservation]) -> None:
         )
     if any(
         current.frame_sequence <= previous.frame_sequence
-        or current.producer_sequence <= previous.producer_sequence
+        or current.producer_sequence < previous.producer_sequence
         for previous, current in zip(observations, observations[1:])
     ):
         raise ValueError(
-            "frame and producer sequences must increase within a trajectory"
+            "frame sequence must increase and producer sequence cannot decrease"
         )
 
 
@@ -216,6 +219,7 @@ def reconstruct_trajectory_observations(
     x_mm = 0.0
     z_mm = 0.0
     angle_rad = 0.0
+    previous_producer_sequence: int | None = None
     observations: list[ReplayObservation] = []
     for record, probability, quality in zip(
         actor_records, validity_probabilities, quality_predictions
@@ -236,8 +240,13 @@ def reconstruct_trajectory_observations(
                 relative_pose=(x_mm, z_mm, angle_rad),
                 validity_probability=float(probability),
                 quality=float(quality),
+                producer_advanced=(
+                    previous_producer_sequence is None
+                    or int(record["producer_sequence"]) > previous_producer_sequence
+                ),
             )
         )
+        previous_producer_sequence = int(record["producer_sequence"])
     _validate_sequence(observations)
     return tuple(observations)
 
@@ -271,12 +280,13 @@ def _evidence_for_candidate(
     *,
     require_distinct_viewpoints: bool,
 ) -> CandidateEvidence | None:
-    if not _classifier_accepted(candidate, config):
+    if not candidate.producer_advanced or not _classifier_accepted(candidate, config):
         return None
     eligible = [
         row
         for row in observations
-        if _classifier_accepted(row, config)
+        if row.producer_advanced
+        and _classifier_accepted(row, config)
         and _in_candidate_neighborhood(candidate, row, config)
         and row.quality >= candidate.quality - config.maximum_quality_drop
     ]
@@ -413,6 +423,7 @@ def fresh_confirmation_passes_distinct(
     if any(
         row.session_id != remembered.session_id
         or row.frame_sequence <= remembered.frame_sequence
+        or row.producer_sequence <= remembered.producer_sequence
         for row in rows
     ):
         return False

@@ -50,6 +50,7 @@ def observation(
     quality: float = 0.8,
     transition_valid: bool = True,
     image_valid: bool = True,
+    producer_advanced: bool = True,
     session_id: str = "session",
     trajectory_id: str = "trajectory",
 ) -> ReplayObservation:
@@ -65,6 +66,7 @@ def observation(
         quality=quality,
         transition_valid=transition_valid,
         image_valid=image_valid,
+        producer_advanced=producer_advanced,
     )
 
 
@@ -206,6 +208,17 @@ class TemporalEvidenceTests(unittest.TestCase):
         decision = replay_decision(rows, policy="candidate_c_temporal", config=config())
         self.assertEqual(decision.state, DecisionState.ABSTAIN)
 
+    def test_nonadvancing_producer_sequence_cannot_supply_temporal_evidence(
+        self
+    ) -> None:
+        rows = [
+            observation(0),
+            observation(1, producer_advanced=False),
+            observation(2, producer_advanced=False),
+        ]
+        decision = replay_decision(rows, policy="candidate_c_temporal", config=config())
+        self.assertEqual(decision.state, DecisionState.ABSTAIN)
+
 
 class RecordIntegrityTests(unittest.TestCase):
     def test_relative_pose_is_reconstructed_from_executed_motion(self) -> None:
@@ -213,6 +226,13 @@ class RecordIntegrityTests(unittest.TestCase):
         observations = reconstruct_trajectory_observations(rows, [0.9, 0.8], [0.7, 0.6])
         self.assertEqual(observations[0].relative_pose[:2], (1.5, 0.0))
         self.assertEqual(observations[1].relative_pose[:2], (1.0, 2.0))
+
+    def test_equal_producer_sequence_is_recorded_as_not_advanced(self) -> None:
+        rows = [actor_record(0), actor_record(1)]
+        rows[1]["producer_sequence"] = rows[0]["producer_sequence"]
+        observations = reconstruct_trajectory_observations(rows, [0.9, 0.9], [0.8, 0.8])
+        self.assertTrue(observations[0].producer_advanced)
+        self.assertFalse(observations[1].producer_advanced)
 
     def test_mixed_trajectory_records_are_rejected(self) -> None:
         rows = [actor_record(0), actor_record(1, trajectory_id="other")]

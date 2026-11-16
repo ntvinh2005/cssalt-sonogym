@@ -1,5 +1,20 @@
 protocol_id: sonogym-stage2-temporal-replay-v1
 status: PRE_REPLAY_FROZEN
+technical_amendment:
+  evidence_job: 51515957
+  reason: >-
+    The first replay stopped before comparative metrics because producer_sequence can remain equal
+    when an already-reached waypoint requires zero simulator action steps. Equality is therefore
+    recorded as a non-advancing observation rather than treated as corrupt ordering. Such a frame
+    remains available to historical single-frame baselines but cannot provide temporal or
+    multi-view support. Decreasing producer_sequence remains invalid.
+  scientific_design_unchanged:
+    - frozen_models_and_threshold
+    - dataset_sources
+    - candidate_neighborhood_and_view_separation
+    - required_hash_count_and_quality_drop
+    - evaluation_targets_and_d3_conditions
+    - resource_boundaries
 purpose: >-
   Explore whether causal temporal and physically distinct multi-view evidence improves Stage 2
   candidate selection on opened fixed-s0010 captures. This is CPU-only replay, not independent
@@ -55,7 +70,9 @@ replay_integrity:
   require_public_privileged_identity_join: true
   require_canonical_image_hash: true
   require_monotonic_frame_sequence_within_session: true
-  require_monotonic_trajectory_frame_and_producer_sequence: true
+  require_increasing_trajectory_frame_sequence: true
+  require_nondecreasing_producer_sequence: true
+  require_producer_advance_for_temporal_or_multi_view_support: true
   reset_boundary_source: trajectory_id_and_zero_trajectory_frame_sequence
   forbid_cross_trajectory_evidence: true
   relative_pose_reconstruction: cumulative_executed_delta_within_trajectory_only

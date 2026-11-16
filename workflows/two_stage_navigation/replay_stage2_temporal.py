@@ -496,8 +496,16 @@ def main() -> int:
 
             trajectory_groups = _trajectory_groups(public)
             relative_pose_count = 0
+            nonadvancing_producer_frame_count = 0
             for trajectory_id, indexes in trajectory_groups:
                 actor_rows = [public[index] for index in indexes]
+                nonadvancing_producer_frame_count += sum(
+                    int(
+                        int(current["producer_sequence"])
+                        == int(previous["producer_sequence"])
+                    )
+                    for previous, current in zip(actor_rows, actor_rows[1:])
+                )
                 trajectory_probabilities = [
                     float(probabilities[index]) for index in indexes
                 ]
@@ -603,6 +611,7 @@ def main() -> int:
                         len(group) for group in near_groups
                     ),
                     "distinct_reconstructed_relative_pose_count": relative_pose_count,
+                    "nonadvancing_producer_frame_count": nonadvancing_producer_frame_count,
                     "accepted_transition_frame_count": sum(
                         int(row["action_accepted"] and row["action_completed"])
                         for row in public
