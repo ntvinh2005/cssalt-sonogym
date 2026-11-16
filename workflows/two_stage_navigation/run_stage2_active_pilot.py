@@ -302,6 +302,7 @@ def main() -> int:
             "sonogym-stage2-active-acquisition-pilot-v3",
             "sonogym-stage2-active-acquisition-grid-demo-v4",
             "sonogym-stage2-active-acquisition-grid-demo-v4r1",
+            "sonogym-stage2-active-acquisition-grid-demo-v5",
         }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(
@@ -629,6 +630,14 @@ def main() -> int:
         write_json(output / "summary.json", summary)
         if action_rows and not (privileged_dir / "actions.jsonl").exists():
             write_jsonl(privileged_dir / "actions_partial.jsonl", action_rows)
+        if public_rows and not (public_dir / "frames.jsonl").exists():
+            write_jsonl(public_dir / "frames_partial.jsonl", public_rows)
+        if images and not (public_dir / "ultrasound.npz").exists():
+            public_dir.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                public_dir / "ultrasound_partial.npz",
+                ultrasound=np.stack(images),
+            )
 
 
 if __name__ == "__main__":
