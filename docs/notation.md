@@ -14,6 +14,72 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It acquires the best acceptable view near an inferred anatomical target while keeping learned perception separate from physical search.
 - **Source:** Thoracic-US-Coach-Standalone commit f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0, approved by user, 2026-11-12.
 
+### Stage 2 candidate memory
+- **Kind:** object
+- **Definition:** Actor-side causal records of physically observed candidate views containing only executed relative pose, frame identity, frozen image-model predictions, action feedback, and supporting-observation identities from the active trajectory.
+- **Intuition:** It retains evidence needed for selection without storing evaluator labels or target coordinates.
+- **Source:** approved by user, 2026-11-15.
+
+### Stage 2 temporal evidence
+- **Kind:** method
+- **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.
+- **Intuition:** It tests prediction stability over acquired observations but does not by itself establish different physical viewpoints.
+- **Source:** approved by user, 2026-11-15.
+
+### Stage 2 multi-view evidence
+- **Kind:** method
+- **Definition:** Stage 2 temporal evidence whose counted observations are pairwise separated by the protocol-defined executed relative translation or rotation.
+- **Intuition:** It requires physically different observed viewpoints while making no claim that their model errors are statistically independent.
+- **Source:** approved by user, 2026-11-15.
+
+### Stage 2 fresh confirmation
+- **Kind:** method
+- **Definition:** Ultrasound observations acquired after verified physical return to a remembered candidate, with increasing acquisition identity, distinct frame hashes, valid motion and technical feedback, and predictions consistent with the remembered view.
+- **Intuition:** It verifies reacquisition and same-pose repeatability separately from nearby multi-view corroboration.
+- **Source:** approved by user, 2026-11-15.
+
+### D0
+- **Kind:** metric
+- **Definition:** Passes when replay observations, frame identities, frozen predictions, trajectory boundaries, and executed relative motion can be reconstructed without joining evidence across resets.
+- **Intuition:** It checks replay integrity before decision performance is interpreted.
+- **Source:** approved by user, 2026-11-15.
+
+### D1
+- **Kind:** metric
+- **Definition:** Passes when every replay decision uses only actor-allowed fields available by the current causal step.
+- **Intuition:** It prevents evaluator leakage and future-frame access.
+- **Source:** approved by user, 2026-11-15.
+
+### D2
+- **Kind:** metric
+- **Definition:** Passes when tested decision logic distinguishes duplicate same-view observations, distinct hashes at one pose, invalid motion, reset boundaries, and physically different viewpoints.
+- **Intuition:** It checks that repeated records cannot masquerade as independent physical evidence.
+- **Source:** approved by user, 2026-11-15.
+
+### D3
+- **Kind:** metric
+- **Definition:** An exploratory classification of whether Stage 2 multi-view evidence reduces false accepted candidates relative to frozen quality-ranked selection while retaining the protocol-defined minimum acceptance coverage on opened datasets.
+- **Intuition:** It determines whether a new independent physical experiment is justified, not whether Stage 2 is validated.
+- **Source:** approved by user, 2026-11-15.
+
+### D4
+- **Kind:** metric
+- **Definition:** Passes when the isolated decision implementation is deterministic, information-boundary tested, regression tested, and specified sufficiently for later controller integration.
+- **Intuition:** It establishes engineering readiness without claiming live execution.
+- **Source:** approved by user, 2026-11-15.
+
+### D5
+- **Kind:** metric
+- **Definition:** Passes only after a separately authorized physical return-to-best and Stage 2 fresh confirmation experiment in SonoGym.
+- **Intuition:** CPU replay cannot satisfy this gate.
+- **Source:** approved by user, 2026-11-15.
+
+### D6
+- **Kind:** metric
+- **Definition:** Passes only after coarse, fine, and micro physical search, return-to-best, Stage 2 fresh confirmation, and independent evaluation all complete under a frozen protocol.
+- **Intuition:** It is the full Unity Stage 2 equivalent and remains distinct from replay implementation readiness.
+- **Source:** approved by user, 2026-11-15.
+
 ### Shared anatomical-structure detector
 - **Kind:** method
 - **Definition:** A binary ExtraTrees classifier fitted on normalized intensity and gradient features from tracked-interface-centred ultrasound patches, with positive offline labels requiring Group A raw-identity overlap in the corresponding patch.

@@ -1,0 +1,137 @@
+protocol_id: sonogym-stage2-temporal-replay-v1
+status: PRE_REPLAY_FROZEN
+purpose: >-
+  Explore whether causal temporal and physically distinct multi-view evidence improves Stage 2
+  candidate selection on opened fixed-s0010 captures. This is CPU-only replay, not independent
+  confirmation, return-to-best execution, fresh confirmation, V19, or full closed-loop Stage 2.
+source:
+  design_commit: 18979f7ef56e99ec94cb01663ef13d45ff9ba726
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+  frozen_model_bundle: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_development_v15/51380423/results/stage2_models.joblib
+  frozen_model_bundle_sha256: 7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672
+  v18_historical_threshold: 0.5666666666666667
+datasets:
+  - name: v14_development
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943
+    capture_summary_sha256: 5b1498c458f632cd255244b6750659e4cdb6af53b19884741707e4ed3b2fe285
+    opened_status: development_and_calibration_data
+  - name: v16_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v16/51387027
+    capture_summary_sha256: 6b2802f77b29d7a47708916b563bbe03ffafba9690c1833c2c1d46dc79bf252a
+    opened_status: confirmation_no_go_opened_for_diagnosis
+  - name: v17_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v17/51400282
+    capture_summary_sha256: 4df533ad249b16c70156d4068a255390063e0948cd6dadceec3dae91ee79246e
+    opened_status: confirmation_no_go_opened_for_diagnosis
+  - name: v18_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v18/51402759
+    capture_summary_sha256: 5937bd65da7df1df723877f8e371e3b6d7a18194d5b3a5e02073e5fcb6e2b863
+    opened_status: confirmation_no_go_opened_for_diagnosis
+information_boundaries:
+  actor_allowed:
+    - clean_ultrasound_pixels
+    - frozen_validity_probability
+    - frozen_quality_prediction
+    - frame_and_producer_sequence
+    - frame_sha256
+    - trajectory_identity
+    - actually_executed_relative_translation_and_rotation
+    - action_acceptance_completion_and_clamp_feedback
+    - contact_workspace_and_image_validity_feedback
+    - causal_candidate_memory
+  actor_forbidden:
+    - patient_id
+    - raw_labels
+    - segmentation
+    - command_or_realized_absolute_pose
+    - requested_waypoint_or_goal_pose
+    - position_or_orientation_error_to_target
+    - l4_visible_fraction
+    - validity_or_quality_labels
+    - evaluator_score
+    - future_frames
+replay_integrity:
+  require_public_privileged_identity_join: true
+  require_canonical_image_hash: true
+  require_monotonic_frame_sequence_within_session: true
+  require_monotonic_trajectory_frame_and_producer_sequence: true
+  reset_boundary_source: trajectory_id_and_zero_trajectory_frame_sequence
+  forbid_cross_trajectory_evidence: true
+  relative_pose_reconstruction: cumulative_executed_delta_within_trajectory_only
+  near_duplicate_audit:
+    downsample_shape: [20, 15]
+    normalized_pixel_rmse_maximum: 0.01
+    note: diagnostic_only_not_actor_evidence
+decision_rules:
+  validity_probability_threshold: 0.5666666666666667
+  maximum_neighbor_translation_mm: 4.5
+  maximum_neighbor_angle_deg: 6.0
+  maximum_quality_drop: 0.08
+  required_distinct_hash_observations: 3
+  minimum_distinct_view_translation_mm: 1.0
+  minimum_distinct_view_angle_deg: 1.0
+  selection_time: after_last_recorded_frame_in_each_trajectory
+  tie_break_order: [quality_descending, validity_probability_descending, frame_sequence_ascending]
+  policies:
+    baseline_a_single_frame:
+      rule: first_physically_admissible_frame_at_or_above_historical_threshold
+    baseline_b_quality_ranked:
+      rule: highest_predicted_quality_among_physically_admissible_threshold_accepted_frames
+    candidate_c_temporal:
+      rule: >-
+        Highest-quality threshold-accepted candidate with three distinct hashes from the same
+        causal trajectory inside the declared neighborhood, each threshold-accepted and no more
+        than 0.08 below candidate predicted quality. Physical viewpoint separation is not required.
+    candidate_d_multi_view:
+      rule: >-
+        Candidate C plus three pairwise distinct physical viewpoints, where every accepted pair is
+        separated by at least 1.0 mm translation or 1.0 degree rotation using executed motion.
+    diagnostic_quality_only:
+      rule: highest_predicted_quality_physically_admissible_frame_without_stop_authority
+evaluation:
+  evaluator_join_after_actor_decision: true
+  primary_target: offline_l4_image_visibility_target
+  separate_secondary_target: frozen_10mm_10degree_geometric_evaluator_validity
+  frame_metrics_context_only: true
+  trajectory_metrics:
+    - accepted_candidate_count
+    - false_accepted_candidate_count
+    - correct_selected_candidate_count
+    - incorrect_selected_candidate_count
+    - abstention_count
+    - accepted_candidate_precision
+    - acceptance_coverage
+    - decision_latency_observed_frames
+    - distinct_supporting_hashes
+    - distinct_supporting_viewpoints
+  exploratory_d3_promising_when:
+    - candidate_d_false_accepts_less_than_baseline_b
+    - candidate_d_acceptance_count_at_least_half_baseline_b
+    - candidate_d_false_accepts_not_higher_than_baseline_b_in_any_dataset_source
+    - candidate_d_accepts_at_least_one_candidate_in_three_dataset_sources
+  interpretation: >-
+    D3 is exploratory because every dataset is opened. Passing these conditions only supports
+    proposing a separately reviewed future protocol; it is not independent confirmation.
+scientific_gates:
+  D0: replay_integrity_must_pass_or_affected_source_is_excluded_with_reason
+  D1: actor_decisions_use_only_causally_available_allowed_fields
+  D2: duplicate_same_pose_invalid_motion_reset_and_cross_trajectory_tests_must_pass
+  D3: report_exploratory_conditions_without_relabeling_opened_data_as_confirmation
+  D4: pure_deterministic_logic_and_required_tests_must_pass
+  D5: NOT_RUN_requires_separate_gpu_authorization
+  D6: NOT_RUN_requires_full_closed_loop_execution_and_independent_evaluation
+resource_bound:
+  account: anest-dept
+  gpu_count: 0
+  cpu_cores: 4
+  memory: 16gb
+  walltime: "00:30:00"
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1
+change_policy:
+  - Do not fit, retrain, calibrate or modify either frozen model.
+  - Do not alter V16, V17, V18 protocols, thresholds, results or verdicts.
+  - Do not sweep or select replay-rule parameters after opening comparative results.
+  - Do not synthesize frames or connect evidence across trajectory reset boundaries.
+  - Do not launch GPU work, Isaac Sim, V19 or live closed-loop execution.
+  - Preserve every declared replay policy result, including negative and abstaining outcomes.
