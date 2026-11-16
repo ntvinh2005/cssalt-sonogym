@@ -38,6 +38,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It verifies reacquisition and same-pose repeatability separately from nearby multi-view corroboration.
 - **Source:** approved by user, 2026-11-15.
 
+### Stage 2 abstention waterfall
+- **Kind:** metric
+- **Definition:** A fixed-order count of the same trajectory population remaining after each declared observation, movement, neighborhood, quality, hash-diversity, viewpoint-diversity, and decision requirement; every stage retains the original trajectory count as its reporting denominator.
+- **Intuition:** It localizes where evidence disappears without hiding losses through denominator changes.
+- **Source:** approved by user, 2026-11-15.
+
+### Clamp-consistent diagnostic
+- **Kind:** method
+- **Definition:** An opened-data Stage 2 replay arm that preserves the frozen observations, model predictions, threshold, neighborhood, quality, freshness, and viewpoint requirements, but admits an angle-only clamped frame only when its frozen acquisition protocol explicitly allowed ceiling-limited capture and its complete action record remains finite, mapping-valid, surface-valid, nonterminal, nontruncated, and position-unclamped.
+- **Intuition:** It measures the narrow collector-versus-replay contract mismatch without creating a global rule that ignores angular clamps.
+- **Source:** approved by user, 2026-11-15.
+
 ### D0
 - **Kind:** metric
 - **Definition:** Passes when replay observations, frame identities, frozen predictions, trajectory boundaries, and executed relative motion can be reconstructed without joining evidence across resets.

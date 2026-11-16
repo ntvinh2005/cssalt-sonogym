@@ -1,0 +1,109 @@
+protocol_id: sonogym-stage2-contract-audit-v1
+status: PRE_AUDIT_FROZEN
+purpose: >-
+  Diagnose the 1/144 Stage 2 temporal and multi-view replay acceptance without changing its
+  frozen result. Quantify the combined-clamp mismatch, the abstention waterfall, and whether a
+  narrow acquisition-protocol-consistent angle-ceiling diagnostic materially restores coverage.
+source_commit: 66431ba2a21c22a33dedc5a324d32f75b9bb453b
+unity_reference_commit: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+prior_replay:
+  job_id: 51518820
+  root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820
+  frame_scores: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820/results/frame_scores.csv
+  frame_scores_sha256: 0dcd15ebc79e4ccd7cba32f1561aaa114e40617c50f7a61beae4ad456b62a346
+  trajectory_results: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820/results/trajectory_results.jsonl
+  trajectory_results_sha256: f467162d51a3f4da11eae11c32265c7c5c16e93689204c4a8276bb882b844e32
+  frozen_decision: EXPLORATORY_NO_GO
+datasets:
+  - name: v14_development
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943
+    capture_summary_sha256: 5b1498c458f632cd255244b6750659e4cdb6af53b19884741707e4ed3b2fe285
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_dataset_protocol_v14.yaml
+    capture_protocol_sha256: 3525f4223133adb8235d438ab9cec0a1b5d26d13740f0c4aef889c0b84588ab8
+  - name: v16_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v16/51387027
+    capture_summary_sha256: 6b2802f77b29d7a47708916b563bbe03ffafba9690c1833c2c1d46dc79bf252a
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v16.yaml
+    capture_protocol_sha256: bbb9ebfd2a84087f70cdb971a09f91ae1a37f3c8d6a2eccf6bfe136605742bc0
+  - name: v17_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v17/51400282
+    capture_summary_sha256: 4df533ad249b16c70156d4068a255390063e0948cd6dadceec3dae91ee79246e
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v17.yaml
+    capture_protocol_sha256: 79e5fe83ff3f99eff199d7f4e4e401fe2b67aa6784ab54caeae351995dc46318
+  - name: v18_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v18/51402759
+    capture_summary_sha256: 5937bd65da7df1df723877f8e371e3b6d7a18194d5b3a5e02073e5fcb6e2b863
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v18.yaml
+    capture_protocol_sha256: 5bce5bca1c8942aa6a2b7ccd63823bc34cc98cecf1a215f1c3eb51566abf1143
+movement_contracts:
+  original_frozen: >-
+    Require action accepted and completed, contact and workspace valid, and reject every combined
+    action_clamped record exactly as job 51518820 did.
+  clamp_consistent_diagnostic: >-
+    Preserve every original requirement. Additionally admit an angle-only clamped frame only when
+    its source capture protocol explicitly enabled angle-ceiling samples, the public frame was
+    accepted and completed, position clamp is false, motion is finite, and every recorded action
+    is mapping-valid, surface-valid, nonterminal, nontruncated, and position-unclamped. This is a
+    source-specific opened-data diagnostic, not a deployed global ignore-angle-clamp rule.
+decision_rules:
+  validity_probability_threshold: 0.5666666666666667
+  maximum_neighbor_translation_mm: 4.5
+  maximum_neighbor_angle_deg: 6.0
+  maximum_quality_drop: 0.08
+  required_distinct_hash_observations: 3
+  minimum_distinct_view_translation_mm: 1.0
+  minimum_distinct_view_angle_deg: 1.0
+waterfall_order:
+  - all_trajectories
+  - collector_accepted_observation
+  - collector_classifier_candidate
+  - at_least_two_raw_distinct_hashes
+  - at_least_three_raw_distinct_hashes
+  - at_least_two_producer_advanced
+  - at_least_three_producer_advanced
+  - three_movement_valid_candidates
+  - three_in_candidate_neighborhood
+  - three_quality_consistent
+  - three_distinct_qualifying_hashes
+  - three_distinct_qualifying_viewpoints
+  - final_temporal_accept
+  - final_multi_view_accept
+interpretation_gate:
+  minimum_material_accept_count: 52
+  minimum_sources_with_acceptance: 3
+  origin: >-
+    Reuse the prior D3 requirement that multi-view retain at least half of the 103 quality-ranked
+    accepts and accept in at least three sources. This audit does not choose a new threshold.
+  option_1_when: narrow_clamp_diagnostic_meets_both_materiality_conditions
+  option_2_otherwise: acquisition_structure_remains_the_primary_next_blocker
+information_boundary:
+  actor_side_inputs:
+    - public_actor_frames
+    - frozen_validity_probability
+    - frozen_quality_prediction
+    - causal_executed_motion_and_action_feedback
+  diagnostic_only_motion_provenance:
+    - source_capture_protocol_identity
+    - per_action_finite_mapping_surface_terminal_and_clamp_fields
+  evaluator_after_decision:
+    - image_validity_target
+    - geometric_validity_target
+  forbidden_actor_inputs:
+    - target_pose
+    - target_errors
+    - l4_visible_fraction
+    - raw_labels
+    - evaluator_labels
+resource_bound:
+  account: anest-dept
+  cpu_cores: 4
+  gpu_count: 0
+  memory: 16gb
+  walltime: "00:30:00"
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_audit_v1
+change_policy:
+  - Preserve V16, V17, V18, and temporal replay verdicts and files.
+  - Do not fit, train, calibrate, sweep, or change decision parameters.
+  - Do not launch Isaac Sim, GPU work, V19, or a physical acquisition pilot.
+  - Preserve both original and diagnostic arms and every negative result.
+  - Stop after audit and recommendation.
