@@ -1,8 +1,26 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 physical-grid development demo
+
+Job `51641034` completed `0:0` on `anest-dept` with one L4, four CPUs, and 30 GB requested RAM.
+The formalized search used a 3x3 position grid with 6 mm spacing and three executable angles per
+position (27 coarse poses). Every coarse pose executed physical actions and produced a fresh,
+valid, distinct ultrasound hash. The actor returned `ACCEPT`, used eight supporting viewpoints,
+returned within 0.237 mm / 0.004 degrees, and passed two fresh confirmations.
+
+The result remains **`DEVELOPMENT_NO_GO`**: evaluator-only position error was 4.100 mm, but
+orientation error was 10.287 degrees, 0.287 degrees above the frozen 10-degree gate. V3's earlier
+development pass remains preserved; V5 is a stricter physical-grid demonstration and does not
+retroactively change V16-V18 or establish independent confirmation.
+
+- Detailed report: `docs/research/sonogym_stage2_physical_grid_demo_v5.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_active_acquisition_grid_demo_v5_result.json`.
+- Run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_active_acquisition_grid_demo_v5/51641034/`.
+- Two-video ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/sonogym_stage2_physical_grid_demo_20261116.zip` (SHA-256 `efaf0a4a6ec46a5fb62a50b6067d936bbc43a9817685d467d93008c128fb0c08`).
 
 ## Phase 5C Stage 2 continuous active-acquisition development pass
 
