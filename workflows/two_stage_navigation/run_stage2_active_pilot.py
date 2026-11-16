@@ -69,6 +69,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_temporal_decision imp
     ReplayObservation,
     TemporalDecisionConfig,
     fresh_confirmation_passes_distinct,
+    reindex_trajectory_subset,
     replay_decision,
 )
 
@@ -559,7 +560,7 @@ def main() -> int:
             ):
                 raise RuntimeError("orientation refinement produced duplicate ultrasound hashes")
             decision = replay_decision(
-                refinement_observations,
+                reindex_trajectory_subset(refinement_observations),
                 policy="candidate_d_multi_view",
                 config=decision_config,
             )

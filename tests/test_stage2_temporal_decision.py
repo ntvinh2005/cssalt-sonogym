@@ -22,6 +22,7 @@ from two_stage_navigation.stage2_temporal_decision import (  # noqa: E402
     TemporalDecisionConfig,
     fresh_confirmation_passes_distinct,
     reconstruct_trajectory_observations,
+    reindex_trajectory_subset,
     replay_decision,
 )
 
@@ -118,6 +119,18 @@ def action_feedback(**changes: object) -> dict[str, object]:
 
 
 class TemporalEvidenceTests(unittest.TestCase):
+    def test_reindex_subset_preserves_global_identity_and_causal_order(self) -> None:
+        rows = [observation(index) for index in range(39, 44)]
+        replay_rows = reindex_trajectory_subset(rows)
+        self.assertEqual([row.trajectory_frame_sequence for row in replay_rows], list(range(5)))
+        self.assertEqual([row.frame_sequence for row in replay_rows], list(range(39, 44)))
+        decision = replay_decision(
+            replay_rows,
+            policy="candidate_d_multi_view",
+            config=config(),
+        )
+        self.assertEqual(decision.state, DecisionState.ABSTAIN)
+
     def test_three_identical_hashes_are_not_three_confirmations(self) -> None:
         rows = [observation(index, hash_name="same") for index in range(3)]
         decision = replay_decision(rows, policy="candidate_c_temporal", config=config())

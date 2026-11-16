@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -140,6 +140,7 @@ class ReplayObservation:
     image_valid: bool
     producer_advanced: bool
 
+
     def __post_init__(self) -> None:
         if not self.session_id or not self.trajectory_id:
             raise ValueError("session and trajectory identities must be nonempty")
@@ -202,6 +203,28 @@ class ReplayObservation:
             image_valid=bool(record["image_valid"]),
             producer_advanced=bool(producer_advanced),
         )
+
+
+def reindex_trajectory_subset(
+    observations: Sequence[ReplayObservation],
+) -> tuple[ReplayObservation, ...]:
+    """Create a replay-only contiguous view without changing global frame identity."""
+    if not observations:
+        return ()
+    if len({row.session_id for row in observations}) != 1 or len(
+        {row.trajectory_id for row in observations}
+    ) != 1:
+        raise ValueError("replay subset cannot cross a session or trajectory boundary")
+    if any(
+        current.frame_sequence <= previous.frame_sequence
+        or current.producer_sequence < previous.producer_sequence
+        for previous, current in zip(observations, observations[1:])
+    ):
+        raise ValueError("replay subset must retain causal global ordering")
+    return tuple(
+        replace(row, trajectory_frame_sequence=index)
+        for index, row in enumerate(observations)
+    )
 
 
 @dataclass(frozen=True)
