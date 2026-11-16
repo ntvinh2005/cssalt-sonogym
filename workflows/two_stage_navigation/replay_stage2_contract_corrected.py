@@ -286,7 +286,7 @@ def main() -> int:
         == int(expected["multi_view_false_accepts"])
         and all(
             source_metrics[source]["candidate_d_multi_view"][
-                "accepted_candidate_count"
+                "accepted_trajectory_count"
             ]
             == int(count)
             for source, count in expected["multi_view_accepts_by_source"].items()
