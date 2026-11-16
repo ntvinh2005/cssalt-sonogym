@@ -278,10 +278,19 @@ def main() -> int:
     reproduced = bool(
         policy_metrics["candidate_c_temporal"]["accepted_trajectory_count"]
         == int(expected["temporal_accepts"])
+        and policy_metrics["candidate_c_temporal"]["false_accepted_candidate_count"]
+        == int(expected["temporal_false_accepts"])
         and policy_metrics["candidate_d_multi_view"]["accepted_trajectory_count"]
         == int(expected["multi_view_accepts"])
         and policy_metrics["candidate_d_multi_view"]["false_accepted_candidate_count"]
         == int(expected["multi_view_false_accepts"])
+        and all(
+            source_metrics[source]["candidate_d_multi_view"][
+                "accepted_candidate_count"
+            ]
+            == int(count)
+            for source, count in expected["multi_view_accepts_by_source"].items()
+        )
     )
     report = {
         "schema": "sonogym-stage2-contract-corrected-replay-v1",

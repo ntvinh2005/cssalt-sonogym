@@ -1,0 +1,91 @@
+protocol_id: sonogym-stage2-contract-corrected-replay-v1
+status: PRE_RUN_FROZEN
+purpose: >-
+  Re-run the opened Stage 2 temporal and multi-view replay through the explicit capture-consistent
+  movement contract. Preserve the original replay, model, threshold, observations, decision rules,
+  and scientific verdicts.
+source_commit: 6e18eb0738dfb46ec631021047bc86e4f2997c11
+frozen_inputs:
+  frame_scores: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820/results/frame_scores.csv
+  frame_scores_sha256: 0dcd15ebc79e4ccd7cba32f1561aaa114e40617c50f7a61beae4ad456b62a346
+  original_trajectory_results: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_temporal_replay_v1/51518820/results/trajectory_results.jsonl
+  original_trajectory_results_sha256: f467162d51a3f4da11eae11c32265c7c5c16e93689204c4a8276bb882b844e32
+datasets:
+  - name: v14_development
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943
+    capture_summary_sha256: 5b1498c458f632cd255244b6750659e4cdb6af53b19884741707e4ed3b2fe285
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_dataset_protocol_v14.yaml
+    capture_protocol_sha256: 3525f4223133adb8235d438ab9cec0a1b5d26d13740f0c4aef889c0b84588ab8
+  - name: v16_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v16/51387027
+    capture_summary_sha256: 6b2802f77b29d7a47708916b563bbe03ffafba9690c1833c2c1d46dc79bf252a
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v16.yaml
+    capture_protocol_sha256: bbb9ebfd2a84087f70cdb971a09f91ae1a37f3c8d6a2eccf6bfe136605742bc0
+  - name: v17_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v17/51400282
+    capture_summary_sha256: 4df533ad249b16c70156d4068a255390063e0948cd6dadceec3dae91ee79246e
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v17.yaml
+    capture_protocol_sha256: 79e5fe83ff3f99eff199d7f4e4e401fe2b67aa6784ab54caeae351995dc46318
+  - name: v18_confirmation_opened
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_confirmation_v18/51402759
+    capture_summary_sha256: 5937bd65da7df1df723877f8e371e3b6d7a18194d5b3a5e02073e5fcb6e2b863
+    capture_protocol: experiments/unity_two_stage_transfer/stage2_confirmation_protocol_v18.yaml
+    capture_protocol_sha256: 5bce5bca1c8942aa6a2b7ccd63823bc34cc98cecf1a215f1c3eb51566abf1143
+movement_contract:
+  selected: clamp_consistent_diagnostic
+  original_default_preserved: true
+  angle_exception_source: frozen_capture_protocol
+  requirements:
+    - source protocol explicitly enables capture_angle_ceiling_limited_samples
+    - public action is accepted and completed
+    - public position clamp is false
+    - executed relative movement is finite
+    - action-step count matches the public record
+    - every action step is finite, mapping-valid, surface-valid, nonterminal, and nontruncated
+    - every action step is position-unclamped
+    - at least one action step records an angle clamp
+decision_rules:
+  validity_probability_threshold: 0.5666666666666667
+  maximum_neighbor_translation_mm: 4.5
+  maximum_neighbor_angle_deg: 6.0
+  maximum_quality_drop: 0.08
+  required_distinct_hash_observations: 3
+  minimum_distinct_view_translation_mm: 1.0
+  minimum_distinct_view_angle_deg: 1.0
+expected_opened_data_reproduction:
+  source: stage2_contract_audit_v1 job 51542236
+  temporal_accepts: 38
+  multi_view_accepts: 31
+  temporal_false_accepts: 0
+  multi_view_false_accepts: 0
+  multi_view_accepts_by_source:
+    v14_development: 12
+    v16_confirmation_opened: 5
+    v17_confirmation_opened: 6
+    v18_confirmation_opened: 8
+interpretation:
+  minimum_useful_multi_view_accept_count: 52
+  minimum_sources_with_acceptance: 3
+  decision_if_reproduced: EXPLORATORY_NO_GO
+  reason: >-
+    The opened-data correction must reproduce the audited 31 multi-view accepts, but 31 remains
+    below the previously declared 52-accept usefulness condition.
+preserved_results:
+  V16: CONFIRMATION_NO_GO
+  V17: CONFIRMATION_NO_GO
+  V18: CONFIRMATION_NO_GO
+  temporal_replay: EXPLORATORY_NO_GO
+  FULL_STAGE2_CLOSED_LOOP: NOT_RUN
+resource_bound:
+  account: anest-dept
+  cpu_cores: 4
+  gpu_count: 0
+  memory: 16gb
+  walltime: "00:30:00"
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_contract_corrected_replay_v1
+change_policy:
+  - Do not fit or recalibrate a model.
+  - Do not change decision thresholds, evidence counts, neighborhoods, or quality limits.
+  - Do not launch Isaac Sim, a GPU job, a V19 protocol, or a new capture.
+  - Keep the original frozen movement contract as the default and reproduce it exactly.
+  - Stop after the opened CPU replay and review.
