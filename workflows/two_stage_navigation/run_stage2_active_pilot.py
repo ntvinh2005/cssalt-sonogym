@@ -49,6 +49,7 @@ from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa
 )
 from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (  # noqa: E402
     ACTIVE_PILOT_PROTOCOL_IDS,
+    bounded_orientation_refinement_poses,
     offset_poses,
     phase1_handoff_pose,
     relative_pose_from_start,
@@ -303,6 +304,7 @@ def main() -> int:
             "sonogym-stage2-active-acquisition-grid-demo-v4",
             "sonogym-stage2-active-acquisition-grid-demo-v4r1",
             "sonogym-stage2-active-acquisition-grid-demo-v5",
+            "sonogym-stage2-active-acquisition-orientation-refinement-v6",
         }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(
@@ -511,11 +513,58 @@ def main() -> int:
                     orientation_tolerance_deg=float(motion["micro_orientation_tolerance_deg"]),
                 )
 
-        decision = replay_decision(
+        preliminary_decision = replay_decision(
             observations,
             policy="candidate_d_multi_view",
             config=decision_config,
         )
+        refinement_observations: list[ReplayObservation] = []
+        refinement_targets: tuple[np.ndarray, ...] = ()
+        if (
+            "orientation_refinement" in search
+            and preliminary_decision.state is DecisionState.ACCEPT
+            and preliminary_decision.selected is not None
+        ):
+            refinement = search["orientation_refinement"]
+            refinement_center = absolute_pose_by_frame[
+                preliminary_decision.selected.frame_sequence
+            ]
+            refinement_targets = bounded_orientation_refinement_poses(
+                refinement_center,
+                refinement["offsets_deg"],
+                minimum_angle_rad=float(refinement["minimum_angle_rad"]),
+                maximum_angle_rad=float(refinement["maximum_angle_rad"]),
+            )
+            for target in refinement_targets:
+                refined, _ = acquire(
+                    target,
+                    "orientation_refine",
+                    position_tolerance_mm=float(
+                        motion["orientation_refinement_position_tolerance_mm"]
+                    ),
+                    orientation_tolerance_deg=float(
+                        motion["orientation_refinement_orientation_tolerance_deg"]
+                    ),
+                )
+                refinement_observations.append(refined)
+            if any(
+                not row.transition_valid
+                or not row.image_valid
+                or not row.producer_advanced
+                for row in refinement_observations
+            ):
+                raise RuntimeError("orientation refinement did not produce fresh valid evidence")
+            if len({row.frame_sha256 for row in refinement_observations}) != len(
+                refinement_observations
+            ):
+                raise RuntimeError("orientation refinement produced duplicate ultrasound hashes")
+            decision = replay_decision(
+                refinement_observations,
+                policy="candidate_d_multi_view",
+                config=decision_config,
+            )
+        else:
+            decision = preliminary_decision
         confirmations: list[ReplayObservation] = []
         return_error_mm = None
         return_error_deg = None
@@ -593,6 +642,15 @@ def main() -> int:
             "model_retrained": False,
             "decision_parameters_changed": False,
             "physical_grid": grid_spec,
+            "preliminary_selected_frame_sequence": (
+                None
+                if preliminary_decision.selected is None
+                else preliminary_decision.selected.frame_sequence
+            ),
+            "orientation_refinement_target_count": len(refinement_targets),
+            "orientation_refinement_frame_sequences": [
+                row.frame_sequence for row in refinement_observations
+            ],
         }
         assert_no_privileged_fields(actor_result)
         public_dir.mkdir(parents=True, exist_ok=True)

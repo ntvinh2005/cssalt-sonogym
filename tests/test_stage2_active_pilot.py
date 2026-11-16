@@ -17,6 +17,7 @@ sys.path.insert(0, str(EVALUATION_ROOT))
 
 from two_stage_navigation.stage2_active_pilot import (  # noqa: E402
     ACTIVE_PILOT_PROTOCOL_IDS,
+    bounded_orientation_refinement_poses,
     offset_poses,
     phase1_handoff_pose,
     relative_pose_from_start,
@@ -159,6 +160,25 @@ class ActivePilotTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must exceed"):
             validate_episode_horizon(1800, 30.0)
 
+    def test_orientation_refinement_is_symmetric_then_physically_bounded(self) -> None:
+        poses = bounded_orientation_refinement_poses(
+            [10.0, 20.0, 2.96],
+            [-6.0, -4.0, -2.0, 0.0, 2.0, 4.0, 6.0],
+            minimum_angle_rad=2.70,
+            maximum_angle_rad=2.97,
+        )
+        self.assertEqual(len(poses), 5)
+        self.assertAlmostEqual(poses[0][2], 2.96 + math.radians(-6.0))
+        self.assertAlmostEqual(poses[-1][2], 2.97)
+        self.assertTrue(all(np.allclose(pose[:2], [10.0, 20.0]) for pose in poses))
+        with self.assertRaisesRegex(ValueError, "at least three"):
+            bounded_orientation_refinement_poses(
+                [10.0, 20.0, 2.96],
+                [0.0, 2.0, 4.0],
+                minimum_angle_rad=2.96,
+                maximum_angle_rad=2.97,
+            )
+
     def test_only_reviewed_active_pilot_protocols_are_supported(self) -> None:
         self.assertEqual(
             ACTIVE_PILOT_PROTOCOL_IDS,
@@ -169,6 +189,7 @@ class ActivePilotTests(unittest.TestCase):
                 "sonogym-stage2-active-acquisition-grid-demo-v4",
                 "sonogym-stage2-active-acquisition-grid-demo-v4r1",
                 "sonogym-stage2-active-acquisition-grid-demo-v5",
+                "sonogym-stage2-active-acquisition-orientation-refinement-v6",
             },
         )
 

@@ -62,8 +62,11 @@ def main() -> int:
 
     actor = json.loads((args.run_dir / "results" / "actor_result.json").read_text())
     evaluator = json.loads((args.run_dir / "results" / "evaluation_report.json").read_text())
-    if actor["outcome"] != "ACCEPT" or evaluator["decision"] != "DEVELOPMENT_NO_GO":
-        raise RuntimeError("unexpected source result; package contract requires ACCEPT/NO_GO")
+    if actor["outcome"] != "ACCEPT" or evaluator["decision"] not in {
+        "DEVELOPMENT_PASS",
+        "DEVELOPMENT_NO_GO",
+    }:
+        raise RuntimeError("unexpected source result; package requires a completed actor ACCEPT")
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
     map_video = args.output_dir / "01-ultrasound-spatial-grid-demo.mp4"
@@ -85,14 +88,14 @@ def main() -> int:
     )
     evidence_dir = args.output_dir / "evidence"
     evidence_dir.mkdir()
+    protocol_paths = sorted(args.run_dir.glob("context/*protocol*.yaml"))
+    if len(protocol_paths) != 1:
+        raise RuntimeError("run context must contain exactly one protocol YAML")
     for source, destination in (
         (args.run_dir / "results" / "actor_result.json", "actor_result.json"),
         (args.run_dir / "results" / "evaluation_report.json", "evaluation_report.json"),
         (args.run_dir / "summary.json", "run_summary.json"),
-        (
-            args.run_dir / "context" / "stage2_active_acquisition_grid_demo_protocol_v5.yaml",
-            "protocol.yaml",
-        ),
+        (protocol_paths[0], "protocol.yaml"),
         (args.run_dir / "context" / "slurm-job.txt", "slurm-job.txt"),
         (args.run_dir / "context" / "application-exit-codes.env", "exit-codes.env"),
         (args.run_dir / "metrics" / "slurm.csv", "resource-usage.csv"),
@@ -113,10 +116,7 @@ def main() -> int:
         "final_position_error_mm": evaluator["final_position_error_mm"],
         "final_orientation_error_deg": evaluator["final_orientation_error_deg"],
         "videos": videos,
-        "scientific_limit": (
-            "Development visualization on fixed s0010. Actor accepted, but the independent "
-            "geometric evaluator returned DEVELOPMENT_NO_GO because orientation exceeded 10 deg."
-        ),
+        "scientific_limit": "Development visualization on fixed s0010; not independent confirmation.",
     }
     (args.output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
@@ -130,7 +130,7 @@ def main() -> int:
         "moving the probe on the complete patient asset available in this task. The asset is a "
         "cropped torso, not a full-body anatomical model.\n\n"
         "The actor returned ACCEPT and all 27 coarse poses produced fresh, distinct images. "
-        "The independent evaluator returned DEVELOPMENT_NO_GO: position error was "
+        f"The independent evaluator returned {evaluator['decision']}: position error was "
         f"{evaluator['final_position_error_mm']:.3f} mm, while orientation error was "
         f"{evaluator['final_orientation_error_deg']:.3f} degrees (gate: <=10 degrees). "
         "Do not interpret this package as scientific Stage 2 PASS or clinical evidence.\n",

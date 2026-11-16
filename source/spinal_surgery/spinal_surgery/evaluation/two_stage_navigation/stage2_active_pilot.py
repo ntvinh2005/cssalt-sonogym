@@ -18,8 +18,42 @@ ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
         "sonogym-stage2-active-acquisition-grid-demo-v4",
         "sonogym-stage2-active-acquisition-grid-demo-v4r1",
         "sonogym-stage2-active-acquisition-grid-demo-v5",
+        "sonogym-stage2-active-acquisition-orientation-refinement-v6",
     }
 )
+
+
+def bounded_orientation_refinement_poses(
+    center_pose: Sequence[float],
+    offsets_deg: Sequence[float],
+    *,
+    minimum_angle_rad: float,
+    maximum_angle_rad: float,
+) -> tuple[np.ndarray, ...]:
+    """Build a causal angular sweep clipped to a declared physical range."""
+    center = np.asarray(center_pose, dtype=np.float64)
+    if center.shape != (3,) or not np.all(np.isfinite(center)):
+        raise ValueError("orientation-refinement center must contain three finite values")
+    if (
+        not math.isfinite(minimum_angle_rad)
+        or not math.isfinite(maximum_angle_rad)
+        or minimum_angle_rad >= maximum_angle_rad
+    ):
+        raise ValueError("orientation-refinement range is invalid")
+    targets: list[np.ndarray] = []
+    for offset_deg in offsets_deg:
+        if not math.isfinite(float(offset_deg)):
+            raise ValueError("orientation-refinement offsets must be finite")
+        angle = float(center[2]) + math.radians(float(offset_deg))
+        angle = min(max(angle, minimum_angle_rad), maximum_angle_rad)
+        if targets and math.isclose(angle, float(targets[-1][2]), abs_tol=1e-12):
+            continue
+        target = center.copy()
+        target[2] = angle
+        targets.append(target)
+    if len(targets) < 3:
+        raise ValueError("orientation refinement requires at least three distinct targets")
+    return tuple(targets)
 
 
 def validate_episode_horizon(

@@ -17,6 +17,7 @@ PHASE_COLORS = {
     "coarse": (255, 170, 70),
     "fine": (90, 220, 230),
     "micro": (100, 220, 110),
+    "orientation_refine": (80, 190, 255),
     "fresh_confirmation_1": (220, 120, 240),
     "fresh_confirmation_2": (220, 120, 240),
 }
@@ -83,6 +84,7 @@ def phase_title(phase: str) -> str:
         "coarse": "COARSE SEARCH: sample a broad pose grid",
         "fine": "FINE SEARCH: refine around best valid region",
         "micro": "MICRO SEARCH: small local refinements",
+        "orientation_refine": "ORIENTATION REFINEMENT: image-ranked angular sweep",
         "fresh_confirmation_1": "RETURN + FRESH CONFIRMATION 1",
         "fresh_confirmation_2": "RETURN + FRESH CONFIRMATION 2",
     }[phase]
