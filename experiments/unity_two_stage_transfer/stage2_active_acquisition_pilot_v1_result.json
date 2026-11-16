@@ -1,0 +1,77 @@
+{
+  "schema": "sonogym-stage2-active-acquisition-pilot-result-v1",
+  "decision": "DEVELOPMENT_NO_GO",
+  "job": {
+    "id": 51607477,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c0604a-s8",
+    "state": "FAILED",
+    "exit_code": "1:0",
+    "elapsed": "00:00:44",
+    "start": "2026-11-16T13:00:09-05:00",
+    "end": "2026-11-16T13:00:53-05:00",
+    "requested_cpu_cores": 4,
+    "requested_memory_gb": 30,
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "driver": "580.178.04",
+    "peak_gpu_memory_mib": 5009,
+    "peak_gpu_utilization_percent": 39
+  },
+  "provenance": {
+    "execution_commit": "94e312026923d6b25d442a7fbd3cdd200f708589",
+    "evaluator_recovery_commit": "390416b71ffcaa1606b88c962429e0ad16621b30",
+    "protocol_sha256": "85d09795e9a47a402077f5f066bae9f2353b389c03e2447cc20821548cf30dd6",
+    "actor_result_sha256": "7561b86aba518b8fd9f5989e65d02fd1c36669c37b697c11e13f836b6118fa69",
+    "recovered_evaluation_sha256": "3647b60f1fcb0d15b98f02b90fa260d64285382ab34cd875c1e5f7d3054c5a4b",
+    "phase1_actor_result_sha256": "9d3532f06f15443d7a0d3ac7c32d67430c93de45f1fe8d61bbdbe8ac7c58c13e",
+    "model_bundle_sha256": "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672"
+  },
+  "tests": {
+    "active_pilot": {"passed": 7, "failed": 0},
+    "temporal_decision": {"passed": 23, "failed": 0},
+    "stage2_regression": {"passed": 34, "failed": 0},
+    "total": {"passed": 64, "failed": 0}
+  },
+  "actor": {
+    "outcome": "ABSTAIN",
+    "total_action_steps": 371,
+    "search_frames": 39,
+    "total_frames": 41,
+    "distinct_image_hashes": 17,
+    "producer_advanced_frames": 17,
+    "supporting_hashes": 3,
+    "supporting_viewpoints": 3,
+    "selected_frame_sequence": 29,
+    "selected_validity_probability": 0.9222222222222223,
+    "selected_quality_prediction": 0.467161431008329,
+    "return_position_error_mm": 0.0,
+    "return_orientation_error_deg": 0.0,
+    "fresh_confirmation_passed": false
+  },
+  "evaluator": {
+    "geometric_success": true,
+    "image_success": true,
+    "final_position_error_mm": 8.196973891201736,
+    "final_orientation_error_deg": 9.534602571879299,
+    "final_l4_visible_fraction": 0.2548,
+    "full_stage2_closed_loop": "NOT_ESTABLISHED",
+    "independent_confirmation": false
+  },
+  "failure": {
+    "job_level": "The original evaluator used actor_result.sha256 instead of actor_result.json.sha256; actor execution itself completed.",
+    "scientific": "Both confirmation dither moves were 0.75 mm, below the 5 mm controller acceptance tolerance, so no action executed and no fresh frame was produced.",
+    "selected_hash_equals_confirmation_hashes": true,
+    "confirmation_producer_sequence_advanced": false,
+    "confirmation_action_steps_each": 0
+  },
+  "artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_active_acquisition_pilot_v1/51607477",
+  "storage_bytes": 4916102,
+  "preserved_results": {
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO",
+    "temporal_replay": "EXPLORATORY_NO_GO"
+  }
+}

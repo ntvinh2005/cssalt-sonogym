@@ -1,8 +1,32 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_NO_GO**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 active-acquisition development pilot
+
+Job `51607477` ran one continuous fixed-`s0010` coarse/fine/micro search on `anest-dept` with one
+NVIDIA L4, four CPUs, and 30 GB requested RAM. The actor completed 371 action steps and 41
+observations, found a candidate supported by three hashes and three viewpoints, and returned to
+it with 0.0 mm / 0.0 degree relative error. Evaluator-only geometry (8.197 mm, 9.535 degrees) and
+L4 visibility (0.2548) met their development thresholds.
+
+The actor correctly returned `ABSTAIN`: both 0.75 mm confirmation dithers were below the shared
+5 mm movement tolerance, so they executed zero actions, did not advance the producer, and repeated
+the selected image hash. Fresh confirmation therefore failed and the result is
+`DEVELOPMENT_NO_GO`; full Stage 2 remains `NOT_ESTABLISHED`.
+
+The job state is `FAILED (1:0)` because the evaluator initially looked for the wrong actor-seal
+filename after the actor completed. Commit `390416b` fixed that packaging bug, and a recovered
+evaluation of the sealed artifact produced the same scientific NO_GO without rerunning the GPU.
+All 64 tests passed. External output size is 4,916,102 bytes.
+
+- Detailed report: `docs/research/sonogym_stage2_active_acquisition_pilot.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_active_acquisition_pilot_v1_result.json`.
+- Artifacts: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_active_acquisition_pilot_v1/51607477/`.
+- Next approval: a new development-only confirmation-motion protocol with a dedicated tolerance
+  below the frozen 0.75 mm dither; no model, threshold, or search-policy change.
 
 ## Phase 5C Stage 2 contract-corrected CPU replay
 
