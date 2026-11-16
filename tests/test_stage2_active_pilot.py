@@ -16,11 +16,13 @@ EVALUATION_ROOT = ROOT / "source" / "spinal_surgery" / "spinal_surgery" / "evalu
 sys.path.insert(0, str(EVALUATION_ROOT))
 
 from two_stage_navigation.stage2_active_pilot import (  # noqa: E402
+    ACTIVE_PILOT_PROTOCOL_IDS,
     offset_poses,
     phase1_handoff_pose,
     relative_pose_from_start,
     serpentine_offsets,
     transition_is_valid,
+    validate_confirmation_motion,
 )
 
 
@@ -111,6 +113,29 @@ class ActivePilotTests(unittest.TestCase):
     def test_nonfinite_plans_fail(self) -> None:
         with self.assertRaises(ValueError):
             offset_poses([0.0, 0.0, 0.0], [[0.0, math.nan, 0.0]])
+
+    def test_confirmation_dither_must_exceed_dedicated_tolerance(self) -> None:
+        distances = validate_confirmation_motion(
+            [[0.5, 0.0, 0.0], [-0.5, 0.0, 0.0]],
+            label_resolution_mm=1.5,
+            position_tolerance_mm=0.25,
+        )
+        self.assertEqual(distances, (0.75, 0.75))
+        with self.assertRaisesRegex(ValueError, "must exceed"):
+            validate_confirmation_motion(
+                [[0.5, 0.0, 0.0]],
+                label_resolution_mm=1.5,
+                position_tolerance_mm=5.0,
+            )
+
+    def test_only_reviewed_active_pilot_protocols_are_supported(self) -> None:
+        self.assertEqual(
+            ACTIVE_PILOT_PROTOCOL_IDS,
+            {
+                "sonogym-stage2-active-acquisition-pilot-v1",
+                "sonogym-stage2-active-acquisition-pilot-v2",
+            },
+        )
 
 
 if __name__ == "__main__":

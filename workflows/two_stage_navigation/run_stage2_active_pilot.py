@@ -47,11 +47,13 @@ from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa
     wrap_to_pi,
 )
 from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (  # noqa: E402
+    ACTIVE_PILOT_PROTOCOL_IDS,
     offset_poses,
     phase1_handoff_pose,
     relative_pose_from_start,
     serpentine_offsets,
     transition_is_valid,
+    validate_confirmation_motion,
 )
 from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # noqa: E402
     ScoredView,
@@ -107,22 +109,20 @@ def seal(path: Path) -> str:
     return digest
 
 
-def load_sealed_yaml(path: Path, expected_id: str) -> tuple[dict[str, Any], str]:
+def load_sealed_yaml(path: Path) -> tuple[dict[str, Any], str]:
     expected = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
     observed = file_sha256(path)
     if observed != expected:
         raise RuntimeError("protocol seal mismatch")
     protocol = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if protocol.get("protocol_id") != expected_id:
+    if protocol.get("protocol_id") not in ACTIVE_PILOT_PROTOCOL_IDS:
         raise RuntimeError("unexpected protocol")
     return protocol, observed
 
 
 def main() -> int:
     protocol_path = Path(args.protocol).resolve()
-    protocol, protocol_hash = load_sealed_yaml(
-        protocol_path, "sonogym-stage2-active-acquisition-pilot-v1"
-    )
+    protocol, protocol_hash = load_sealed_yaml(protocol_path)
     output = Path(args.output_dir).resolve()
     public_dir = output / "public"
     privileged_dir = output / "privileged"
@@ -200,11 +200,33 @@ def main() -> int:
         search = protocol["search"]
         motion = protocol["motion"]
         label_resolution = float(protocol["geometry"]["label_resolution_mm"])
+        confirmation_position_tolerance = float(
+            motion.get("confirmation_position_tolerance_mm", motion["position_tolerance_mm"])
+        )
+        strict_confirmation_motion = (
+            protocol["protocol_id"] == "sonogym-stage2-active-acquisition-pilot-v2"
+        )
+        if strict_confirmation_motion:
+            confirmation_displacements = validate_confirmation_motion(
+                search["confirmation_dither_offsets"],
+                label_resolution_mm=label_resolution,
+                position_tolerance_mm=confirmation_position_tolerance,
+            )
+        else:
+            confirmation_displacements = tuple(
+                float(np.linalg.norm(np.asarray(offset, dtype=np.float64)[:2]) * label_resolution)
+                for offset in search["confirmation_dither_offsets"]
+            )
         maximum_total_steps = int(motion["maximum_total_action_steps"])
         total_action_steps = 0
         previous_producer = int(unwrapped.num_step)
 
-        def move_only(target: np.ndarray, phase: str) -> list[dict[str, Any]]:
+        def move_only(
+            target: np.ndarray,
+            phase: str,
+            *,
+            position_tolerance_mm: float | None = None,
+        ) -> list[dict[str, Any]]:
             nonlocal total_action_steps
             controller_target = target.copy()
             if target[2] >= float(motion["ceiling_assisted_minimum_angle_rad"]):
@@ -220,7 +242,11 @@ def main() -> int:
                         else "maximum_steps_per_move"
                     ]
                 ),
-                maximum_position_error_mm=float(motion["position_tolerance_mm"]),
+                maximum_position_error_mm=float(
+                    motion["position_tolerance_mm"]
+                    if position_tolerance_mm is None
+                    else position_tolerance_mm
+                ),
                 maximum_orientation_error_deg=float(motion["orientation_tolerance_deg"]),
                 ratio=tuple(float(value) for value in motion["controller_ratio"]),
                 allow_angle_ceiling_saturation=bool(motion["allow_angle_ceiling_saturation"]),
@@ -233,9 +259,18 @@ def main() -> int:
             action_rows.extend(trajectory)
             return trajectory
 
-        def acquire(target: np.ndarray, phase: str) -> tuple[ReplayObservation, ScoredView]:
+        def acquire(
+            target: np.ndarray,
+            phase: str,
+            *,
+            position_tolerance_mm: float | None = None,
+        ) -> tuple[ReplayObservation, ScoredView]:
             nonlocal previous_producer
-            trajectory = move_only(target, phase)
+            trajectory = move_only(
+                target,
+                phase,
+                position_tolerance_mm=position_tolerance_mm,
+            )
             transition_valid = transition_is_valid(trajectory)
             image = clean_ultrasound(unwrapped)
             frame_hash = ultrasound_sha256(image)
@@ -348,13 +383,38 @@ def main() -> int:
         return_error_mm = None
         return_error_deg = None
         fresh_pass = False
+        confirmation_moves: list[dict[str, Any]] = []
         if decision.state is DecisionState.ACCEPT and decision.selected is not None:
             selected_pose = absolute_pose_by_frame[decision.selected.frame_sequence]
             for index, dither in enumerate(search["confirmation_dither_offsets"]):
                 dither_pose = selected_pose + np.asarray(dither, dtype=np.float64)
-                move_only(dither_pose, f"confirmation_dither_{index + 1}")
-                confirmed, _ = acquire(selected_pose, f"fresh_confirmation_{index + 1}")
+                outbound = move_only(
+                    dither_pose,
+                    f"confirmation_dither_{index + 1}",
+                    position_tolerance_mm=confirmation_position_tolerance,
+                )
+                if strict_confirmation_motion and not outbound:
+                    raise RuntimeError("confirmation dither produced no physical action")
+                confirmed, _ = acquire(
+                    selected_pose,
+                    f"fresh_confirmation_{index + 1}",
+                    position_tolerance_mm=confirmation_position_tolerance,
+                )
+                if strict_confirmation_motion and (
+                    not confirmed.transition_valid or not confirmed.producer_advanced
+                ):
+                    raise RuntimeError("confirmation return did not produce a fresh valid frame")
                 confirmations.append(confirmed)
+                confirmation_moves.append(
+                    {
+                        "confirmation_index": index + 1,
+                        "declared_dither_displacement_mm": confirmation_displacements[index],
+                        "outbound_action_steps": len(outbound),
+                        "return_action_steps": int(public_rows[-1]["action_step_count"]),
+                        "confirmation_frame_sequence": confirmed.frame_sequence,
+                        "confirmation_producer_sequence": confirmed.producer_sequence,
+                    }
+                )
             returned = current_realized_pose(unwrapped)
             return_error_mm = float(np.linalg.norm(returned[:2] - selected_pose[:2]) * label_resolution)
             return_error_deg = abs(float(wrap_to_pi(returned[2] - selected_pose[2]))) * 180.0 / math.pi
@@ -389,6 +449,7 @@ def main() -> int:
             "supporting_hash_count": 0 if decision.evidence is None else decision.evidence.distinct_hash_count,
             "supporting_viewpoint_count": 0 if decision.evidence is None else decision.evidence.distinct_viewpoint_count,
             "fresh_confirmation_frame_sequences": [row.frame_sequence for row in confirmations],
+            "confirmation_moves": confirmation_moves,
             "fresh_confirmation_passed": fresh_pass,
             "return_position_error_mm": return_error_mm,
             "return_orientation_error_deg": return_error_deg,

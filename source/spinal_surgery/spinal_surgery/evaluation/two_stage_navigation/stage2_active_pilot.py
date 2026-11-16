@@ -10,6 +10,14 @@ import numpy as np
 from .contracts import assert_no_privileged_fields
 
 
+ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
+    {
+        "sonogym-stage2-active-acquisition-pilot-v1",
+        "sonogym-stage2-active-acquisition-pilot-v2",
+    }
+)
+
+
 def phase1_handoff_pose(
     actor_result: Mapping[str, Any],
     *,
@@ -127,3 +135,30 @@ def transition_is_valid(action_rows: Sequence[Mapping[str, Any]]) -> bool:
             for row in action_rows
         )
     )
+
+
+def validate_confirmation_motion(
+    dither_offsets: Sequence[Sequence[float]],
+    *,
+    label_resolution_mm: float,
+    position_tolerance_mm: float,
+) -> tuple[float, ...]:
+    """Require every confirmation dither to exceed its dedicated motion tolerance."""
+    if not math.isfinite(label_resolution_mm) or label_resolution_mm <= 0.0:
+        raise ValueError("label resolution must be finite and positive")
+    if not math.isfinite(position_tolerance_mm) or position_tolerance_mm <= 0.0:
+        raise ValueError("confirmation position tolerance must be finite and positive")
+    if not dither_offsets:
+        raise ValueError("at least one confirmation dither is required")
+    distances: list[float] = []
+    for offset in dither_offsets:
+        delta = np.asarray(offset, dtype=np.float64)
+        if delta.shape != (3,) or not np.all(np.isfinite(delta)):
+            raise ValueError("each confirmation dither must contain three finite values")
+        distance_mm = float(np.linalg.norm(delta[:2]) * label_resolution_mm)
+        if distance_mm <= position_tolerance_mm:
+            raise ValueError(
+                "confirmation dither displacement must exceed its movement tolerance"
+            )
+        distances.append(distance_mm)
+    return tuple(distances)

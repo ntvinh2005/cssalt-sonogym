@@ -11,6 +11,10 @@ from typing import Any, Mapping
 
 import yaml
 
+from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (
+    ACTIVE_PILOT_PROTOCOL_IDS,
+)
+
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--protocol", type=Path, required=True)
@@ -68,7 +72,7 @@ def main() -> int:
     if protocol_hash != expected_protocol_hash:
         raise RuntimeError("protocol seal mismatch")
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol.get("protocol_id") != "sonogym-stage2-active-acquisition-pilot-v1":
+    if protocol.get("protocol_id") not in ACTIVE_PILOT_PROTOCOL_IDS:
         raise RuntimeError("unexpected protocol")
     actor_path = args.run_dir / "results" / "actor_result.json"
     actor_hash = file_sha256(actor_path)
