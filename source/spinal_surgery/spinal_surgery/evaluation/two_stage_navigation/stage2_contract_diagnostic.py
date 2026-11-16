@@ -4,19 +4,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
-from enum import Enum
 from typing import Any, Mapping, Sequence
 
-from .contracts import assert_no_privileged_fields
 from .stage2_temporal_decision import (
+    MovementContract,
     ReplayObservation,
     TemporalDecisionConfig,
+    transition_valid_for_contract,
 )
-
-
-class MovementContract(str, Enum):
-    ORIGINAL_FROZEN = "original_frozen"
-    CLAMP_CONSISTENT_DIAGNOSTIC = "clamp_consistent_diagnostic"
 
 
 @dataclass(frozen=True)
@@ -31,13 +26,11 @@ class CandidateSupportProfile:
 
 def original_transition_valid(record: Mapping[str, Any]) -> bool:
     """Reproduce the immutable temporal replay movement check."""
-    assert_no_privileged_fields(record)
-    return bool(
-        record["action_accepted"]
-        and record["action_completed"]
-        and not record["action_clamped"]
-        and record["contact_ok"]
-        and record["workspace_ok"]
+    return transition_valid_for_contract(
+        record,
+        (),
+        contract=MovementContract.ORIGINAL_FROZEN,
+        angle_ceiling_exception_declared=False,
     )
 
 
@@ -54,48 +47,11 @@ def clamp_consistent_transition_valid(
     low-level movement record remains finite, mapping-valid, surface-valid, nonterminal, and free
     of position clamps.
     """
-    assert_no_privileged_fields(record)
-    delta = record.get("executed_delta_relative_mm")
-    try:
-        finite_motion = bool(
-            isinstance(delta, (list, tuple))
-            and len(delta) == 2
-            and all(math.isfinite(float(value)) for value in delta)
-            and math.isfinite(float(record["executed_delta_angle_rad"]))
-        )
-    except (KeyError, TypeError, ValueError):
-        return False
-    base = bool(
-        record.get("action_accepted", False)
-        and record.get("action_completed", False)
-        and record.get("contact_ok", False)
-        and record.get("workspace_ok", False)
-        and finite_motion
-    )
-    if not base:
-        return False
-    if not bool(record.get("action_clamped", False)):
-        return True
-    if (
-        not angle_ceiling_exception_declared
-        or bool(record.get("action_position_clamped", False))
-        or not bool(record.get("action_angle_clamped", False))
-        or not action_rows
-    ):
-        return False
-    if int(record.get("action_steps_since_previous_frame", -1)) != len(action_rows):
-        return False
-    return bool(
-        all(
-            bool(row.get("finite", False))
-            and bool(row.get("surface_proxy_ok", False))
-            and bool(row.get("command_mapping_valid", False))
-            and not bool(row.get("terminated", False))
-            and not bool(row.get("truncated", False))
-            and not bool(row.get("command_position_clamped", False))
-            for row in action_rows
-        )
-        and any(bool(row.get("command_angle_clamped", False)) for row in action_rows)
+    return transition_valid_for_contract(
+        record,
+        action_rows,
+        contract=MovementContract.CLAMP_CONSISTENT_DIAGNOSTIC,
+        angle_ceiling_exception_declared=angle_ceiling_exception_declared,
     )
 
 

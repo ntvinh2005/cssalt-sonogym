@@ -22,6 +22,77 @@ class DecisionState(str, Enum):
     FAILURE = "FAILURE"
 
 
+class MovementContract(str, Enum):
+    ORIGINAL_FROZEN = "original_frozen"
+    CLAMP_CONSISTENT_DIAGNOSTIC = "clamp_consistent_diagnostic"
+
+
+def transition_valid_for_contract(
+    record: Mapping[str, Any],
+    action_rows: Sequence[Mapping[str, Any]],
+    *,
+    contract: MovementContract,
+    angle_ceiling_exception_declared: bool,
+) -> bool:
+    """Validate movement under an explicitly selected replay contract."""
+    assert_no_privileged_fields(record)
+    for row in action_rows:
+        assert_no_privileged_fields(row)
+    original = bool(
+        record["action_accepted"]
+        and record["action_completed"]
+        and not record["action_clamped"]
+        and record["contact_ok"]
+        and record["workspace_ok"]
+    )
+    if contract is MovementContract.ORIGINAL_FROZEN:
+        return original
+    if contract is not MovementContract.CLAMP_CONSISTENT_DIAGNOSTIC:
+        raise ValueError(f"unsupported movement contract {contract!r}")
+
+    delta = record.get("executed_delta_relative_mm")
+    try:
+        finite_motion = bool(
+            isinstance(delta, (list, tuple))
+            and len(delta) == 2
+            and all(math.isfinite(float(value)) for value in delta)
+            and math.isfinite(float(record["executed_delta_angle_rad"]))
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+    if not bool(
+        record.get("action_accepted", False)
+        and record.get("action_completed", False)
+        and record.get("contact_ok", False)
+        and record.get("workspace_ok", False)
+        and finite_motion
+    ):
+        return False
+    if not bool(record.get("action_clamped", False)):
+        return True
+    if (
+        not angle_ceiling_exception_declared
+        or bool(record.get("action_position_clamped", False))
+        or not bool(record.get("action_angle_clamped", False))
+        or not action_rows
+        or int(record.get("action_steps_since_previous_frame", -1))
+        != len(action_rows)
+    ):
+        return False
+    return bool(
+        all(
+            bool(row.get("finite", False))
+            and bool(row.get("surface_proxy_ok", False))
+            and bool(row.get("command_mapping_valid", False))
+            and not bool(row.get("terminated", False))
+            and not bool(row.get("truncated", False))
+            and not bool(row.get("command_position_clamped", False))
+            for row in action_rows
+        )
+        and any(bool(row.get("command_angle_clamped", False)) for row in action_rows)
+    )
+
+
 @dataclass(frozen=True)
 class TemporalDecisionConfig:
     validity_probability_threshold: float
@@ -105,15 +176,17 @@ class ReplayObservation:
         validity_probability: float,
         quality: float,
         producer_advanced: bool,
+        action_rows: Sequence[Mapping[str, Any]] = (),
+        movement_contract: MovementContract = MovementContract.ORIGINAL_FROZEN,
+        angle_ceiling_exception_declared: bool = False,
     ) -> "ReplayObservation":
         """Construct one replay observation after a fail-closed leakage check."""
         assert_no_privileged_fields(record)
-        transition_valid = bool(
-            record["action_accepted"]
-            and record["action_completed"]
-            and not record["action_clamped"]
-            and record["contact_ok"]
-            and record["workspace_ok"]
+        transition_valid = transition_valid_for_contract(
+            record,
+            action_rows,
+            contract=movement_contract,
+            angle_ceiling_exception_declared=angle_ceiling_exception_declared,
         )
         return cls(
             session_id=str(record["session_id"]),
@@ -210,6 +283,10 @@ def reconstruct_trajectory_observations(
     actor_records: Sequence[Mapping[str, Any]],
     validity_probabilities: Sequence[float],
     quality_predictions: Sequence[float],
+    *,
+    actions_by_frame: Mapping[int, Sequence[Mapping[str, Any]]] | None = None,
+    movement_contract: MovementContract = MovementContract.ORIGINAL_FROZEN,
+    angle_ceiling_exception_declared: bool = False,
 ) -> tuple[ReplayObservation, ...]:
     """Reconstruct actor-relative pose from executed deltas within one trajectory."""
     if not (
@@ -244,6 +321,13 @@ def reconstruct_trajectory_observations(
                     previous_producer_sequence is None
                     or int(record["producer_sequence"]) > previous_producer_sequence
                 ),
+                action_rows=(
+                    ()
+                    if actions_by_frame is None
+                    else actions_by_frame.get(int(record["frame_sequence"]), ())
+                ),
+                movement_contract=movement_contract,
+                angle_ceiling_exception_declared=angle_ceiling_exception_declared,
             )
         )
         previous_producer_sequence = int(record["producer_sequence"])

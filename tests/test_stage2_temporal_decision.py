@@ -17,6 +17,7 @@ sys.path.insert(0, str(EVALUATION_ROOT))
 
 from two_stage_navigation.stage2_temporal_decision import (  # noqa: E402
     DecisionState,
+    MovementContract,
     ReplayObservation,
     TemporalDecisionConfig,
     fresh_confirmation_passes_distinct,
@@ -100,6 +101,20 @@ def actor_record(
         "workspace_ok": True,
         "image_valid": True,
     }
+
+
+def action_feedback(**changes: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "finite": True,
+        "surface_proxy_ok": True,
+        "command_mapping_valid": True,
+        "terminated": False,
+        "truncated": False,
+        "command_position_clamped": False,
+        "command_angle_clamped": True,
+    }
+    row.update(changes)
+    return row
 
 
 class TemporalEvidenceTests(unittest.TestCase):
@@ -221,6 +236,73 @@ class TemporalEvidenceTests(unittest.TestCase):
 
 
 class RecordIntegrityTests(unittest.TestCase):
+    def test_original_contract_remains_default(self) -> None:
+        row = actor_record(0)
+        row.update(
+            action_clamped=True,
+            action_angle_clamped=True,
+            action_position_clamped=False,
+        )
+        observations = reconstruct_trajectory_observations([row], [0.9], [0.8])
+        self.assertFalse(observations[0].transition_valid)
+
+    def test_declared_angle_ceiling_exception_uses_complete_action_feedback(self) -> None:
+        row = actor_record(0)
+        row.update(
+            action_clamped=True,
+            action_angle_clamped=True,
+            action_position_clamped=False,
+        )
+        observations = reconstruct_trajectory_observations(
+            [row],
+            [0.9],
+            [0.8],
+            actions_by_frame={0: [action_feedback()]},
+            movement_contract=MovementContract.CLAMP_CONSISTENT_DIAGNOSTIC,
+            angle_ceiling_exception_declared=True,
+        )
+        self.assertTrue(observations[0].transition_valid)
+
+    def test_angle_exception_remains_fail_closed(self) -> None:
+        row = actor_record(0)
+        row.update(
+            action_clamped=True,
+            action_angle_clamped=True,
+            action_position_clamped=False,
+        )
+        for declared, feedback in (
+            (False, action_feedback()),
+            (True, action_feedback(command_position_clamped=True)),
+            (True, action_feedback(command_mapping_valid=False)),
+        ):
+            observations = reconstruct_trajectory_observations(
+                [row],
+                [0.9],
+                [0.8],
+                actions_by_frame={0: [feedback]},
+                movement_contract=MovementContract.CLAMP_CONSISTENT_DIAGNOSTIC,
+                angle_ceiling_exception_declared=declared,
+            )
+            self.assertFalse(observations[0].transition_valid)
+
+    def test_evaluator_field_in_action_feedback_fails_closed(self) -> None:
+        row = actor_record(0)
+        row.update(
+            action_clamped=True,
+            action_angle_clamped=True,
+            action_position_clamped=False,
+        )
+        feedback = action_feedback(goal_cmd_pose=[0.0, 0.0, 0.0])
+        with self.assertRaisesRegex(ValueError, "privileged actor field"):
+            reconstruct_trajectory_observations(
+                [row],
+                [0.9],
+                [0.8],
+                actions_by_frame={0: [feedback]},
+                movement_contract=MovementContract.CLAMP_CONSISTENT_DIAGNOSTIC,
+                angle_ceiling_exception_declared=True,
+            )
+
     def test_relative_pose_is_reconstructed_from_executed_motion(self) -> None:
         rows = [actor_record(0), actor_record(1, delta=(-0.5, 2.0))]
         observations = reconstruct_trajectory_observations(rows, [0.9, 0.8], [0.7, 0.6])
