@@ -153,7 +153,7 @@ def main() -> int:
             session_id=str(handoff_spec["session_id"]),
             home_z_index=float(handoff_spec["home_z_index"]),
             label_resolution_mm=float(protocol["geometry"]["label_resolution_mm"]),
-            stage2_angle_rad=float(handoff_spec["stage2_initial_angle_rad"]),
+            stage2_angle_rad=float(protocol["geometry"]["stage2_handoff_angle_rad"]),
         )
 
         model_spec = protocol["model"]
