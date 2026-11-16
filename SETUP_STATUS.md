@@ -1,8 +1,30 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_NO_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 continuous active-acquisition development pass
+
+Technical-recovery V3 job `51611658` completed `0:0` on `anest-dept` with one NVIDIA L4, four
+CPUs, and 30 GB requested RAM. The unchanged fixed-`s0010` actor executed 572 actions and 41
+observations, selected a candidate with three distinct supporting viewpoints, physically returned,
+and acquired two fresh, distinct, producer-advanced confirmations. Actor outcome was `ACCEPT`.
+
+Return error was 0.1432 mm / 0.0173 degrees. After actor sealing, the independent evaluator found
+8.0565 mm position error, 9.5173 degrees orientation error, and L4 visibility 0.25453. All frozen
+development gates passed. All 66 tests passed; the job used at most 5,005 MiB GPU memory and 55%
+GPU utilization.
+
+V1 `DEVELOPMENT_NO_GO` and V2 technical action-budget failure remain preserved. V3 changed only
+the total action budget from 550 to 600 after V2 measured a 552-action requirement; model,
+threshold, search, confirmation movement, decision rule, seed, and evaluator gates were unchanged.
+This is a fixed-anatomy engineering `DEVELOPMENT_PASS`, not V19 or independent generalization.
+
+- Detailed report: `docs/research/sonogym_stage2_active_acquisition_v3_demo.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_active_acquisition_pilot_v3_result.json`.
+- Run artifacts: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_active_acquisition_pilot_v3/51611658/`.
+- Demo: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658/`.
 
 ## Phase 5C Stage 2 active-acquisition development pilot
 

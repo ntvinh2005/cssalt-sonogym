@@ -1,0 +1,96 @@
+{
+  "schema": "sonogym-stage2-active-acquisition-pilot-result-v1",
+  "decision": "DEVELOPMENT_PASS",
+  "job": {
+    "id": 51611658,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c0603a-s18",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:00:50",
+    "start": "2026-11-16T13:37:54-05:00",
+    "end": "2026-11-16T13:38:44-05:00",
+    "requested_cpu_cores": 4,
+    "requested_memory_gb": 30,
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "driver": "580.178.04",
+    "peak_gpu_memory_mib": 5005,
+    "peak_gpu_utilization_percent": 55,
+    "actor_peak_rss_kib": 3655844,
+    "actor_wall_seconds": 41.84
+  },
+  "provenance": {
+    "execution_commit": "40103ddd7df2c6f218077b963cbdbe6e5c9726ce",
+    "implementation_commit": "4f685ee14a79c6aa6bf6009be88b2156db896e5a",
+    "protocol_sha256": "02934f11cf6544c534066046e6b3cfbf226df1acd99c4da3ad5f6a7ec5933d4a",
+    "actor_result_sha256": "bbba48fb1831e3a490c772cdff5aa98f91942efe26221ebf89ef90498fe0adb3",
+    "evaluation_report_sha256": "98728646d536bad9718cdb61cba5b20efd6d25df35f49c5a4a447605990c9ce4",
+    "phase1_actor_result_sha256": "9d3532f06f15443d7a0d3ac7c32d67430c93de45f1fe8d61bbdbe8ac7c58c13e",
+    "model_bundle_sha256": "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672"
+  },
+  "tests": {
+    "active_pilot": {"passed": 9, "failed": 0},
+    "temporal_decision": {"passed": 23, "failed": 0},
+    "stage2_regression": {"passed": 34, "failed": 0},
+    "total": {"passed": 66, "failed": 0}
+  },
+  "actor": {
+    "outcome": "ACCEPT",
+    "total_action_steps": 572,
+    "search_frames": 39,
+    "total_frames": 41,
+    "distinct_image_hashes": 19,
+    "producer_advanced_frames": 19,
+    "supporting_hashes": 3,
+    "supporting_viewpoints": 3,
+    "selected_frame_sequence": 29,
+    "selected_validity_probability": 0.9222222222222223,
+    "selected_quality_prediction": 0.467161431008329,
+    "confirmation_action_steps": [105, 96],
+    "confirmation_producer_sequences": [477, 573],
+    "return_position_error_mm": 0.14320421909785075,
+    "return_orientation_error_deg": 0.017294038978472287,
+    "fresh_confirmation_passed": true
+  },
+  "evaluator": {
+    "geometric_success": true,
+    "image_success": true,
+    "final_position_error_mm": 8.056545793113383,
+    "final_orientation_error_deg": 9.517308532900827,
+    "final_l4_visible_fraction": 0.25453333333333333,
+    "full_stage2_closed_loop": "DEVELOPMENT_PASS",
+    "independent_confirmation": false
+  },
+  "recovery_history": {
+    "v1_job": 51607477,
+    "v1_decision": "DEVELOPMENT_NO_GO",
+    "v1_issue": "The 0.75 mm confirmation dither was smaller than the shared 5 mm motion tolerance.",
+    "v2_job": 51611052,
+    "v2_decision": "TECHNICAL_FAIL_ACTION_BUDGET",
+    "v2_issue": "Measured confirmation motion required 552 actions while the frozen total budget allowed 550.",
+    "v3_change": "Increase only maximum_total_action_steps from 550 to 600 and repair evaluator import/summary guards."
+  },
+  "artifacts": {
+    "run_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_active_acquisition_pilot_v3/51611658",
+    "run_storage_bytes": 5167711,
+    "demo_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/stage2_active_pilot_v3_51611658",
+    "demo_storage_bytes_before_zip": 1740833,
+    "video_sha256": "d5b6e628d1d475447e0ded7d9b3986fb1766eb2f018019bebf18a9db522aba1e",
+    "video_duration_seconds": 12.2
+  },
+  "limitations": {
+    "patient_count": 1,
+    "fixed_anatomy_only": true,
+    "independent_confirmation": false,
+    "clinical_claim": false,
+    "mbb_claim": false
+  },
+  "preserved_results": {
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO",
+    "temporal_replay": "EXPLORATORY_NO_GO"
+  }
+}
