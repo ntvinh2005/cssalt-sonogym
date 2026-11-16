@@ -306,6 +306,7 @@ def main() -> int:
             "sonogym-stage2-active-acquisition-grid-demo-v4r1",
             "sonogym-stage2-active-acquisition-grid-demo-v5",
             "sonogym-stage2-active-acquisition-orientation-refinement-v6",
+            "sonogym-stage2-active-acquisition-orientation-refinement-v6r1",
         }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(

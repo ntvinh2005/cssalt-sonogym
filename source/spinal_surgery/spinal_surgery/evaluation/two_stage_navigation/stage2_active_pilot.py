@@ -19,6 +19,7 @@ ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
         "sonogym-stage2-active-acquisition-grid-demo-v4r1",
         "sonogym-stage2-active-acquisition-grid-demo-v5",
         "sonogym-stage2-active-acquisition-orientation-refinement-v6",
+        "sonogym-stage2-active-acquisition-orientation-refinement-v6r1",
     }
 )
 
