@@ -50,6 +50,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It measures the narrow collector-versus-replay contract mismatch without creating a global rule that ignores angular clamps.
 - **Source:** approved by user, 2026-11-15.
 
+### Stage 2 active-acquisition pilot
+- **Kind:** method
+- **Definition:** A development-only fixed-anatomy execution that receives a sealed actor-only Phase 1 target-level estimate, performs one continuous deterministic coarse, fine, and micro ultrasound search with frozen image validity and quality models, requires Stage 2 multi-view evidence, physically returns to the selected view, captures Stage 2 fresh confirmation, and exposes evaluator geometry only after the actor result is sealed.
+- **Intuition:** It tests whether continuous physical acquisition supplies the evidence absent from reset-separated replay without claiming independent confirmation or changing perception models.
+- **Source:** approved by user, 2026-11-16.
+
 ### D0
 - **Kind:** metric
 - **Definition:** Passes when replay observations, frame identities, frozen predictions, trajectory boundaries, and executed relative motion can be reconstructed without joining evidence across resets.
