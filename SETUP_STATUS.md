@@ -1,8 +1,26 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED; MBB_STAGE2_BLOCKED_GROUND_TRUTH**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED; MBB_STAGE2_BLOCKED_GROUND_TRUTH; MBB_RIGHT_LANDMARK_REVIEW_PENDING**
 
-Updated: 2026-11-16 (America/New_York)
+Updated: 2026-11-17 (America/New_York)
+
+## RIGHT SAP/TP independent-review package
+
+CPU job `51706459` completed `0:0` on `anest-dept` in 17 seconds with four CPUs, 16 GB requested
+RAM, and zero GPUs. It verified all source hashes, reconstructed the four RIGHT L4/L5 SAP/TP v2
+candidates exactly, passed 5 / 5 focused tests, rendered CT/mesh review figures, and produced a
+checksum-sealed ZIP. Peak RSS was 449,608 KiB.
+
+The result is **`MBB_RIGHT_LANDMARK_REVIEW_PENDING`**, not annotation acceptance. L4/L5 TP remain
+`PROVISIONAL`; L4/L5 SAP remain `UNRESOLVED`; annotation v2 was not modified; no model was trained;
+and no target region was constructed. The next action is a per-landmark independent reviewer
+decision (`ACCEPT_BOUNDARY`, `REVISE_BOUNDARY`, or `REJECT_CANDIDATE`) with reviewer provenance and
+uncertainty.
+
+- Report: `docs/research/sonogym_s0010_right_sap_tp_review.md`.
+- Result: `experiments/unity_two_stage_transfer/s0010_right_sap_tp_review_v1_result.json`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_review_v1_51706459.zip`.
+- ZIP SHA-256: `c7bb77eafcc672493266b785745bee9ea99c0d3c6f62f2c9169662637d293ec5`.
 
 ## MBB-oriented Stage 2 contract and readiness audit
 

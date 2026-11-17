@@ -1,0 +1,80 @@
+{
+  "schema": "sonogym-s0010-right-sap-tp-review-result-v1",
+  "decision": "PENDING_INDEPENDENT_REVIEW",
+  "stage2_readiness": "MBB_STAGE2_BLOCKED_GROUND_TRUTH",
+  "patient_id": "s0010",
+  "facet_level": "L4-L5",
+  "laterality": "RIGHT",
+  "execution": {
+    "job_id": "51706459",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "commit": "72d9cfdb177f386d3f442f5c4c85ef034f460f3f",
+    "account": "anest-dept",
+    "cpus": 4,
+    "requested_memory_gb": 16,
+    "gpus": 0,
+    "elapsed_seconds": 17,
+    "peak_rss_kib": 449608,
+    "start": "2026-11-17T00:26:37-05:00",
+    "end": "2026-11-17T00:26:50-05:00"
+  },
+  "verification": {
+    "focused_tests": {
+      "passed": 5,
+      "total": 5,
+      "exit_code": 0
+    },
+    "export_exit_code": 0,
+    "zip_test_exit_code": 0,
+    "source_hashes_matched_protocol": true,
+    "candidate_vertex_counts_matched_v2": true
+  },
+  "candidates": [
+    {
+      "id": "L4_RIGHT_superior_articular_process",
+      "source_status": "UNRESOLVED",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "vertex_count": 2198
+    },
+    {
+      "id": "L4_RIGHT_transverse_process",
+      "source_status": "PROVISIONAL",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "vertex_count": 4833
+    },
+    {
+      "id": "L5_RIGHT_superior_articular_process",
+      "source_status": "UNRESOLVED",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "vertex_count": 2422
+    },
+    {
+      "id": "L5_RIGHT_transverse_process",
+      "source_status": "PROVISIONAL",
+      "review_status": "PENDING_INDEPENDENT_REVIEW",
+      "vertex_count": 4343
+    }
+  ],
+  "artifacts": {
+    "run_directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_review/51706459",
+    "review_manifest_sha256": "6dc24a4677793c6bb5825f56739af1ba454b73293adddd64bbd54cf1e49fc742",
+    "zip": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_review_v1_51706459.zip",
+      "size_bytes": 2890235,
+      "sha256": "c7bb77eafcc672493266b785745bee9ea99c0d3c6f62f2c9169662637d293ec5"
+    },
+    "figures": {
+      "L4_RIGHT_superior_articular_process": "06e7029cb4de9d92cabbe880e35508a67a588a7fc532715bcdc050739695e66f",
+      "L4_RIGHT_transverse_process": "646ca3d1283b5b74cfd7a0b3608714015f6cbfa959d5e6bbdabf5a6ec4de3b9b",
+      "L5_RIGHT_superior_articular_process": "ebef3b85ce07fc21a18ebf8c114c09dcbb03f89bda96961b5a3a4e40ed60953b",
+      "L5_RIGHT_transverse_process": "47b29385d852b3defee8d8b734d7cd9d811c7d0a19b4db084374c3b5237272d0"
+    }
+  },
+  "annotation_changes": {
+    "v2_modified": false,
+    "promoted_to_ready": 0,
+    "model_training_authorized": false,
+    "target_region_constructed": false
+  }
+}
