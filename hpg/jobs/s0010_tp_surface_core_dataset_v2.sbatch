@@ -7,8 +7,8 @@ source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common.sh
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v1.yaml"
-SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v1.sha256"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v2.yaml"
+SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v2.sha256"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v2/$SLURM_JOB_ID"
 GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234"
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:${PYTHONPATH:-}"
@@ -19,7 +19,7 @@ export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/
 mkdir -p "$RUN_DIR"/{sessions,results,metrics,reviewer,context}
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "$SEAL" "$RUN_DIR/context/"
-(cd "$RUN_DIR/context" && sha256sum -c s0010_tp_surface_core_dataset_protocol_v1.sha256)
+(cd "$RUN_DIR/context" && sha256sum -c s0010_tp_surface_core_dataset_protocol_v2.sha256)
 
 nvidia-smi --query-gpu=timestamp,name,driver_version,utilization.gpu,memory.used,memory.total \
     --format=csv --loop=2 > "$RUN_DIR/metrics/gpu-telemetry.csv" &
@@ -32,6 +32,7 @@ trap 'kill "$TELEMETRY_PID" 2>/dev/null || true' EXIT
     "$PYTHON" tests/test_ultrasound_plane_geometry.py
     "$PYTHON" tests/test_two_stage_contracts.py
     "$PYTHON" tests/test_tp_surface_core_training.py
+    "$PYTHON" tests/test_tp_surface_core_capture_contract.py
     "$PYTHON" -m py_compile \
         workflows/two_stage_navigation/collect_stage2_dataset.py \
         workflows/two_stage_navigation/verify_exact_pose_capture.py \
@@ -48,6 +49,10 @@ capture_and_verify() {
         --protocol "$PROTOCOL" --session-id "$session_id" \
         --output-dir "$session_dir" --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" \
         --headless --device cuda:0 > "$session_dir/launcher.log" 2>&1
+    [[ -f "$session_dir/public/frames.jsonl" ]] || {
+        echo "Capture produced no public frame manifest for $session_id" >&2
+        return 5
+    }
     /usr/bin/time -v -o "$RUN_DIR/metrics/time-verify-$session_id.txt" \
         "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/verify_exact_pose_capture.py" \
         --protocol "$PROTOCOL" --session-dir "$session_dir" \
