@@ -36,6 +36,12 @@ PROTOCOL_V3 = (
 )
 SEAL_V3 = PROTOCOL_V3.with_suffix(".sha256")
 JOB_V3 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v3.sbatch"
+PROTOCOL_V4 = (
+    ROOT
+    / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v4.yaml"
+)
+SEAL_V4 = PROTOCOL_V4.with_suffix(".sha256")
+JOB_V4 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v4.sbatch"
 
 
 class CaptureContractTests(unittest.TestCase):
@@ -109,6 +115,53 @@ class CaptureV3ContractTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertIn(protocol_id, (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text())
+
+
+class CaptureV4ContractTests(unittest.TestCase):
+    def test_protocol_seal_and_job_pointer(self) -> None:
+        expected = SEAL_V4.read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V4.read_bytes()).hexdigest(), expected)
+        job = JOB_V4.read_text()
+        self.assertIn(PROTOCOL_V4.name, job)
+        self.assertIn(SEAL_V4.name, job)
+        self.assertNotIn("dataset_protocol_v3", job)
+
+    def test_every_job_session_is_frozen_in_protocol(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V4.read_text())
+        frozen = {row["session_id"] for row in protocol["sessions"]}
+        job = JOB_V4.read_text()
+        declared = set(
+            re.findall(r"\bs0010tpscv4_(?:smoke|train_\d\d|cal_00|dev_00)\b", job)
+        )
+        self.assertEqual(declared, frozen)
+
+    def test_retry_preserves_the_v3_scientific_contract(self) -> None:
+        previous = yaml.safe_load(PROTOCOL_V3.read_text())
+        current = yaml.safe_load(PROTOCOL_V4.read_text())
+        self.assertEqual(current["amendment"]["prior_job"], 51798995)
+        self.assertEqual(
+            current["source"]["implementation_commit"],
+            "707e9ca86d2a1b6466a9cb9d37636510a5d163a9",
+        )
+        for key in (
+            "sampling",
+            "labels",
+            "dataset_gate",
+            "exact_pose_replay",
+            "label_preparation",
+            "training_preflight",
+            "resource_bound",
+        ):
+            self.assertEqual(current[key], previous[key])
+
+    def test_collector_and_verifier_accept_the_frozen_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V4.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertIn(
+            protocol_id,
+            (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text(),
+        )
 
 
 if __name__ == "__main__":
