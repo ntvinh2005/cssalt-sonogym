@@ -5,16 +5,26 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 from sklearn.ensemble import ExtraTreesClassifier
 
-from spinal_surgery.evaluation.two_stage_navigation.stage1_features import (
-    UNITY_REFERENCE_PATCH_SPEC,
-    extract_patch_feature,
+FEATURE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/stage1_features.py"
 )
+FEATURE_SPEC = importlib.util.spec_from_file_location("tp_surface_core_features", FEATURE_PATH)
+if FEATURE_SPEC is None or FEATURE_SPEC.loader is None:
+    raise RuntimeError("cannot load CPU patch features")
+FEATURES = importlib.util.module_from_spec(FEATURE_SPEC)
+sys.modules[FEATURE_SPEC.name] = FEATURES
+FEATURE_SPEC.loader.exec_module(FEATURES)
+UNITY_REFERENCE_PATCH_SPEC = FEATURES.UNITY_REFERENCE_PATCH_SPEC
+extract_patch_feature = FEATURES.extract_patch_feature
 
 
 def parse_args() -> argparse.Namespace:

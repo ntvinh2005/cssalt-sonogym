@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import importlib.util
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +19,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
-from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (
-    plane_from_full_pose,
-    project_points_to_pixels,
+GEOMETRY_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/ultrasound_plane_geometry.py"
 )
+GEOMETRY_SPEC = importlib.util.spec_from_file_location("tp_surface_core_geometry", GEOMETRY_PATH)
+if GEOMETRY_SPEC is None or GEOMETRY_SPEC.loader is None:
+    raise RuntimeError("cannot load CPU ultrasound-plane geometry")
+GEOMETRY = importlib.util.module_from_spec(GEOMETRY_SPEC)
+sys.modules[GEOMETRY_SPEC.name] = GEOMETRY
+GEOMETRY_SPEC.loader.exec_module(GEOMETRY)
+plane_from_full_pose = GEOMETRY.plane_from_full_pose
+project_points_to_pixels = GEOMETRY.project_points_to_pixels
 
 
 ACTIVE_CANDIDATES = (
