@@ -241,3 +241,39 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Definition:** A Group B annotation status/name pair indicating that no bounded medial branch block target region can be supported from the current bone geometry without nerve data or a validated anatomical construction.
 - **Intuition:** It records that procedure-target inference is blocked while leaving Group A work usable.
 - **Source:** approved by user, 2026-11-12.
+
+### EXACT_POSE_REPLAY
+- **Kind:** method
+- **Definition:** Reconstruction of an ultrasound image plane from a recorded full end-effector transform or the exact sampled volume coordinates used by the renderer.
+- **Intuition:** It can reproduce the recorded plane without estimating missing orientation components.
+- **Source:** approved by user, 2026-11-17.
+
+### REDUCED_POSE_RECONSTRUCTION
+- **Kind:** method
+- **Definition:** Approximate reconstruction of an ultrasound image plane from recorded surface x, surface z, in-plane angle, and patient surface geometry when the full end-effector transform is unavailable.
+- **Intuition:** It is testable against stored labels but is not exact recorded-pose replay.
+- **Source:** approved by user, 2026-11-17.
+
+### PROJECTION_PARITY_PASS
+- **Kind:** metric
+- **Definition:** The CPU reference implements native width/elevation/depth ordering and inverse projection, and at least one existing frame passes the unchanged exact-label-agreement and bone-IoU gates.
+- **Intuition:** It distinguishes mathematical parity plus recovered real data from synthetic-test success alone.
+- **Source:** approved by user, 2026-11-17.
+
+### PROJECTION_REPAIR_BLOCKED
+- **Kind:** metric
+- **Definition:** Native-coordinate tests pass but no existing frame satisfies the unchanged correspondence gates, or required pose metadata are missing.
+- **Intuition:** It prevents a synthetic coordinate test from being reported as recovered CT-to-ultrasound correspondence.
+- **Source:** approved by user, 2026-11-17.
+
+### PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW
+- **Kind:** object
+- **Definition:** An agent-generated surface-region revision with editable geometry and explicit uncertainty that has not received documented qualified anatomical approval.
+- **Intuition:** It is review material, not semantic detector ground truth.
+- **Source:** approved by user, 2026-11-17.
+
+### UNRESOLVED_BOUNDARY
+- **Kind:** object
+- **Definition:** Boundary-review outcome indicating that the available CT, segmentation, and surface mesh do not defensibly separate the requested structure from adjacent anatomy.
+- **Intuition:** It leaves the full candidate as uncertainty instead of presenting a cosmetic re-cut as anatomy truth.
+- **Source:** approved by user, 2026-11-17.

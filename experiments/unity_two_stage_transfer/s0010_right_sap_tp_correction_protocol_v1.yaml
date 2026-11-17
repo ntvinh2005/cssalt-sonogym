@@ -1,0 +1,37 @@
+schema: sonogym-s0010-right-sap-tp-correction-protocol-v1
+protocol_id: s0010-right-sap-tp-correction-v1
+patient_id: s0010
+laterality: RIGHT
+historical_package:
+  job_id: 51764274
+  sha256: 9cfc8be656e219043010eea78b2787cd7f4de0c1e7f442c3d5205c0afb5bfc88
+  audited_frames: 3826
+  verified_projections: 0
+  approved_boundaries: 0
+capture_sources:
+  - id: stage1_g0_g1_v2_50908807
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v2/50908807
+    scientific_use: previously_opened_development
+  - id: stage2_dataset_v14_51377943
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943
+    scientific_use: previously_opened_development
+projection_integrity:
+  exact_raw_label_agreement_minimum: 0.985
+  bone_mask_iou_minimum: 0.90
+  local_bone_diagnostic_only: true
+  plane_distance_tolerance_mm: 1.5
+boundary_revision:
+  representation: semantic_bone_surface_region_candidate
+  transverse_process: conservative_distal_surface_core_with_uncertain_base
+  superior_articular_process: unresolved_without_independent_anatomical_boundary
+  approval: pending_qualified_anatomical_review
+training:
+  execution: forbidden
+  supervision: image_patch
+  current_eligibility: fail_closed
+resources:
+  account: anest-dept
+  cpus: 4
+  memory_gb: 16
+  gpus: 0
+  walltime_minutes: 30
