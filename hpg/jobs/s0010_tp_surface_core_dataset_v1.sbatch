@@ -11,7 +11,11 @@ PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_sur
 SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v1.sha256"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v1/$SLURM_JOB_ID"
 GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234"
-export PYTHONPATH="$SONOGYM_PROJECT_DIR/source/spinal_surgery:${PYTHONPATH:-}"
+export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:${PYTHONPATH:-}"
+[[ -d "$SONOGYM_RUNTIME_DIR/envs/stage1-python/sklearn" ]] || {
+    echo "Pinned supervised-learning packages are missing" >&2
+    exit 2
+}
 mkdir -p "$RUN_DIR"/{sessions,results,metrics,reviewer,context}
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "$SEAL" "$RUN_DIR/context/"

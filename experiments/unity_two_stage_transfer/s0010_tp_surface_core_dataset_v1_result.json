@@ -1,0 +1,35 @@
+{
+  "schema": "sonogym-tp-surface-core-dataset-result-v1",
+  "job_id": 51793371,
+  "execution_commit": "0ea74a60a7666a4cf0d14e86693717315d467e2c",
+  "final_readiness": "DATASET_INCOMPLETE",
+  "smoke": {
+    "frames": 8,
+    "unique_images": 8,
+    "distinct_viewpoints": 8,
+    "sessions": 1,
+    "verdict": "PROJECTION_PARITY_PASS",
+    "all_four_gates_pass": true,
+    "maximum_coordinate_error_index": 0.00002814913344195702,
+    "minimum_raw_label_agreement": 1.0,
+    "minimum_bone_iou": 1.0
+  },
+  "dataset": {
+    "planned_frames": 300,
+    "captured_frames": 0,
+    "planned_sessions": 6,
+    "captured_sessions": 0,
+    "candidate_rows_from_smoke": 16,
+    "verified_geometric_intersections": 3,
+    "training_eligible_samples": 0
+  },
+  "preflight": {
+    "status": "ENGINEERING_PREFLIGHT_ONLY",
+    "resolved_feature_rows": 3,
+    "feature_width": 774,
+    "fit_called": false
+  },
+  "historical_results_modified": false,
+  "model_training_run": "NOT_RUN",
+  "stage3": "OUT_OF_SCOPE"
+}

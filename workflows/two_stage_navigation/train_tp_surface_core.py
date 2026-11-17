@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import importlib.util
 import json
 import sys
@@ -40,6 +41,14 @@ def load_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def ultrasound_sha256(image: np.ndarray) -> str:
+    array = np.asarray(image, dtype="<f4")
+    digest = hashlib.sha256()
+    digest.update(np.asarray(array.shape, dtype="<i8").tobytes())
+    digest.update(np.ascontiguousarray(array).tobytes())
+    return digest.hexdigest()
+
+
 def main() -> int:
     args = parse_args()
     dataset = args.dataset_dir.resolve()
@@ -53,6 +62,9 @@ def main() -> int:
     feature_rows: list[dict[str, str]] = []
     archives: dict[Path, np.ndarray] = {}
     failures: list[str] = []
+    dataset_summary = json.loads((dataset / "dataset_summary.json").read_text())
+    if dataset_summary.get("status") != "ENGINEERING_READY_LABEL_REVIEW_PENDING":
+        failures.append(f"dataset status is {dataset_summary.get('status')}")
     for row in present:
         path = Path(row["image_archive"])
         if not path.is_file():
@@ -61,6 +73,9 @@ def main() -> int:
         if path not in archives:
             archives[path] = np.load(path)["ultrasound"]
         image = archives[path][int(row["image_archive_index"])]
+        if image.shape != (200, 150) or ultrasound_sha256(image) != row["frame_sha256"]:
+            failures.append(f"image shape or hash mismatch: {row['sample_id']}")
+            continue
         feature = extract_patch_feature(
             image,
             float(row["patch_row"]),
@@ -120,6 +135,8 @@ def main() -> int:
         for split, minimum in minimums.items():
             if counts[split] < minimum:
                 failures.append(f"{class_name} {split}: {counts[split]} < {minimum}")
+    if not any(row["training_label"] == "VERIFIED_NEGATIVE" for row in feature_rows):
+        failures.append("reviewed hard-negative coverage is absent")
 
     estimator = ExtraTreesClassifier(
         n_estimators=240,
