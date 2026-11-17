@@ -571,13 +571,41 @@ def render_ultrasound_sheet(
             if np.any(level_mask):
                 overlay.contour(level_mask, [0.5], colors=["#39ff14"], linewidths=1.0)
             overlay.set_title("Evaluator-only vertebral context; NO candidate overlay")
-        ct_axis.imshow(row.ct_plane, cmap="gray", origin="upper", aspect="auto")
-        level_mask = row.raw_labels == LEVEL_LABEL[candidate.level]
-        if np.any(level_mask):
-            ct_axis.contour(level_mask, [0.5], colors=["#39ff14"], linewidths=0.9)
+        if row.integrity["verified"]:
+            ct_axis.imshow(row.ct_plane, cmap="gray", origin="upper", aspect="auto")
+            level_mask = row.raw_labels == LEVEL_LABEL[candidate.level]
+            if np.any(level_mask):
+                ct_axis.contour(level_mask, [0.5], colors=["#39ff14"], linewidths=0.9)
         if verified_intersection and np.any(row.candidate_mask):
             ct_axis.contour(row.candidate_mask, [0.5], colors=[color], linewidths=1.4)
-        ct_axis.set_title("Pose-reconstructed CT imaging plane (evaluator-only)")
+            ct_axis.set_title("Verified CT imaging plane (evaluator-only)")
+        elif row.integrity["verified"]:
+            ct_axis.set_title("Verified CT plane; candidate does not intersect")
+        else:
+            ct_axis.axis("off")
+            ct_axis.text(
+                0.5,
+                0.58,
+                "VERIFIED CT PLANE UNAVAILABLE",
+                ha="center",
+                va="center",
+                fontsize=14,
+                weight="bold",
+                color="#b22222",
+            )
+            ct_axis.text(
+                0.5,
+                0.39,
+                "Stored captures contain reduced (x, z, angle) pose,\n"
+                "but not the full end-effector transform or per-pixel\n"
+                "human_img_coords needed for exact replay.\n\n"
+                f"Round-trip label agreement: {row.integrity['exact_label_agreement']:.4f}\n"
+                f"Bone-mask IoU: {row.integrity['bone_mask_iou']:.4f}\n\n"
+                "Candidate projection intentionally withheld.",
+                ha="center",
+                va="center",
+                fontsize=11,
+            )
         metadata = (
             f"{row.source_id}/{row.session_id} frame={row.frame_sequence} "
             f"producer={row.producer_sequence}\n"
@@ -889,6 +917,12 @@ def build_package(args: argparse.Namespace) -> dict[str, Any]:
             "capture_sources": protocol["capture_sources"],
         },
         "capture_audit": capture_audit,
+        "stored_pose_metadata_limitation": {
+            "full_end_effector_transform_recorded": False,
+            "per_pixel_human_image_coordinates_recorded": False,
+            "available": "reduced realized_pose_index [surface_x, surface_z, in_plane_angle]",
+            "consequence": "candidate-specific CT-plane projection is not verified for existing captures",
+        },
         "projection_contract": {
             "label_agreement_minimum": PROJECTION_LABEL_AGREEMENT_MINIMUM,
             "bone_iou_minimum": PROJECTION_BONE_IOU_MINIMUM,
@@ -919,6 +953,9 @@ training, no MBB target region is defined, and no file is actor-usable. A colore
 shown only when pose-derived image coordinates pass the stored raw-label round-trip check. Green
 whole-vertebra contours are evaluator-only context, not SAP/TP masks. Plane intersection and a
 visible bone interface do not prove that SAP or TP can be distinguished from ultrasound pixels.
+The existing captures store only a reduced `(surface_x, surface_z, in_plane_angle)` pose; their
+pose-derived CT planes failed the raw-label round-trip gate, so no candidate-specific ultrasound
+projection is shown in this package.
 
 ## Review order
 
