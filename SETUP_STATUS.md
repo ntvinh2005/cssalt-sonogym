@@ -1,8 +1,28 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED; MBB_STAGE2_BLOCKED_GROUND_TRUTH**
 
 Updated: 2026-11-16 (America/New_York)
+
+## MBB-oriented Stage 2 contract and readiness audit
+
+CPU job `51697175` completed `0:0` on `anest-dept` in 13 seconds with four CPUs, 16 GB requested
+RAM, and zero GPUs. The isolated branch/site taxonomy, causal multi-view landmark records,
+candidate memory, information-boundary checks, uncertainty gate, result schema, and fail-closed
+target-region interface passed 19 / 19 focused tests. Existing annotation, Stage 1, and frozen Stage
+2 regressions passed 61 / 61; the task-specific readiness manifest reproduced byte-for-byte.
+
+The scientific result is **`MBB_STAGE2_BLOCKED_GROUND_TRUTH`**. For both left and right L4-L5
+configurations, L4/L5 SAP annotations remain `UNRESOLVED`, L4/L5 TP candidates remain low-confidence
+`PROVISIONAL`, medial-branch nerve references are `MISSING`, and existing ultrasound captures do
+not establish SAP/TP semantic observability. No detector was trained, no target region was
+constructed, no simulator/GPU job ran, and historical `CONFIRMATION_NO_GO` evidence was unchanged.
+
+- Report: `docs/research/sonogym_stage2_mbb_contract_readiness.md`.
+- Manifest: `experiments/unity_two_stage_transfer/stage2_mbb_landmark_readiness_v1.json`.
+- CPU evidence: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_mbb_contracts/51697175/`.
+- Next approval: independent L4/L5 SAP/TP anatomical delineation and review, followed only then by
+  a bounded ultrasound-observability pilot.
 
 ## Phase 5C Stage 2 angular-selection diagnosis
 
