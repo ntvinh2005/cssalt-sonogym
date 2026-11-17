@@ -4,7 +4,7 @@ purpose: >-
   Capture synchronized fixed-anatomy development observations for a RIGHT L4/L5
   TP_SURFACE_CORE patch-classification pilot. Smoke must pass before bounded dataset capture.
 source:
-  implementation_commit: TO_BE_REPLACED_AFTER_CORE_COMMIT
+  implementation_commit: 7039c7ee559ddd40631b8ab25ec81659fe143d01
   correction_geometry_job: 51779234
   correction_geometry_status: PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW
 scope:
