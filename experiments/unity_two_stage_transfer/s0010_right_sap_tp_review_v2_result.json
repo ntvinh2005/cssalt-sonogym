@@ -1,0 +1,73 @@
+{
+  "schema": "sonogym-s0010-right-sap-tp-expanded-review-result-v2",
+  "package_decision": "PACKAGE_READY_FOR_INDEPENDENT_REVIEW",
+  "anatomical_decision": "MORE_EVIDENCE_REQUIRED",
+  "stage2_readiness": "MBB_STAGE2_BLOCKED_GROUND_TRUTH",
+  "patient_id": "s0010",
+  "facet_level": "L4-L5",
+  "laterality": "RIGHT",
+  "execution": {
+    "job_id": "51717444",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "commit": "4a3570d4e62fa2c97c68ac88f77e32c0f63add9c",
+    "account": "anest-dept",
+    "cpus": 4,
+    "requested_memory_gb": 16,
+    "gpus": 0,
+    "elapsed_seconds": 39,
+    "peak_rss_kib": 756180,
+    "start": "2026-11-17T01:47:27-05:00",
+    "end": "2026-11-17T01:48:02-05:00"
+  },
+  "review_feedback_preserved": {
+    "v1_integrity_files_verified": 7,
+    "v1_boundaries_accepted": 0,
+    "TP_concern": "possible anterior adjacent bone surface contamination",
+    "SAP_concern": "coordinate-cut boundaries do not establish semantic isolation",
+    "ultrasound_observability_evaluated": false
+  },
+  "verification": {
+    "focused_tests": {
+      "passed": 10,
+      "total": 10,
+      "exit_code": 0
+    },
+    "export_exit_code": 0,
+    "zip_test_exit_code": 0,
+    "internal_checksum_files_passed": 28,
+    "internal_checksum_files_total": 28,
+    "source_hashes_matched_protocol": true,
+    "candidate_vertex_counts_matched_v2": true,
+    "crop_resampled": false,
+    "crop_voxel_spacing_mm": [1.5, 1.5, 1.5]
+  },
+  "expanded_contents": {
+    "overview_figures": 4,
+    "adjacent_slice_figures": 4,
+    "adjacent_slices_per_candidate": 15,
+    "editable_geometry_files": 12,
+    "source_STL_files": 2,
+    "cropped_NIfTI_volumes": 2,
+    "review_response_templates": 1
+  },
+  "artifacts": {
+    "run_directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_review_v2/51717444",
+    "run_directory_size_bytes": 9431045,
+    "expanded_review_manifest_sha256": "ad610d9b54131561ec8ef3296aa53cec8943c434925ad07d475e170fba69a0a2",
+    "review_response_template_sha256": "c13612df59dc75cabd1c2210cb09df0a5b70022188039b7ae05007d923e2c675",
+    "zip": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_review_v2_51717444.zip",
+      "size_bytes": 5786547,
+      "sha256": "4e9722d0c51fbe497bba4005caeaa357692ae6e70ac3ddaa6805d06cacf24f83"
+    }
+  },
+  "annotation_changes": {
+    "v2_modified": false,
+    "promoted_to_ready": 0,
+    "model_training_authorized": false,
+    "actor_usable": false,
+    "ultrasound_observability": "NOT_EVALUATED_IN_THIS_PACKAGE",
+    "target_region_constructed": false
+  }
+}

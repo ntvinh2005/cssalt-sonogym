@@ -1,8 +1,27 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED; MBB_STAGE2_BLOCKED_GROUND_TRUTH; MBB_RIGHT_LANDMARK_REVIEW_PENDING**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED; MBB_STAGE2_BLOCKED_GROUND_TRUTH; MBB_RIGHT_LANDMARK_REVIEW_V2_PACKAGE_READY**
 
 Updated: 2026-11-17 (America/New_York)
+
+## RIGHT SAP/TP expanded-review v2 package
+
+CPU job `51717444` completed `0:0` on `anest-dept` in 39 seconds with four CPUs, 16 GB requested
+RAM, and zero GPUs. It passed 10 / 10 tests and 28 / 28 package checksums. The v2 ZIP adds four
+15-slice zoomed CT montages, editable CSV/NPZ/PLY geometry for each candidate, source L4/L5 STL,
+non-resampled CT/segmentation crops, and a structured reviewer response template.
+
+The package result is **`MBB_RIGHT_LANDMARK_REVIEW_V2_PACKAGE_READY`**; the anatomical result remains
+**`MORE_EVIDENCE_REQUIRED`** and Stage 2 remains **`MBB_STAGE2_BLOCKED_GROUND_TRUTH`**. The enlarged
+slices reinforce possible anterior contamination in TP candidates and axis-cut/adjacent-posterior
+contamination in SAP candidates. No boundary was automatically corrected or promoted; annotation
+v2 remains unchanged; ultrasound observability, model training, and target-region construction
+remain not run.
+
+- Report: `docs/research/sonogym_s0010_right_sap_tp_review_v2.md`.
+- Result: `experiments/unity_two_stage_transfer/s0010_right_sap_tp_review_v2_result.json`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_review_v2_51717444.zip`.
+- ZIP SHA-256: `4e9722d0c51fbe497bba4005caeaa357692ae6e70ac3ddaa6805d06cacf24f83`.
 
 ## RIGHT SAP/TP independent-review package
 
