@@ -55,7 +55,10 @@ def main() -> int:
     args = parse_args()
     protocol_path = args.protocol.resolve()
     protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
-    if protocol.get("protocol_id") != "sonogym-s0010-exact-pose-replay-v1":
+    if protocol.get("protocol_id") not in {
+        "sonogym-s0010-exact-pose-replay-v1",
+        "sonogym-s0010-exact-pose-replay-v2",
+    }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
     if file_sha256(protocol_path) != seal:

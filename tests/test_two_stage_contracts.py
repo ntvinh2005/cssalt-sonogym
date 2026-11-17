@@ -179,6 +179,14 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(
             is_supported_stage2_dataset_protocol("sonogym-s0010-exact-pose-replay-v1")
         )
+        self.assertTrue(
+            is_supported_stage2_dataset_protocol("sonogym-s0010-exact-pose-replay-v2")
+        )
+        self.assertTrue(
+            uses_coupled_stage2_dataset_controller(
+                "sonogym-s0010-exact-pose-replay-v2"
+            )
+        )
         self.assertTrue(uses_coupled_stage2_dataset_controller("sonogym-stage2-dataset-v14"))
         self.assertTrue(
             uses_segmented_stage2_dataset_capture("sonogym-stage2-confirmation-v16")
