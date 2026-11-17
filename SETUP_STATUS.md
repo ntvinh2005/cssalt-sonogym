@@ -1,5 +1,29 @@
 # Setup status
 
+## 2026-11-17: TP dataset capture remains incomplete after bounded technical repairs
+
+The trainer now partitions eligible rows before fitting: only `train` enters `fit()`, calibration
+selects operating thresholds, and development evaluation remains read-only.  Actor-visible
+background proposals, per-split unique-image gates, checkpoint save/reload verification and the
+strict serialized-coordinate hash gate are implemented.  Pinned CPU job `51799253` passed 55 / 55
+tests in 9 seconds with four CPUs and zero GPUs.
+
+GPU job `51798167` passed all five strict smoke gates, then stopped before saving the first bulk
+session because float32 quaternion-to-matrix conversion exceeded the unchanged orthonormality
+tolerance.  Job `51798995` stopped before its first smoke frame because protocol v3 was missing from
+the explicit collector/verifier allow-lists.  Both defects now have focused regression tests, and
+sealed protocol v4 preserves the prior waypoint bank, splits, gates and resources, but v4 was not
+run because the bounded GPU allocation was consumed.
+
+The readiness state remains **`DATASET_INCOMPLETE`**: 0 / 300 development frames and zero
+training-eligible samples.  L4/L5 RIGHT TP surface-core anatomy and image-semantic decisions remain
+pending; no real model was fitted.  The next approval is one smoke-gated v4 capture, followed by
+import of exact per-overlay review decisions before any fitting.
+
+- Protocol-v4 commit: `f8a4dbf`; registered implementation commit: `707e9ca`.
+- V3 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v3_result.json`.
+- Readiness report: `docs/research/sonogym_s0010_tp_surface_core_dataset_readiness.md`.
+
 ## 2026-11-17: synchronized TP surface-core smoke passes; dataset remains incomplete
 
 The single authorized GPU job `51793371` captured eight genuinely distinct s0010 viewpoints and

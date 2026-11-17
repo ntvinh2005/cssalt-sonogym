@@ -3,19 +3,23 @@
 | Result | Value |
 |---|---|
 | Final readiness | `DATASET_INCOMPLETE` |
-| GPU execution | job `51793371`; 1 L4, 4 CPUs, 30 GB; 48 s; exit `1:0` |
+| Verified real acquisition | job `51793371`; synchronized smoke 8/8; dataset 0/300 |
+| Repair executions | `51797926` no frame; `51798167` smoke pass then bulk rotation failure; `51798995` no frame |
 | Synchronized smoke | **PASS**, 8/8 reloaded frames pass all four gates |
 | Development dataset | **NOT COLLECTED**, 0/300 frames across the six preassigned sessions |
 | Review candidates | 3 verified geometric intersections: 1 L4 RIGHT TP core and 2 L5 RIGHT TP core |
 | Training eligibility | 0 samples; anatomy and image-semantic review remain pending |
-| No-fit | `ENGINEERING_PREFLIGHT_ONLY`; 3 real 774-value feature vectors; `fit_called=false` |
+| Training implementation | train-only fit, calibration-only threshold selection, development-only evaluation, background class, save/reload |
+| Current CPU regression | job `51799253`; 55/55 tests; 4 CPUs; 9 s; exit `0:0` |
+| Next sealed protocol | v4, SHA-256 `5a1cb48fe475c6370259336109c4ac135805880931e1bfe6505cb06b9476e801`; not run |
 
 The bounded job fixed and verified synchronized acquisition, but it stopped after smoke because the
 verifier compared the saved float32 coordinate map against a hash computed before the collector's
 float64-to-float32 serialization.  Ultrasound and raw-label hashes matched.  The post-run CPU audit
 preserved that defect, added hashes of the actual saved arrays, and demonstrated exact replay from
 the reloaded files.  Because the one authorized GPU job had already ended, no second job was
-submitted and the required six-session dataset remains absent.
+submitted in that protocol and the required six-session dataset remains absent.  Later repair jobs
+are preserved separately in Section 4; none collected a development-dataset frame.
 
 ## 1. Acquisition synchronization and physical viewpoints
 
@@ -149,12 +153,100 @@ required split/class count is zero.
 - `preflight/preflight_result.json`
 - `workflows/two_stage_navigation/train_tp_surface_core.py`
 
-## 4. Exact remaining gate
+## 4. Training and capture repair — whether the reviewed defects are closed in code
 
-The next execution needs a newly authorized bounded capture because the only authorized GPU job has
-already been consumed.  It should use the corrected coordinate-hash source and the unchanged sealed
-50-view banks to acquire the six missing sessions.  After capture, the reviewer must decide, for the
-exact L4 and L5 geometry checksums, whether the distal surface cores are accepted and must classify
-each candidate overlay as visible/supported, ambiguous, occluded or rejected.  Importing those
-decisions and rerunning no-fit is sufficient; SAP and Stage 3 remain out of scope.
+### Criterion
+
+Only training rows assigned to `train` may enter `fit()`.  Calibration chooses operating thresholds,
+development evaluation remains read-only, every active split contains reviewed background examples,
+and a fitted checkpoint must reload without changing development predictions.  Capture must reject
+serialized coordinate-hash mismatches and accept only a protocol explicitly registered in both the
+collector and verifier.
+
+### Method
+
+The dataset builder now proposes patches from actor-visible bright interfaces and uses privileged
+geometry only to prepare review targets.  The trainer partitions eligible rows before constructing
+the estimator, fits only the training partition, selects class thresholds only from calibration,
+evaluates only on development, and saves then reloads the model bundle.  Synthetic regression data
+cover all three classes and all three splits; no real research model is fitted.
+
+### Setup
+
+| what | value | spec |
+|---|---|---|
+| CPU job | `51799253` | 4 CPUs, 8 GB, pinned environment |
+| source | `ca74cbd418d8149b1b6ae6bf084c409600ad827a` | post-v3 protocol registration |
+| capture retry | protocol v4 | same waypoint bank, gates, splits and resources as v3 |
+
+```bash
+python tests/test_acquisition_integrity.py
+python tests/test_ultrasound_plane_geometry.py
+python tests/test_two_stage_contracts.py
+python tests/test_tp_surface_core_training.py
+python tests/test_tp_surface_core_capture_contract.py
+```
+
+### Results and verdict
+
+The pinned run passed `9 + 11 + 23 + 4 + 8 = 55` tests.  The synthetic end-to-end test resolved
+180 feature rows, fitted only training IDs, calibrated only on calibration IDs, evaluated only on
+development IDs, and verified checkpoint reload identity.  Job `51798167` independently passed all
+five strict smoke gates before the first bulk session exposed float32 rotation validation; job
+`51798995` stopped before its first frame because the new protocol ID was absent from the explicit
+allow-list.  Both source defects now have focused regression coverage, but protocol v4 has not run.
+
+**Verdict: CPU capture/training implementation PASS; real v4 capture NOT RUN.**
+
+### Reading it
+
+- The code no longer permits calibration or development rows to enter model fitting.
+- Background proposals have a complete review and feature-extraction path; unreviewed rows remain
+  excluded instead of becoming negatives.
+- Passing synthetic fitting tests does not create a usable real dataset or approve TP anatomy.
+- Jobs `51797926`, `51798167` and `51798995` remain technical failures and are not rewritten.
+
+### Files
+
+- `workflows/two_stage_navigation/train_tp_surface_core.py`
+- `source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/tp_surface_core_dataset.py`
+- `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v4.yaml`
+- `hpg/jobs/s0010_tp_surface_core_dataset_v4.sbatch`
+
+## 5. Exact remaining gate
+
+### Criterion
+
+Training can start only after protocol v4 captures all 300 frames, every session passes strict
+reloaded correspondence/hash/freshness checks, and review imports produce at least 40/10/10 unique
+positive images per active class plus reviewed background examples in each split.
+
+### Method
+
+No additional method is run in this section.
+
+### Setup
+
+The next execution requires separate approval because the bounded GPU allocation in the completed
+scope has been consumed.  The ready job is `hpg/jobs/s0010_tp_surface_core_dataset_v4.sbatch`.
+
+### Results and verdict
+
+Current counts remain 0/300 development frames and zero training-eligible samples.  L4 and L5 RIGHT
+distal TP surface-core geometry and image-semantic decisions remain pending for the exact candidate
+checksums; SAP remains excluded.
+
+**Verdict: `DATASET_INCOMPLETE`; real model fitting remains blocked.**
+
+### Reading it
+
+- The next bounded action is one v4 smoke-gated capture, not model training.
+- After capture, the reviewer must classify exact overlays as supported, ambiguous, occluded or
+  rejected and approve or reject the exact L4/L5 surface-core geometry.
+- If imported review counts pass no-fit, the supplied fit command can run without another capture.
+
+### Files
+
+- Protocol: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v4.yaml`
+- Protocol seal: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v4.sha256`
 

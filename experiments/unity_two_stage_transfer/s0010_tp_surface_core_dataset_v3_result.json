@@ -1,0 +1,19 @@
+{
+  "schema": "sonogym-tp-surface-core-dataset-result-v1",
+  "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v3",
+  "job_id": 51798995,
+  "execution_commit": "dbcebbc7983f7fcc4477bf64c55179619cfd6d67",
+  "scheduler_state": "FAILED",
+  "elapsed_seconds": 26,
+  "exit_code": "5:0",
+  "final_readiness": "DATASET_INCOMPLETE",
+  "failure_stage": "SMOKE_BEFORE_FIRST_FRAME",
+  "failure_reason": "protocol identity was absent from the collector and verifier allow-lists",
+  "captured_frames": 0,
+  "captured_sessions": 0,
+  "training_eligible_samples": 0,
+  "model_training_run": "NOT_RUN",
+  "historical_results_modified": false,
+  "next_protocol": "sonogym-s0010-tp-surface-core-dataset-v4",
+  "stage3": "OUT_OF_SCOPE"
+}
