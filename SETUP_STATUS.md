@@ -1,8 +1,31 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 angular-selection diagnosis
+
+CPU job `51683029` completed `0:0` on `anest-dept` with four CPUs, 16 GB requested RAM, and zero
+GPUs. Focused tests passed 4 / 4 and existing Stage 2 regression tests passed 34 / 34.
+
+All three evaluable new-start runs physically acquired at least one frame meeting the unchanged
+position, orientation, L4-visibility, technical, and image gates. All five such frames also passed
+the frozen actor threshold and multi-view evidence contract, but the maximum-quality rule selected
+an orientation-invalid frame in every run. The primary diagnosis is therefore
+`SELECTION_FAILURE`, not search coverage or physical tracking; the recommendation is
+`SELECTION_REPAIR_RECOMMENDED`.
+
+The 2.97-rad refinement ceiling was reached closely enough to produce 9.9794, 9.9385, and 9.9379
+degree observations without refinement-frame clamping. Start 00 remains a separate technical
+freshness failure: a 0.003809-degree clipped waypoint separation was below the 0.25-degree movement
+tolerance, produced zero actions, and repeated the producer sequence and hash. The frozen
+`CONFIRMATION_NO_GO` result is unchanged and no GPU, simulator, retraining, threshold change, or
+retry ran.
+
+- Detailed report: `docs/research/sonogym_stage2_angular_selection_audit.md`.
+- Small artifacts: `experiments/unity_two_stage_transfer/stage2_angular_selection_audit/`.
+- CPU run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_angular_selection_audit/51683029/`.
 
 ## Phase 5C Stage 2 new-start confirmation no-go
 

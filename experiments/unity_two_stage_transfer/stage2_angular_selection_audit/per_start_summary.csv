@@ -1,0 +1,5 @@
+start_id,artifact_complete,search_frame_count,fully_valid_observed_count,fully_valid_actor_eligible_count,fully_valid_in_final_pool_count,selected_fully_valid,primary_cause,selected_frame,selected_orientation_error_deg,best_observed_frame,best_observed_orientation_error_deg,final_orientation_error_deg
+confirm_new_00,False,44,0,0,0,,TECHNICAL_FRESHNESS_FAILURE,,,,,
+confirm_new_01,True,44,3,3,1,False,SELECTION_FAILURE,40,15.262412870230333,32,9.051216423939158,15.25051468069617
+confirm_new_02,True,46,1,1,1,False,SELECTION_FAILURE,44,11.899842439941356,45,9.938485317880493,11.880513004590219
+confirm_new_03,True,46,1,1,1,False,SELECTION_FAILURE,44,11.897533836001891,45,9.937911581990212,11.878190740272414

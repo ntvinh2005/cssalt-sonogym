@@ -134,6 +134,12 @@ class AngularSelectionAuditTests(unittest.TestCase):
             self.assertEqual(summary["fully_valid_actor_eligible_sequences"], [4])
             self.assertEqual(summary["selected"]["frame_sequence"], 3)
             self.assertFalse(summary["selected"]["full_gate"])
+            self.assertEqual(
+                summary["refinement_sequential_filter_counts"][
+                    "actor_eligible_distinct_viewpoints"
+                ],
+                5,
+            )
             self.assertAlmostEqual(rows[-1]["evaluator_orientation_error_deg"], orientation_error_deg(2.97, 3.14))
 
     def test_join_rejects_inconsistent_evaluator_angle(self) -> None:

@@ -135,6 +135,76 @@ def eligible_sequences(
     return eligible, support
 
 
+def candidate_filter_diagnostics(
+    observations: Sequence[ReplayObservation], config: TemporalDecisionConfig
+) -> dict[int, dict[str, int | bool]]:
+    """Expose the frozen evidence filters without changing their decision order."""
+    if not observations:
+        return {}
+    pool = reindex_trajectory_subset(observations)
+    output: dict[int, dict[str, int | bool]] = {}
+    for candidate in pool:
+        technically_valid = bool(
+            candidate.transition_valid and candidate.image_valid and candidate.producer_advanced
+        )
+        classifier_accepted = bool(
+            technically_valid
+            and candidate.validity_probability >= config.validity_probability_threshold
+        )
+        neighborhood: list[ReplayObservation] = []
+        for row in pool:
+            translation = math.hypot(
+                candidate.relative_pose[0] - row.relative_pose[0],
+                candidate.relative_pose[1] - row.relative_pose[1],
+            )
+            angle = orientation_error_deg(candidate.relative_pose[2], row.relative_pose[2])
+            if (
+                row.transition_valid
+                and row.image_valid
+                and row.producer_advanced
+                and row.validity_probability >= config.validity_probability_threshold
+                and translation <= config.maximum_neighbor_translation_mm
+                and angle <= config.maximum_neighbor_angle_deg
+            ):
+                neighborhood.append(row)
+        quality_rows = [
+            row
+            for row in neighborhood
+            if row.quality >= candidate.quality - config.maximum_quality_drop
+        ]
+        unique_rows: list[ReplayObservation] = []
+        seen: set[str] = set()
+        for row in quality_rows:
+            if row.frame_sha256 not in seen:
+                seen.add(row.frame_sha256)
+                unique_rows.append(row)
+        distinct = [candidate]
+        if classifier_accepted:
+            for row in unique_rows:
+                if row.frame_sha256 == candidate.frame_sha256:
+                    continue
+                if all(
+                    math.hypot(
+                        row.relative_pose[0] - prior.relative_pose[0],
+                        row.relative_pose[1] - prior.relative_pose[1],
+                    )
+                    >= config.minimum_distinct_view_translation_mm
+                    or orientation_error_deg(row.relative_pose[2], prior.relative_pose[2])
+                    >= config.minimum_distinct_view_angle_deg
+                    for prior in distinct
+                ):
+                    distinct.append(row)
+        output[candidate.frame_sequence] = {
+            "technically_valid": technically_valid,
+            "classifier_accepted": classifier_accepted,
+            "neighborhood_support": len(neighborhood),
+            "quality_support": len(quality_rows),
+            "distinct_hashes": len(unique_rows),
+            "distinct_viewpoints": len(distinct) if classifier_accepted else 0,
+        }
+    return output
+
+
 def best(rows: Iterable[Mapping[str, Any]], key) -> Mapping[str, Any] | None:
     values = list(rows)
     return None if not values else max(values, key=key)
@@ -196,6 +266,8 @@ def audit_start(
     early_eligible, early_support = eligible_sequences(early_obs, config)
     refine_eligible, refine_support = eligible_sequences(refine_obs, config)
     all_eligible, all_support = eligible_sequences(search_obs, config)
+    early_filters = candidate_filter_diagnostics(early_obs, config)
+    refine_filters = candidate_filter_diagnostics(refine_obs, config)
 
     handoff_angle = float(protocol["geometry"]["stage2_handoff_angle_rad"])
     gate = protocol["evaluation_gate"]
@@ -248,6 +320,11 @@ def audit_start(
             if phase == "orientation_refine"
             else early_support.get(sequence, {})
         )
+        filters = (
+            refine_filters.get(sequence, {})
+            if phase == "orientation_refine"
+            else early_filters.get(sequence, {})
+        )
         joined.append(
             {
                 "start_id": start_id,
@@ -275,6 +352,10 @@ def audit_start(
                 "all_history_actor_eligible_hindsight": sequence in all_eligible,
                 "supporting_hash_count": support.get("hashes", 0),
                 "supporting_viewpoint_count": support.get("viewpoints", 0),
+                "candidate_neighborhood_support_count": filters.get("neighborhood_support", 0),
+                "candidate_quality_support_count": filters.get("quality_support", 0),
+                "candidate_distinct_hash_count": filters.get("distinct_hashes", 0),
+                "candidate_distinct_viewpoint_count": filters.get("distinct_viewpoints", 0),
                 "producer_advanced": bool(frame["producer_advanced"]),
                 "action_count": int(frame["action_step_count"]),
                 "position_clamped": any(bool(row.get("command_position_clamped")) for row in action_rows),
@@ -340,7 +421,63 @@ def audit_start(
         "invalid_motion_or_image": sum(not row["technical_valid"] for row in search_rows),
         "non_advancing_producer": sum(not row["producer_advanced"] for row in search_rows),
         "multi_view_evidence": sum(row["classifier_accepted"] and row["technical_valid"] and not row["actor_eligible"] for row in search_rows),
+        "neighborhood_support": sum(
+            row["classifier_accepted"]
+            and row["technical_valid"]
+            and row["candidate_neighborhood_support_count"] < config.required_distinct_hash_observations
+            for row in search_rows
+        ),
+        "quality_consistency": sum(
+            row["classifier_accepted"]
+            and row["technical_valid"]
+            and row["candidate_neighborhood_support_count"] >= config.required_distinct_hash_observations
+            and row["candidate_quality_support_count"] < config.required_distinct_hash_observations
+            for row in search_rows
+        ),
+        "distinct_hashes": sum(
+            row["classifier_accepted"]
+            and row["technical_valid"]
+            and row["candidate_quality_support_count"] >= config.required_distinct_hash_observations
+            and row["candidate_distinct_hash_count"] < config.required_distinct_hash_observations
+            for row in search_rows
+        ),
+        "distinct_viewpoints": sum(
+            row["classifier_accepted"]
+            and row["technical_valid"]
+            and row["candidate_distinct_hash_count"] >= config.required_distinct_hash_observations
+            and row["candidate_distinct_viewpoint_count"] < config.required_distinct_hash_observations
+            for row in search_rows
+        ),
         "refinement_only_pool": sum(row["phase"] in EARLY_PHASES for row in search_rows),
+    }
+    refinement_rows = [row for row in search_rows if row["phase"] == "orientation_refine"]
+    sequential = {
+        "refinement_candidates": len(refinement_rows),
+        "technical_and_fresh": sum(row["technical_valid"] for row in refinement_rows),
+        "classifier_accepted": sum(
+            row["technical_valid"] and row["classifier_accepted"] for row in refinement_rows
+        ),
+        "minimum_neighborhood_support": sum(
+            row["technical_valid"]
+            and row["classifier_accepted"]
+            and row["candidate_neighborhood_support_count"] >= config.required_distinct_hash_observations
+            for row in refinement_rows
+        ),
+        "minimum_quality_consistent_support": sum(
+            row["technical_valid"]
+            and row["classifier_accepted"]
+            and row["candidate_neighborhood_support_count"] >= config.required_distinct_hash_observations
+            and row["candidate_quality_support_count"] >= config.required_distinct_hash_observations
+            for row in refinement_rows
+        ),
+        "minimum_distinct_hashes": sum(
+            row["technical_valid"]
+            and row["classifier_accepted"]
+            and row["candidate_quality_support_count"] >= config.required_distinct_hash_observations
+            and row["candidate_distinct_hash_count"] >= config.required_distinct_hash_observations
+            for row in refinement_rows
+        ),
+        "actor_eligible_distinct_viewpoints": sum(row["actor_eligible"] for row in refinement_rows),
     }
     summary = {
         "start_id": start_id,
@@ -364,13 +501,18 @@ def audit_start(
         "final_confirmation": compact_frame(final_confirmation),
         "return_orientation_error_deg": None if actor is None else actor.get("return_orientation_error_deg"),
         "final_evaluator_orientation_error_deg": None if evaluation is None else evaluation.get("final_orientation_error_deg"),
-        "refinement_only_discarded_better_earlier_candidate": bool(
+        "refinement_only_discarded_higher_model_ranked_earlier_candidate": bool(
             selected_row is not None
             and best_all_history_quality is not None
+            and best_all_history_quality["phase"] in EARLY_PHASES
             and best_all_history_quality["frame_sequence"] != selected_row["frame_sequence"]
             and best_all_history_quality["quality_prediction"] > selected_row["quality_prediction"]
         ),
+        "refinement_only_excluded_fully_valid_earlier_candidate": any(
+            row["phase"] in EARLY_PHASES for row in valid_rows
+        ),
         "exclusion_nonexclusive_counts": exclusion,
+        "refinement_sequential_filter_counts": sequential,
     }
     inputs = {
         str(path.relative_to(start_dir)): file_sha256(path)
