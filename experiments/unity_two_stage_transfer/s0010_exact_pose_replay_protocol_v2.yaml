@@ -1,0 +1,108 @@
+protocol_id: sonogym-s0010-exact-pose-replay-v2
+status: PRE_GPU_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-s0010-exact-pose-replay-v1
+  prior_sha256: 2847aa9293cbff8c62e7984f92770410bca27c3efbaa3f99d935f352494e0fc4
+  evidence_job: 51782795
+  reason: >-
+    V1 stopped before acquiring a frame when the legacy independent-axis controller
+    produced a 0.161271-index command mapping error against its unchanged 0.15 limit.
+    Use the already validated coupled proportional Stage 2 controller while preserving
+    the six poses and every replay, diversity, resource and information-boundary gate.
+  changed_fields:
+    - protocol_id
+    - source.implementation_commit
+    - sampling.physical_controller
+  retry_policy: This is the single justified retry; preserve any failure and stop.
+purpose: >-
+  Capture six development-only s0010 ultrasound frames with synchronized native
+  pixel-to-volume coordinates and full probe transforms, then verify exact raw-label
+  replay before any semantic landmark dataset or detector training is permitted.
+source:
+  implementation_commit: ddd8d5892ba1c9941021124b94be5e7ba1766b7d
+  prior_correction_commit: bc7dbd77b105fa72ec5d55421b78de4ea79b7e8d
+  prior_correction_job: 51779234
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  simulator_environments: 1
+  development_only: true
+  semantic_training_authorized: false
+  ppo_changes: forbidden
+information_boundaries:
+  public:
+    - clean_ultrasound_pixels
+    - frame_hash_and_sequence
+    - executed_relative_motion
+    - acquisition_feedback
+  privileged:
+    - raw_anatomical_label_slice
+    - full_probe_transform
+    - native_pixel_to_volume_coordinates
+    - evaluator_pose_and_labels
+  inference_forbidden:
+    - raw_anatomical_labels
+    - full_probe_transform
+    - pixel_to_volume_coordinates
+    - target_coordinates
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 10.0
+    maximum_orientation_error_deg: 10.0
+    minimum_l4_visible_fraction: 0.05
+  quality:
+    visibility_normalization_fraction: 0.20
+sampling:
+  goal_relative_x_offsets_index: [-2.0, 0.0, 2.0]
+  goal_relative_z_offsets_index: [0.0]
+  command_angles_rad: [2.90, 2.95]
+  expected_frames_per_session: 6
+  maximum_initial_positioning_steps: 300
+  maximum_action_steps_per_waypoint: 90
+  maximum_total_action_steps_per_session: 750
+  physical_tracking_position_tolerance_mm: 5.0
+  physical_tracking_orientation_tolerance_deg: 5.0
+  physical_controller:
+    name: coupled_proportional_target
+    ratio: [0.02, 0.02, 0.6]
+    ceiling_assisted_minimum_requested_angle_rad: 2.98
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: true
+    capture_angle_ceiling_limited_samples: true
+sessions:
+  - session_id: s0010epr_00
+    split: opened_development
+    seed: 2026111700
+    x_jitter_index: 0.0
+    z_jitter_index: 0.0
+    angle_jitter_rad: 0.0
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 4
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.90
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:20:00"
+  one_job_at_a_time: true
+  maximum_storage_growth_gb: 0.10
+  output_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_exact_pose_replay_v2
+change_policy:
+  - Do not lower the projection gates after capture.
+  - Preserve every failure record and do not fit a detector from this capture.
+  - A successful replay permits review-label preparation, not automatic anatomical approval.
