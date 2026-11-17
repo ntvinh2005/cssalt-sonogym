@@ -22,6 +22,8 @@ native_local_coordinates = MODULE.native_local_coordinates
 plane_from_full_pose = MODULE.plane_from_full_pose
 plane_from_reduced_pose = MODULE.plane_from_reduced_pose
 project_points_to_pixels = MODULE.project_points_to_pixels
+sample_label_image = MODULE.sample_label_image
+label_agreement = MODULE.label_agreement
 
 
 class NativeCoordinateTests(unittest.TestCase):
@@ -130,6 +132,51 @@ class InverseProjectionTests(unittest.TestCase):
         )
         self.assertEqual(int(result["rows"][0]), 2)
         self.assertTrue(bool(result["inside"][0]))
+
+
+class LabelSamplingTests(unittest.TestCase):
+    def test_native_flattening_and_display_transpose_match_renderer(self) -> None:
+        volume = np.arange(6 * 7 * 8, dtype=np.int32).reshape(6, 7, 8)
+        coordinates = np.asarray(
+            [
+                [1.0, 2.0, 3.0],
+                [1.0, 2.0, 4.0],
+                [2.0, 2.0, 3.0],
+                [2.0, 2.0, 4.0],
+            ]
+        )
+        image = sample_label_image(
+            volume=volume, coordinates_index=coordinates, width=2, depth=2
+        )
+        expected = np.asarray(
+            [
+                [volume[1, 2, 3], volume[2, 2, 3]],
+                [volume[1, 2, 4], volume[2, 2, 4]],
+            ]
+        )
+        np.testing.assert_array_equal(image, expected)
+
+    def test_sampling_rejects_out_of_volume_coordinates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "already be clipped"):
+            sample_label_image(
+                volume=np.zeros((2, 2, 2), dtype=np.uint8),
+                coordinates_index=np.asarray([[2.0, 0.0, 0.0]]),
+                width=1,
+                depth=1,
+            )
+
+    def test_label_agreement_keeps_frozen_dual_gate(self) -> None:
+        reference = np.zeros((10, 10), dtype=np.uint8)
+        reference[0, :10] = 28
+        self.assertTrue(label_agreement(reference, reference)["passes_unchanged_gate"])
+        replay = reference.copy()
+        replay[0, 0] = 0
+        metrics = label_agreement(reference, replay)
+        self.assertEqual(metrics["exact_raw_label_agreement"], 0.99)
+        self.assertEqual(metrics["bone_mask_iou"], 0.9)
+        self.assertTrue(metrics["passes_unchanged_gate"])
+        replay[0, 1] = 0
+        self.assertFalse(label_agreement(reference, replay)["passes_unchanged_gate"])
 
 
 if __name__ == "__main__":

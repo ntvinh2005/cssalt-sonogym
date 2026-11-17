@@ -54,11 +54,17 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # no
     Stage2LabelConfig,
     supervised_targets,
 )
+from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (  # noqa: E402
+    label_agreement,
+    plane_from_full_pose,
+    sample_label_image,
+)
 
 from stage2_sim import (  # noqa: E402
     clean_ultrasound,
     current_command,
     current_realized_pose,
+    current_rotation,
     move_proportional_target,
     move_to_pose,
     raw_label_slice,
@@ -153,6 +159,9 @@ def main() -> int:
     privileged_rows: list[dict[str, Any]] = []
     images: list[np.ndarray] = []
     raw_images: list[np.ndarray] = []
+    coordinate_maps: list[np.ndarray] = []
+    full_pose_rows: list[dict[str, Any]] = []
+    local_image_coordinates: np.ndarray | None = None
     try:
         env_cfg = parse_env_cfg(
             protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1
@@ -174,6 +183,12 @@ def main() -> int:
             / "combined_label_map.nii.gz"
         )
         raw_volume = np.asarray(nib.load(raw_path).dataobj, dtype=np.uint8)
+        exact_pose_replay = protocol.get("exact_pose_replay", {})
+        exact_pose_replay_enabled = bool(exact_pose_replay.get("enabled", False))
+        if exact_pose_replay_enabled and int(
+            protocol["sampling"]["expected_frames_per_session"]
+        ) > 10:
+            raise RuntimeError("exact-pose replay smoke capture is limited to ten frames")
         goal = tensor_row(unwrapped.goal_cmd_pose)
         waypoints = ordered_waypoints(protocol, session, goal)
         sampling = protocol["sampling"]
@@ -375,6 +390,89 @@ def main() -> int:
                     "raw_label_archive_index": frame_sequence,
                 }
             )
+            if exact_pose_replay_enabled:
+                native_coordinates = np.asarray(
+                    unwrapped.US_slicer.human_img_coords[0].detach().cpu().numpy(),
+                    dtype=np.float64,
+                )
+                local_coordinates = np.asarray(
+                    unwrapped.US_slicer.img_coords.detach().cpu().numpy(), dtype=np.float64
+                )
+                if local_image_coordinates is None:
+                    local_image_coordinates = local_coordinates.copy()
+                elif not np.array_equal(local_image_coordinates, local_coordinates):
+                    raise RuntimeError("native local image coordinates changed during capture")
+                human_to_ee_position = tensor_row(unwrapped.extras["human_to_ee_pos"])
+                human_to_ee_quaternion = tensor_row(unwrapped.extras["human_to_ee_quat"])
+                rotation = current_rotation(unwrapped)
+                full_plane = plane_from_full_pose(
+                    end_effector_position_m=human_to_ee_position,
+                    rotation_columns=rotation,
+                    image_origin_height_m=float(unwrapped.US_slicer.height_img),
+                    local_coordinates_m=local_coordinates,
+                    label_resolution_m=float(unwrapped.US_slicer.label_res),
+                    volume_shape=tuple(int(value) for value in raw_volume.shape),
+                )
+                width, depth = (int(value) for value in unwrapped.US_slicer.img_size)
+                native_raw = sample_label_image(
+                    volume=raw_volume,
+                    coordinates_index=native_coordinates,
+                    width=width,
+                    depth=depth,
+                ).astype(np.uint8, copy=False)
+                replay_raw = sample_label_image(
+                    volume=raw_volume,
+                    coordinates_index=full_plane.coordinates_index,
+                    width=width,
+                    depth=depth,
+                ).astype(np.uint8, copy=False)
+                native_metric = label_agreement(raw, native_raw)
+                replay_metric = label_agreement(raw, replay_raw)
+                maximum_coordinate_error = float(
+                    np.max(np.abs(native_coordinates - full_plane.coordinates_index))
+                )
+                coordinate_tolerance = float(
+                    exact_pose_replay["maximum_coordinate_error_index"]
+                )
+                frame_passes = bool(
+                    native_metric["exact_raw_label_agreement"] == 1.0
+                    and replay_metric["passes_unchanged_gate"]
+                    and maximum_coordinate_error <= coordinate_tolerance
+                )
+                coordinate_maps.append(native_coordinates.astype(np.float32))
+                full_pose_rows.append(
+                    {
+                        "schema": "sonogym-exact-pose-replay-frame-v1",
+                        "session_id": session["session_id"],
+                        "frame_sequence": frame_sequence,
+                        "producer_sequence": int(unwrapped.num_step),
+                        "frame_sha256": frame_hash,
+                        "human_to_ee_position_m": human_to_ee_position.tolist(),
+                        "human_to_ee_quaternion_wxyz": human_to_ee_quaternion.tolist(),
+                        "human_to_ee_rotation_columns": rotation.tolist(),
+                        "image_origin_height_m": float(unwrapped.US_slicer.height_img),
+                        "label_resolution_m": float(unwrapped.US_slicer.label_res),
+                        "image_size_width_depth": [width, depth],
+                        "world_to_human_position_m": tensor_row(
+                            unwrapped.world_to_human_pos
+                        ).tolist(),
+                        "world_to_human_quaternion_wxyz": tensor_row(
+                            unwrapped.world_to_human_rot
+                        ).tolist(),
+                        "coordinate_archive": "privileged/pixel_to_volume_coordinates.npz",
+                        "coordinate_archive_index": frame_sequence,
+                        "maximum_coordinate_error_index": maximum_coordinate_error,
+                        "native_coordinate_raw_label_metrics": native_metric,
+                        "full_pose_raw_label_metrics": replay_metric,
+                        "frame_passes": frame_passes,
+                    }
+                )
+                privileged_rows[-1].update(
+                    {
+                        "exact_pose_replay_record": "privileged/full_pose_replay.jsonl",
+                        "exact_pose_replay_record_index": frame_sequence,
+                    }
+                )
             images.append(image.copy())
             raw_images.append(raw.copy())
             previous_realized = current_pose
@@ -387,7 +485,10 @@ def main() -> int:
         )
         summary["distinct_frame_hash_count"] = distinct_frame_hash_count
         summary["minimum_distinct_frame_hashes"] = minimum_distinct_frame_hashes
-        if distinct_frame_hash_count < minimum_distinct_frame_hashes:
+        distinct_frame_gate_passed = bool(
+            distinct_frame_hash_count >= minimum_distinct_frame_hashes
+        )
+        if not distinct_frame_gate_passed and not exact_pose_replay_enabled:
             raise RuntimeError(
                 "Stage 2 dataset contains insufficient distinct images: "
                 f"{distinct_frame_hash_count} < {minimum_distinct_frame_hashes}"
@@ -396,22 +497,50 @@ def main() -> int:
         privileged_dir.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(public_dir / "ultrasound.npz", ultrasound=np.stack(images))
         np.savez_compressed(privileged_dir / "raw_labels.npz", raw_labels=np.stack(raw_images))
+        if exact_pose_replay_enabled:
+            if len(coordinate_maps) != len(public_rows) or local_image_coordinates is None:
+                raise RuntimeError("exact-pose replay records are incomplete")
+            np.savez_compressed(
+                privileged_dir / "pixel_to_volume_coordinates.npz",
+                human_img_coords=np.stack(coordinate_maps),
+                human_img_coords_integer=np.trunc(np.stack(coordinate_maps)).astype(np.int32),
+                native_local_image_coordinates_m=local_image_coordinates.astype(np.float32),
+            )
+            write_jsonl(privileged_dir / "full_pose_replay.jsonl", full_pose_rows)
         write_jsonl(public_dir / "frames.jsonl", public_rows)
         write_jsonl(privileged_dir / "annotations.jsonl", privileged_rows)
         write_jsonl(privileged_dir / "actions.jsonl", action_rows)
+        exact_pose_replay_passed_frames = sum(
+            int(row["frame_passes"]) for row in full_pose_rows
+        )
+        exact_pose_replay_all_frames_passed = bool(
+            not exact_pose_replay_enabled
+            or (
+                exact_pose_replay_passed_frames == len(public_rows)
+                and distinct_frame_gate_passed
+            )
+        )
         summary.update(
-            status="PASSED",
+            status=(
+                "PASSED"
+                if exact_pose_replay_all_frames_passed
+                else "EXACT_POSE_REPLAY_NO_GO"
+            ),
             frame_count=len(public_rows),
             trajectory_count=len(trajectory_start_frames),
             valid_frame_count=sum(int(row["validity_label"]) for row in privileged_rows),
             distinct_frame_hash_count=distinct_frame_hash_count,
+            distinct_frame_gate_passed=distinct_frame_gate_passed,
             total_action_steps=total_steps,
             public_manifest="public/frames.jsonl",
             privileged_manifest="privileged/annotations.jsonl",
             ultrasound_archive="public/ultrasound.npz",
             raw_label_archive="privileged/raw_labels.npz",
+            exact_pose_replay_enabled=exact_pose_replay_enabled,
+            exact_pose_replay_passed_frames=exact_pose_replay_passed_frames,
+            exact_pose_replay_all_frames_passed=exact_pose_replay_all_frames_passed,
         )
-        return 0
+        return 0 if exact_pose_replay_all_frames_passed else 3
     except Exception as error:
         summary["error"] = f"{type(error).__name__}: {error}"
         summary["traceback"] = traceback.format_exc()

@@ -207,3 +207,48 @@ def project_points_to_pixels(
         "elevation_distance_mm": elevation_distance_mm,
         "inside": inside,
     }
+
+
+def sample_label_image(
+    *,
+    volume: np.ndarray,
+    coordinates_index: np.ndarray,
+    width: int,
+    depth: int,
+) -> np.ndarray:
+    """Sample one central native image plane using the slicer's truncation rule."""
+
+    source = np.asarray(volume)
+    coordinates = np.asarray(coordinates_index, dtype=np.float64)
+    if source.ndim != 3:
+        raise ValueError("volume must be three-dimensional")
+    if coordinates.shape != (width * depth, 3) or not np.all(np.isfinite(coordinates)):
+        raise ValueError("coordinates must contain width*depth finite xyz rows")
+    indices = np.trunc(coordinates).astype(np.int64)
+    if np.any(indices < 0) or np.any(indices >= np.asarray(source.shape)):
+        raise ValueError("coordinates must already be clipped to the volume")
+    sampled = source[indices[:, 0], indices[:, 1], indices[:, 2]]
+    return sampled.reshape(width, depth, -1)[:, :, 0].T
+
+
+def label_agreement(reference: np.ndarray, replay: np.ndarray) -> dict[str, float | bool]:
+    """Measure the unchanged whole-label and bone-mask correspondence gates."""
+
+    expected = np.asarray(reference)
+    observed = np.asarray(replay)
+    if expected.shape != observed.shape or expected.ndim != 2:
+        raise ValueError("reference and replay must be same-shape 2D arrays")
+    exact = float(np.mean(expected == observed))
+    expected_bone = np.isin(expected, np.arange(25, 44))
+    observed_bone = np.isin(observed, np.arange(25, 44))
+    union = expected_bone | observed_bone
+    bone_iou = (
+        float(np.count_nonzero(expected_bone & observed_bone) / np.count_nonzero(union))
+        if np.any(union)
+        else 1.0
+    )
+    return {
+        "exact_raw_label_agreement": exact,
+        "bone_mask_iou": bone_iou,
+        "passes_unchanged_gate": bool(exact >= 0.985 and bone_iou >= 0.90),
+    }
