@@ -1,0 +1,92 @@
+{
+  "schema": "sonogym-s0010-right-sap-tp-ultrasound-review-result-v2",
+  "status": "REVIEW_PACKAGE_READY_TRAINING_BLOCKED_INDEPENDENT_REVIEW",
+  "patient_id": "s0010",
+  "facet_level": "L4-L5",
+  "laterality": "RIGHT",
+  "execution_commit": "9abed5f7b286e359306d93aa34c97144acac4de2",
+  "slurm": {
+    "job_id": 51764274,
+    "account": "anest-dept",
+    "partition": "hpg-default",
+    "qos": "anest-dept",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:01:45",
+    "cpus": 4,
+    "memory_requested": "16G",
+    "peak_rss": "743.50M",
+    "gpus": 0,
+    "node": "c0704a-s25",
+    "start": "2026-11-17T10:24:28-05:00",
+    "end": "2026-11-17T10:26:10-05:00"
+  },
+  "tests": {
+    "existing_review_v1": {"passed": 5, "failed": 0},
+    "existing_review_v2": {"passed": 5, "failed": 0},
+    "ultrasound_review_v2": {"passed": 6, "failed": 0},
+    "total_passed": 16,
+    "total_failed": 0
+  },
+  "capture_audit": {
+    "sources": 2,
+    "sessions": 22,
+    "frames_scanned": 3826,
+    "frames_joined_to_reduced_pose": 3826,
+    "frames_passing_projection_round_trip": 0,
+    "stage1_g0_g1_v2_50908807": {"sessions": 16, "frames": 3376},
+    "stage2_dataset_v14_51377943": {"sessions": 6, "frames": 450}
+  },
+  "landmarks": [
+    {
+      "id": "L4_RIGHT_superior_articular_process",
+      "source_status": "UNRESOLVED",
+      "boundary_status": "PENDING_QUALIFIED_REVIEW",
+      "ultrasound_status": "NOT_OBSERVED_IN_EXISTING_DATA",
+      "recommendation": "REVISE_BOUNDARY",
+      "training_eligible": false
+    },
+    {
+      "id": "L4_RIGHT_transverse_process",
+      "source_status": "PROVISIONAL",
+      "boundary_status": "PENDING_QUALIFIED_REVIEW",
+      "ultrasound_status": "NOT_OBSERVED_IN_EXISTING_DATA",
+      "recommendation": "REVISE_BOUNDARY",
+      "training_eligible": false
+    },
+    {
+      "id": "L5_RIGHT_superior_articular_process",
+      "source_status": "UNRESOLVED",
+      "boundary_status": "PENDING_QUALIFIED_REVIEW",
+      "ultrasound_status": "NOT_OBSERVED_IN_EXISTING_DATA",
+      "recommendation": "REVISE_BOUNDARY",
+      "training_eligible": false
+    },
+    {
+      "id": "L5_RIGHT_transverse_process",
+      "source_status": "PROVISIONAL",
+      "boundary_status": "PENDING_QUALIFIED_REVIEW",
+      "ultrasound_status": "NOT_OBSERVED_IN_EXISTING_DATA",
+      "recommendation": "REVISE_BOUNDARY",
+      "training_eligible": false
+    }
+  ],
+  "deliverables": {
+    "anatomical_review_sheets": 4,
+    "ultrasound_review_sheets": 4,
+    "contact_sheet": 1,
+    "checksummed_payload_files": 46,
+    "editable_candidate_exports": 12,
+    "training_executed": false,
+    "annotation_promotion": "NOT_PERFORMED"
+  },
+  "artifacts": {
+    "run_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_review_v2_ultrasound/51764274",
+    "review_zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_review_v2_51764274.zip",
+    "review_zip_sha256": "9cfc8be656e219043010eea78b2787cd7f4de0c1e7f442c3d5205c0afb5bfc88",
+    "review_zip_bytes": 16397980,
+    "run_bytes": 21403055
+  },
+  "scientific_limit": "Existing captures preserve reduced x/z/angle pose but not the full end-effector transform or per-pixel human image coordinates. Candidate-specific CT/ultrasound projection was therefore withheld after 0/3826 frames passed the frozen round-trip gate.",
+  "next_approval": "Qualified boundary review followed by a separately approved bounded targeted capture that preserves exact image-plane coordinates."
+}

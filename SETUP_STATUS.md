@@ -1,5 +1,19 @@
 # Setup status
 
+## 2026-11-17: RIGHT SAP/TP ultrasound-inclusive review v2
+
+CPU job `51764274` (`anest-dept`, four CPUs, 16 GB requested, zero GPUs) completed `0:0` in 1:45
+and produced the final reviewer ZIP
+`/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_review_v2_51764274.zip`
+(SHA-256 `9cfc8be656e219043010eea78b2787cd7f4de0c1e7f442c3d5205c0afb5bfc88`). All
+16 focused/regression tests passed. The audit joined 3,826 real `conv` frames across 22 opened
+development sessions, but zero frames passed the candidate-plane raw-label round-trip gate because
+the captures do not preserve the full end-effector transform or per-pixel image coordinates.
+Accordingly, candidate overlays were withheld, all four boundaries remain unapproved, and semantic
+training remains blocked pending qualified boundary review plus a separately approved targeted
+capture with exact image-plane provenance. See
+`docs/research/sonogym_s0010_right_sap_tp_review_v2_ultrasound.md`.
+
 Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO; SELECTION_REPAIR_RECOMMENDED; MBB_STAGE2_BLOCKED_GROUND_TRUTH; MBB_RIGHT_LANDMARK_REVIEW_V2_PACKAGE_READY**
 
 Updated: 2026-11-17 (America/New_York)
