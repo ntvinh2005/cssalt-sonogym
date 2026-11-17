@@ -1,0 +1,58 @@
+schema: sonogym-s0010-right-sap-tp-ultrasound-review-protocol-v2
+protocol_id: s0010-right-sap-tp-review-v2-ultrasound
+patient_id: s0010
+facet_level: L4-L5
+laterality: RIGHT
+purpose: final_ultrasound_inclusive_anatomical_review_package
+preserves:
+  source_annotation_statuses: true
+  historical_review_packages: true
+  frozen_stage2_verdicts: true
+  annotation_promotion: forbidden
+  model_training: forbidden
+capture_sources:
+  - id: stage1_g0_g1_v2_50908807
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/g0_g1_v2/50908807
+    renderer: real_SonoGym_model_based_conv
+    scientific_use: opened_development_only
+  - id: stage2_dataset_v14_51377943
+    root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_dataset_v14/51377943
+    renderer: real_SonoGym_model_based_conv
+    scientific_use: opened_development_only
+projection_integrity:
+  image_size_hw: [200, 150]
+  image_resolution_mm: 0.5
+  label_resolution_mm: 1.5
+  exact_raw_label_agreement_minimum: 0.985
+  bone_mask_iou_minimum: 0.90
+  candidate_plane_distance_tolerance_mm: 1.5
+  failure_behavior: omit_candidate_overlay_and_report_unverified
+review_contract:
+  candidates:
+    - L4_RIGHT_superior_articular_process
+    - L4_RIGHT_transverse_process
+    - L5_RIGHT_superior_articular_process
+    - L5_RIGHT_transverse_process
+  advisory_recommendations:
+    - ACCEPT_BOUNDARY
+    - REVISE_BOUNDARY
+    - REJECT_CANDIDATE
+  promotion_requires:
+    - documented_qualified_reviewer_identity
+    - per_landmark_boundary_decision
+    - corrected_geometry_when_revised
+    - positional_uncertainty
+    - ultrasound_correspondence_decision
+  actor_usable: false
+  training_authorized: false
+training_preparation:
+  split_unit: complete_session
+  review_sessions: excluded_from_unseen_evaluation
+  current_labels: ambiguous_not_trainable
+  model: CPU_ExtraTrees_prepared_not_run
+resources:
+  account: anest-dept
+  cpus: 4
+  memory_gb: 16
+  gpus: 0
+  walltime_minutes: 30
