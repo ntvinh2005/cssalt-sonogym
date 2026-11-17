@@ -20,6 +20,24 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It retains evidence needed for selection without storing evaluator labels or target coordinates.
 - **Source:** approved by user, 2026-11-15.
 
+### MBB-oriented Stage 2
+- **Kind:** method
+- **Definition:** Causal ultrasound acquisition and executed-motion aggregation for unilateral L4-L5 anatomical localization, requiring separate evidence for the L3 medial-branch-related L4 SAP/TP site and the L4 medial-branch-related L5 SAP/TP site, with explicit uncertainty and fail-closed abstention.
+- **Intuition:** It replaces one maximum-quality probe pose with procedure-specific multi-view landmark evidence while remaining separate from instrument control.
+- **Source:** approved by user, 2026-11-16.
+
+### MBB landmark evidence
+- **Kind:** object
+- **Definition:** An actor-side landmark hypothesis containing image coordinates, optional validated patient-relative coordinates, uncertainty, confidence, and causal supporting frame/viewpoint identities; CT, segmentation, evaluator coordinates, and hidden target locations are excluded.
+- **Intuition:** It records what ultrasound and executed motion actually support without converting a single detection into a 3-D anatomical claim.
+- **Source:** approved by user, 2026-11-16.
+
+### MBB target-region interface
+- **Kind:** method
+- **Definition:** A branch-specific mapping from independently supported SAP/TP landmark estimates to a bounded bony-landmark-derived surrogate region; it remains undefined and returns `BLOCKED_GROUND_TRUTH` until the anatomical mapping and uncertainty coverage are independently validated.
+- **Intuition:** It prevents vertebral centroids, mesh quantiles, or classifier confidence from becoming invented nerve or injection coordinates.
+- **Source:** approved by user, 2026-11-16.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.

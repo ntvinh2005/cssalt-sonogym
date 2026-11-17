@@ -1,0 +1,173 @@
+{
+  "facet_level": "L4-L5",
+  "landmark_readiness": [
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "UNRESOLVED",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "superior_articular_process",
+      "laterality": "LEFT",
+      "minimum_next_requirement": "independent anatomical delineation and review",
+      "positional_uncertainty_mm": null,
+      "readiness": "UNRESOLVED",
+      "site_branch": "L3_MEDIAL_BRANCH",
+      "vertebral_level": "L4"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "LOW",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "transverse_process",
+      "laterality": "LEFT",
+      "minimum_next_requirement": "independent anatomical review of process boundaries before supervised use",
+      "positional_uncertainty_mm": 6.0,
+      "readiness": "PROVISIONAL",
+      "site_branch": "L3_MEDIAL_BRANCH",
+      "vertebral_level": "L4"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "UNRESOLVED",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "superior_articular_process",
+      "laterality": "LEFT",
+      "minimum_next_requirement": "independent anatomical delineation and review",
+      "positional_uncertainty_mm": null,
+      "readiness": "UNRESOLVED",
+      "site_branch": "L4_MEDIAL_BRANCH",
+      "vertebral_level": "L5"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "LOW",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "transverse_process",
+      "laterality": "LEFT",
+      "minimum_next_requirement": "independent anatomical review of process boundaries before supervised use",
+      "positional_uncertainty_mm": 6.0,
+      "readiness": "PROVISIONAL",
+      "site_branch": "L4_MEDIAL_BRANCH",
+      "vertebral_level": "L5"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "UNRESOLVED",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "superior_articular_process",
+      "laterality": "RIGHT",
+      "minimum_next_requirement": "independent anatomical delineation and review",
+      "positional_uncertainty_mm": null,
+      "readiness": "UNRESOLVED",
+      "site_branch": "L3_MEDIAL_BRANCH",
+      "vertebral_level": "L4"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "LOW",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "transverse_process",
+      "laterality": "RIGHT",
+      "minimum_next_requirement": "independent anatomical review of process boundaries before supervised use",
+      "positional_uncertainty_mm": 6.0,
+      "readiness": "PROVISIONAL",
+      "site_branch": "L3_MEDIAL_BRANCH",
+      "vertebral_level": "L4"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "UNRESOLVED",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "superior_articular_process",
+      "laterality": "RIGHT",
+      "minimum_next_requirement": "independent anatomical delineation and review",
+      "positional_uncertainty_mm": null,
+      "readiness": "UNRESOLVED",
+      "site_branch": "L4_MEDIAL_BRANCH",
+      "vertebral_level": "L5"
+    },
+    {
+      "blocker": "no dedicated process segmentation exists; region requires anatomical review before supervised use",
+      "confidence": "LOW",
+      "evidence": [
+        "docs/research/figures/s0010_anatomical_ground_truth_v2/lumbar_mesh_regions.png"
+      ],
+      "facet_level": "L4-L5",
+      "generation_method": "level_specific_mesh_quantile_region",
+      "landmark": "transverse_process",
+      "laterality": "RIGHT",
+      "minimum_next_requirement": "independent anatomical review of process boundaries before supervised use",
+      "positional_uncertainty_mm": 6.0,
+      "readiness": "PROVISIONAL",
+      "site_branch": "L4_MEDIAL_BRANCH",
+      "vertebral_level": "L5"
+    }
+  ],
+  "laterality_configuration": "REQUIRED_EXPLICIT_LEFT_OR_RIGHT",
+  "nerve_reference_readiness": [
+    {
+      "blocker": "no medial-branch nerve segmentation or independently reviewed patient-specific nerve course",
+      "branch": "L3_MEDIAL_BRANCH",
+      "readiness": "MISSING"
+    },
+    {
+      "blocker": "no medial-branch nerve segmentation or independently reviewed patient-specific nerve course",
+      "branch": "L4_MEDIAL_BRANCH",
+      "readiness": "MISSING"
+    }
+  ],
+  "patient_id": "s0010",
+  "readiness_decision": "MBB_STAGE2_BLOCKED_GROUND_TRUTH",
+  "schema": "sonogym-stage2-mbb-landmark-readiness-v1",
+  "scientific_scope": {
+    "clinical_validation": false,
+    "detector_trained": false,
+    "gpu_work": "NOT_RUN",
+    "patient_count": 1,
+    "target_region_implemented": false
+  },
+  "source_annotation": {
+    "path": "experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json",
+    "sha256": "25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3",
+    "status": "PROVISIONAL"
+  },
+  "source_annotation_generation_commit": "0640c4f22b13ad8ab8459d13e14d4b1941961e13",
+  "target_region": {
+    "blocker": "required SAP annotations and branch-specific patient geometry are not validated; nerve segmentation is absent",
+    "kind": "bony-landmark-derived anatomical surrogate region",
+    "localized": false,
+    "readiness": "UNRESOLVED"
+  },
+  "ultrasound_observability": {
+    "evidence": "existing captures establish raw-label occupancy, not SAP/TP semantic discriminability",
+    "readiness": "UNRESOLVED",
+    "renderer_limitation": "raw vertebral labels 25-31 map to the common acoustic bone class 13"
+  }
+}
