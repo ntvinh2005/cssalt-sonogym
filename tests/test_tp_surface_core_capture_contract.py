@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import re
+import sys
 import unittest
 from pathlib import Path
 
@@ -12,6 +14,19 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+COORDINATES_PATH = (
+    ROOT
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/coordinates.py"
+)
+COORDINATES_SPEC = importlib.util.spec_from_file_location(
+    "capture_contract_coordinates", COORDINATES_PATH
+)
+assert COORDINATES_SPEC is not None and COORDINATES_SPEC.loader is not None
+COORDINATES = importlib.util.module_from_spec(COORDINATES_SPEC)
+sys.modules[COORDINATES_SPEC.name] = COORDINATES
+COORDINATES_SPEC.loader.exec_module(COORDINATES)
+is_supported_stage2_dataset_protocol = COORDINATES.is_supported_stage2_dataset_protocol
+uses_coupled_stage2_dataset_controller = COORDINATES.uses_coupled_stage2_dataset_controller
 PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v2.yaml"
 SEAL = PROTOCOL.with_suffix(".sha256")
 JOB = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v2.sbatch"
@@ -88,6 +103,12 @@ class CaptureV3ContractTests(unittest.TestCase):
         protocol = yaml.safe_load(PROTOCOL_V3.read_text())
         self.assertTrue(protocol["exact_pose_replay"]["require_serialized_array_hash_integrity"])
         self.assertIn("ARRAY_HASH_INTEGRITY", JOB_V3.read_text())
+
+    def test_collector_and_verifier_accept_the_frozen_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V3.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertIn(protocol_id, (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text())
 
 
 if __name__ == "__main__":
