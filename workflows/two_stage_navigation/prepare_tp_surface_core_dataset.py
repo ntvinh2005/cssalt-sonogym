@@ -93,11 +93,15 @@ def main() -> int:
         }
 
     rows: list[dict[str, Any]] = []
+    missing_sessions: list[str] = []
+    processed_sessions: list[str] = []
     overlay_budget = {candidate: 12 for candidate in ACTIVE_CANDIDATES}
     for session in protocol["sessions"]:
-        if session["role"] == "smoke":
-            continue
         session_dir = args.capture_root / "sessions" / session["session_id"]
+        if not session_dir.is_dir():
+            missing_sessions.append(session["session_id"])
+            continue
+        processed_sessions.append(session["session_id"])
         report = json.loads((session_dir / "verification_report.json").read_text())
         if report["verdict"] != "PROJECTION_PARITY_PASS":
             raise RuntimeError(f"unverified session: {session['session_id']}")
@@ -220,7 +224,13 @@ def main() -> int:
         "verified_intersections": sum(row["candidate_intersection"] == "PRESENT" for row in rows),
         "training_eligible_rows": 0,
         "anatomical_approval": "PENDING",
-        "status": "ENGINEERING_READY_LABEL_REVIEW_PENDING",
+        "processed_sessions": processed_sessions,
+        "missing_sessions": missing_sessions,
+        "status": (
+            "DATASET_INCOMPLETE"
+            if missing_sessions
+            else "ENGINEERING_READY_LABEL_REVIEW_PENDING"
+        ),
         "counts": {
             candidate: {
                 split: sum(

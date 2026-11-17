@@ -594,7 +594,9 @@ def main() -> int:
                         ).tolist(),
                         "ultrasound_array_sha256": array_sha256(image),
                         "raw_label_array_sha256": array_sha256(raw),
-                        "native_coordinate_array_sha256": array_sha256(native_coordinates),
+                        "native_coordinate_array_sha256": array_sha256(
+                            native_coordinates.astype(np.float32)
+                        ),
                         "coordinate_archive": "privileged/pixel_to_volume_coordinates.npz",
                         "coordinate_archive_index": frame_sequence,
                         "maximum_coordinate_error_index": maximum_coordinate_error,
