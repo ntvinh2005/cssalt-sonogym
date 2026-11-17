@@ -40,7 +40,6 @@ import yaml  # noqa: E402
 import isaaclab_tasks  # noqa: E402, F401
 import spinal_surgery  # noqa: E402, F401
 from isaaclab_tasks.utils import parse_env_cfg  # noqa: E402
-from isaaclab.utils.math import matrix_from_quat  # noqa: E402
 from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: E402
     assert_no_privileged_fields,
     ultrasound_sha256,
@@ -64,6 +63,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_models import (  # no
 from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (  # noqa: E402
     label_agreement,
     plane_from_full_pose,
+    rotation_columns_from_quaternion_wxyz,
     sample_label_image,
 )
 
@@ -527,7 +527,9 @@ def main() -> int:
                     raise RuntimeError("native local image coordinates changed during capture")
                 human_to_ee_position = tensor_row(snapshot["human_to_ee_pos"])
                 human_to_ee_quaternion = tensor_row(snapshot["human_to_ee_quat"])
-                rotation = matrix_from_quat(snapshot["human_to_ee_quat"])[0].detach().cpu().to(torch.float64).numpy()
+                rotation = rotation_columns_from_quaternion_wxyz(
+                    tensor_row(snapshot["human_to_ee_quat"])
+                )
                 full_plane = plane_from_full_pose(
                     end_effector_position_m=human_to_ee_position,
                     rotation_columns=rotation,

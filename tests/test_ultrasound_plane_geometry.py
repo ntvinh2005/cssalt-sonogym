@@ -20,6 +20,7 @@ sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 native_local_coordinates = MODULE.native_local_coordinates
 plane_from_full_pose = MODULE.plane_from_full_pose
+rotation_columns_from_quaternion_wxyz = MODULE.rotation_columns_from_quaternion_wxyz
 plane_from_reduced_pose = MODULE.plane_from_reduced_pose
 project_points_to_pixels = MODULE.project_points_to_pixels
 sample_label_image = MODULE.sample_label_image
@@ -27,6 +28,27 @@ label_agreement = MODULE.label_agreement
 
 
 class NativeCoordinateTests(unittest.TestCase):
+    def test_scaled_nonidentity_quaternion_produces_orthonormal_rotation(self) -> None:
+        quaternion = np.asarray(
+            [-1.1943603, 1.453829, 2.2427623, -0.3706229], dtype=np.float32
+        )
+        r, i, j, k = quaternion
+        two_s = np.float32(2.0) / np.sum(quaternion * quaternion)
+        legacy_float32 = np.asarray(
+            [
+                [1 - two_s * (j * j + k * k), two_s * (i * j - k * r), two_s * (i * k + j * r)],
+                [two_s * (i * j + k * r), 1 - two_s * (i * i + k * k), two_s * (j * k - i * r)],
+                [two_s * (i * k - j * r), two_s * (j * k + i * r), 1 - two_s * (i * i + j * j)],
+            ],
+            dtype=np.float32,
+        )
+        self.assertGreater(
+            float(np.max(np.abs(legacy_float32.T @ legacy_float32 - np.eye(3)))), 1e-7
+        )
+        rotation = rotation_columns_from_quaternion_wxyz(quaternion)
+        np.testing.assert_allclose(rotation.T @ rotation, np.eye(3), atol=1e-12)
+        self.assertAlmostEqual(float(np.linalg.det(rotation)), 1.0, places=12)
+
     def test_row_is_depth_column_is_width_and_elevation_is_zero(self) -> None:
         local = native_local_coordinates(width=4, depth=3, resolution_m=0.5)
         np.testing.assert_array_equal(local[0, 2], [0.0, 0.0, 0.0])

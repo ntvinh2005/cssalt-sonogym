@@ -35,6 +35,27 @@ def _rotation(value: np.ndarray) -> np.ndarray:
     return result
 
 
+def rotation_columns_from_quaternion_wxyz(value: np.ndarray) -> np.ndarray:
+    """Mirror Isaac Lab ``matrix_from_quat`` using float64 arithmetic."""
+    quaternion = np.asarray(value, dtype=np.float64)
+    if quaternion.shape != (4,) or not np.all(np.isfinite(quaternion)):
+        raise ValueError("quaternion must be a finite wxyz vector")
+    norm_squared = float(np.dot(quaternion, quaternion))
+    if norm_squared <= 1e-16:
+        raise ValueError("quaternion norm is zero")
+    r, i, j, k = quaternion
+    two_s = 2.0 / norm_squared
+    rotation = np.asarray(
+        [
+            [1 - two_s * (j * j + k * k), two_s * (i * j - k * r), two_s * (i * k + j * r)],
+            [two_s * (i * j + k * r), 1 - two_s * (i * i + k * k), two_s * (j * k - i * r)],
+            [two_s * (i * k - j * r), two_s * (j * k + i * r), 1 - two_s * (i * i + j * j)],
+        ],
+        dtype=np.float64,
+    )
+    return _rotation(rotation)
+
+
 def native_local_coordinates(
     *, width: int, depth: int, resolution_m: float, elevation_m: float = 0.0
 ) -> np.ndarray:
