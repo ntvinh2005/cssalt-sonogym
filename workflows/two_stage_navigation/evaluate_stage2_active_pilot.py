@@ -85,6 +85,7 @@ def main() -> int:
     if leaks:
         raise RuntimeError(f"privileged fields entered actor result: {sorted(leaks)}")
     annotations = read_jsonl(args.run_dir / "privileged" / "annotations.jsonl")
+    summary = json.loads((args.run_dir / "summary.json").read_text(encoding="utf-8"))
     by_sequence = {int(row["frame_sequence"]): row for row in annotations}
     confirmation_sequences = [int(value) for value in actor["fresh_confirmation_frame_sequences"]]
     final = None if not confirmation_sequences else by_sequence[confirmation_sequences[-1]]
@@ -117,6 +118,9 @@ def main() -> int:
         "protocol_sha256": protocol_hash,
         "actor_result_sha256": actor_hash,
         "actor_outcome": actor["outcome"],
+        "start_id": actor.get("start_id", actor["session_id"]),
+        "seed": actor.get("seed", summary["seed"]),
+        "initial_reset_pose_index": summary.get("initial_reset_pose_index"),
         "supporting_viewpoint_count": actor["supporting_viewpoint_count"],
         "fresh_confirmation_passed": actor["fresh_confirmation_passed"],
         "return_success": return_success,
@@ -127,6 +131,9 @@ def main() -> int:
         "final_l4_visible_fraction": None if final is None else final["l4_visible_fraction"],
         "fixed_anatomy_only": True,
         "independent_confirmation": False,
+        "new_start_confirmation_member": bool(
+            protocol.get("confirmation", {}).get("new_start_confirmation", False)
+        ),
         "full_stage2_closed_loop": "DEVELOPMENT_PASS" if passed else "NOT_ESTABLISHED",
     }
     write_json(args.output, report)

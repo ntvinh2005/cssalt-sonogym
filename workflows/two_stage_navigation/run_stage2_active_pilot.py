@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--protocol", required=True)
 parser.add_argument("--output-dir", required=True)
 parser.add_argument("--assets-data-dir", required=True)
+parser.add_argument("--start-id")
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -53,6 +54,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (
     offset_poses,
     phase1_handoff_pose,
     relative_pose_from_start,
+    resolve_execution_identity,
     serpentine_offsets,
     transition_is_valid,
     validate_confirmation_motion,
@@ -186,6 +188,7 @@ class RobotVideoRecorder:
 def main() -> int:
     protocol_path = Path(args.protocol).resolve()
     protocol, protocol_hash = load_sealed_yaml(protocol_path)
+    execution = resolve_execution_identity(protocol, args.start_id)
     output = Path(args.output_dir).resolve()
     public_dir = output / "public"
     privileged_dir = output / "privileged"
@@ -195,7 +198,9 @@ def main() -> int:
         "schema": "sonogym-stage2-active-pilot-summary-v1",
         "status": "RUNTIME_FAIL",
         "protocol_sha256": protocol_hash,
-        "seed": int(protocol["execution"]["seed"]),
+        "start_id": execution["start_id"],
+        "session_id": execution["session_id"],
+        "seed": execution["seed"],
     }
     env = None
     robot_video: RobotVideoRecorder | None = None
@@ -245,7 +250,7 @@ def main() -> int:
         env_cfg = parse_env_cfg(
             protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1
         )
-        env_cfg.seed = int(protocol["execution"]["seed"])
+        env_cfg.seed = int(execution["seed"])
         motion = protocol["motion"]
         if "episode_length_s" in motion:
             declared_episode_length_s = float(motion["episode_length_s"])
@@ -259,8 +264,10 @@ def main() -> int:
             cfg=env_cfg,
             render_mode="rgb_array" if record_robot_video else None,
         )
-        observation, _ = env.reset(seed=int(protocol["execution"]["seed"]))
+        observation, _ = env.reset(seed=int(execution["seed"]))
         unwrapped = env.unwrapped
+        initial_reset_pose = current_realized_pose(unwrapped).copy()
+        summary["initial_reset_pose_index"] = initial_reset_pose.tolist()
         if tuple(observation["policy"].shape) != (1, 1, 200, 150):
             raise RuntimeError("unexpected policy observation shape")
         if unwrapped.US_slicer.sim_mode != "conv" or unwrapped.scene.num_envs != 1:
@@ -307,6 +314,7 @@ def main() -> int:
             "sonogym-stage2-active-acquisition-grid-demo-v5",
             "sonogym-stage2-active-acquisition-orientation-refinement-v6",
             "sonogym-stage2-active-acquisition-orientation-refinement-v6r1",
+            "sonogym-stage2-new-start-confirmation-v1",
         }
         if strict_confirmation_motion:
             confirmation_displacements = validate_confirmation_motion(
@@ -402,8 +410,8 @@ def main() -> int:
             relative_pose = relative_pose_from_start(realized, handoff, label_resolution)
             requested_relative_pose = relative_pose_from_start(target, handoff, label_resolution)
             replay_row = ReplayObservation(
-                session_id=str(protocol["execution"]["session_id"]),
-                trajectory_id=str(protocol["execution"]["session_id"]),
+                session_id=str(execution["session_id"]),
+                trajectory_id=str(execution["session_id"]),
                 frame_sequence=frame_sequence,
                 trajectory_frame_sequence=frame_sequence,
                 producer_sequence=producer,
@@ -623,7 +631,9 @@ def main() -> int:
             "schema": "sonogym-stage2-active-pilot-actor-result-v1",
             "protocol_sha256": protocol_hash,
             "phase1_actor_result_sha256": handoff_spec["actor_result_sha256"],
-            "session_id": protocol["execution"]["session_id"],
+            "start_id": execution["start_id"],
+            "session_id": execution["session_id"],
+            "seed": execution["seed"],
             "outcome": actor_outcome,
             "search_frame_count": len(observations) - len(confirmations),
             "total_frame_count": len(observations),

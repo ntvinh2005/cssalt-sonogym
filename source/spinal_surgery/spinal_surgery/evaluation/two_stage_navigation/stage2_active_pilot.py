@@ -20,8 +20,92 @@ ACTIVE_PILOT_PROTOCOL_IDS = frozenset(
         "sonogym-stage2-active-acquisition-grid-demo-v5",
         "sonogym-stage2-active-acquisition-orientation-refinement-v6",
         "sonogym-stage2-active-acquisition-orientation-refinement-v6r1",
+        "sonogym-stage2-new-start-confirmation-v1",
     }
 )
+
+
+def resolve_execution_identity(
+    protocol: Mapping[str, Any], start_id: str | None = None
+) -> dict[str, int | str]:
+    """Resolve one execution only from the protocol-sealed start list."""
+    execution = protocol.get("execution")
+    if not isinstance(execution, Mapping):
+        raise ValueError("protocol execution section is missing")
+    starts = execution.get("confirmation_starts")
+    if starts is None:
+        if start_id is not None:
+            raise ValueError("start-id is not valid for a single-start protocol")
+        return {
+            "start_id": str(execution["session_id"]),
+            "session_id": str(execution["session_id"]),
+            "seed": int(execution["seed"]),
+        }
+    if not isinstance(starts, Sequence) or isinstance(starts, (str, bytes)) or not starts:
+        raise ValueError("confirmation start list must be nonempty")
+    resolved: list[dict[str, int | str]] = []
+    for row in starts:
+        if not isinstance(row, Mapping):
+            raise ValueError("confirmation start entries must be mappings")
+        resolved.append(
+            {
+                "start_id": str(row["start_id"]),
+                "session_id": str(row["session_id"]),
+                "seed": int(row["seed"]),
+            }
+        )
+    ids = [str(row["start_id"]) for row in resolved]
+    sessions = [str(row["session_id"]) for row in resolved]
+    seeds = [int(row["seed"]) for row in resolved]
+    if len(set(ids)) != len(ids) or len(set(sessions)) != len(sessions):
+        raise ValueError("confirmation start and session identities must be unique")
+    if len(set(seeds)) != len(seeds):
+        raise ValueError("confirmation seeds must be unique")
+    if start_id is None:
+        raise ValueError("start-id is required for a multi-start protocol")
+    matches = [row for row in resolved if row["start_id"] == start_id]
+    if len(matches) != 1:
+        raise ValueError(f"unknown confirmation start-id: {start_id}")
+    return matches[0]
+
+
+def summarize_confirmation_runs(
+    rows: Sequence[Mapping[str, Any]], *, required_count: int
+) -> dict[str, Any]:
+    """Apply the sealed all-start success rule to completed evaluator records."""
+    if required_count <= 0 or len(rows) != required_count:
+        raise ValueError("confirmation requires the exact declared run count")
+    required = {
+        "start_id",
+        "seed",
+        "initial_reset_pose_index",
+        "decision",
+        "final_position_error_mm",
+        "final_orientation_error_deg",
+    }
+    if any(not required <= set(row) for row in rows):
+        raise ValueError("confirmation evaluator record is incomplete")
+    start_ids = [str(row["start_id"]) for row in rows]
+    seeds = [int(row["seed"]) for row in rows]
+    if len(set(start_ids)) != required_count or len(set(seeds)) != required_count:
+        raise ValueError("confirmation identities and seeds must be unique")
+    poses: list[tuple[float, float, float]] = []
+    for row in rows:
+        pose = np.asarray(row["initial_reset_pose_index"], dtype=np.float64)
+        if pose.shape != (3,) or not np.all(np.isfinite(pose)):
+            raise ValueError("initial reset pose must contain three finite values")
+        poses.append(tuple(float(value) for value in pose))
+    if len(set(poses)) != required_count:
+        raise ValueError("confirmation initial reset poses must be distinct")
+    passed = sum(row["decision"] == "DEVELOPMENT_PASS" for row in rows)
+    return {
+        "decision": "CONFIRMATION_PASS" if passed == required_count else "CONFIRMATION_NO_GO",
+        "passed_runs": passed,
+        "required_runs": required_count,
+        "distinct_start_ids": len(set(start_ids)),
+        "distinct_seeds": len(set(seeds)),
+        "distinct_initial_reset_poses": len(set(poses)),
+    }
 
 
 def bounded_orientation_refinement_poses(

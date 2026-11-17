@@ -62,6 +62,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It resolves orientation at a finer angular scale without reading target orientation or changing the image models.
 - **Source:** experiments/unity_two_stage_transfer/stage2_orientation_refinement_protocol_v6r1.yaml, approved by user, 2026-11-16.
 
+### Stage 2 new-start confirmation
+- **Kind:** method
+- **Definition:** Four protocol-sealed executions of Stage 2 bounded orientation refinement using previously unused reset seeds and distinct realized initial reset poses on fixed anatomy `s0010`; the aggregate passes only when all four executions independently pass the unchanged per-run actor, return, geometry, image, and fresh-confirmation gates.
+- **Intuition:** It tests sensitivity to new physical reset starts without claiming patient-held-out generalization.
+- **Source:** approved by user, 2026-11-16.
+
 ### D0
 - **Kind:** metric
 - **Definition:** Passes when replay observations, frame identities, frozen predictions, trajectory boundaries, and executed relative motion can be reconstructed without joining evidence across resets.

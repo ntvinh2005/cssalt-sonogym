@@ -21,8 +21,10 @@ from two_stage_navigation.stage2_active_pilot import (  # noqa: E402
     offset_poses,
     phase1_handoff_pose,
     relative_pose_from_start,
+    resolve_execution_identity,
     serpentine_offsets,
     transition_is_valid,
+    summarize_confirmation_runs,
     validate_confirmation_motion,
     validate_episode_horizon,
     validate_physical_grid,
@@ -191,8 +193,66 @@ class ActivePilotTests(unittest.TestCase):
                 "sonogym-stage2-active-acquisition-grid-demo-v5",
                 "sonogym-stage2-active-acquisition-orientation-refinement-v6",
                 "sonogym-stage2-active-acquisition-orientation-refinement-v6r1",
+                "sonogym-stage2-new-start-confirmation-v1",
             },
         )
+
+    def test_confirmation_start_is_resolved_only_from_sealed_list(self) -> None:
+        protocol = {
+            "execution": {
+                "confirmation_starts": [
+                    {"start_id": "new_00", "session_id": "session_00", "seed": 11},
+                    {"start_id": "new_01", "session_id": "session_01", "seed": 12},
+                ]
+            }
+        }
+        self.assertEqual(
+            resolve_execution_identity(protocol, "new_01"),
+            {"start_id": "new_01", "session_id": "session_01", "seed": 12},
+        )
+        with self.assertRaisesRegex(ValueError, "required"):
+            resolve_execution_identity(protocol)
+        with self.assertRaisesRegex(ValueError, "unknown"):
+            resolve_execution_identity(protocol, "opened_start")
+
+    def test_single_start_protocol_remains_backward_compatible(self) -> None:
+        self.assertEqual(
+            resolve_execution_identity(
+                {"execution": {"session_id": "existing", "seed": 17}}
+            ),
+            {"start_id": "existing", "session_id": "existing", "seed": 17},
+        )
+
+    def test_confirmation_start_rejects_duplicate_seed(self) -> None:
+        protocol = {
+            "execution": {
+                "confirmation_starts": [
+                    {"start_id": "new_00", "session_id": "session_00", "seed": 11},
+                    {"start_id": "new_01", "session_id": "session_01", "seed": 11},
+                ]
+            }
+        }
+        with self.assertRaisesRegex(ValueError, "seeds must be unique"):
+            resolve_execution_identity(protocol, "new_00")
+
+    def test_confirmation_requires_all_distinct_starts_to_pass(self) -> None:
+        rows = [
+            {
+                "start_id": f"new_{index:02d}",
+                "seed": 100 + index,
+                "initial_reset_pose_index": [float(index), 2.0 * index, 2.5 + index / 100.0],
+                "decision": "DEVELOPMENT_PASS",
+                "final_position_error_mm": 5.0,
+                "final_orientation_error_deg": 9.0,
+            }
+            for index in range(4)
+        ]
+        passed = summarize_confirmation_runs(rows, required_count=4)
+        self.assertEqual(passed["decision"], "CONFIRMATION_PASS")
+        rows[2]["decision"] = "DEVELOPMENT_NO_GO"
+        failed = summarize_confirmation_runs(rows, required_count=4)
+        self.assertEqual(failed["decision"], "CONFIRMATION_NO_GO")
+        self.assertEqual(failed["passed_runs"], 3)
 
 
 if __name__ == "__main__":
