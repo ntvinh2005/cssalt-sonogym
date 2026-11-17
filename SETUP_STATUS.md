@@ -1,8 +1,29 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS; STAGE2_NEW_START_CONFIRMATION_NO_GO**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 new-start confirmation no-go
+
+Job `51668777` executed four sealed unused reset seeds sequentially on `anest-dept` with one NVIDIA
+L4, four CPUs, and 30 GB requested RAM. The frozen confirmation required all 4 / 4 runs to pass the
+unchanged V6R1 actor, return, fresh-confirmation, image, position, and orientation gates.
+
+The result is **`CONFIRMATION_NO_GO`**. Three runs produced sealed actor/evaluator results: all three
+actors accepted, returned successfully, passed two fresh confirmations, and met position and image
+gates, but orientation errors were 15.2505, 11.8805, and 11.8782 degrees against the unchanged
+10-degree gate. The fourth run failed closed before actor sealing when a clipped final refinement
+target was only 0.003809 degrees from the previous target, below the 0.25-degree movement tolerance,
+so it executed zero actions and could not provide fresh evidence.
+
+The scheduler recorded `FAILED (2:0)` after 8:25 because one evaluator input was absent. The
+scientific no-go is nevertheless decisive: 0 / 3 evaluable runs passed and the aggregate required
+4 / 4. No retry, retraining, threshold change, V19, or patient-generalization claim followed.
+
+- Detailed report: `docs/research/sonogym_stage2_new_start_confirmation_v1.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_new_start_confirmation_v1_result.json`.
+- Run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_new_start_confirmation_v1/51668777/`.
 
 ## Phase 5C Stage 2 bounded-orientation development pass
 

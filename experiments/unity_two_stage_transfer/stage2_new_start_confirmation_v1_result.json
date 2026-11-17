@@ -1,0 +1,172 @@
+{
+  "schema": "sonogym-stage2-new-start-confirmation-result-v1",
+  "decision": "CONFIRMATION_NO_GO",
+  "decision_basis": "The sealed rule requires 4/4 per-run passes. Three evaluable runs produced 0/3 passes and one run had a fail-closed technical freshness error, so 4/4 is impossible.",
+  "job": {
+    "id": 51668777,
+    "account": "anest-dept",
+    "partition": "hpg-turin",
+    "node": "c1105a-s19",
+    "state": "FAILED",
+    "exit_code": "2:0",
+    "elapsed": "00:08:25",
+    "start": "2026-11-16T19:33:22-05:00",
+    "end": "2026-11-16T19:41:47-05:00",
+    "requested_cpu_cores": 4,
+    "requested_memory_gb": 30,
+    "gpu": "NVIDIA L4",
+    "gpu_count": 1,
+    "peak_gpu_memory_mib": 7317,
+    "peak_gpu_utilization_percent": 48,
+    "sampled_slurm_max_rss_kib": 6823376,
+    "maximum_actor_process_rss_kib": 6993260
+  },
+  "provenance": {
+    "execution_commit": "ae45f65c927115e1fd5a6319ad6669430fa8432b",
+    "implementation_commit": "80432650a6fad18a80929c0cd18b78dd8daa41e6",
+    "protocol_sha256": "e3a98e42090df0f02e3e29e1caf25ea8c0b1a3a013fbd233059b1769b774b99c",
+    "model_bundle_sha256": "7d3b113ba33b1b80448264a0d2e7f2c2cd5561b26021707648c4eef43d586672",
+    "patient_id": "s0010",
+    "patient_count": 1,
+    "threshold_changed": false,
+    "model_retrained": false
+  },
+  "gate": {
+    "required_pass_count": 4,
+    "total_start_count": 4,
+    "maximum_position_error_mm": 10.0,
+    "maximum_orientation_error_deg": 10.0,
+    "minimum_l4_visible_fraction": 0.2,
+    "require_actor_accept": true,
+    "require_two_fresh_confirmations": true
+  },
+  "accounting": {
+    "attempted_runs": 4,
+    "technically_evaluable_runs": 3,
+    "technical_failures": 1,
+    "actor_accepts": 3,
+    "per_run_development_passes": 0,
+    "per_run_development_no_go": 3
+  },
+  "start_diversity": {
+    "distinct_seeds": 4,
+    "distinct_realized_initial_reset_poses": 4,
+    "minimum_pairwise_initial_translation_mm": 18.661551302325087,
+    "maximum_pairwise_initial_translation_mm": 137.26200560768842,
+    "minimum_pairwise_initial_orientation_deg": 0.5230558866395765,
+    "maximum_pairwise_initial_orientation_deg": 76.50300911958854
+  },
+  "runs": [
+    {
+      "start_id": "confirm_new_00",
+      "seed": 2026112200,
+      "status": "TECHNICAL_FAIL_FRESHNESS_AT_CLIPPED_BOUND",
+      "initial_reset_pose_index": [
+        116.8192367553711,
+        81.73290252685547,
+        3.000108480453491
+      ],
+      "failure": "The final bounded refinement target was only 0.00006649017334003 rad (0.003809 degrees) beyond the preceding target, below the frozen 0.25-degree movement tolerance; it executed zero actions and could not produce new evidence.",
+      "actor_result_created": false,
+      "evaluator_run": false,
+      "elapsed": "00:02:25.70",
+      "peak_process_rss_kib": 6878380
+    },
+    {
+      "start_id": "confirm_new_01",
+      "seed": 2026112201,
+      "status": "DEVELOPMENT_NO_GO",
+      "initial_reset_pose_index": [
+        164.5023651123047,
+        159.8356170654297,
+        2.9909794330596924
+      ],
+      "actor_outcome": "ACCEPT",
+      "total_action_steps": 2099,
+      "total_frames": 46,
+      "distinct_frame_hashes": 46,
+      "supporting_viewpoints": 5,
+      "fresh_confirmation_passed": true,
+      "return_position_error_mm": 0.1263608282084157,
+      "return_orientation_error_deg": 0.011898189534162213,
+      "final_position_error_mm": 4.8557366151216685,
+      "final_orientation_error_deg": 15.25051468069617,
+      "final_l4_visible_fraction": 0.2632,
+      "actor_result_sha256": "1910d9e74b7261cfc4d77114db07bacc3d66ae32d5252c948a376196484a916c",
+      "evaluation_report_sha256": "662a253ff6226eb93647b2693bd1c5cb5387a68b8b746bd3e3a84d72564e2ee9",
+      "elapsed": "00:01:59.78",
+      "peak_process_rss_kib": 6989204
+    },
+    {
+      "start_id": "confirm_new_02",
+      "seed": 2026112202,
+      "status": "DEVELOPMENT_NO_GO",
+      "initial_reset_pose_index": [
+        125.3525390625,
+        90.78619384765625,
+        1.6648790836334229
+      ],
+      "actor_outcome": "ACCEPT",
+      "total_action_steps": 2302,
+      "total_frames": 48,
+      "distinct_frame_hashes": 48,
+      "supporting_viewpoints": 5,
+      "fresh_confirmation_passed": true,
+      "return_position_error_mm": 0.24287277571679,
+      "return_orientation_error_deg": 0.019329435351136084,
+      "final_position_error_mm": 3.8447238086796434,
+      "final_orientation_error_deg": 11.880513004590219,
+      "final_l4_visible_fraction": 0.2617333333333333,
+      "actor_result_sha256": "399c6d31f45b9c0469306b43d3444ab5d10f90aee4c1300d39f8b88de9c07e19",
+      "evaluation_report_sha256": "be522017d6763bc2f987e656ce8a54452f4c4ccc8ec63dc8d22abf4e1f6c3afd",
+      "elapsed": "00:01:52.14",
+      "peak_process_rss_kib": 6923984
+    },
+    {
+      "start_id": "confirm_new_03",
+      "seed": 2026112203,
+      "status": "DEVELOPMENT_NO_GO",
+      "initial_reset_pose_index": [
+        174.78651428222656,
+        113.52204895019531,
+        2.4986019134521484
+      ],
+      "actor_outcome": "ACCEPT",
+      "total_action_steps": 2220,
+      "total_frames": 48,
+      "distinct_frame_hashes": 48,
+      "supporting_viewpoints": 5,
+      "fresh_confirmation_passed": true,
+      "return_position_error_mm": 0.2441240915422193,
+      "return_orientation_error_deg": 0.01934309572947611,
+      "final_position_error_mm": 3.8584854593679183,
+      "final_orientation_error_deg": 11.878190740272414,
+      "final_l4_visible_fraction": 0.26153333333333334,
+      "actor_result_sha256": "d04e599dd06829a7720ea9ded2084c85fa753eefc5a0b441536c30bf398766b2",
+      "evaluation_report_sha256": "fb80cd4e35163f9c50e769206e9171c2a6d1839d2d380011e17983a9d86cb219",
+      "elapsed": "00:02:01.12",
+      "peak_process_rss_kib": 6993260
+    }
+  ],
+  "tests": {
+    "pre_submit_total_passed": 74,
+    "pre_submit_failed": 0,
+    "in_job_active_pilot_passed": 16,
+    "in_job_active_pilot_failed": 0
+  },
+  "artifacts": {
+    "run_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_new_start_confirmation_v1/51668777",
+    "run_storage_bytes": 38426848
+  },
+  "preserved_results": {
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO"
+  },
+  "limitations": {
+    "fixed_anatomy_only": true,
+    "patient_generalization": false,
+    "clinical_claim": false,
+    "mbb_claim": false
+  }
+}
