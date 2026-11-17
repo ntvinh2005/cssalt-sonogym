@@ -1,0 +1,45 @@
+{
+  "schema": "sonogym-s0010-right-sap-tp-correction-result-summary-v1",
+  "job_id": 51779234,
+  "source_commit": "6fbe38df115d2483c334874ce5027c9f3c2d6b83",
+  "exit_code": "0:0",
+  "resources": {
+    "account": "anest-dept",
+    "cpus": 4,
+    "memory_requested_gb": 16,
+    "gpus": 0,
+    "elapsed_seconds": 89,
+    "slurm_batch_peak_rss_kib": 655084
+  },
+  "projection": {
+    "status": "PROJECTION_REPAIR_BLOCKED",
+    "frames_available": 3826,
+    "frames_joined": 3826,
+    "verified_frames": 0,
+    "historical_median_exact_agreement": 0.30023333333333335,
+    "corrected_median_exact_agreement": 0.8156666666666667,
+    "historical_median_bone_iou": 0.0,
+    "corrected_median_bone_iou": 0.5637763447067438,
+    "corrected_maximum_exact_agreement": 0.9732333333333333,
+    "corrected_maximum_bone_iou": 0.9438984948376664,
+    "full_pose_records": 0,
+    "reconstruction_mode": "REDUCED_POSE_RECONSTRUCTION"
+  },
+  "boundaries": {
+    "L4_RIGHT_superior_articular_process": "UNRESOLVED_BOUNDARY",
+    "L4_RIGHT_transverse_process": "PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW",
+    "L5_RIGHT_superior_articular_process": "UNRESOLVED_BOUNDARY",
+    "L5_RIGHT_transverse_process": "PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW"
+  },
+  "training": {
+    "status": "TRAINING_BLOCKED_WITH_SPECIFIC_REASON",
+    "candidate_rows": 0,
+    "eligible_rows": 0,
+    "training_run": "NOT_RUN"
+  },
+  "artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234/",
+  "review_zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_correction_v1_51779234.zip",
+  "review_zip_sha256": "1dcf71bd463bb53abd72877e831961bb5c70060b2e66cf7229c3ea1ca1f20ebd",
+  "historical_results_modified": false,
+  "annotation_promotion": "NOT_PERFORMED"
+}

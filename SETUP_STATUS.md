@@ -1,5 +1,28 @@
 # Setup status
 
+## 2026-11-17: RIGHT SAP/TP projection and boundary correction
+
+CPU job `51779234` (`anest-dept`, four CPUs, 16 GB requested, zero GPUs) completed `0:0` in 1:29.
+All 30 focused and historical regression tests passed. The native width/elevation/depth mismatch
+and image-origin rule were corrected, improving median exact raw-label agreement from 0.3002 to
+0.8157 and median bone IoU from 0.0000 to 0.5638 across 3,826 frames. Nevertheless, zero frames
+passed the unchanged joint 0.985/0.90 gate because existing captures retain only a reduced
+three-value pose and not the full end-effector position/quaternion used by the renderer.
+
+The result is **`PROJECTION_REPAIR_BLOCKED`**. L4/L5 RIGHT TP now have editable conservative distal
+surface-core proposals with explicit uncertain bases, both
+`PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW`; L4/L5 RIGHT SAP remain `UNRESOLVED_BOUNDARY`.
+There are zero verified candidate projections and zero training-eligible samples, so detector
+training remains `NOT_RUN` despite researcher authorization to train after annotation. The next
+data action is a bounded development capture that records exact per-frame `human_to_ee_pos`,
+`human_to_ee_quat`, and preferably sampled pixel-to-volume coordinates, plus qualified review of
+the exact TP/SAP geometry version.
+
+- Report: `docs/research/sonogym_s0010_right_sap_tp_correction.md`.
+- Result: `experiments/unity_two_stage_transfer/s0010_right_sap_tp_correction_v1_result.json`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_right_sap_tp_correction_v1_51779234.zip`.
+- ZIP SHA-256: `1dcf71bd463bb53abd72877e831961bb5c70060b2e66cf7229c3ea1ca1f20ebd`.
+
 ## 2026-11-17: RIGHT SAP/TP ultrasound-inclusive review v2
 
 CPU job `51764274` (`anest-dept`, four CPUs, 16 GB requested, zero GPUs) completed `0:0` in 1:45
