@@ -1,0 +1,62 @@
+schema: sonogym-s0010-right-sap-tp-review-protocol-v1
+patient_id: s0010
+facet_level: L4-L5
+laterality: RIGHT
+purpose: independent_anatomical_review_package
+scope:
+  required_landmarks:
+    - L4_RIGHT_superior_articular_process
+    - L4_RIGHT_transverse_process
+    - L5_RIGHT_superior_articular_process
+    - L5_RIGHT_transverse_process
+  actor_inference: forbidden
+  model_training: forbidden_until_review
+  target_region_construction: forbidden_until_review
+inputs:
+  annotation:
+    path: experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json
+    sha256: 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3
+  assets:
+    ct_sha256: eff5e5f5829cf8cc3e413b3ac09ce455e45bc0f91f5ba37fab9b37b1fe683546
+    segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+    L4_mesh_sha256: 0da4b679e4913f2f526cdff6aae49a0c52658aa13ec2a16a9da7da9bc598b702
+    L5_mesh_sha256: 7beea0d2db62959f10c32c1f7c514120a8d3b027e121245a6530ef9700f3bde9
+candidate_contract:
+  method: exact_reconstruction_of_v2_mesh_quantile_candidates
+  semantic_claim: geometry_candidate_only
+  status_promotion: not_performed
+  expected_vertex_counts:
+    L4_RIGHT_superior_articular_process: 2198
+    L4_RIGHT_transverse_process: 4833
+    L5_RIGHT_superior_articular_process: 2422
+    L5_RIGHT_transverse_process: 4343
+review_contract:
+  decisions:
+    - ACCEPT_BOUNDARY
+    - REVISE_BOUNDARY
+    - REJECT_CANDIDATE
+  required_checks:
+    - correct_vertebral_level
+    - correct_right_laterality
+    - semantic_structure_isolated
+    - no_material_adjacent_structure_contamination
+    - supportable_in_axial_sagittal_coronal_CT
+    - supportable_in_posterior_lateral_superior_mesh_views
+  ready_requires:
+    - reviewer_identity_and_qualification
+    - per_landmark_decision
+    - corrected_geometry_if_revised
+    - uncertainty_assessment
+acceptance:
+  package_pass:
+    - all_source_hashes_match
+    - four_candidates_reconstruct_exactly
+    - four_review_figures_exist
+    - review_manifest_is_fail_closed
+  scientific_pass: not_defined_until_independent_review
+resources:
+  account: anest-dept
+  cpus: 4
+  memory_gb: 16
+  gpus: 0
+  walltime_minutes: 20
