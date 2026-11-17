@@ -10,7 +10,7 @@
 | Review candidates | 3 verified geometric intersections: 1 L4 RIGHT TP core and 2 L5 RIGHT TP core |
 | Training eligibility | 0 samples; anatomy and image-semantic review remain pending |
 | Training implementation | train-only fit, calibration-only threshold selection, development-only evaluation, background class, save/reload |
-| Current CPU regression | job `51799253`; 55/55 tests; 4 CPUs; 9 s; exit `0:0` |
+| Current CPU regression | job `51807926`; 59/59 tests; 4 CPUs; 8 s; exit `0:0` |
 | Next sealed protocol | v4, SHA-256 `5a1cb48fe475c6370259336109c4ac135805880931e1bfe6505cb06b9476e801`; not run |
 
 The bounded job fixed and verified synchronized acquisition, but it stopped after smoke because the
@@ -175,8 +175,8 @@ cover all three classes and all three splits; no real research model is fitted.
 
 | what | value | spec |
 |---|---|---|
-| CPU job | `51799253` | 4 CPUs, 8 GB, pinned environment |
-| source | `ca74cbd418d8149b1b6ae6bf084c409600ad827a` | post-v3 protocol registration |
+| CPU job | `51807926` | 4 CPUs, 8 GB, pinned environment |
+| source | `245d10d470ca900381b7ebbeb026035a3a9fb55e` | protocol-v4 readiness revision |
 | capture retry | protocol v4 | same waypoint bank, gates, splits and resources as v3 |
 
 ```bash
@@ -189,7 +189,7 @@ python tests/test_tp_surface_core_capture_contract.py
 
 ### Results and verdict
 
-The pinned run passed `9 + 11 + 23 + 4 + 8 = 55` tests.  The synthetic end-to-end test resolved
+The pinned run passed `9 + 11 + 23 + 4 + 12 = 59` tests.  The synthetic end-to-end test resolved
 180 feature rows, fitted only training IDs, calibrated only on calibration IDs, evaluated only on
 development IDs, and verified checkpoint reload identity.  Job `51798167` independently passed all
 five strict smoke gates before the first bulk session exposed float32 rotation validation; job

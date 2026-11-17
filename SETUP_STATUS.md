@@ -5,8 +5,8 @@
 The trainer now partitions eligible rows before fitting: only `train` enters `fit()`, calibration
 selects operating thresholds, and development evaluation remains read-only.  Actor-visible
 background proposals, per-split unique-image gates, checkpoint save/reload verification and the
-strict serialized-coordinate hash gate are implemented.  Pinned CPU job `51799253` passed 55 / 55
-tests in 9 seconds with four CPUs and zero GPUs.
+strict serialized-coordinate hash gate are implemented.  Final pinned CPU job `51807926` passed
+59 / 59 tests in 8 seconds with four CPUs and zero GPUs.
 
 GPU job `51798167` passed all five strict smoke gates, then stopped before saving the first bulk
 session because float32 quaternion-to-matrix conversion exceeded the unchanged orthonormality
