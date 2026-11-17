@@ -2,7 +2,7 @@
 #SBATCH --job-name=s0010-sap-tp-correction
 #SBATCH --account=anest-dept
 #SBATCH --partition=hpg-default
-#SBATCH --qos=sol
+#SBATCH --qos=anest-dept
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
