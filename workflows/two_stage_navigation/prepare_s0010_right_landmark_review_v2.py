@@ -942,6 +942,59 @@ def build_package(args: argparse.Namespace) -> dict[str, Any]:
     (package_root / "review_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    readiness_rows = "\n".join(
+        "| {candidate_id} | {source_annotation_status} | {anatomical_boundary_status} | "
+        "{ultrasound_observability_status} | {agent_advisory_recommendation} | no |".format(**row)
+        for row in records
+    )
+    readiness = f"""# Training readiness report
+
+## Result
+
+**Semantic SAP/TP detector training is `BLOCKED_INDEPENDENT_REVIEW_AND_CORRESPONDENCE`.**
+The package is review-ready, but zero anatomical boundaries are accepted and zero stored frames
+support a verified candidate-specific ultrasound projection.
+
+| quantity | result |
+|---|---:|
+| real SonoGym conv frames audited | {capture_audit['frames_scanned']} |
+| frames joined to recorded reduced pose | {capture_audit['frames_with_joined_pose']} |
+| frames passing CT/raw-label projection round trip | {capture_audit['projection_verified_frames']} |
+| boundaries accepted by qualified reviewer | 0 / 4 |
+| training-eligible semantic labels | 0 / 4 |
+
+| candidate | source status | boundary status | ultrasound status | advisory action | train now |
+|---|---|---|---|---|---|
+{readiness_rows}
+
+## What the existing data establish
+
+- The included images are actual model-based `conv` SonoGym observations for `s0010`.
+- Stored raw vertebral labels show L4/L5 bone interfaces in the selected frames.
+- The four editable geometry exports exactly reproduce the existing heuristic candidates.
+- The existing metadata do **not** preserve the full end-effector transform or per-pixel
+  `human_img_coords`; reduced `(x, z, angle)` replay failed the frozen round-trip gate.
+- Therefore, candidate intersection and SAP-versus-TP semantic recognizability are not established.
+
+## Minimum work before the first semantic landmark fit
+
+1. A qualified anatomical reviewer records identity/qualification and accepts or corrects each
+   boundary, with uncertainty and corrected-geometry checksum.
+2. After separate approval, collect a small targeted set that records the full image-plane mapping
+   (or exact per-pixel volume coordinates) for positive, nearby ambiguous, and independent negative
+   views of the accepted subset.
+3. Review the ultrasound correspondence and promote only supported rows from `AMBIGUOUS` to
+   `VERIFIED_POSITIVE` or `VERIFIED_NEGATIVE`.
+4. Freeze session-disjoint train/calibration/development splits; review sessions remain excluded
+   from any unseen-confirmation claim.
+5. Run the prepared CPU ExtraTrees baseline. A new sealed capture is still required for independent
+   confirmation after model selection.
+
+If only TP boundaries are accepted, a TP-only feasibility pilot is defensible; SAP-dependent
+two-site L4-L5 MBB target-region localization remains blocked. No target region or Stage 3 action is
+authorized by this package.
+"""
+    (package_root / "TRAINING_READINESS_REPORT.md").write_text(readiness, encoding="utf-8")
     readme = f"""# s0010 RIGHT SAP/TP anatomical review v2
 
 This package contains four high-resolution CT/mesh review sheets, four sheets made from real
