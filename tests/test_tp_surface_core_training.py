@@ -78,12 +78,12 @@ class TrainingTests(unittest.TestCase):
             images = []
             split_sizes = {"train": 40, "calibration": 10, "development_evaluation": 10}
             for class_id in (0, 1, 2):
-                for split, count in split_sizes.items():
+                for split_index, (split, count) in enumerate(split_sizes.items()):
                     for index in range(count):
                         image = np.zeros((200, 150), dtype=np.float32)
                         row = 70 + class_id * 32
                         image[row - 2 : row + 3, :] = 0.4 + 0.25 * class_id
-                        image += np.float32((index + 1) * 1e-5)
+                        image += np.float32((split_index * 100 + index + 1) * 1e-5)
                         archive_index = len(images)
                         images.append(image)
                         negative = class_id == 0
