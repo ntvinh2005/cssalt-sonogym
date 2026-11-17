@@ -68,7 +68,7 @@ def geometry_frames(points: np.ndarray, affine: np.ndarray) -> dict[str, Any]:
     }
 
 
-def quantile_candidate(
+def quantile_vertex_mask(
     vertices: np.ndarray, selector: dict[str, list[float]]
 ) -> np.ndarray:
     mask = np.ones(len(vertices), dtype=bool)
@@ -81,6 +81,13 @@ def quantile_candidate(
         low, high = selector[key]
         lower, upper = np.quantile(vertices[:, axis], [low, high])
         mask &= (vertices[:, axis] >= lower) & (vertices[:, axis] <= upper)
+    return mask
+
+
+def quantile_candidate(
+    vertices: np.ndarray, selector: dict[str, list[float]]
+) -> np.ndarray:
+    mask = quantile_vertex_mask(vertices, selector)
     points = vertices[mask]
     if not len(points):
         raise RuntimeError("candidate selector produced no vertices")

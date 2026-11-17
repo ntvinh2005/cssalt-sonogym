@@ -1,0 +1,85 @@
+schema: sonogym-s0010-right-sap-tp-review-protocol-v2
+patient_id: s0010
+facet_level: L4-L5
+laterality: RIGHT
+purpose: expanded_editable_anatomical_review_package
+supersedes_package_format: s0010_right_sap_tp_review_protocol_v1
+preserves_scientific_result: MBB_STAGE2_BLOCKED_GROUND_TRUTH
+review_feedback:
+  prior_package_integrity_files_verified: 7
+  accepted_boundaries: 0
+  TP_concern: possible_anterior_adjacent_surface_contamination
+  SAP_concern: coordinate_cut_boundary_does_not_establish_semantic_isolation
+  missing_review_material:
+    - zoomed_adjacent_CT_slices
+    - editable_selected_point_geometry
+    - source_L4_L5_meshes
+    - cropped_CT_and_segmentation_volumes
+scope:
+  required_landmarks:
+    - L4_RIGHT_superior_articular_process
+    - L4_RIGHT_transverse_process
+    - L5_RIGHT_superior_articular_process
+    - L5_RIGHT_transverse_process
+  actor_inference: forbidden
+  model_training: forbidden_until_review
+  target_region_construction: forbidden_until_review
+  ultrasound_observability: not_evaluated
+inputs:
+  annotation:
+    path: experiments/unity_two_stage_transfer/s0010_anatomical_annotations_v2.json
+    sha256: 25df75aadb83b6d1faf39cfd8b376fb8976a08dbd834e302bad8f38e9de023c3
+  assets:
+    ct_sha256: eff5e5f5829cf8cc3e413b3ac09ce455e45bc0f91f5ba37fab9b37b1fe683546
+    segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+    L4_mesh_sha256: 0da4b679e4913f2f526cdff6aae49a0c52658aa13ec2a16a9da7da9bc598b702
+    L5_mesh_sha256: 7beea0d2db62959f10c32c1f7c514120a8d3b027e121245a6530ef9700f3bde9
+candidate_contract:
+  method: exact_reconstruction_of_v2_mesh_quantile_candidates
+  semantic_claim: geometry_candidate_only
+  status_promotion: not_performed
+  expected_vertex_counts:
+    L4_RIGHT_superior_articular_process: 2198
+    L4_RIGHT_transverse_process: 4833
+    L5_RIGHT_superior_articular_process: 2422
+    L5_RIGHT_transverse_process: 4343
+expanded_evidence:
+  adjacent_slice_offsets_voxels: [-4, -2, 0, 2, 4]
+  voxel_spacing_mm: 1.5
+  crop_margin_voxels: 12
+  crop_resampled: false
+  include:
+    - per_candidate_zoomed_adjacent_slice_montage
+    - selected_vertex_CSV
+    - full_vertex_mask_NPZ
+    - selected_point_cloud_PLY
+    - source_L4_L5_STL
+    - L4_L5_CT_crop_NIfTI
+    - L4_L5_segmentation_crop_NIfTI
+    - reviewer_response_template
+review_contract:
+  decisions:
+    - ACCEPT_BOUNDARY
+    - REVISE_BOUNDARY
+    - REJECT_CANDIDATE
+  ready_requires:
+    - reviewer_identity_and_qualification
+    - per_landmark_decision
+    - corrected_geometry_if_revised
+    - uncertainty_assessment
+acceptance:
+  package_pass:
+    - all_source_hashes_match
+    - four_candidates_reconstruct_exactly
+    - four_adjacent_slice_figures_exist
+    - all_editable_geometry_files_exist
+    - crop_world_coordinates_round_trip
+    - response_template_contains_no_decisions
+    - ZIP_integrity_passes
+  scientific_pass: not_defined_until_independent_review
+resources:
+  account: anest-dept
+  cpus: 4
+  memory_gb: 16
+  gpus: 0
+  walltime_minutes: 30

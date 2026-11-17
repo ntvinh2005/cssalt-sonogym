@@ -40,7 +40,9 @@ class CandidateSelectionTests(unittest.TestCase):
         }
         first = MODULE.quantile_candidate(vertices, selector)
         second = MODULE.quantile_candidate(vertices, selector)
+        mask = MODULE.quantile_vertex_mask(vertices, selector)
         np.testing.assert_array_equal(first, second)
+        np.testing.assert_array_equal(first, vertices[mask])
         self.assertTrue(np.all(first[:, 0] >= 3.0))
         self.assertTrue(np.all(first[:, 1] <= 1.0))
         self.assertTrue(np.all((first[:, 2] >= 1.0) & (first[:, 2] <= 3.0)))
