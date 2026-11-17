@@ -240,5 +240,5 @@ NO_GO, not because the simulator crashed.
 
 - Result: `experiments/unity_two_stage_transfer/s0010_exact_pose_replay_v2_result.json`
 - Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_exact_pose_replay_v2/51783444/`
-- Reviewer ZIP: generated from the preserved V2 artifacts; path and checksum are recorded in
-  `SETUP_STATUS.md`.
+- Reviewer ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_exact_pose_replay_review_51783444.zip`
+- ZIP SHA-256: `0263a99829125431d53c962a6ddcdd25c3f55f56cc08e9b3e2777ced6d79a7f8`
