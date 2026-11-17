@@ -242,11 +242,13 @@ def export_revision(candidate: CandidateRevision, root: Path) -> dict[str, Any]:
     }
 
 
-def render_revision(candidate: CandidateRevision, output: Path) -> None:
+def render_revision(
+    candidate: CandidateRevision, ct: np.ndarray, segmentation: np.ndarray, output: Path
+) -> None:
     unique = np.unique(candidate.vertices, axis=0)
     rng = np.random.default_rng(20261117)
     background = unique[rng.choice(len(unique), min(8000, len(unique)), replace=False)]
-    figure, axes = plt.subplots(2, 3, figsize=(18, 11), constrained_layout=True)
+    figure, axes = plt.subplots(3, 3, figsize=(18, 16), constrained_layout=True)
     specs = ((0, 2, "Posterior"), (1, 2, "Right lateral"), (0, 1, "Superior"))
     layers = (
         (candidate.removed_mask, "#d62728", "removed"),
@@ -269,8 +271,44 @@ def render_revision(candidate: CandidateRevision, output: Path) -> None:
             axis.set_title(f"{title}: {'original' if row == 0 else 'revision'}")
             if column == 0:
                 axis.legend(loc="best", fontsize=8)
+    center = np.rint(np.mean(candidate.vertices[candidate.original_mask], axis=0)).astype(int)
+    ct_specs = (
+        (2, center[2], 0, 1, "Axial CT"),
+        (0, center[0], 1, 2, "Sagittal CT"),
+        (1, center[1], 0, 2, "Coronal CT"),
+    )
+    for column, (fixed, coordinate, horizontal, vertical, title) in enumerate(ct_specs):
+        if fixed == 2:
+            image = ct[:, :, coordinate].T
+            labels = segmentation[:, :, coordinate].T
+        elif fixed == 0:
+            image = ct[coordinate, :, :].T
+            labels = segmentation[coordinate, :, :].T
+        else:
+            image = ct[:, coordinate, :].T
+            labels = segmentation[:, coordinate, :].T
+        axis = axes[2, column]
+        axis.imshow(np.clip(image, -300, 1200), cmap="gray", origin="lower")
+        axis.contour(labels == LEVEL_LABEL[candidate.level], [0.5], colors=["#39ff14"], linewidths=1.0)
+        for mask, color, label in layers:
+            points = base.projected_points(
+                candidate.vertices[mask], fixed, int(coordinate), tolerance=1.0
+            )
+            if len(points):
+                axis.scatter(points[:, horizontal], points[:, vertical], s=8, c=color, alpha=0.75, label=label)
+        original_points = candidate.vertices[candidate.original_mask]
+        low = np.maximum(np.floor(np.min(original_points[:, [horizontal, vertical]], axis=0)).astype(int) - 12, 0)
+        high = np.minimum(
+            np.ceil(np.max(original_points[:, [horizontal, vertical]], axis=0)).astype(int) + 13,
+            [image.shape[1], image.shape[0]],
+        )
+        axis.set_xlim(low[0], high[0])
+        axis.set_ylim(low[1], high[1])
+        axis.set_title(f"{title}; candidate slab +/-1.5 mm")
+        if column == 0:
+            axis.legend(loc="best", fontsize=7)
     figure.suptitle(
-        f"{candidate.candidate_id}\n{candidate.status} — evaluator-only surface proposal",
+        f"{candidate.candidate_id}\n{candidate.status} — evaluator-only surface proposal; green=whole vertebra",
         fontsize=16,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -376,12 +414,25 @@ def replay(
             )
             reconstructed = sample_volume(raw_volume, plane.coordinates_index)
             metric = integrity(reconstructed, np.asarray(labels[index]))
+            historical_coordinates, _, _ = historical.image_plane_from_realized_pose(
+                np.asarray(annotation["realized_pose_index"], dtype=np.float64),
+                surface_y,
+                surface_normals,
+            )
+            historical_metric = integrity(
+                sample_volume(raw_volume, historical_coordinates), np.asarray(labels[index])
+            )
             projection_status = "VERIFIED" if metric["verified"] else "UNVERIFIED"
             frame_rows.append(
                 {
                     **common,
                     **metric,
                     "projection_status": projection_status,
+                    "historical_exact_raw_label_agreement": historical_metric[
+                        "exact_raw_label_agreement"
+                    ],
+                    "historical_bone_mask_iou": historical_metric["bone_mask_iou"],
+                    "historical_projection_verified": historical_metric["verified"],
                     "clipped_sample_count": plane.clipped_sample_count,
                     "realized_pose_index": annotation["realized_pose_index"],
                     "image_archive_index": index,
@@ -438,12 +489,27 @@ def replay(
                 "frames": len(rows),
                 "joined": len(valid),
                 "verified": sum(row["projection_status"] == "VERIFIED" for row in valid),
+                "historical_verified": sum(bool(row["historical_projection_verified"]) for row in valid),
                 "median_exact_agreement": float(np.median([row["exact_raw_label_agreement"] for row in valid])) if valid else None,
                 "median_bone_iou": float(np.median([row["bone_mask_iou"] for row in valid])) if valid else None,
+                "historical_median_exact_agreement": float(np.median([row["historical_exact_raw_label_agreement"] for row in valid])) if valid else None,
+                "historical_median_bone_iou": float(np.median([row["historical_bone_mask_iou"] for row in valid])) if valid else None,
                 "distinct_hashes": len({row["frame_sha256"] for row in rows}),
                 "distinct_reduced_poses": len({tuple(np.round(row.get("realized_pose_index", []), 6)) for row in valid}),
             }
         )
+    valid_rows = [row for row in frame_rows if row["projection_status"] != "MISSING_METADATA"]
+
+    def distribution(field: str) -> dict[str, float]:
+        values = np.asarray([row[field] for row in valid_rows], dtype=np.float64)
+        return {
+            "minimum": float(np.min(values)),
+            "p10": float(np.quantile(values, 0.10)),
+            "median": float(np.median(values)),
+            "p90": float(np.quantile(values, 0.90)),
+            "maximum": float(np.max(values)),
+        }
+
     summary = {
         "frames_available": len(frame_rows),
         "frames_joined": sum(row["projection_status"] != "MISSING_METADATA" for row in frame_rows),
@@ -453,6 +519,13 @@ def replay(
         "missing_metadata_frames": sum(row["projection_status"] == "MISSING_METADATA" for row in frame_rows),
         "unique_image_hashes": len({(row["source_id"], row["frame_sha256"]) for row in frame_rows}),
         "clipped_sample_total": sum(int(row.get("clipped_sample_count", 0)) for row in frame_rows),
+        "metric_distributions": {
+            "historical_exact_raw_label_agreement": distribution("historical_exact_raw_label_agreement"),
+            "corrected_exact_raw_label_agreement": distribution("exact_raw_label_agreement"),
+            "historical_bone_mask_iou": distribution("historical_bone_mask_iou"),
+            "corrected_bone_mask_iou": distribution("bone_mask_iou"),
+            "corrected_local_bone_exact_agreement_diagnostic": distribution("local_bone_exact_agreement_diagnostic"),
+        },
         "per_session": per_session,
     }
     return frame_rows, candidate_rows, summary
@@ -468,6 +541,74 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
             writer.writerow(
                 {key: json.dumps(value, separators=(",", ":")) if isinstance(value, (list, dict)) else value for key, value in row.items()}
             )
+
+
+def render_projection_failures(
+    *, package_root: Path, frame_rows: list[dict[str, Any]], raw_volume: np.ndarray,
+    surface_y: np.ndarray, surface_normals: np.ndarray,
+) -> list[dict[str, Any]]:
+    """Save representative high/low-agreement failures without candidate overlays."""
+
+    selected: list[tuple[str, dict[str, Any]]] = []
+    for source_id in sorted({row["source_id"] for row in frame_rows}):
+        rows = [
+            row for row in frame_rows
+            if row["source_id"] == source_id and row["projection_status"] != "MISSING_METADATA"
+        ]
+        selected.append(("best_remaining", max(rows, key=lambda row: row["exact_raw_label_agreement"])))
+        selected.append(("low_agreement", min(rows, key=lambda row: row["exact_raw_label_agreement"])))
+    output_rows = []
+    root = package_root / "projection_repair" / "failure_examples"
+    root.mkdir(parents=True, exist_ok=True)
+    for index, (kind, row) in enumerate(selected):
+        images = np.load(row["image_archive"])["ultrasound"]
+        labels = np.load(row["raw_label_archive"])["raw_labels"]
+        stored = labels[int(row["image_archive_index"])]
+        plane = geometry.plane_from_reduced_pose(
+            realized_pose_index=np.asarray(row["realized_pose_index"]),
+            surface_y_index=surface_y,
+            surface_normals=surface_normals,
+            width=IMAGE_WIDTH,
+            depth=IMAGE_DEPTH,
+            image_resolution_m=IMAGE_RESOLUTION_M,
+            label_resolution_m=LABEL_RESOLUTION_M,
+            probe_height_m=PROBE_HEIGHT_M,
+            image_origin_height_m=IMAGE_ORIGIN_HEIGHT_M,
+            volume_shape=raw_volume.shape,
+        )
+        reconstructed = sample_volume(raw_volume, plane.coordinates_index)
+        mismatch = reconstructed != stored
+        figure, axes = plt.subplots(1, 4, figsize=(16, 5), constrained_layout=True)
+        axes[0].imshow(images[int(row["image_archive_index"])], cmap="gray")
+        axes[0].set_title("Clean ultrasound")
+        axes[1].imshow(stored, cmap="tab20", vmin=0, vmax=43)
+        axes[1].set_title("Stored raw labels")
+        axes[2].imshow(reconstructed, cmap="tab20", vmin=0, vmax=43)
+        axes[2].set_title("Reduced-pose reconstruction")
+        axes[3].imshow(mismatch, cmap="gray_r")
+        axes[3].set_title("Mismatch pixels")
+        for axis in axes:
+            axis.axis("off")
+        figure.suptitle(
+            f"{kind}: {row['source_id']} / {row['session_id']} frame {row['frame_sequence']}\n"
+            f"exact={row['exact_raw_label_agreement']:.4f}, bone IoU={row['bone_mask_iou']:.4f}; gate not passed"
+        )
+        stem = f"{index:02d}_{row['source_id']}_{row['session_id']}_{kind}"
+        figure.savefig(root / f"{stem}.png", dpi=170)
+        plt.close(figure)
+        output_rows.append(
+            {
+                "kind": kind,
+                "source_id": row["source_id"],
+                "session_id": row["session_id"],
+                "frame_sequence": row["frame_sequence"],
+                "frame_sha256": row["frame_sha256"],
+                "exact_raw_label_agreement": row["exact_raw_label_agreement"],
+                "bone_mask_iou": row["bone_mask_iou"],
+                "figure": str((root / f"{stem}.png").relative_to(package_root)),
+            }
+        )
+    return output_rows
 
 
 def render_integrated_examples(
@@ -574,6 +715,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     patient = args.asset_root / "selected_dataset_stl" / "s0010"
     segmentation_path = patient / "combined_label_map.nii.gz"
     segmentation = np.asanyarray(nib.load(segmentation_path).dataobj).astype(np.uint8)
+    ct_path = args.asset_root / "selected_dataset" / "s0010" / "ct.nii.gz"
+    ct = np.asanyarray(nib.load(ct_path).dataobj)
     candidates = load_revisions(
         asset_root=args.asset_root,
         annotation_source=args.annotation_source,
@@ -584,7 +727,35 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     for candidate in candidates:
         files = export_revision(candidate, geometry_root / "editable_geometry")
         figure = geometry_root / "figures" / f"{candidate.candidate_id}_before_after.png"
-        render_revision(candidate, figure)
+        render_revision(candidate, ct, segmentation, figure)
+        original_points = candidate.vertices[candidate.original_mask]
+        proposed_points = candidate.vertices[candidate.proposed_mask]
+        geometry_difference = {
+            "retained_fraction_of_original": float(candidate.proposed_mask.sum() / candidate.original_mask.sum()),
+            "centroid_shift_mm": (
+                float(
+                    np.linalg.norm(
+                        np.mean(proposed_points, axis=0) - np.mean(original_points, axis=0)
+                    )
+                    * LABEL_RESOLUTION_M
+                    * 1000.0
+                )
+                if len(proposed_points)
+                else None
+            ),
+            "original_bounds_index": [
+                np.min(original_points, axis=0).tolist(),
+                np.max(original_points, axis=0).tolist(),
+            ],
+            "proposed_bounds_index": (
+                [
+                    np.min(proposed_points, axis=0).tolist(),
+                    np.max(proposed_points, axis=0).tolist(),
+                ]
+                if len(proposed_points)
+                else None
+            ),
+        }
         boundary_records.append(
             {
                 "candidate_id": candidate.candidate_id,
@@ -595,6 +766,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
                 "source_mesh": str(candidate.source_mesh_path),
                 "source_mesh_sha256": candidate.source_mesh_sha256,
                 "geometry": files,
+                "geometry_difference": geometry_difference,
                 "figure": str(figure.relative_to(package_root)),
                 "independent_anatomical_approval": "PENDING",
                 "actor_usable": False,
@@ -613,6 +785,13 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     write_csv(package_root / "projection_repair" / "candidate_correspondence.csv", candidate_rows)
     (package_root / "projection_repair" / "replay_summary.json").write_text(
         json.dumps(replay_summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    failure_examples = render_projection_failures(
+        package_root=package_root,
+        frame_rows=frame_rows,
+        raw_volume=segmentation,
+        surface_y=surface_y,
+        surface_normals=surface_normals,
     )
     selected = render_integrated_examples(
         package_root=package_root, candidate_rows=candidate_rows, candidates=candidates
@@ -640,6 +819,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "mode": "REDUCED_POSE_RECONSTRUCTION",
             "frozen_gate": {"exact_raw_label_agreement_minimum": EXACT_MIN, "bone_mask_iou_minimum": BONE_IOU_MIN},
             "result": replay_summary,
+            "representative_failures": failure_examples,
             "status": "PROJECTION_PARITY_PASS" if replay_summary["verified_frames"] else "PROJECTION_REPAIR_BLOCKED",
         },
         "boundary_review": boundary_records,
@@ -661,6 +841,19 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "slab bounds, not semantic visibility. TP revisions are conservative distal surface-core "
         "proposals with an uncertain base; SAP boundaries remain unresolved. No annotation is "
         "independently approved, no row is a training label, and no model was fit.\n",
+        encoding="utf-8",
+    )
+    (package_root / "ANATOMICAL_REVIEW_CHECKLIST.md").write_text(
+        "# Qualified anatomical review checklist\n\n"
+        "For each of the four candidate IDs, record reviewer name, qualification, date, "
+        "geometry NPZ checksum, correct level and RIGHT laterality, whether the proposed surface "
+        "isolates the requested process, adjacent-structure contamination, uncertainty at the "
+        "base, and one of ACCEPT_BOUNDARY, REVISE_BOUNDARY, or REJECT_CANDIDATE. For TP, explicitly "
+        "decide whether the conservative distal surface core is an acceptable supervision target "
+        "and whether the yellow base zone should be included, excluded, or redrawn. For SAP, provide "
+        "corrected source-vertex indices if the process can be separated from lamina/posterior "
+        "elements. Self-review by the generating agent is engineering QA only and cannot fill the "
+        "qualified-review fields.\n",
         encoding="utf-8",
     )
     return manifest
