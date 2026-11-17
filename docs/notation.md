@@ -56,6 +56,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It tests whether continuous physical acquisition supplies the evidence absent from reset-separated replay without claiming independent confirmation or changing perception models.
 - **Source:** approved by user, 2026-11-16.
 
+### Stage 2 bounded orientation refinement
+- **Kind:** method
+- **Definition:** A development-only continuation of a Stage 2 active-acquisition pilot that samples the protocol-declared angular offsets around the actor-selected candidate, clips them to declared physical angle limits, scores only the resulting fresh ultrasound observations with the frozen validity and quality models, and selects before evaluator geometry is opened.
+- **Intuition:** It resolves orientation at a finer angular scale without reading target orientation or changing the image models.
+- **Source:** experiments/unity_two_stage_transfer/stage2_orientation_refinement_protocol_v6r1.yaml, approved by user, 2026-11-16.
+
 ### D0
 - **Kind:** metric
 - **Definition:** Passes when replay observations, frame identities, frozen predictions, trajectory boundaries, and executed relative motion can be reconstructed without joining evidence across resets.

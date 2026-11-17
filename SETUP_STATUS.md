@@ -1,8 +1,31 @@
 # Setup status
 
-Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO**
+Status: **PHASE_4_RUNTIME_READY; PHASE_5A_METRIC_GO; PHASE_5C_STAGE1_GROUP_A_CONFIRMATION_PASS; PHASE_5C_STAGE2_CONFIRMATION_NO_GO; STAGE2_TEMPORAL_REPLAY_EXPLORATORY_NO_GO; STAGE2_CONTRACT_CORRECTED_EXPLORATORY_NO_GO; STAGE2_ACTIVE_ACQUISITION_DEVELOPMENT_PASS; STAGE2_PHYSICAL_GRID_DEMO_DEVELOPMENT_NO_GO; STAGE2_BOUNDED_ORIENTATION_REFINEMENT_DEVELOPMENT_PASS**
 
 Updated: 2026-11-16 (America/New_York)
+
+## Phase 5C Stage 2 bounded-orientation development pass
+
+Technical-retry job `51664534` completed `0:0` on `anest-dept` with one NVIDIA L4, four CPUs,
+and 30 GB requested RAM. After the physical 3x3 grid and fine/micro search, the actor sampled five
+fresh angular views inside the frozen 2.70--2.97 rad limits, selected frame 43 using the unchanged
+validity and quality models, physically returned within 0.2375 mm / 0.0060 degrees, and passed two
+fresh confirmations. All 70 tests passed.
+
+The evaluator returned **`DEVELOPMENT_PASS`**: position error was 4.0860 mm, orientation error was
+9.9952305295 degrees, and L4 visibility was 0.2570333. The orientation margin is only
+0.0047694705 degrees below the frozen 10-degree gate, so this is a numerical fixed-`s0010`
+development pass, not evidence of robustness or independent confirmation. V16--V18 remain
+`CONFIRMATION_NO_GO`.
+
+Job `51662670` is preserved as a technical replay-subset indexing failure. V6R1 changed only the
+replay-local contiguous index while preserving global frame identities and every scientific,
+motion, model, and evaluator parameter.
+
+- Detailed report: `docs/research/sonogym_stage2_orientation_refinement_v6r1.md`.
+- Result manifest: `experiments/unity_two_stage_transfer/stage2_orientation_refinement_v6r1_result.json`.
+- Run: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/stage2_orientation_refinement_v6r1/51664534/`.
+- Two-video ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/demo/sonogym_stage2_orientation_refinement_v6r1_20261116.zip` (SHA-256 `1380a7790ab296e9e68e2a1c31a6ebcd3dbad4ae87c601922389523b0fa5793f`).
 
 ## Phase 5C Stage 2 physical-grid development demo
 
