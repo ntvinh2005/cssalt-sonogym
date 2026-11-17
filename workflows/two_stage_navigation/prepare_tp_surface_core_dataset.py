@@ -19,6 +19,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
+EVALUATION_ROOT = (
+    Path(__file__).resolve().parents[2]
+    / "source/spinal_surgery/spinal_surgery/evaluation"
+)
+sys.path.insert(0, str(EVALUATION_ROOT))
+from two_stage_navigation.stage1_features import UNITY_REFERENCE_PATCH_SPEC  # noqa: E402
+from two_stage_navigation.tp_surface_core_dataset import (  # noqa: E402
+    L4_CLASS,
+    L5_CLASS,
+    actor_visible_patch_proposals,
+    count_points_in_patch,
+    proposed_review_target,
+)
+
 GEOMETRY_PATH = (
     Path(__file__).resolve().parents[2]
     / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/ultrasound_plane_geometry.py"
@@ -37,6 +51,10 @@ ACTIVE_CANDIDATES = (
     "L4_RIGHT_transverse_process",
     "L5_RIGHT_transverse_process",
 )
+CANDIDATE_TO_CLASS = {
+    "L4_RIGHT_transverse_process": L4_CLASS,
+    "L5_RIGHT_transverse_process": L5_CLASS,
+}
 
 
 def sha256(path: Path) -> str:
@@ -81,7 +99,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-s0010-tp-surface-core-dataset-v1":
+    if not protocol["protocol_id"].startswith("sonogym-s0010-tp-surface-core-dataset-v"):
         raise RuntimeError("unexpected protocol")
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -133,7 +151,8 @@ def main() -> int:
                 local_coordinates_m=local,
                 label_resolution_m=float(pose["label_resolution_m"]),
             )
-            for class_id, candidate in enumerate(ACTIVE_CANDIDATES):
+            projections: dict[str, dict[str, np.ndarray]] = {}
+            for candidate in ACTIVE_CANDIDATES:
                 geometry = geometries[candidate]
                 projected = project_points_to_pixels(
                     points_index=geometry["vertices"][geometry["core"]],
@@ -145,7 +164,6 @@ def main() -> int:
                     label_resolution_m=float(pose["label_resolution_m"]),
                     plane_tolerance_mm=float(protocol["label_preparation"]["surface_slab_tolerance_mm"]),
                 )
-                inside = projected["inside"]
                 uncertain_projection = project_points_to_pixels(
                     points_index=geometry["vertices"][geometry["uncertain"]],
                     image_origin_index=plane.origin_index,
@@ -156,15 +174,47 @@ def main() -> int:
                     label_resolution_m=float(pose["label_resolution_m"]),
                     plane_tolerance_mm=float(protocol["label_preparation"]["surface_slab_tolerance_mm"]),
                 )
-                if inside.any():
-                    patch_row = float(np.median(projected["rows"][inside]))
-                    patch_column = float(np.median(projected["columns"][inside]))
-                    intersection = "PRESENT"
-                else:
-                    patch_row = patch_column = float("nan")
-                    intersection = "ABSENT"
+                projections[CANDIDATE_TO_CLASS[candidate]] = {
+                    "core_rows": projected["rows"][projected["inside"]],
+                    "core_columns": projected["columns"][projected["inside"]],
+                    "uncertain_rows": uncertain_projection["rows"][uncertain_projection["inside"]],
+                    "uncertain_columns": uncertain_projection["columns"][uncertain_projection["inside"]],
+                }
+            proposals = actor_visible_patch_proposals(
+                images[index],
+                patch_spec=UNITY_REFERENCE_PATCH_SPEC,
+                column_stride_pixels=int(
+                    protocol["label_preparation"].get("proposal_column_stride_pixels", 12)
+                ),
+            )
+            for proposal_index, proposal in enumerate(proposals):
+                core_counts = {
+                    name: count_points_in_patch(
+                        proposal,
+                        rows=value["core_rows"],
+                        columns=value["core_columns"],
+                        patch_spec=UNITY_REFERENCE_PATCH_SPEC,
+                    )
+                    for name, value in projections.items()
+                }
+                uncertain_counts = {
+                    name: count_points_in_patch(
+                        proposal,
+                        rows=value["uncertain_rows"],
+                        columns=value["uncertain_columns"],
+                        patch_spec=UNITY_REFERENCE_PATCH_SPEC,
+                    )
+                    for name, value in projections.items()
+                }
+                review_target, class_id, target_reason = proposed_review_target(
+                    core_counts, uncertain_counts
+                )
+                candidate_id = next(
+                    (name for name, value in core_counts.items() if value > 0),
+                    "BACKGROUND_OR_OTHER_STRUCTURE",
+                )
                 record = {
-                    "sample_id": f"{session['session_id']}:{index}:{candidate}",
+                    "sample_id": f"{session['session_id']}:{index}:{proposal.track_id}:{proposal_index}",
                     "session_id": session["session_id"],
                     "split": session["split"],
                     "frame_sequence": index,
@@ -172,15 +222,22 @@ def main() -> int:
                     "frame_sha256": actor["frame_sha256"],
                     "image_archive": str((session_dir / "public/ultrasound.npz").resolve()),
                     "image_archive_index": index,
-                    "candidate_id": candidate,
-                    "class_id": class_id,
-                    "geometry_version_sha256": geometry["sha256"],
+                    "proposal_source": "ACTOR_VISIBLE_BRIGHT_INTERFACE",
+                    "track_id": proposal.track_id,
+                    "candidate_id": candidate_id,
+                    "class_id": -1 if class_id is None else class_id,
+                    "geometry_version_sha256": json.dumps(
+                        {name: geometries[candidate]["sha256"] for candidate, name in CANDIDATE_TO_CLASS.items()},
+                        sort_keys=True,
+                    ),
                     "projection_status": "VERIFIED",
-                    "candidate_intersection": intersection,
-                    "core_projected_vertex_count": int(inside.sum()),
-                    "uncertain_projected_vertex_count": int(uncertain_projection["inside"].sum()),
-                    "patch_row": patch_row,
-                    "patch_column": patch_column,
+                    "candidate_intersection": review_target,
+                    "l4_core_points_in_patch": core_counts[L4_CLASS],
+                    "l5_core_points_in_patch": core_counts[L5_CLASS],
+                    "l4_uncertain_points_in_patch": uncertain_counts[L4_CLASS],
+                    "l5_uncertain_points_in_patch": uncertain_counts[L5_CLASS],
+                    "patch_row": proposal.row,
+                    "patch_column": proposal.column,
                     "patch_width": 48,
                     "patch_depth": 80,
                     "acoustic_visibility": "NOT_REVIEWED",
@@ -188,28 +245,32 @@ def main() -> int:
                     "anatomical_approval": "PENDING",
                     "training_label": "EXCLUDED",
                     "training_eligible": False,
-                    "exclusion_reason": "anatomical and image-semantic review pending",
+                    "review_target": review_target,
+                    "review_target_reason": target_reason,
+                    "exclusion_reason": "anatomical and patch-semantic review pending",
                 }
                 rows.append(record)
-                if inside.any() and overlay_budget[candidate] > 0:
-                    overlay_budget[candidate] -= 1
+                budget_key = next(
+                    (key for key, name in CANDIDATE_TO_CLASS.items() if name == candidate_id),
+                    None,
+                )
+                if review_target == "REVIEW_POSITIVE" and budget_key and overlay_budget[budget_key] > 0:
+                    overlay_budget[budget_key] -= 1
                     figure_path = output / "review" / f"{record['sample_id'].replace(':', '_')}.png"
                     figure_path.parent.mkdir(parents=True, exist_ok=True)
                     fig, axes = plt.subplots(1, 2, figsize=(8, 4), dpi=160)
                     axes[0].imshow(images[index], cmap="gray")
+                    axes[0].scatter([proposal.column], [proposal.row], s=20, c="lime")
                     axes[0].set_title("Clean actor-visible ultrasound")
                     axes[1].imshow(images[index], cmap="gray")
-                    axes[1].scatter(projected["columns"][inside], projected["rows"][inside], s=4, c="orange")
-                    axes[1].scatter(
-                        uncertain_projection["columns"][uncertain_projection["inside"]],
-                        uncertain_projection["rows"][uncertain_projection["inside"]],
-                        s=3,
-                        c="cyan",
-                    )
+                    for name, value in projections.items():
+                        axes[1].scatter(value["core_columns"], value["core_rows"], s=4, label=name)
+                        axes[1].scatter(value["uncertain_columns"], value["uncertain_rows"], s=3, c="cyan")
+                    axes[1].scatter([proposal.column], [proposal.row], s=20, c="lime")
                     axes[1].set_title("Reviewer-only core/uncertain projection")
                     for axis in axes:
                         axis.axis("off")
-                    fig.suptitle(f"{candidate} | {session['session_id']} frame {index}")
+                    fig.suptitle(f"{candidate_id} | {session['session_id']} frame {index}")
                     fig.tight_layout()
                     fig.savefig(figure_path)
                     plt.close(fig)
@@ -231,7 +292,7 @@ def main() -> int:
         "active_classes": list(ACTIVE_CANDIDATES),
         "task_name": "TP_SURFACE_CORE detection",
         "rows": len(rows),
-        "verified_intersections": sum(row["candidate_intersection"] == "PRESENT" for row in rows),
+        "verified_intersections": sum(row["review_target"] == "REVIEW_POSITIVE" for row in rows),
         "training_eligible_rows": 0,
         "anatomical_approval": "PENDING",
         "processed_sessions": processed_sessions,
@@ -242,11 +303,11 @@ def main() -> int:
             else "ENGINEERING_READY_LABEL_REVIEW_PENDING"
         ),
         "counts": {
-            candidate: {
+            CANDIDATE_TO_CLASS[candidate]: {
                 split: sum(
-                    row["candidate_id"] == candidate
+                    row["candidate_id"] == CANDIDATE_TO_CLASS[candidate]
                     and row["split"] == split
-                    and row["candidate_intersection"] == "PRESENT"
+                    and row["review_target"] == "REVIEW_POSITIVE"
                     for row in rows
                 )
                 for split in ("train", "calibration", "development_evaluation")
@@ -259,11 +320,11 @@ def main() -> int:
         json.dumps(
             {
                 "task": "TP_SURFACE_CORE detection",
-                "classes": list(ACTIVE_CANDIDATES),
+                "classes": ["BACKGROUND_OR_OTHER_STRUCTURE", L4_CLASS, L5_CLASS],
                 "excluded": ["SAP", "whole_TP", "MBB_target"],
                 "supervision": "48x80 interface-centred patch classification",
                 "feature_mode": "16x16 normalized intensity and gradients",
-                "inference_proposals": "actor-visible bright bone-interface candidates",
+                "inference_proposals": "actor-visible bright-interface tracks and fixed-stride patches",
             },
             indent=2,
         )

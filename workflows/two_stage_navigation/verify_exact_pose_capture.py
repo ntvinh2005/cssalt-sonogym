@@ -38,6 +38,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--session-dir", type=Path, required=True)
     parser.add_argument("--assets-data-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--allow-known-job-51793371-coordinate-hash-defect",
+        action="store_true",
+        help="Historical post-hoc audit only; forbidden for new captures.",
+    )
     return parser.parse_args()
 
 
@@ -80,6 +85,7 @@ def main() -> int:
         "sonogym-s0010-exact-pose-replay-v1",
         "sonogym-s0010-exact-pose-replay-v2",
         "sonogym-s0010-tp-surface-core-dataset-v1",
+        "sonogym-s0010-tp-surface-core-dataset-v2",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
@@ -133,7 +139,7 @@ def main() -> int:
         if int(public["frame_sequence"]) != index or int(pose["frame_sequence"]) != index:
             raise RuntimeError("frame order is not contiguous")
         if (
-            protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1"
+            protocol["protocol_id"].startswith("sonogym-s0010-tp-surface-core-dataset-v")
             and public.get("acquisition_id") != pose.get("acquisition_id")
         ):
             raise RuntimeError(f"acquisition identity mismatch at index {index}")
@@ -141,7 +147,7 @@ def main() -> int:
         if actual_hash != public["frame_sha256"] or actual_hash != pose["frame_sha256"]:
             raise RuntimeError(f"frame hash mismatch at index {index}")
         coordinate_hash_matches = True
-        if protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1":
+        if protocol["protocol_id"].startswith("sonogym-s0010-tp-surface-core-dataset-v"):
             if (
                 array_sha256(ultrasound[index]) != pose.get("ultrasound_array_sha256")
                 or array_sha256(raw_labels[index]) != pose.get("raw_label_array_sha256")
@@ -230,7 +236,20 @@ def main() -> int:
         for row in frame_results
     )
     synchronized_full_pose_replay = all(row["frame_passes"] for row in frame_results)
-    if protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1":
+    tp_surface_core_protocol = protocol["protocol_id"].startswith(
+        "sonogym-s0010-tp-surface-core-dataset-v"
+    )
+    coordinate_hash_integrity = all(
+        row["saved_coordinate_hash_matches_record"] for row in frame_results
+    )
+    historical_hash_exception = bool(
+        args.allow_known_job_51793371_coordinate_hash_defect
+        and protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1"
+        and "51793371" in session.parts
+    )
+    if args.allow_known_job_51793371_coordinate_hash_defect and not historical_hash_exception:
+        raise RuntimeError("coordinate-hash exception is restricted to historical job 51793371")
+    if tp_surface_core_protocol:
         acquisition_freshness = all(row["fresh_viewpoint"] for row in frame_results)
         viewpoint_diversity = bool(
             distinct_ultrasound_hashes >= minimum_distinct_hashes
@@ -244,6 +263,7 @@ def main() -> int:
         and synchronized_full_pose_replay
         and acquisition_freshness
         and viewpoint_diversity
+        and (coordinate_hash_integrity or historical_hash_exception)
     )
     report = {
         "schema": "sonogym-exact-pose-replay-report-v1",
@@ -260,15 +280,16 @@ def main() -> int:
             not row["saved_coordinate_hash_matches_record"] for row in frame_results
         ),
         "coordinate_hash_note": (
-            "Job 51793371 hashed float64 native coordinates before saving the archive as "
-            "float32. Scientific replay uses the reloaded float32 archive; source was corrected "
-            "after this one authorized job."
+            "A mismatch is a hard failure for new captures. The only permitted exception is an "
+            "explicit post-hoc audit of historical job 51793371."
         ),
+        "historical_coordinate_hash_exception_applied": historical_hash_exception,
         "gates": {
             "NATIVE_MAP_REPLAY": native_map_replay,
             "SYNCHRONIZED_FULL_POSE_REPLAY": synchronized_full_pose_replay,
             "ACQUISITION_FRESHNESS": acquisition_freshness,
             "VIEWPOINT_DIVERSITY": viewpoint_diversity,
+            "ARRAY_HASH_INTEGRITY": coordinate_hash_integrity,
         },
         "verdict": "PROJECTION_PARITY_PASS" if capture_passes else "PROJECTION_REPAIR_BLOCKED",
         "frames": frame_results,
