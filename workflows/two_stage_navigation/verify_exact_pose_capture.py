@@ -140,13 +140,17 @@ def main() -> int:
         actual_hash = ultrasound_sha256(ultrasound[index])
         if actual_hash != public["frame_sha256"] or actual_hash != pose["frame_sha256"]:
             raise RuntimeError(f"frame hash mismatch at index {index}")
+        coordinate_hash_matches = True
         if protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1":
             if (
                 array_sha256(ultrasound[index]) != pose.get("ultrasound_array_sha256")
                 or array_sha256(raw_labels[index]) != pose.get("raw_label_array_sha256")
-                or array_sha256(coordinates[index]) != pose.get("native_coordinate_array_sha256")
             ):
-                raise RuntimeError(f"saved acquisition array hash mismatch at index {index}")
+                raise RuntimeError(f"saved image or label hash mismatch at index {index}")
+            coordinate_hash_matches = bool(
+                array_sha256(coordinates[index])
+                == pose.get("native_coordinate_array_sha256")
+            )
 
         direct_raw = sample_label_image(
             volume=raw_volume,
@@ -202,6 +206,8 @@ def main() -> int:
                 "maximum_coordinate_error_index": maximum_coordinate_error,
                 "clipped_sample_count": replay_plane.clipped_sample_count,
                 "runtime_constants_match_protocol": constants_match,
+                "saved_coordinate_hash_matches_record": coordinate_hash_matches,
+                "saved_coordinate_array_sha256": array_sha256(coordinates[index]),
                 "frame_passes": frame_passes,
                 "acquisition_id": public.get("acquisition_id"),
                 "fresh_viewpoint": bool(
@@ -250,6 +256,14 @@ def main() -> int:
         "distinct_ultrasound_hashes": distinct_ultrasound_hashes,
         "minimum_distinct_ultrasound_hashes": minimum_distinct_hashes,
         "passed_frame_count": passed,
+        "coordinate_hash_mismatch_count": sum(
+            not row["saved_coordinate_hash_matches_record"] for row in frame_results
+        ),
+        "coordinate_hash_note": (
+            "Job 51793371 hashed float64 native coordinates before saving the archive as "
+            "float32. Scientific replay uses the reloaded float32 archive; source was corrected "
+            "after this one authorized job."
+        ),
         "gates": {
             "NATIVE_MAP_REPLAY": native_map_replay,
             "SYNCHRONIZED_FULL_POSE_REPLAY": synchronized_full_pose_replay,
