@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""CPU tests for synchronized acquisition and waypoint integrity."""
+
+from __future__ import annotations
+
+import importlib.util
+import sys
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+
+PATH = (
+    Path(__file__).resolve().parents[1]
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/acquisition_integrity.py"
+)
+SPEC = importlib.util.spec_from_file_location("acquisition_integrity", PATH)
+assert SPEC is not None and SPEC.loader is not None
+MODULE = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = MODULE
+SPEC.loader.exec_module(MODULE)
+
+
+def view(**changes):
+    values = {
+        "acquisition_id": "session:reset:1",
+        "session_id": "session",
+        "reset_id": "reset",
+        "acquisition_sequence": 1,
+        "producer_sequence": 10,
+        "realized_pose_index": np.asarray([100.0, 120.0, 2.8]),
+        "frame_sha256": "a" * 64,
+        "action_count": 2,
+        "technical_image_valid": True,
+    }
+    values.update(changes)
+    return MODULE.AcquiredView(**values)
+
+
+class SnapshotTests(unittest.TestCase):
+    def test_snapshot_copy_is_immutable_after_source_mutation(self) -> None:
+        source = np.asarray([1.0, 2.0, 3.0])
+        frozen = MODULE.immutable_array(source)
+        source[:] = 9.0
+        np.testing.assert_array_equal(frozen, [1.0, 2.0, 3.0])
+        with self.assertRaises(ValueError):
+            frozen[0] = 4.0
+
+    def test_shifted_frame_pose_pairing_fails_join(self) -> None:
+        with self.assertRaisesRegex(ValueError, "one acquisition identity"):
+            MODULE.validate_acquisition_join(
+                [{"acquisition_id": "a"}, {"acquisition_id": "b"}]
+            )
+
+    def test_privileged_mapping_cannot_enter_detector_input(self) -> None:
+        MODULE.assert_detector_input_is_actor_visible({"pixels": [1, 2]})
+        with self.assertRaisesRegex(ValueError, "privileged"):
+            MODULE.assert_detector_input_is_actor_visible(
+                {"pixels": [1, 2], "human_img_coords": [0, 1]}
+            )
+
+
+class WaypointTests(unittest.TestCase):
+    def test_waypoints_swallowed_by_tolerance_are_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "swallowed"):
+            MODULE.validate_waypoint_bank(
+                [[100.0, 100.0, 2.8], [102.0, 100.0, 2.81]],
+                command_minimum=[90.0, 90.0, 2.0],
+                command_maximum=[110.0, 110.0, 3.0],
+                label_resolution_mm=1.5,
+                position_tolerance_mm=2.0,
+                orientation_tolerance_deg=1.0,
+            )
+
+    def test_post_clipping_duplicate_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            MODULE.validate_waypoint_bank(
+                [[100.0, 100.0, 2.8], [120.0, 100.0, 2.8], [130.0, 100.0, 2.8]],
+                command_minimum=[90.0, 90.0, 2.0],
+                command_maximum=[110.0, 110.0, 3.0],
+                label_resolution_mm=1.5,
+                position_tolerance_mm=2.0,
+                orientation_tolerance_deg=1.0,
+            )
+
+    def test_distinct_bank_passes_twice_tolerance_rule(self) -> None:
+        result = MODULE.validate_waypoint_bank(
+            [[100.0, 100.0, 2.8], [106.0, 100.0, 2.8], [106.0, 106.0, 2.9]],
+            command_minimum=[90.0, 90.0, 2.0],
+            command_maximum=[110.0, 110.0, 3.0],
+            label_resolution_mm=1.5,
+            position_tolerance_mm=2.0,
+            orientation_tolerance_deg=1.0,
+        )
+        self.assertEqual(result.shape, (3, 3))
+
+
+class FreshnessTests(unittest.TestCase):
+    def test_repeated_producer_cannot_create_new_view(self) -> None:
+        result = MODULE.validate_new_view(
+            view(),
+            view(
+                acquisition_id="session:reset:2",
+                acquisition_sequence=2,
+                producer_sequence=10,
+                realized_pose_index=np.asarray([106.0, 120.0, 2.8]),
+                frame_sha256="b" * 64,
+            ),
+            label_resolution_mm=1.5,
+            minimum_translation_mm=2.0,
+            minimum_orientation_deg=1.0,
+        )
+        self.assertFalse(result["accepted"])
+
+    def test_stale_pose_is_rejected_even_with_new_hash(self) -> None:
+        result = MODULE.validate_new_view(
+            view(),
+            view(
+                acquisition_id="session:reset:2",
+                acquisition_sequence=2,
+                producer_sequence=11,
+                frame_sha256="b" * 64,
+                action_count=1,
+            ),
+            label_resolution_mm=1.5,
+            minimum_translation_mm=2.0,
+            minimum_orientation_deg=1.0,
+        )
+        self.assertFalse(result["physical_viewpoint_changed"])
+        self.assertFalse(result["accepted"])
+
+    def test_valid_moved_snapshot_is_accepted(self) -> None:
+        result = MODULE.validate_new_view(
+            view(),
+            view(
+                acquisition_id="session:reset:2",
+                acquisition_sequence=2,
+                producer_sequence=11,
+                realized_pose_index=np.asarray([106.0, 120.0, 2.8]),
+                frame_sha256="b" * 64,
+            ),
+            label_resolution_mm=1.5,
+            minimum_translation_mm=2.0,
+            minimum_orientation_deg=1.0,
+        )
+        self.assertTrue(result["accepted"])
+
+
+if __name__ == "__main__":
+    unittest.main()

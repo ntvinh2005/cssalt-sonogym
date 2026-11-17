@@ -38,6 +38,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It prevents vertebral centroids, mesh quantiles, or classifier confidence from becoming invented nerve or injection coordinates.
 - **Source:** approved by user, 2026-11-16.
 
+### TP_SURFACE_CORE
+- **Kind:** object
+- **Definition:** The versioned, conservative distal surface subset of a RIGHT L4 or L5 transverse-process candidate, excluding its unresolved base and carrying separate anatomical-approval and image-semantic-review states.
+- **Intuition:** It supports a narrowly named feasibility detector without claiming whole-TP segmentation, SAP localization, an MBB target, or injection readiness.
+- **Source:** approved by user, 2026-11-17.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.

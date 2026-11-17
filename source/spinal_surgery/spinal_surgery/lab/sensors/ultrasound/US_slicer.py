@@ -378,6 +378,11 @@ class USSlicer(LabelImgSlicer):
         ).permute(
             0, 2, 3, 1
         )  # (n, H, W, e)
+        if self.capture_snapshot_enabled:
+            self.annotate_latest_acquisition(
+                clean_ultrasound=self.us_img_tensor.detach().clone(),
+                converted_label_slice=self.label_img_tensor.detach().clone(),
+            )
 
         if self.sim_mode == "both":
             ct_img_tensor = self.ct_img_tensor.permute(0, 3, 1, 2)  # (n*e, W, H)

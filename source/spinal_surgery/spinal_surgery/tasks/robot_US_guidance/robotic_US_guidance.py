@@ -530,6 +530,12 @@ class roboticUSEnv(DirectRLEnv):
             observations = {"policy": label_img}
         else:
             raise ValueError("Invalid observation mode")
+        if self.US_slicer.capture_snapshot_enabled:
+            self.US_slicer.annotate_latest_acquisition(
+                producer_sequence=int(self.num_step),
+                simulation_step=int(self._sim_step_counter),
+                simulation_time_s=float(self._sim_step_counter * self.physics_dt),
+            )
         # torch.cuda.synchronize()  # Wait for GPU work to finish
         # end = time.time()
         # print(end - start)

@@ -63,6 +63,15 @@ def ultrasound_sha256(image: np.ndarray) -> str:
     return digest.hexdigest()
 
 
+def array_sha256(value: np.ndarray) -> str:
+    array = np.ascontiguousarray(value)
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("ascii"))
+    digest.update(np.asarray(array.shape, dtype="<i8").tobytes())
+    digest.update(array.tobytes())
+    return digest.hexdigest()
+
+
 def main() -> int:
     args = parse_args()
     protocol_path = args.protocol.resolve()
@@ -70,6 +79,7 @@ def main() -> int:
     if protocol.get("protocol_id") not in {
         "sonogym-s0010-exact-pose-replay-v1",
         "sonogym-s0010-exact-pose-replay-v2",
+        "sonogym-s0010-tp-surface-core-dataset-v1",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
@@ -86,7 +96,16 @@ def main() -> int:
     )
     coordinates = coordinate_archive["human_img_coords"]
     local_coordinates = coordinate_archive["native_local_image_coordinates_m"]
-    expected_frames = int(protocol["sampling"]["expected_frames_per_session"])
+    session_id = str(public_rows[0]["session_id"])
+    session_spec = next(
+        item for item in protocol["sessions"] if str(item["session_id"]) == session_id
+    )
+    expected_frames = int(
+        session_spec.get(
+            "expected_frame_count",
+            protocol["sampling"].get("expected_frames_per_session"),
+        )
+    )
     lengths = {
         len(public_rows),
         len(pose_rows),
@@ -113,9 +132,21 @@ def main() -> int:
         pose = pose_rows[index]
         if int(public["frame_sequence"]) != index or int(pose["frame_sequence"]) != index:
             raise RuntimeError("frame order is not contiguous")
+        if (
+            protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1"
+            and public.get("acquisition_id") != pose.get("acquisition_id")
+        ):
+            raise RuntimeError(f"acquisition identity mismatch at index {index}")
         actual_hash = ultrasound_sha256(ultrasound[index])
         if actual_hash != public["frame_sha256"] or actual_hash != pose["frame_sha256"]:
             raise RuntimeError(f"frame hash mismatch at index {index}")
+        if protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1":
+            if (
+                array_sha256(ultrasound[index]) != pose.get("ultrasound_array_sha256")
+                or array_sha256(raw_labels[index]) != pose.get("raw_label_array_sha256")
+                or array_sha256(coordinates[index]) != pose.get("native_coordinate_array_sha256")
+            ):
+                raise RuntimeError(f"saved acquisition array hash mismatch at index {index}")
 
         direct_raw = sample_label_image(
             volume=raw_volume,
@@ -172,6 +203,14 @@ def main() -> int:
                 "clipped_sample_count": replay_plane.clipped_sample_count,
                 "runtime_constants_match_protocol": constants_match,
                 "frame_passes": frame_passes,
+                "acquisition_id": public.get("acquisition_id"),
+                "fresh_viewpoint": bool(
+                    int(public.get("action_steps_since_previous_frame", 0)) > 0
+                    and (
+                        index == 0
+                        or bool((public.get("physical_viewpoint_check") or {}).get("accepted"))
+                    )
+                ),
             }
         )
 
@@ -180,9 +219,25 @@ def main() -> int:
     minimum_distinct_hashes = int(
         protocol["dataset_gate"]["minimum_distinct_frame_hashes_per_session"]
     )
+    native_map_replay = all(
+        row["direct_coordinate_metrics"]["exact_raw_label_agreement"] == 1.0
+        for row in frame_results
+    )
+    synchronized_full_pose_replay = all(row["frame_passes"] for row in frame_results)
+    if protocol["protocol_id"] == "sonogym-s0010-tp-surface-core-dataset-v1":
+        acquisition_freshness = all(row["fresh_viewpoint"] for row in frame_results)
+        viewpoint_diversity = bool(
+            distinct_ultrasound_hashes >= minimum_distinct_hashes
+            and len({row["acquisition_id"] for row in frame_results}) == expected_frames
+        )
+    else:
+        acquisition_freshness = True
+        viewpoint_diversity = distinct_ultrasound_hashes >= minimum_distinct_hashes
     capture_passes = bool(
-        passed == expected_frames
-        and distinct_ultrasound_hashes >= minimum_distinct_hashes
+        native_map_replay
+        and synchronized_full_pose_replay
+        and acquisition_freshness
+        and viewpoint_diversity
     )
     report = {
         "schema": "sonogym-exact-pose-replay-report-v1",
@@ -195,6 +250,12 @@ def main() -> int:
         "distinct_ultrasound_hashes": distinct_ultrasound_hashes,
         "minimum_distinct_ultrasound_hashes": minimum_distinct_hashes,
         "passed_frame_count": passed,
+        "gates": {
+            "NATIVE_MAP_REPLAY": native_map_replay,
+            "SYNCHRONIZED_FULL_POSE_REPLAY": synchronized_full_pose_replay,
+            "ACQUISITION_FRESHNESS": acquisition_freshness,
+            "VIEWPOINT_DIVERSITY": viewpoint_diversity,
+        },
         "verdict": "PROJECTION_PARITY_PASS" if capture_passes else "PROJECTION_REPAIR_BLOCKED",
         "frames": frame_results,
     }

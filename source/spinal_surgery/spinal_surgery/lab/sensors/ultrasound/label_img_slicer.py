@@ -78,6 +78,12 @@ class LabelImgSlicer(SurfaceMotionPlanner):
         self.max_distance = max_distance
         self.img_real_size = [img_size[0] * img_res, img_size[1] * img_res]
         self.height_img = height_img
+        # Opt-in capture instrumentation records the exact immutable inputs used by slicing.
+        self.capture_snapshot_enabled = False
+        self.capture_session_id = None
+        self.capture_reset_id = None
+        self.latest_acquisition_snapshot = None
+        self._acquisition_sequence = 0
 
         # TODO: add CT maps
         self.ct_maps = [
@@ -178,6 +184,33 @@ class LabelImgSlicer(SurfaceMotionPlanner):
             world_to_ee_quat,
         )  # (num_envs, w*h*e, 3)
 
+        if self.capture_snapshot_enabled:
+            human_to_ee_pos, human_to_ee_quat = subtract_frame_transforms(
+                world_to_human_pos,
+                world_to_human_quat,
+                world_to_ee_pos,
+                world_to_ee_quat,
+            )
+            self._acquisition_sequence += 1
+            self.latest_acquisition_snapshot = {
+                "session_id": self.capture_session_id,
+                "reset_id": self.capture_reset_id,
+                "acquisition_sequence": int(self._acquisition_sequence),
+                "world_to_human_pos": world_to_human_pos.detach().clone(),
+                "world_to_human_quat": world_to_human_quat.detach().clone(),
+                "world_to_ee_pos": world_to_ee_pos.detach().clone(),
+                "world_to_ee_quat": world_to_ee_quat.detach().clone(),
+                "human_to_ee_pos": human_to_ee_pos.detach().clone(),
+                "human_to_ee_quat": human_to_ee_quat.detach().clone(),
+                "native_local_image_coordinates_m": self.img_coords.detach().clone(),
+                "human_img_coords": self.human_img_coords.detach().clone(),
+                "image_origin_height_m": float(self.height_img),
+                "label_resolution_m": float(self.label_res),
+                "image_resolution_m": float(self.img_res),
+                "image_size_width_depth": [int(value) for value in self.img_size],
+                "image_thickness": int(self.img_thickness),
+            }
+
         # speed up the slicing
         for i in range(self.n_human_types):
             self.label_img_tensor[i :: self.n_human_types, :, :] = self.label_maps[
@@ -204,6 +237,20 @@ class LabelImgSlicer(SurfaceMotionPlanner):
         # self.label_img_tensor = self.bilateral_filter_pytorch(self.label_img_tensor.unsqueeze(1)).squeeze(1)
 
         return
+
+    def annotate_latest_acquisition(self, **metadata):
+        if not self.capture_snapshot_enabled or self.latest_acquisition_snapshot is None:
+            return
+        for key, value in metadata.items():
+            self.latest_acquisition_snapshot[key] = value
+
+    def copy_latest_acquisition_snapshot(self):
+        if not self.capture_snapshot_enabled or self.latest_acquisition_snapshot is None:
+            raise RuntimeError("no acquisition snapshot is available")
+        result = {}
+        for key, value in self.latest_acquisition_snapshot.items():
+            result[key] = value.detach().clone() if torch.is_tensor(value) else value
+        return result
 
     def get_distances_from_label_img(self, label_img_tensor):
         """
