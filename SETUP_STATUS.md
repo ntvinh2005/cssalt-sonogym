@@ -1,5 +1,27 @@
 # Setup status
 
+## 2026-11-17: synchronized TP surface-core smoke passes; dataset remains incomplete
+
+The single authorized GPU job `51793371` captured eight genuinely distinct s0010 viewpoints and
+passed reloaded native-map, synchronized full-pose, acquisition-freshness and viewpoint-diversity
+gates on 8/8 frames. Raw-label agreement and bone IoU were both 1.0, maximum coordinate error was
+`2.8149e-05` index and no sample was clipped. The job then stopped `1:0` because the coordinate
+hash had been computed before float64-to-float32 serialization; image and raw-label hashes matched.
+The hash source was corrected and the CPU verifier preserved the mismatch as an explicit warning.
+
+No second GPU job was submitted. Consequently the six preassigned sessions (300 frames) are absent,
+so the final state is **`DATASET_INCOMPLETE`**. The smoke provides three verified geometric review
+intersections (one L4 RIGHT TP surface core, two L5), but zero training-eligible labels because exact
+anatomical approval, semantic image review, hard negatives and all train/calibration/development
+counts remain missing. No-fit resolved three real crops into 774-value features and returned
+`ENGINEERING_PREFLIGHT_ONLY` with `fit_called=false`.
+
+- Report: `docs/research/sonogym_s0010_tp_surface_core_dataset_readiness.md`.
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v1_result.json`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v1/51793371/`.
+- Reviewer ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/reviewer/s0010_tp_surface_core_dataset_review_51793371.zip`.
+- ZIP SHA-256: `ce58a9d375be42f22e76885ffd9fc7bdd3872ff096163f6778415259a3ce037d`.
+
 ## 2026-11-17: s0010 exact-pose mapping smoke remains blocked
 
 GPU job `51783444` (`anest-dept`, one L4, four CPUs, 30 GB requested) captured six development
