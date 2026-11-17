@@ -1,0 +1,45 @@
+{
+  "schema": "sonogym-s0010-exact-pose-replay-result-v1",
+  "protocol_id": "sonogym-s0010-exact-pose-replay-v2",
+  "protocol_sha256": "57b5b213a5141499a70aedadb85bca5644fd6e95e82d59f8a5ed3d9aed73bc70",
+  "source_commit": "0b8294e77008a5d296a3bc53c213e232a565e0c7",
+  "jobs": {
+    "v1_technical_failure": 51782795,
+    "v2_final_capture": 51783444
+  },
+  "v1": {
+    "status": "TECHNICAL_PRECAPTURE_FAILURE",
+    "frame_count": 0,
+    "cause": "legacy move_to_pose mapping error 0.161271 index exceeded the unchanged 0.15 limit"
+  },
+  "v2": {
+    "slurm_state": "FAILED",
+    "exit_code": "3:0",
+    "elapsed_seconds": 43,
+    "frame_count": 6,
+    "distinct_ultrasound_hashes": 2,
+    "required_distinct_ultrasound_hashes": 4,
+    "producer_sequences": [82, 88, 88, 88, 88, 88],
+    "total_action_steps": 87,
+    "direct_native_coordinate_exact_frames": 6,
+    "full_pose_dual_gate_frames": 6,
+    "strict_coordinate_tolerance_frames": 0,
+    "maximum_coordinate_error_index_range": [
+      0.19182317037672192,
+      0.2135563682988817
+    ],
+    "full_pose_exact_raw_label_agreement_range": [0.9879, 0.9906],
+    "full_pose_bone_mask_iou_range": [
+      0.9513971210838272,
+      0.9575745447268361
+    ],
+    "training_eligible_samples": 0
+  },
+  "tests": {
+    "native_geometry": "10/10 PASS",
+    "stage2_contracts": "23/23 PASS"
+  },
+  "verdict": "PROJECTION_REPAIR_BLOCKED",
+  "training": "NOT_RUN",
+  "next_gate": "Freeze a new development capture only after review of waypoint separation, mandatory producer advancement, and the strict coordinate-level replay requirement."
+}

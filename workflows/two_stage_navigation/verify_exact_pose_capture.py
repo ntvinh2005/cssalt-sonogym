@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -13,11 +15,21 @@ import nibabel as nib
 import numpy as np
 import yaml
 
-from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (
-    label_agreement,
-    plane_from_full_pose,
-    sample_label_image,
+GEOMETRY_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/ultrasound_plane_geometry.py"
 )
+GEOMETRY_SPEC = importlib.util.spec_from_file_location(
+    "exact_pose_ultrasound_plane_geometry", GEOMETRY_PATH
+)
+if GEOMETRY_SPEC is None or GEOMETRY_SPEC.loader is None:
+    raise RuntimeError("cannot load CPU ultrasound-plane geometry module")
+GEOMETRY = importlib.util.module_from_spec(GEOMETRY_SPEC)
+sys.modules[GEOMETRY_SPEC.name] = GEOMETRY
+GEOMETRY_SPEC.loader.exec_module(GEOMETRY)
+label_agreement = GEOMETRY.label_agreement
+plane_from_full_pose = GEOMETRY.plane_from_full_pose
+sample_label_image = GEOMETRY.sample_label_image
 
 
 def parse_args() -> argparse.Namespace:

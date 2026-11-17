@@ -1,5 +1,24 @@
 # Setup status
 
+## 2026-11-17: s0010 exact-pose mapping smoke remains blocked
+
+GPU job `51783444` (`anest-dept`, one L4, four CPUs, 30 GB requested) captured six development
+frames after V1 job `51782795` failed before acquisition. All 33 CPU tests passed. Persisted native
+pixel-to-volume coordinates reconstructed 6 / 6 raw-label slices exactly, and full-pose replay
+passed the historical 0.985 agreement / 0.90 bone-IoU gates on 6 / 6 frames. The sealed protocol
+nevertheless failed: full-pose coordinates differed from native coordinates by 0.1918--0.2136
+volume index against the frozen 0.001 limit, and only 2 / 6 hashes were distinct because frames
+2--5 required zero actions inside the 5 mm movement tolerance.
+
+The result is **`PROJECTION_REPAIR_BLOCKED`** and detector training remains `NOT_RUN`. No third GPU
+job was submitted. The next capture requires waypoint spacing larger than the motion tolerance,
+mandatory producer advancement, and researcher review of the strict coordinate-level gate; TP
+geometry still needs independent approval and SAP boundaries remain unresolved.
+
+- Report: `docs/research/sonogym_s0010_exact_pose_replay_capture.md`.
+- Result: `experiments/unity_two_stage_transfer/s0010_exact_pose_replay_v2_result.json`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_exact_pose_replay_v2/51783444/`.
+
 ## 2026-11-17: RIGHT SAP/TP projection and boundary correction
 
 CPU job `51779234` (`anest-dept`, four CPUs, 16 GB requested, zero GPUs) completed `0:0` in 1:29.
