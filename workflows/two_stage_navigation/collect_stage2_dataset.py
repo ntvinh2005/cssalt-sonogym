@@ -47,6 +47,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
 from spinal_surgery.evaluation.two_stage_navigation.acquisition_integrity import (  # noqa: E402
     AcquiredView,
     validate_new_view,
+    validate_segment_action_budget,
     validate_waypoint_bank,
 )
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import (  # noqa: E402
@@ -252,13 +253,27 @@ def main() -> int:
         trajectory_seed_stride = 0
         if uses_segmented_stage2_dataset_capture(protocol["protocol_id"]):
             trajectory_start_frames = [
-                int(value) for value in sampling["trajectory_start_frames"]
+                int(value)
+                for value in sampling["trajectory_start_frames"]
+                if int(value) < expected_frame_count
             ]
             trajectory_seed_stride = int(sampling["trajectory_seed_stride"])
             if trajectory_start_frames[0] != 0 or trajectory_start_frames != sorted(
                 set(trajectory_start_frames)
             ):
                 raise RuntimeError("invalid frozen trajectory boundaries")
+            if bool(sampling.get("enforce_episode_action_budget", False)):
+                validate_segment_action_budget(
+                    expected_frame_count=expected_frame_count,
+                    trajectory_start_frames=trajectory_start_frames,
+                    maximum_initial_positioning_steps=int(
+                        sampling["maximum_initial_positioning_steps"]
+                    ),
+                    maximum_action_steps_per_waypoint=int(
+                        sampling["maximum_action_steps_per_waypoint"]
+                    ),
+                    maximum_episode_steps=int(unwrapped.max_episode_length),
+                )
         position_tolerance = float(sampling["physical_tracking_position_tolerance_mm"])
         orientation_tolerance = float(
             sampling["physical_tracking_orientation_tolerance_deg"]
@@ -287,16 +302,20 @@ def main() -> int:
             )
             trajectory_start = trajectory_start_frames[trajectory_index]
             trajectory_id = f"{session['session_id']}_seg{trajectory_index:02d}"
-            if frame_sequence == trajectory_start and frame_sequence > 0:
-                trajectory_seed = int(session["seed"]) + (
-                    trajectory_index * trajectory_seed_stride
-                )
-                observation, _ = env.reset(seed=trajectory_seed)
-                if tuple(observation["policy"].shape) != (1, 1, 200, 150):
-                    raise RuntimeError("unexpected policy observation shape after reset")
-                goal = tensor_row(unwrapped.goal_cmd_pose)
-                waypoints = ordered_waypoints(protocol, session, goal)
-                previous_realized = current_realized_pose(unwrapped).copy()
+            if frame_sequence == trajectory_start:
+                if exact_pose_replay_enabled:
+                    unwrapped.US_slicer.capture_reset_id = trajectory_id
+                if frame_sequence > 0:
+                    trajectory_seed = int(session["seed"]) + (
+                        trajectory_index * trajectory_seed_stride
+                    )
+                    observation, _ = env.reset(seed=trajectory_seed)
+                    if tuple(observation["policy"].shape) != (1, 1, 200, 150):
+                        raise RuntimeError("unexpected policy observation shape after reset")
+                    goal = tensor_row(unwrapped.goal_cmd_pose)
+                    waypoints = ordered_waypoints(protocol, session, goal)
+                    previous_realized = current_realized_pose(unwrapped).copy()
+                previous_acquired_view = None
             waypoint = waypoints[frame_sequence]
             maximum_steps = int(
                 sampling[

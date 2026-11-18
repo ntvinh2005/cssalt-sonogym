@@ -95,6 +95,26 @@ class WaypointTests(unittest.TestCase):
         )
         self.assertEqual(result.shape, (3, 3))
 
+    def test_continuous_dataset_budget_reaches_episode_horizon(self) -> None:
+        with self.assertRaisesRegex(ValueError, "reaches episode horizon"):
+            MODULE.validate_segment_action_budget(
+                expected_frame_count=50,
+                trajectory_start_frames=[0],
+                maximum_initial_positioning_steps=350,
+                maximum_action_steps_per_waypoint=100,
+                maximum_episode_steps=600,
+            )
+
+    def test_three_frame_segments_fit_episode_horizon(self) -> None:
+        maximum = MODULE.validate_segment_action_budget(
+            expected_frame_count=50,
+            trajectory_start_frames=list(range(0, 50, 3)),
+            maximum_initial_positioning_steps=350,
+            maximum_action_steps_per_waypoint=100,
+            maximum_episode_steps=600,
+        )
+        self.assertEqual(maximum, 550)
+
 
 class FreshnessTests(unittest.TestCase):
     def test_repeated_producer_cannot_create_new_view(self) -> None:

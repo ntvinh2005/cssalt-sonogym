@@ -70,6 +70,43 @@ def validate_waypoint_bank(
     return resolved
 
 
+def validate_segment_action_budget(
+    *,
+    expected_frame_count: int,
+    trajectory_start_frames: Sequence[int],
+    maximum_initial_positioning_steps: int,
+    maximum_action_steps_per_waypoint: int,
+    maximum_episode_steps: int,
+) -> int:
+    """Return the largest declared segment budget after checking the episode horizon."""
+    values = (
+        expected_frame_count,
+        maximum_initial_positioning_steps,
+        maximum_action_steps_per_waypoint,
+        maximum_episode_steps,
+    )
+    if any(not isinstance(value, int) or value <= 0 for value in values):
+        raise ValueError("frame and action budgets must be positive integers")
+    starts = tuple(int(value) for value in trajectory_start_frames)
+    if (
+        not starts
+        or starts[0] != 0
+        or tuple(sorted(set(starts))) != starts
+        or starts[-1] >= expected_frame_count
+    ):
+        raise ValueError("trajectory starts must be sorted, unique, in range, and begin at zero")
+    boundaries = (*starts, expected_frame_count)
+    largest_segment = max(later - earlier for earlier, later in zip(boundaries, boundaries[1:]))
+    maximum_actions = maximum_initial_positioning_steps + (
+        largest_segment - 1
+    ) * maximum_action_steps_per_waypoint
+    if maximum_actions >= maximum_episode_steps:
+        raise ValueError(
+            f"segment action budget {maximum_actions} reaches episode horizon {maximum_episode_steps}"
+        )
+    return maximum_actions
+
+
 @dataclass(frozen=True)
 class AcquiredView:
     acquisition_id: str
