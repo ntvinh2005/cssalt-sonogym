@@ -396,6 +396,10 @@ calibration alone selects thresholds, and development evaluation remains read-on
 - The next data action is a bounded supplemental capture planned to close the exact deficits,
   followed by checksum-bound review of the new exact crops.  This task did not authorize that GPU
   capture or real fitting.
+- `visual_review_51818619_agent_bundle.zip` was not present in the repository, runtime output tree,
+  `/tmp`, `/mnt/data` or the user home visible to this run.  Its stated findings were therefore
+  treated as advisory input from the task, while L4-06, L5-52 and the background concentration
+  were reproduced independently from the original capture arrays and manifests.
 
 ### Files
 
