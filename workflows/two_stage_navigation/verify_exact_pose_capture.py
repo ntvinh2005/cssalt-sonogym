@@ -103,6 +103,7 @@ def main() -> int:
         "sonogym-s0010-tp-surface-core-dataset-v3",
         "sonogym-s0010-tp-surface-core-dataset-v4",
         "sonogym-s0010-tp-surface-core-dataset-v5",
+        "sonogym-s0010-tp-surface-core-dataset-v6",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
