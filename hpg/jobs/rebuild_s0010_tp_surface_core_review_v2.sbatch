@@ -4,8 +4,10 @@ set -euo pipefail
 : "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported by the submit command}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
-# shellcheck source=common.sh
-source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
+[[ "$SLURM_JOB_ACCOUNT" == "anest-dept" ]] || { echo "Unexpected account" >&2; exit 2; }
+[[ "${SLURM_CPUS_PER_TASK:-0}" -eq 4 ]] || { echo "Expected four CPUs" >&2; exit 2; }
+[[ "${SLURM_GPUS_ON_NODE:-0}" -eq 0 ]] || { echo "CPU rebuild must not allocate a GPU" >&2; exit 2; }
+cd "$SONOGYM_PROJECT_DIR"
 
 PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v9.yaml"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core_review_v2/$SLURM_JOB_ID"
@@ -23,7 +25,12 @@ export PYTHONNOUSERSITE=1
 export MPLBACKEND=Agg
 
 mkdir -p "$RUN_DIR"/{results,metrics,context,sessions}
-capture_run_context "$RUN_DIR"
+date --iso-8601=seconds > "$RUN_DIR/context/start-time.txt"
+git rev-parse HEAD > "$RUN_DIR/context/git-commit.txt"
+git status --short > "$RUN_DIR/context/git-status.txt"
+git diff --binary > "$RUN_DIR/context/uncommitted.patch"
+scontrol show job "$SLURM_JOB_ID" > "$RUN_DIR/context/slurm-job.txt"
+"$PYTHON" --version > "$RUN_DIR/context/python-version.txt" 2>&1
 cp "$PROTOCOL" "$RUN_DIR/context/"
 
 (
@@ -66,5 +73,5 @@ STAGING="${ZIP%.zip}"
 (cd "$STAGING" && sha256sum -c checksums.sha256)
 sha256sum "$ZIP" > "$ZIP.sha256"
 du -sb "$RUN_DIR" > "$RUN_DIR/metrics/storage-bytes.txt"
-capture_run_end "$RUN_DIR"
+date --iso-8601=seconds > "$RUN_DIR/context/end-time.txt"
 find "$RUN_DIR" -type f -print | sort > "$RUN_DIR/files.txt"
