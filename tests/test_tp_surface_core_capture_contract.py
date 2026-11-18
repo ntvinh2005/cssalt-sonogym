@@ -55,6 +55,12 @@ PROTOCOL_V6 = (
 )
 SEAL_V6 = PROTOCOL_V6.with_suffix(".sha256")
 JOB_V6 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v6.sbatch"
+PROTOCOL_V7 = (
+    ROOT
+    / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v7.yaml"
+)
+SEAL_V7 = PROTOCOL_V7.with_suffix(".sha256")
+JOB_V7 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v7.sbatch"
 
 
 class CaptureContractTests(unittest.TestCase):
@@ -272,6 +278,58 @@ class CaptureV6ContractTests(unittest.TestCase):
 
     def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
         protocol_id = yaml.safe_load(PROTOCOL_V6.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+        self.assertIn(
+            protocol_id,
+            (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text(),
+        )
+
+
+class CaptureV7ContractTests(unittest.TestCase):
+    def test_protocol_seal_and_job_pointer(self) -> None:
+        expected = SEAL_V7.read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V7.read_bytes()).hexdigest(), expected)
+        job = JOB_V7.read_text()
+        self.assertIn(PROTOCOL_V7.name, job)
+        self.assertIn(SEAL_V7.name, job)
+
+    def test_supplement_capture_sessions_are_frozen(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V7.read_text())
+        captured = {
+            row["session_id"]
+            for row in protocol["sessions"]
+            if row["role"] in {"smoke", "supplemental_dataset"}
+        }
+        declared = set(
+            re.findall(
+                r"\bs0010tpscv7_(?:smoke|train_l4_00|cal_l4_00|dev_l4_00)\b",
+                JOB_V7.read_text(),
+            )
+        )
+        self.assertEqual(declared, captured)
+
+    def test_supplement_targets_only_demonstrated_l4_coverage_deficit(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V7.read_text())
+        self.assertEqual(protocol["amendment"]["prior_job"], 51811811)
+        self.assertEqual(
+            protocol["source"]["implementation_commit"],
+            "886afadf029de636faf4630b0acc940f2d43ebfd",
+        )
+        bank = protocol["sampling"]["absolute_waypoint_banks_index"]["l4_supplement"]
+        self.assertEqual(len(bank), 24)
+        supplemental = [
+            row for row in protocol["sessions"] if row["role"] == "supplemental_dataset"
+        ]
+        self.assertEqual(
+            {row["split"] for row in supplemental},
+            {"train", "calibration", "development_evaluation"},
+        )
+        self.assertTrue(all(row["expected_frame_count"] == 24 for row in supplemental))
+
+    def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V7.read_text())["protocol_id"]
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
