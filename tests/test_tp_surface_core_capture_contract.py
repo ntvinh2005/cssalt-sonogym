@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import math
 import re
 import sys
 import unittest
@@ -73,6 +74,12 @@ PROTOCOL_V9 = (
 )
 SEAL_V9 = PROTOCOL_V9.with_suffix(".sha256")
 JOB_V9 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v9.sbatch"
+PROTOCOL_V10 = (
+    ROOT
+    / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v10.yaml"
+)
+SEAL_V10 = PROTOCOL_V10.with_suffix(".sha256")
+JOB_V10 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v10.sbatch"
 
 
 class CaptureContractTests(unittest.TestCase):
@@ -436,6 +443,90 @@ class CaptureV9ContractTests(unittest.TestCase):
 
     def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
         protocol_id = yaml.safe_load(PROTOCOL_V9.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+        self.assertIn(
+            protocol_id,
+            (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text(),
+        )
+
+
+class CaptureV10ContractTests(unittest.TestCase):
+    def test_protocol_seal_and_job_pointer(self) -> None:
+        expected = SEAL_V10.read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V10.read_bytes()).hexdigest(), expected)
+        job = JOB_V10.read_text()
+        self.assertIn(PROTOCOL_V10.name, job)
+        self.assertIn(SEAL_V10.name, job)
+
+    def test_capture_is_limited_to_the_frozen_support_supplement(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V10.read_text())
+        captured = [
+            row for row in protocol["sessions"] if row["role"] == "supplemental_dataset"
+        ]
+        expected = {
+            "s0010tpscv10_train_l4_00": ("train", 42),
+            "s0010tpscv10_train_l5_00": ("train", 72),
+            "s0010tpscv10_cal_l5_00": ("calibration", 36),
+            "s0010tpscv10_dev_l4l5_00": ("development_evaluation", 30),
+        }
+        self.assertEqual(
+            {
+                row["session_id"]: (row["split"], row["expected_frame_count"])
+                for row in captured
+            },
+            expected,
+        )
+        job = JOB_V10.read_text()
+        for session_id in expected:
+            self.assertIn(f"capture_session {session_id}", job)
+        self.assertIn("--no-fit", job)
+
+    def test_frozen_waypoints_are_distinct_reachable_and_not_swallowed(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V10.read_text())
+        banks = protocol["sampling"]["absolute_waypoint_banks_index"]
+        expected_lengths = {
+            "l4_train_support_supplement": 42,
+            "l5_train_support_supplement": 72,
+            "l5_calibration_support_supplement": 36,
+            "development_support_supplement": 30,
+        }
+        self.assertEqual({name: len(rows) for name, rows in banks.items()}, expected_lengths)
+        for rows in banks.values():
+            self.assertEqual(len(rows), len({tuple(row) for row in rows}))
+            self.assertLessEqual(max(float(row[2]) for row in rows), 2.935)
+            for earlier, later in zip(rows, rows[1:]):
+                translation_mm = math.hypot(
+                    float(later[0]) - float(earlier[0]),
+                    float(later[1]) - float(earlier[1]),
+                ) * 1.5
+                angle_deg = abs(
+                    (float(later[2]) - float(earlier[2]) + math.pi)
+                    % (2.0 * math.pi)
+                    - math.pi
+                ) * 180.0 / math.pi
+                self.assertTrue(translation_mm > 3.0 or angle_deg > 2.0)
+
+    def test_existing_gates_and_split_roles_are_unchanged(self) -> None:
+        previous = yaml.safe_load(PROTOCOL_V9.read_text())
+        current = yaml.safe_load(PROTOCOL_V10.read_text())
+        for key in (
+            "labels",
+            "dataset_gate",
+            "exact_pose_replay",
+            "label_preparation",
+            "training_preflight",
+        ):
+            self.assertEqual(current[key], previous[key])
+        self.assertFalse(current["scope"]["semantic_training_authorized"])
+        self.assertEqual(
+            current["source"]["implementation_commit"],
+            "ce7d8dd1a9788d037543a5afe1efe696a239a3ea",
+        )
+
+    def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V10.read_text())["protocol_id"]
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))

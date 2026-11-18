@@ -1,0 +1,321 @@
+protocol_id: sonogym-s0010-tp-surface-core-dataset-v10
+status: PRE_GPU_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-s0010-tp-surface-core-dataset-v9
+  prior_job: 51818619
+  reason: >-
+    Preserve all projection-verified V6 through V9 sessions. The support-aware crop audit reduced
+    L4 coverage to 28/12/9 and L5 coverage to 18/4/8 for train/calibration/development against the
+    unchanged 40/10/10 gate. Capture only predeclared perturbations around previously observed
+    support-bearing poses, with explicit reserve coverage, without changing labels or selection gates.
+source:
+  implementation_commit: ce7d8dd1a9788d037543a5afe1efe696a239a3ea
+  base_capture_job: 51811811
+  partial_supplement_jobs: [51815016, 51817719, 51818619]
+  support_audit_job: 51825014
+  correction_geometry_job: 51779234
+  correction_geometry_status: PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_coverage_collection: true
+  semantic_training_authorized: false
+  active_landmarks: [L4_RIGHT_transverse_process, L5_RIGHT_transverse_process]
+  excluded_landmarks: [SAP, whole_TP, MBB_target]
+information_boundaries:
+  actor: [clean_ultrasound_pixels, executed_relative_motion, acquisition_feedback]
+  privileged_collection: [candidate_surface_geometry, raw_labels, full_transforms, native_pixel_to_volume_coordinates]
+sampling:
+  expected_frames_per_session: 72
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.0
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 20000
+  trajectory_start_frames: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70]
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio: [0.02, 0.02, 0.6]
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    l4_train_support_supplement:
+      - [156.5, 137, 2.915]
+      - [136.5, 143.5, 2.92]
+      - [139.5, 147, 2.905]
+      - [156.5, 139.5, 2.89]
+      - [135, 145, 2.89]
+      - [147, 145, 2.81]
+      - [152, 139, 2.92]
+      - [160, 137, 2.92]
+      - [151.5, 140.5, 2.92]
+      - [158.5, 136, 2.825]
+      - [150.5, 138, 2.905]
+      - [138, 145.5, 2.905]
+      - [150, 138.5, 2.935]
+      - [153.5, 139, 2.875]
+      - [149.5, 140, 2.905]
+      - [162.5, 138, 2.865]
+      - [158.5, 135, 2.935]
+      - [141, 145.5, 2.935]
+      - [153.5, 138.5, 2.92]
+      - [149, 138.5, 2.905]
+      - [145.5, 143.5, 2.92]
+      - [146.5, 142, 2.785]
+      - [150, 145.5, 2.825]
+      - [144, 141.5, 2.935]
+      - [165.5, 138.5, 2.88]
+      - [155, 138.5, 2.885]
+      - [149.5, 142.5, 2.8]
+      - [160, 134.5, 2.855]
+      - [158, 139, 2.9]
+      - [161.5, 136.5, 2.84]
+      - [142.5, 143, 2.905]
+      - [148, 140.5, 2.815]
+      - [151, 138.5, 2.935]
+      - [142.5, 147.5, 2.92]
+      - [157, 136.5, 2.905]
+      - [164, 136.5, 2.895]
+      - [148.5, 143.5, 2.84]
+      - [152.5, 140.5, 2.92]
+      - [150.5, 137, 2.935]
+      - [155, 137.5, 2.905]
+      - [148.5, 140, 2.905]
+      - [152, 136.5, 2.935]
+    l5_train_support_supplement:
+      - [151.5, 125.5, 2.9]
+      - [156, 123.5, 2.875]
+      - [144, 133.5, 2.865]
+      - [139.5, 129, 2.835]
+      - [162.5, 127.5, 2.81]
+      - [143.5, 128, 2.905]
+      - [149.5, 130.5, 2.92]
+      - [147, 127.5, 2.905]
+      - [155.5, 130.5, 2.8]
+      - [154.5, 129.5, 2.92]
+      - [148, 128.5, 2.935]
+      - [165.5, 126.5, 2.84]
+      - [153.5, 127, 2.835]
+      - [162, 123.5, 2.835]
+      - [155.5, 124.5, 2.84]
+      - [146.5, 130, 2.865]
+      - [138.5, 132, 2.825]
+      - [149.5, 128, 2.895]
+      - [152.5, 128.5, 2.91]
+      - [154, 128.5, 2.815]
+      - [141.5, 132.5, 2.84]
+      - [150, 123.5, 2.915]
+      - [157.5, 125.5, 2.86]
+      - [142.5, 129.5, 2.85]
+      - [160.5, 123.5, 2.89]
+      - [154.5, 125, 2.845]
+      - [135, 133, 2.81]
+      - [160.5, 125, 2.805]
+      - [162.5, 126, 2.825]
+      - [146.5, 130, 2.905]
+      - [148.5, 129.5, 2.89]
+      - [157.5, 123, 2.875]
+      - [142.5, 131.5, 2.88]
+      - [159, 127.5, 2.935]
+      - [161.5, 124.5, 2.8]
+      - [163.5, 125.5, 2.82]
+      - [138, 133.5, 2.825]
+      - [145.5, 129, 2.905]
+      - [161, 125.5, 2.825]
+      - [160.5, 129.5, 2.92]
+      - [158, 124.5, 2.895]
+      - [154, 122.5, 2.855]
+      - [152.5, 124, 2.825]
+      - [161.5, 122, 2.905]
+      - [153, 127.5, 2.935]
+      - [163, 120.5, 2.935]
+      - [159.5, 127, 2.795]
+      - [152.5, 130, 2.785]
+      - [159.5, 126.5, 2.88]
+      - [145.5, 129, 2.875]
+      - [164, 124.5, 2.855]
+      - [141, 133, 2.85]
+      - [147, 127.5, 2.935]
+      - [148.5, 129.5, 2.92]
+      - [156.5, 127.5, 2.85]
+      - [136.5, 131.5, 2.84]
+      - [141, 127.5, 2.865]
+      - [151.5, 129, 2.905]
+      - [160, 122.5, 2.815]
+      - [164.5, 122.5, 2.92]
+      - [157.5, 129, 2.905]
+      - [151, 126.5, 2.925]
+      - [159, 121.5, 2.905]
+      - [158.5, 124, 2.785]
+      - [148.5, 125, 2.885]
+      - [146.5, 128.5, 2.92]
+      - [155, 125.5, 2.865]
+      - [148, 128.5, 2.895]
+      - [140, 130.5, 2.855]
+      - [145, 126.5, 2.935]
+      - [156.5, 126, 2.865]
+      - [149.5, 130.5, 2.88]
+    l5_calibration_support_supplement:
+      - [154.75, 128.25, 2.925]
+      - [146.25, 128.75, 2.935]
+      - [154.25, 128.25, 2.84]
+      - [148.25, 123.75, 2.92]
+      - [159.25, 125.75, 2.83]
+      - [148.75, 128.25, 2.925]
+      - [162.75, 126.25, 2.815]
+      - [151.75, 124.25, 2.905]
+      - [148.75, 128.25, 2.895]
+      - [153.25, 125.75, 2.87]
+      - [146.25, 130.25, 2.88]
+      - [145.25, 127.75, 2.91]
+      - [163.25, 127.25, 2.83]
+      - [156.75, 126.25, 2.855]
+      - [152.25, 130.25, 2.91]
+      - [147.25, 131.25, 2.87]
+      - [157.25, 127.25, 2.87]
+      - [162.25, 124.75, 2.86]
+      - [151.25, 127.75, 2.935]
+      - [149.75, 129.25, 2.885]
+      - [158.25, 124.25, 2.88]
+      - [146.25, 130.25, 2.91]
+      - [156.25, 124.75, 2.9]
+      - [149.75, 129.25, 2.925]
+      - [146.25, 128.75, 2.9]
+      - [149.25, 126.25, 2.89]
+      - [165.75, 125.25, 2.845]
+      - [157.25, 127.75, 2.935]
+      - [159.75, 125.25, 2.885]
+      - [145.25, 127.75, 2.935]
+      - [160.75, 122.25, 2.895]
+      - [160.75, 128.25, 2.925]
+      - [158.25, 130.25, 2.91]
+      - [160.25, 128.25, 2.8]
+      - [157.25, 121.75, 2.91]
+      - [147.25, 131.25, 2.91]
+    development_support_supplement:
+      - [158.75, 127.75, 2.86]
+      - [165.75, 124.25, 2.85]
+      - [160.75, 137.75, 2.82]
+      - [148.75, 127.25, 2.93]
+      - [159.25, 138.25, 2.9]
+      - [145.25, 129.25, 2.89]
+      - [150.25, 138.25, 2.92]
+      - [146.25, 142.25, 2.8]
+      - [162.25, 126.25, 2.84]
+      - [148.75, 127.25, 2.9]
+      - [152.75, 139.75, 2.9]
+      - [147.75, 130.75, 2.9]
+      - [160.25, 134.75, 2.93]
+      - [161.75, 134.25, 2.85]
+      - [153.75, 130.75, 2.9]
+      - [145.25, 129.25, 2.92]
+      - [147.75, 130.75, 2.87]
+      - [156.75, 136.75, 2.92]
+      - [158.25, 136.25, 2.84]
+      - [149.75, 140.25, 2.81]
+      - [146.25, 130.25, 2.92]
+      - [148.75, 143.75, 2.78]
+      - [148.75, 131.75, 2.9]
+      - [154.75, 127.25, 2.93]
+      - [159.75, 124.25, 2.89]
+      - [151.25, 129.25, 2.92]
+      - [156.25, 126.25, 2.88]
+      - [164.75, 127.75, 2.82]
+      - [149.75, 128.25, 2.93]
+      - [153.75, 136.25, 2.93]
+sessions:
+  - {session_id: s0010tpscv6_train_00, role: inherited_dataset, split: train, seed: 2026111710, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_01, role: inherited_dataset, split: train, seed: 2026111711, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_02, role: inherited_dataset, split: train, seed: 2026111712, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_03, role: inherited_dataset, split: train, seed: 2026111713, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_cal_00, role: inherited_dataset, split: calibration, seed: 2026111720, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_dev_00, role: inherited_dataset, split: development_evaluation, seed: 2026111730, expected_frame_count: 50}
+  - {session_id: s0010tpscv7_train_l4_00, role: inherited_supplement, split: train, seed: 2026111810, expected_frame_count: 24}
+  - {session_id: s0010tpscv8_smoke, role: opened_development_smoke, split: opened_development_smoke, seed: 2026111900, expected_frame_count: 8}
+  - {session_id: s0010tpscv8_train_l4_00, role: inherited_supplement, split: train, seed: 2026111910, expected_frame_count: 12}
+  - {session_id: s0010tpscv8_cal_l4_00, role: inherited_supplement, split: calibration, seed: 2026111920, expected_frame_count: 24}
+  - {session_id: s0010tpscv9_dev_l4_00, role: inherited_supplement, split: development_evaluation, seed: 2026112030, expected_frame_count: 24}
+  - session_id: s0010tpscv10_train_l4_00
+    role: supplemental_dataset
+    split: train
+    seed: 2026112110
+    reset_id: s0010tpscv10_train_l4_00
+    absolute_waypoint_bank_id: l4_train_support_supplement
+    expected_frame_count: 42
+  - session_id: s0010tpscv10_train_l5_00
+    role: supplemental_dataset
+    split: train
+    seed: 2026112111
+    reset_id: s0010tpscv10_train_l5_00
+    absolute_waypoint_bank_id: l5_train_support_supplement
+    expected_frame_count: 72
+  - session_id: s0010tpscv10_cal_l5_00
+    role: supplemental_dataset
+    split: calibration
+    seed: 2026112120
+    reset_id: s0010tpscv10_cal_l5_00
+    absolute_waypoint_bank_id: l5_calibration_support_supplement
+    expected_frame_count: 36
+  - session_id: s0010tpscv10_dev_l4l5_00
+    role: supplemental_dataset
+    split: development_evaluation
+    seed: 2026112130
+    reset_id: s0010tpscv10_dev_l4l5_00
+    absolute_waypoint_bank_id: development_support_supplement
+    expected_frame_count: 30
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity: {maximum_position_error_mm: 10.0, maximum_orientation_error_deg: 10.0, minimum_l4_visible_fraction: 0.05}
+  quality: {visibility_normalization_fraction: 0.20}
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 8
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.90
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+  require_serialized_array_hash_integrity: true
+label_preparation:
+  surface_slab_tolerance_mm: 1.5
+  proposal_column_stride_pixels: 12
+  patch_width_pixels: 48
+  patch_depth_pixels: 80
+  feature_size_pixels: 16
+  anatomy_approval_required: true
+  image_semantic_review_required: true
+training_preflight:
+  estimator: ExtraTreesClassifier
+  n_estimators: 240
+  cpu_threads: 4
+  minimum_reviewed_positive_images_per_class: {train: 40, calibration: 10, development_evaluation: 10}
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  maximum_storage_growth_gb: 1.0
+  maximum_new_gpu_jobs: 1
+change_policy:
+  - Reuse only projection-verified sessions; never use failed partial sessions.
+  - New requested angles remain at or below 2.935 rad.
+  - Apply the frozen support-aware selection settings without retuning.
+  - Do not weaken replay, freshness, anatomy, semantic-review, or 40/10/10 gates.
+  - Do not fit a detector before checksum-bound review import and no-fit readiness.
+
