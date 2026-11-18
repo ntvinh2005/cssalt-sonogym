@@ -44,6 +44,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It supports a narrowly named feasibility detector without claiming whole-TP segmentation, SAP localization, an MBB target, or injection readiness.
 - **Source:** approved by user, 2026-11-17.
 
+### SIMULATOR_GEOMETRY_PROXY
+- **Kind:** method
+- **Definition:** Offline supervision that assigns a TP_SURFACE_CORE patch class only from a verified simulator projection, the versioned surface-core geometry, zero overlap with every declared uncertainty region and competing core, and the experiment's projected-support rule; it does not encode anatomical or clinical approval.
+- **Intuition:** It permits a bounded engineering test of whether image morphology predicts the simulator-defined projected regions while keeping that result separate from anatomical recognition.
+- **Source:** approved by user, 2026-11-18.
+
+### s0010_tp_surface_core_simulator_proxy_exploratory_v1
+- **Kind:** object
+- **Definition:** The fixed-patient three-class ExtraTrees experiment using SIMULATOR_GEOMETRY_PROXY labels for BACKGROUND_OR_OTHER_STRUCTURE, L4_RIGHT_TP_SURFACE_CORE, and L5_RIGHT_TP_SURFACE_CORE, with train-only fitting, calibration-only threshold selection, and development-only evaluation.
+- **Intuition:** It is an exploratory simulator-label pilot, not the verified-label protocol or evidence of anatomical recognition.
+- **Source:** approved by user, 2026-11-18.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.
