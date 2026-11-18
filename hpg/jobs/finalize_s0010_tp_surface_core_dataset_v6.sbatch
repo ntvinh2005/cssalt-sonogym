@@ -11,10 +11,14 @@ GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_c
 DATASET_DIR="$RUN_DIR/dataset_final"
 PREFLIGHT_DIR="$RUN_DIR/preflight_final"
 OUTPUT_ZIP="$RUN_DIR/s0010_tp_surface_core_review_51811811_final.zip"
+PYTHON="$SONOGYM_ENV_PREFIX/bin/python"
+[[ -x "$PYTHON" ]] || { echo "Python environment is missing: $PYTHON" >&2; exit 2; }
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
+export PYTHONNOUSERSITE=1
+export MPLBACKEND=Agg
 
 [[ ! -e "$DATASET_DIR" && ! -e "$PREFLIGHT_DIR" && ! -e "$OUTPUT_ZIP" ]] || {
     echo "Refusing to overwrite existing finalization artifacts" >&2
