@@ -175,6 +175,29 @@ def validate_new_view(
     }
 
 
+def recorded_view_is_fresh(record: Mapping[str, object]) -> bool:
+    """Validate one persisted viewpoint without linking observations across a reset."""
+    try:
+        action_count = int(record["action_steps_since_previous_frame"])
+        trajectory_frame_sequence = int(record["trajectory_frame_sequence"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    if (
+        action_count <= 0
+        or trajectory_frame_sequence < 0
+        or not bool(record.get("action_accepted"))
+        or not bool(record.get("action_completed"))
+        or not bool(record.get("image_valid"))
+    ):
+        return False
+    viewpoint_check = record.get("physical_viewpoint_check")
+    if trajectory_frame_sequence == 0:
+        return viewpoint_check is None
+    return bool(
+        isinstance(viewpoint_check, Mapping) and viewpoint_check.get("accepted")
+    )
+
+
 def validate_acquisition_join(records: Sequence[Mapping[str, object]]) -> str:
     identities = {str(record.get("acquisition_id", "")) for record in records}
     if len(identities) != 1 or "" in identities:

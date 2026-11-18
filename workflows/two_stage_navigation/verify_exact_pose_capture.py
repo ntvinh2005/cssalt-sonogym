@@ -31,6 +31,20 @@ label_agreement = GEOMETRY.label_agreement
 plane_from_full_pose = GEOMETRY.plane_from_full_pose
 sample_label_image = GEOMETRY.sample_label_image
 
+ACQUISITION_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/acquisition_integrity.py"
+)
+ACQUISITION_SPEC = importlib.util.spec_from_file_location(
+    "exact_pose_acquisition_integrity", ACQUISITION_PATH
+)
+if ACQUISITION_SPEC is None or ACQUISITION_SPEC.loader is None:
+    raise RuntimeError("cannot load CPU acquisition-integrity module")
+ACQUISITION = importlib.util.module_from_spec(ACQUISITION_SPEC)
+sys.modules[ACQUISITION_SPEC.name] = ACQUISITION
+ACQUISITION_SPEC.loader.exec_module(ACQUISITION)
+recorded_view_is_fresh = ACQUISITION.recorded_view_is_fresh
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -219,13 +233,7 @@ def main() -> int:
                 "saved_coordinate_array_sha256": array_sha256(coordinates[index]),
                 "frame_passes": frame_passes,
                 "acquisition_id": public.get("acquisition_id"),
-                "fresh_viewpoint": bool(
-                    int(public.get("action_steps_since_previous_frame", 0)) > 0
-                    and (
-                        index == 0
-                        or bool((public.get("physical_viewpoint_check") or {}).get("accepted"))
-                    )
-                ),
+                "fresh_viewpoint": recorded_view_is_fresh(public),
             }
         )
 

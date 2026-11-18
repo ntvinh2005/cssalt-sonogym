@@ -117,6 +117,44 @@ class WaypointTests(unittest.TestCase):
 
 
 class FreshnessTests(unittest.TestCase):
+    def test_first_frame_after_reset_is_fresh_without_cross_reset_comparison(self) -> None:
+        record = {
+            "action_steps_since_previous_frame": 25,
+            "trajectory_frame_sequence": 0,
+            "action_accepted": True,
+            "action_completed": True,
+            "image_valid": True,
+            "physical_viewpoint_check": None,
+        }
+        self.assertTrue(MODULE.recorded_view_is_fresh(record))
+
+    def test_first_frame_after_reset_requires_real_action_and_valid_image(self) -> None:
+        record = {
+            "action_steps_since_previous_frame": 0,
+            "trajectory_frame_sequence": 0,
+            "action_accepted": True,
+            "action_completed": True,
+            "image_valid": True,
+            "physical_viewpoint_check": None,
+        }
+        self.assertFalse(MODULE.recorded_view_is_fresh(record))
+        record["action_steps_since_previous_frame"] = 25
+        record["image_valid"] = False
+        self.assertFalse(MODULE.recorded_view_is_fresh(record))
+
+    def test_noninitial_frame_requires_accepted_viewpoint_check(self) -> None:
+        record = {
+            "action_steps_since_previous_frame": 25,
+            "trajectory_frame_sequence": 1,
+            "action_accepted": True,
+            "action_completed": True,
+            "image_valid": True,
+            "physical_viewpoint_check": None,
+        }
+        self.assertFalse(MODULE.recorded_view_is_fresh(record))
+        record["physical_viewpoint_check"] = {"accepted": True}
+        self.assertTrue(MODULE.recorded_view_is_fresh(record))
+
     def test_repeated_producer_cannot_create_new_view(self) -> None:
         result = MODULE.validate_new_view(
             view(),
