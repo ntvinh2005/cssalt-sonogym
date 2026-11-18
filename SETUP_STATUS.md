@@ -1,5 +1,29 @@
 # Setup status
 
+## 2026-11-17: TP exact-crop reselection exposes a real support-qualified data deficit
+
+CPU jobs `51824166` and `51825014` passed 93/93 regressions and rebuilt the complete review
+package from the existing synchronized captures with four CPUs and zero GPUs.  Candidate selection
+now compares every eligible proposal in a source image before spending its review budget; the old
+L4-06 and L5-52 one/two-pixel border fragments are replaced by proposals with 44/53 unique
+projected pixels and 31/28 interior feature cells.  Background primaries are distributed across
+six training sessions instead of one.
+
+The new package contains 137 primary and 24 reserve samples.  For each it provides the clean full
+ultrasound, context, exact 48x80 raw crop, exact normalized 16x16 input, separate privileged
+overlay, feature hash and checksum-bound identity.  All 992 package checksums passed; no-fit
+resolved all 3,732 real proposals and recorded `fit_called=false`.
+
+The truthful readiness state is **`DATASET_INCOMPLETE`**.  Support-qualified independent image
+counts are L4 `28/12/9` and L5 `18/4/8`, below the frozen `40/10/10` gate, and zero labels have
+qualified review approval.  Therefore real fitting remains blocked; closing this result requires
+a separately approved supplemental capture targeted at the exact deficits plus review of the new
+checksum-bound crops.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_review_selection_v2_result.json`.
+- Review ZIP SHA-256: `e75a31fb4b600ed901eba7e5deb072c3d11eeda36ae0dc5701f19efb2d7aaf6f`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_review_v2/51825014/`.
+
 ## 2026-11-17: TP candidate coverage complete; exact label review remains
 
 V9 completion job `51818619` completed `0:0` in 2:08 on one L4 and four CPUs.  Its 24/24

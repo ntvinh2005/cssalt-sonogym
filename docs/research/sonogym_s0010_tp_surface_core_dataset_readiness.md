@@ -3,15 +3,15 @@
 | Result | Value |
 |---|---|
 | Final readiness | `DATASET_INCOMPLETE` |
-| Verified real acquisition | job `51811811`; v6 smoke 8/8 plus development 300/300 |
+| Verified real acquisition | V6/V7/V8/V9; 384 opened development observations plus smoke |
 | Repair executions | v4 timeout and v5 verifier mismatch preserved; v6 completed `0:0` |
 | Synchronized smoke | **PASS**, 8/8 reloaded frames pass all five gates |
-| Development dataset | **COLLECTED**, 300/300 distinct frames across six preassigned sessions |
-| Review candidates | 414 geometric-intersection patches; 168 split-stratified review assets |
+| Development dataset | **COLLECTED**, but support-qualified L4/L5 crop coverage remains short |
+| Review candidates | 137 primary + 24 reserve exact-patch assets after support-aware reselection |
 | Training eligibility | 0 samples; anatomy and image-semantic review remain pending |
 | Training implementation | train-only fit, calibration-only threshold selection, development-only evaluation, background class, save/reload |
-| CPU finalization | job `51813176`; 26/26 tests; 4 CPUs; 1:16; exit `0:0` |
-| Final package | SHA-256 `259746e83b127c573f47eda31dbecd3d6e8edcb4e62f4953eda442420191402d` |
+| CPU validation | jobs `51824166` and `51825014`; 93/93 regressions; 4 CPUs; zero GPUs |
+| Current review package | SHA-256 `e75a31fb4b600ed901eba7e5deb072c3d11eeda36ae0dc5701f19efb2d7aaf6f` |
 
 The first bounded capture exposed a float64-to-float32 hash mismatch, V4 reached the fixed episode
 horizon, and V5 exposed a reset-boundary verifier error.  Those failures remain preserved.  V6
@@ -278,4 +278,129 @@ real model fitting remains fail-closed on exact review decisions.**
 - Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9_result.json`
 - Review ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9/51818619/s0010_tp_surface_core_review_51818619_final.zip`
 - Review ZIP SHA-256: `aec872965c310c8659a483a393f92efefb98ba7eca9e5af26f059b998876bb8b`
+
+## 6. Support-aware review selection and exact model-input export
+
+### Criterion
+
+Review selection must compare every eligible actor-visible proposal from a source image before
+spending the per-class review budget.  A positive review crop needs unique projected support in
+the crop, interior rather than border-only support, and spatial agreement with the detected bright
+interface.  Selection is still only a request for review: it cannot promote geometry intersection
+to a semantic positive.  The exported raw crop and feature representation must be byte-identical
+to the production extractor and preprocessing path.
+
+### Method
+
+The builder now groups all proposals by source image, class and split, then applies one frozen rule
+to train, calibration and development.  Projected vertices are deduplicated into image pixels and
+16x16 feature cells.  A reviewable positive requires at least two occupied cells, one interior
+cell, one cell within three feature cells of the actor-visible interface, no uncertain-region
+overlap, and a nearest-support distance no larger than three feature cells.  Candidates are ranked
+by interior, near-interface and occupied-cell support, followed by distance and border fraction.
+Background candidates are diversified across sessions and columns using model-input contrast and
+gradient diagnostics; these diagnostics do not change the three-class ontology.
+
+Each selected asset contains a clean full image, a context image with crop bounds, the exact
+48-column x 80-row raw crop, the exact normalized 16x16 intensity representation, a separate
+privileged overlay, and hashes for the raw crop, normalized input and complete 774-value feature.
+The package also contains `selected_patch_arrays.npz` and an exact index.  Geometry and
+preprocessing identity are included in the decision template, so a changed crop cannot inherit an
+older approval.
+
+### Setup
+
+```bash
+# Focused and historical CPU regressions (job 51824166).
+python tests/test_acquisition_integrity.py
+python tests/test_ultrasound_plane_geometry.py
+python tests/test_two_stage_contracts.py
+python tests/test_tp_surface_core_training.py
+python tests/test_tp_surface_core_capture_contract.py
+
+# Full CPU-only rebuild and no-fit validation (job 51825014).
+sbatch --account=anest-dept --partition=hpg-default --cpus-per-task=4 --mem=16G \
+  --time=00:30:00 hpg/jobs/rebuild_s0010_tp_surface_core_review_v2.sbatch
+```
+
+Execution source: `0959bfb277cff6c5fe1ae7252d11d0d946563b44`.  Selection settings SHA-256:
+`b054b5016c251a0252d32742c9dea82aca232e4f822fb7c6af9b3136e718a778`.
+Preprocessing specification SHA-256:
+`eb1f858b27d237e028a9d023f6f1146c75667ab7742c92cb5d71f919dba557ec`.
+
+### Results and verdict
+
+Job `51824166` passed `14 + 11 + 23 + 11 + 34 = 93` CPU tests.  Job `51825014`
+completed `0:0` in 2:43 with four CPUs, zero GPUs and peak measured stage RSS 306,424 KiB.  It
+processed all 3,732 actor-visible proposals, exported 137 primary and 24 reserve samples, and
+verified 992 internal package checksums.  The NPZ arrays have shapes `(161, 80, 48)`,
+`(161, 16, 16)` and `(161, 774)`; all 161 sample, raw-patch and feature hashes are distinct.
+Two bounded orchestration failures are preserved: job `51824343` exited before processing because
+the initial wrapper incorrectly sourced the GPU-only common preflight, and job `51824396` stopped
+on the intentional duplicate-session guard because V9 symlinks the verified V8 smoke session.  The
+final job uses a CPU-only wrapper and canonical-path deduplication while still rejecting genuinely
+different directories that reuse a session identifier.
+
+The two audited first-proposal failures are repaired without claiming semantic correctness:
+
+| case | old selection | new selection | measurable change |
+|---|---|---|---|
+| L4-06 | `...:H0_BASELINE:2`; 2 unique pixels, 0 interior cells, border fraction 1.0 | `...:H0_BASELINE:5`; 44 pixels, 31 interior and 17 near-interface cells, border fraction 0.061 | the tiny right-border fragment no longer wins |
+| L5-52 | `...:H0_BASELINE:0`; 1 unique pixel, 0 interior cells, border fraction 1.0 | `...:H0_BASELINE:3`; 53 pixels, 28 interior and 7 near-interface cells, border fraction 0.176 | the first one-pixel fragment no longer wins |
+
+The 40 training background primaries now span six training sessions rather than only
+`s0010tpscv6_train_00`.  Across all primary splits, backgrounds span ten sessions and nine patch
+columns.  Before/after figures for L4-06, L5-52 and representative backgrounds are included; more
+overlap remains review evidence, not proof of visibility or identity.
+
+After the stricter crop-support audit, the maximum independently reviewable source-image counts
+are:
+
+| class | train | calibration | development evaluation |
+|---|---:|---:|---:|
+| background / other structure | 234 | 74 | 73 |
+| L4 RIGHT TP surface core | 28 | 12 | 9 |
+| L5 RIGHT TP surface core | 18 | 4 | 8 |
+
+Even if every current primary and reserve were approved, L4 train/development and all three L5
+splits would remain below the frozen 40/10/10 gate.  Actual approved and eligible counts are still
+zero in every class/split.  No-fit resolved all 3,732 real crops, found no cross-split exact-image
+duplicates, instantiated the frozen 240-tree estimator, and returned
+`ENGINEERING_PREFLIGHT_ONLY` with `fit_called=false`.
+
+**Verdict: `DATASET_INCOMPLETE`; the bounded CPU pilot cannot legitimately fit yet.**
+
+The frozen launcher remains the following command, but it is intentionally not executable as a
+successful research fit against this incomplete manifest.  After a supplemental dataset closes
+the support-qualified counts, exact review decisions are imported, and `--no-fit` returns
+`TRAINING_READY_FOR_APPROVAL`, the separately approved CPU fit command is:
+
+```bash
+export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery"
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+"$SONOGYM_ENV_PREFIX/bin/python" workflows/two_stage_navigation/train_tp_surface_core.py \
+  --dataset-dir "$REVIEWED_COMPLETE_DATASET" \
+  --output-dir "$TRAINING_OUTPUT"
+```
+
+This constructs a deterministic 240-tree `ExtraTreesClassifier` with `class_weight=balanced`,
+`max_features=sqrt`, `random_state=20261117`, and `n_jobs=4`; train alone enters `fit()`,
+calibration alone selects thresholds, and development evaluation remains read-only.
+
+### Reading it
+
+- The prior 49/14/14 L4 and 55/15/16 L5 counts measured any geometric intersection.  They did not
+  guarantee that the selected 48x80 crop contained usable target evidence.
+- The new shortfall is not an approval shortfall alone.  Existing captures do not provide enough
+  support-qualified independent L4/L5 source images under the frozen crop contract.
+- The next data action is a bounded supplemental capture planned to close the exact deficits,
+  followed by checksum-bound review of the new exact crops.  This task did not authorize that GPU
+  capture or real fitting.
+
+### Files
+
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_review_v2/51825014/`
+- Review ZIP: `s0010_tp_surface_core_review_selection_v2_51825014.zip`
+- ZIP SHA-256: `e75a31fb4b600ed901eba7e5deb072c3d11eeda36ae0dc5701f19efb2d7aaf6f`
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_review_selection_v2_result.json`
 

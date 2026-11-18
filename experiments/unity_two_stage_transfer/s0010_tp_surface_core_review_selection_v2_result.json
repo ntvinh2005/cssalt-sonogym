@@ -1,0 +1,72 @@
+{
+  "schema": "sonogym-tp-surface-core-review-selection-result-v2",
+  "date": "2026-11-17",
+  "source_commit": "0959bfb277cff6c5fe1ae7252d11d0d946563b44",
+  "capture_job": 51818619,
+  "cpu_test_job": 51824166,
+  "cpu_rebuild_job": 51825014,
+  "resource_use": {
+    "cpus": 4,
+    "gpus": 0,
+    "elapsed_seconds": 163,
+    "maximum_measured_stage_rss_kib": 306424
+  },
+  "tests": {
+    "passed": 93,
+    "failed": 0,
+    "groups": [14, 11, 23, 11, 34]
+  },
+  "selection": {
+    "candidate_rows": 3732,
+    "verified_geometric_intersections": 558,
+    "primary_review_samples": 137,
+    "reserve_review_samples": 24,
+    "selection_settings_sha256": "b054b5016c251a0252d32742c9dea82aca232e4f822fb7c6af9b3136e718a778",
+    "preprocessing_spec_sha256": "eb1f858b27d237e028a9d023f6f1146c75667ab7742c92cb5d71f919dba557ec"
+  },
+  "support_qualified_unique_source_images": {
+    "BACKGROUND_OR_OTHER_STRUCTURE": {
+      "train": 234,
+      "calibration": 74,
+      "development_evaluation": 73
+    },
+    "L4_RIGHT_TP_SURFACE_CORE": {
+      "train": 28,
+      "calibration": 12,
+      "development_evaluation": 9
+    },
+    "L5_RIGHT_TP_SURFACE_CORE": {
+      "train": 18,
+      "calibration": 4,
+      "development_evaluation": 8
+    }
+  },
+  "eligible_unique_source_images": {
+    "BACKGROUND_OR_OTHER_STRUCTURE": {"train": 0, "calibration": 0, "development_evaluation": 0},
+    "L4_RIGHT_TP_SURFACE_CORE": {"train": 0, "calibration": 0, "development_evaluation": 0},
+    "L5_RIGHT_TP_SURFACE_CORE": {"train": 0, "calibration": 0, "development_evaluation": 0}
+  },
+  "exact_exports": {
+    "raw_patch_shape": [161, 80, 48],
+    "normalized_intensity_shape": [161, 16, 16],
+    "feature_shape": [161, 774],
+    "unique_sample_ids": 161,
+    "unique_raw_patch_hashes": 161,
+    "unique_feature_hashes": 161
+  },
+  "no_fit": {
+    "status": "ENGINEERING_PREFLIGHT_ONLY",
+    "resolved_feature_rows": 3732,
+    "cross_split_exact_duplicates": 0,
+    "fit_called": false
+  },
+  "review_package": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_review_v2/51825014/s0010_tp_surface_core_review_selection_v2_51825014.zip",
+    "sha256": "e75a31fb4b600ed901eba7e5deb072c3d11eeda36ae0dc5701f19efb2d7aaf6f",
+    "internal_file_count": 992,
+    "checksums_verified": true
+  },
+  "final_status": "DATASET_INCOMPLETE",
+  "fit_authorized_or_run": false,
+  "capture_authorized_or_run": false
+}
