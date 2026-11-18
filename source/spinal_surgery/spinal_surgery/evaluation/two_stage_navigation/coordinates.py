@@ -29,6 +29,7 @@ STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-tp-surface-core-dataset-v5",
     "sonogym-s0010-tp-surface-core-dataset-v6",
     "sonogym-s0010-tp-surface-core-dataset-v7",
+    "sonogym-s0010-tp-surface-core-dataset-v8",
 }
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(4, 15)
@@ -44,6 +45,7 @@ COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-tp-surface-core-dataset-v5",
     "sonogym-s0010-tp-surface-core-dataset-v6",
     "sonogym-s0010-tp-surface-core-dataset-v7",
+    "sonogym-s0010-tp-surface-core-dataset-v8",
 }
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(5, 15)
@@ -54,6 +56,7 @@ SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-tp-surface-core-dataset-v5",
     "sonogym-s0010-tp-surface-core-dataset-v6",
     "sonogym-s0010-tp-surface-core-dataset-v7",
+    "sonogym-s0010-tp-surface-core-dataset-v8",
 }
 
 
