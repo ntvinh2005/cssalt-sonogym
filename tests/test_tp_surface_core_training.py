@@ -34,6 +34,13 @@ TRAIN = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = TRAIN
 SPEC.loader.exec_module(TRAIN)
 
+PREPARE_PATH = ROOT / "workflows/two_stage_navigation/prepare_tp_surface_core_dataset.py"
+PREPARE_SPEC = importlib.util.spec_from_file_location("tp_surface_core_prepare", PREPARE_PATH)
+assert PREPARE_SPEC is not None and PREPARE_SPEC.loader is not None
+PREPARE = importlib.util.module_from_spec(PREPARE_SPEC)
+sys.modules[PREPARE_SPEC.name] = PREPARE
+PREPARE_SPEC.loader.exec_module(PREPARE)
+
 
 class ProposalTests(unittest.TestCase):
     def test_actor_visible_proposals_do_not_need_privileged_coordinates(self) -> None:
@@ -53,6 +60,45 @@ class ProposalTests(unittest.TestCase):
         self.assertEqual(
             proposed_review_target({L4_CLASS: 2, L5_CLASS: 0}, {L4_CLASS: 1, L5_CLASS: 0})[0],
             "AMBIGUOUS",
+        )
+
+    def test_candidate_coverage_counts_unique_source_images_not_patches(self) -> None:
+        rows = []
+        for class_name, target in (
+            (PREPARE.BACKGROUND_CLASS, "REVIEW_HARD_NEGATIVE"),
+            (PREPARE.L4_CLASS, "REVIEW_POSITIVE"),
+            (PREPARE.L5_CLASS, "REVIEW_POSITIVE"),
+        ):
+            for split, count in PREPARE.REVIEW_MINIMUM_UNIQUE_IMAGES.items():
+                for index in range(count):
+                    row = {
+                        "candidate_id": class_name,
+                        "review_target": target,
+                        "split": split,
+                        "frame_sha256": f"{class_name}:{split}:{index}",
+                    }
+                    rows.extend((row, dict(row)))
+        counts = PREPARE.candidate_unique_image_counts(rows)
+        self.assertEqual(
+            counts[PREPARE.L4_CLASS], PREPARE.REVIEW_MINIMUM_UNIQUE_IMAGES
+        )
+        self.assertEqual(PREPARE.candidate_coverage_deficits(counts), [])
+
+        rows = [
+            row
+            for row in rows
+            if not (
+                row["candidate_id"] == PREPARE.L4_CLASS
+                and row["split"] == "calibration"
+                and row["frame_sha256"].endswith(":9")
+            )
+        ]
+        deficits = PREPARE.candidate_coverage_deficits(
+            PREPARE.candidate_unique_image_counts(rows)
+        )
+        self.assertEqual(
+            deficits,
+            ["L4_RIGHT_TP_SURFACE_CORE calibration: 9 unique candidate images < 10"],
         )
 
 

@@ -239,6 +239,9 @@ class CaptureV6ContractTests(unittest.TestCase):
         self.assertIn(SEAL_V6.name, job)
         self.assertNotIn("dataset_protocol_v5", job)
 
+    def test_review_checksum_manifest_does_not_hash_itself(self) -> None:
+        self.assertIn("! -name checksums.sha256", JOB_V6.read_text())
+
     def test_every_job_session_is_frozen_in_protocol(self) -> None:
         protocol = yaml.safe_load(PROTOCOL_V6.read_text())
         frozen = {row["session_id"] for row in protocol["sessions"]}

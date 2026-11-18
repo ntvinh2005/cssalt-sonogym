@@ -26,6 +26,7 @@ EVALUATION_ROOT = (
 sys.path.insert(0, str(EVALUATION_ROOT))
 from two_stage_navigation.stage1_features import UNITY_REFERENCE_PATCH_SPEC  # noqa: E402
 from two_stage_navigation.tp_surface_core_dataset import (  # noqa: E402
+    BACKGROUND_CLASS,
     L4_CLASS,
     L5_CLASS,
     actor_visible_patch_proposals,
@@ -55,6 +56,50 @@ CANDIDATE_TO_CLASS = {
     "L4_RIGHT_transverse_process": L4_CLASS,
     "L5_RIGHT_transverse_process": L5_CLASS,
 }
+REVIEW_CLASSES = (BACKGROUND_CLASS, L4_CLASS, L5_CLASS)
+REVIEW_MINIMUM_UNIQUE_IMAGES = {
+    "train": 40,
+    "calibration": 10,
+    "development_evaluation": 10,
+}
+
+
+def row_is_review_candidate(row: dict[str, Any], class_name: str) -> bool:
+    """Return whether a row can be reviewed for the declared class."""
+    if row["candidate_id"] != class_name:
+        return False
+    if class_name == BACKGROUND_CLASS:
+        return row["review_target"] == "REVIEW_HARD_NEGATIVE"
+    return row["review_target"] == "REVIEW_POSITIVE"
+
+
+def candidate_unique_image_counts(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Count independent source images, not correlated patches."""
+    return {
+        class_name: {
+            split: len(
+                {
+                    row["frame_sha256"]
+                    for row in rows
+                    if row["split"] == split and row_is_review_candidate(row, class_name)
+                }
+            )
+            for split in REVIEW_MINIMUM_UNIQUE_IMAGES
+        }
+        for class_name in REVIEW_CLASSES
+    }
+
+
+def candidate_coverage_deficits(
+    counts: dict[str, dict[str, int]],
+) -> list[str]:
+    """Describe pre-review source-image shortfalls without promoting labels."""
+    return [
+        f"{class_name} {split}: {counts[class_name][split]} unique candidate images < {minimum}"
+        for class_name in REVIEW_CLASSES
+        for split, minimum in REVIEW_MINIMUM_UNIQUE_IMAGES.items()
+        if counts[class_name][split] < minimum
+    ]
 
 
 def sha256(path: Path) -> str:
@@ -123,7 +168,12 @@ def main() -> int:
     rows: list[dict[str, Any]] = []
     missing_sessions: list[str] = []
     processed_sessions: list[str] = []
-    overlay_budget = {candidate: 12 for candidate in ACTIVE_CANDIDATES}
+    overlay_budget = {
+        (class_name, split): minimum
+        for class_name in REVIEW_CLASSES
+        for split, minimum in REVIEW_MINIMUM_UNIQUE_IMAGES.items()
+    }
+    overlay_seen: set[tuple[str, str, str]] = set()
     for session in protocol["sessions"]:
         session_dir = args.capture_root / "sessions" / session["session_id"]
         if not session_dir.is_dir():
@@ -248,15 +298,21 @@ def main() -> int:
                     "review_target": review_target,
                     "review_target_reason": target_reason,
                     "exclusion_reason": "anatomical and patch-semantic review pending",
+                    "review_asset": "",
                 }
                 rows.append(record)
-                budget_key = next(
-                    (key for key, name in CANDIDATE_TO_CLASS.items() if name == candidate_id),
-                    None,
-                )
-                if review_target == "REVIEW_POSITIVE" and budget_key and overlay_budget[budget_key] > 0:
+                budget_key = (candidate_id, session["split"])
+                seen_key = (candidate_id, session["split"], actor["frame_sha256"])
+                if (
+                    budget_key in overlay_budget
+                    and row_is_review_candidate(record, candidate_id)
+                    and seen_key not in overlay_seen
+                    and overlay_budget[budget_key] > 0
+                ):
                     overlay_budget[budget_key] -= 1
+                    overlay_seen.add(seen_key)
                     figure_path = output / "review" / f"{record['sample_id'].replace(':', '_')}.png"
+                    record["review_asset"] = str(figure_path.relative_to(output))
                     figure_path.parent.mkdir(parents=True, exist_ok=True)
                     fig, axes = plt.subplots(1, 2, figsize=(8, 4), dpi=160)
                     axes[0].imshow(images[index], cmap="gray")
@@ -287,6 +343,8 @@ def main() -> int:
         if session["role"] != "smoke"
     ]
     write_csv(output / "session_split_manifest.csv", split_rows)
+    unique_image_counts = candidate_unique_image_counts(rows)
+    coverage_deficits = candidate_coverage_deficits(unique_image_counts)
     summary = {
         "schema": "sonogym-tp-surface-core-dataset-preparation-v1",
         "active_classes": list(ACTIVE_CANDIDATES),
@@ -297,9 +355,12 @@ def main() -> int:
         "anatomical_approval": "PENDING",
         "processed_sessions": processed_sessions,
         "missing_sessions": missing_sessions,
+        "candidate_unique_image_counts": unique_image_counts,
+        "candidate_coverage_deficits": coverage_deficits,
+        "review_asset_count": sum(bool(row["review_asset"]) for row in rows),
         "status": (
             "DATASET_INCOMPLETE"
-            if missing_sessions
+            if missing_sessions or coverage_deficits
             else "ENGINEERING_READY_LABEL_REVIEW_PENDING"
         ),
         "counts": {

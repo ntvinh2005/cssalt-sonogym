@@ -108,7 +108,7 @@ cp "$RUN_DIR/sessions/s0010tpscv6_smoke/privileged/pixel_to_volume_coordinates.n
 cp -r "$RUN_DIR/dataset/review" "$RUN_DIR/reviewer/verified_overlays"
 (
     cd "$RUN_DIR/reviewer"
-    find . -type f -print0 | sort -z | xargs -0 sha256sum > checksums.sha256
+    find . -type f ! -name checksums.sha256 -print0 | sort -z | xargs -0 sha256sum > checksums.sha256
     zip -qr "$RUN_DIR/s0010_tp_surface_core_review_${SLURM_JOB_ID}.zip" .
 )
 
