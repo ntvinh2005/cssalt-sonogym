@@ -18,12 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 EVALUATION_ROOT = ROOT / "source/spinal_surgery/spinal_surgery/evaluation"
 sys.path.insert(0, str(EVALUATION_ROOT))
 
-from two_stage_navigation.stage1_features import UNITY_REFERENCE_PATCH_SPEC  # noqa: E402
+from two_stage_navigation.stage1_features import (  # noqa: E402
+    UNITY_REFERENCE_PATCH_SPEC,
+    extract_interface_patch,
+    normalized_patch_intensity,
+    patch_feature,
+)
 from two_stage_navigation.tp_surface_core_dataset import (  # noqa: E402
     L4_CLASS,
     L5_CLASS,
     PatchProposal,
     actor_visible_patch_proposals,
+    projected_pixel_diagnostics,
     proposed_review_target,
 )
 
@@ -83,6 +89,7 @@ class ProposalTests(unittest.TestCase):
                         "review_target": target,
                         "split": split,
                         "frame_sha256": f"{class_name}:{split}:{index}",
+                        "adequate_projected_support": True,
                     }
                     rows.extend((row, dict(row)))
         counts = PREPARE.candidate_unique_image_counts(rows)
@@ -107,6 +114,120 @@ class ProposalTests(unittest.TestCase):
             deficits,
             ["L4_RIGHT_TP_SURFACE_CORE calibration: 9 unique candidate images < 10"],
         )
+
+    def test_better_supported_proposal_wins_after_all_image_proposals_are_seen(self) -> None:
+        common = {
+            "candidate_id": PREPARE.L4_CLASS,
+            "review_target": "REVIEW_POSITIVE",
+            "split": "train",
+            "frame_sha256": "same-image",
+            "session_id": "session",
+            "patch_column": 24,
+            "near_interface_core_feature_cells": 1,
+            "nearest_core_distance_feature_cells": 1.0,
+            "border_core_feature_cell_fraction": 0.0,
+            "unique_core_pixels": 20,
+            "patch_gradient_p90": 0.0,
+            "patch_normalized_std": 0.0,
+        }
+        first = dict(
+            common,
+            sample_id="first-border-fragment",
+            adequate_projected_support=False,
+            interior_core_feature_cells=0,
+            core_feature_cells=1,
+        )
+        later = dict(
+            common,
+            sample_id="later-supported",
+            adequate_projected_support=True,
+            interior_core_feature_cells=4,
+            core_feature_cells=5,
+        )
+        selected = PREPARE.best_candidate_per_source_image(
+            [first, later], PREPARE.L4_CLASS, "train"
+        )
+        self.assertEqual([row["sample_id"] for row in selected], ["later-supported"])
+
+    def test_border_fragment_is_not_adequate_projected_support(self) -> None:
+        proposal = PatchProposal("H0", 100.0, 72.0, np.zeros(774))
+        diagnostics = projected_pixel_diagnostics(
+            proposal,
+            core_rows=np.asarray([100, 101, 102]),
+            core_columns=np.asarray([95, 95, 95]),
+            uncertain_rows=np.asarray([], dtype=int),
+            uncertain_columns=np.asarray([], dtype=int),
+            patch_spec=UNITY_REFERENCE_PATCH_SPEC,
+        )
+        self.assertFalse(diagnostics["adequate_projected_support"])
+        self.assertEqual(diagnostics["interior_core_feature_cells"], 0)
+
+    def test_background_selection_uses_multiple_sessions_and_columns(self) -> None:
+        candidates = []
+        for session in ("a", "b", "c"):
+            for column in (24, 60, 96):
+                candidates.append(
+                    {
+                        "sample_id": f"{session}:{column}",
+                        "session_id": session,
+                        "patch_column": column,
+                        "candidate_id": PREPARE.BACKGROUND_CLASS,
+                        "patch_gradient_p90": 1.0,
+                        "patch_normalized_std": 1.0,
+                    }
+                )
+        selected, _ = PREPARE.diversified_selection(candidates, 6)
+        self.assertEqual(len({row["session_id"] for row in selected}), 3)
+        self.assertGreaterEqual(len({row["patch_column"] for row in selected}), 2)
+
+    def test_review_export_matches_production_patch_and_feature(self) -> None:
+        image = np.linspace(0.0, 1.0, 200 * 150, dtype=np.float64).reshape(200, 150)
+        row = {
+            "sample_id": "session:0:H0:0",
+            "session_id": "session",
+            "frame_sequence": 0,
+            "review_selection": "PRIMARY",
+            "patch_row": 100.0,
+            "patch_column": 72.0,
+            "patch_row_start": 66,
+            "patch_column_start": 48,
+            "patch_width": 48,
+            "patch_depth": 80,
+            "unique_core_pixels": 2,
+            "core_feature_cells": 2,
+            "interior_core_feature_cells": 2,
+            "nearest_core_distance_feature_cells": 1.0,
+            "border_core_feature_cell_fraction": 0.0,
+        }
+        raw = extract_interface_patch(
+            image, row["patch_row"], row["patch_column"], UNITY_REFERENCE_PATCH_SPEC
+        )
+        self.assertIsNotNone(raw)
+        intensity = normalized_patch_intensity(raw, UNITY_REFERENCE_PATCH_SPEC)
+        feature = patch_feature(raw, UNITY_REFERENCE_PATCH_SPEC)
+        row.update(
+            raw_crop_sha256=PREPARE.array_sha256(raw),
+            preprocessed_intensity_sha256=PREPARE.array_sha256(intensity),
+            feature_sha256=PREPARE.array_sha256(feature),
+        )
+        projections = {
+            PREPARE.L4_CLASS: {
+                "rows": np.asarray([100, 101]),
+                "columns": np.asarray([72, 73]),
+                "uncertain_rows": np.asarray([], dtype=int),
+                "uncertain_columns": np.asarray([], dtype=int),
+            }
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            PREPARE.export_review_sample(
+                output=Path(temporary),
+                row=row,
+                image=image,
+                projections=projections,
+                npz_index=0,
+            )
+        self.assertEqual(row["raw_crop_sha256"], PREPARE.array_sha256(raw))
+        self.assertEqual(row["feature_sha256"], PREPARE.array_sha256(feature))
 
 
 class TrainingTests(unittest.TestCase):
@@ -208,10 +329,21 @@ class ReviewApplicationTests(unittest.TestCase):
                             "session_id": f"{split}_session",
                             "split": split,
                             "frame_sha256": f"hash:{sample_id}",
+                            "image_archive_index": index,
+                            "track_id": "H0",
+                            "patch_row": 100.0,
+                            "patch_column": 72.0,
+                            "patch_row_start": 66,
+                            "patch_column_start": 48,
                             "candidate_id": class_name,
                             "class_id": class_id,
                             "geometry_version_sha256": geometry,
                             "review_asset": f"review/{sample_id}.png",
+                            "review_selection": "PRIMARY",
+                            "raw_crop_sha256": f"raw:{sample_id}",
+                            "preprocessed_intensity_sha256": f"intensity:{sample_id}",
+                            "feature_sha256": f"feature:{sample_id}",
+                            "preprocessing_spec_sha256": "preprocessing",
                             "acoustic_visibility": "NOT_REVIEWED",
                             "semantic_identity": "NOT_REVIEWED",
                             "anatomical_approval": "PENDING",
@@ -227,6 +359,18 @@ class ReviewApplicationTests(unittest.TestCase):
                                 "session_id": row["session_id"],
                                 "split": split,
                                 "frame_sha256": row["frame_sha256"],
+                                "source_array_index": str(index),
+                                "track_id": "H0",
+                                "patch_row": "100.0",
+                                "patch_column": "72.0",
+                                "patch_row_start": "66",
+                                "patch_column_start": "48",
+                                "raw_crop_sha256": row["raw_crop_sha256"],
+                                "preprocessed_intensity_sha256": row[
+                                    "preprocessed_intensity_sha256"
+                                ],
+                                "feature_sha256": row["feature_sha256"],
+                                "preprocessing_spec_sha256": "preprocessing",
                                 "class_name": class_name,
                                 "geometry_version_sha256": geometry,
                                 "anatomical_boundary_decision": "NOT_APPLICABLE" if negative else "ACCEPT_BOUNDARY",
@@ -254,6 +398,14 @@ class ReviewApplicationTests(unittest.TestCase):
             self.assertEqual(result["promoted_rows"], 180)
             reviewed = REVIEW.read_csv(root / "reviewed/candidate_sample_manifest.csv")
             self.assertTrue(all(row["training_eligible"] == "True" for row in reviewed))
+            decisions[0]["patch_column"] = "84.0"
+            stale_path = root / "stale-decisions.csv"
+            with stale_path.open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(decisions[0]))
+                writer.writeheader()
+                writer.writerows(decisions)
+            with self.assertRaisesRegex(ValueError, "patch_column"):
+                REVIEW.apply_review(dataset, stale_path, root / "stale-reviewed")
 
     def test_identity_mismatch_and_unqualified_acceptance_fail_closed(self) -> None:
         row = {

@@ -100,18 +100,11 @@ def extract_interface_patch(
 
 def patch_feature(patch: np.ndarray, spec: PatchSpec) -> np.ndarray:
     """Return normalized intensity/gradient morphology with the Unity 6-value summary."""
-    array = _validate_image(patch)
-    if array.shape != (spec.depth_pixels, spec.width_pixels):
-        raise ValueError(
-            f"patch must have shape {(spec.depth_pixels, spec.width_pixels)}, got {array.shape}"
-        )
-    low, high = np.quantile(array, (spec.low_quantile, spec.high_quantile))
-    normalized = np.clip((array - low) / max(float(high - low), 1e-6), 0.0, 1.0)
-    size = spec.feature_size_pixels
-    small = bilinear_resize(normalized, size, size)
+    small = normalized_patch_intensity(patch, spec)
     gradient_x = np.gradient(small, axis=1)
     gradient_y = np.gradient(small, axis=0)
     magnitude = np.hypot(gradient_x, gradient_y)
+    size = spec.feature_size_pixels
     interface_row = int(
         np.clip(round(spec.interface_offset_pixels * size / spec.depth_pixels), 0, size - 1)
     )
@@ -132,6 +125,19 @@ def patch_feature(patch: np.ndarray, spec: PatchSpec) -> np.ndarray:
     if feature.shape != (spec.feature_width,) or not np.all(np.isfinite(feature)):
         raise AssertionError("invalid patch feature output")
     return feature
+
+
+def normalized_patch_intensity(patch: np.ndarray, spec: PatchSpec) -> np.ndarray:
+    """Return the exact normalized and resized intensity input used by ``patch_feature``."""
+    array = _validate_image(patch)
+    if array.shape != (spec.depth_pixels, spec.width_pixels):
+        raise ValueError(
+            f"patch must have shape {(spec.depth_pixels, spec.width_pixels)}, got {array.shape}"
+        )
+    low, high = np.quantile(array, (spec.low_quantile, spec.high_quantile))
+    normalized = np.clip((array - low) / max(float(high - low), 1e-6), 0.0, 1.0)
+    size = spec.feature_size_pixels
+    return bilinear_resize(normalized, size, size)
 
 
 def extract_patch_feature(

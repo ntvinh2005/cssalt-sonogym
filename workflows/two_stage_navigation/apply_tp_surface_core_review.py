@@ -18,12 +18,22 @@ CLASS_NAMES = (
     "L5_RIGHT_TP_SURFACE_CORE",
 )
 MINIMUM_UNIQUE_IMAGES = {"train": 40, "calibration": 10, "development_evaluation": 10}
-IDENTITY_FIELDS = (
-    "sample_id",
-    "session_id",
-    "split",
-    "frame_sha256",
-    "geometry_version_sha256",
+IDENTITY_FIELD_PAIRS = (
+    ("sample_id", "sample_id"),
+    ("session_id", "session_id"),
+    ("split", "split"),
+    ("frame_sha256", "frame_sha256"),
+    ("source_array_index", "image_archive_index"),
+    ("track_id", "track_id"),
+    ("patch_row", "patch_row"),
+    ("patch_column", "patch_column"),
+    ("patch_row_start", "patch_row_start"),
+    ("patch_column_start", "patch_column_start"),
+    ("raw_crop_sha256", "raw_crop_sha256"),
+    ("preprocessed_intensity_sha256", "preprocessed_intensity_sha256"),
+    ("feature_sha256", "feature_sha256"),
+    ("preprocessing_spec_sha256", "preprocessing_spec_sha256"),
+    ("geometry_version_sha256", "geometry_version_sha256"),
 )
 
 
@@ -107,20 +117,27 @@ def apply_review(dataset: Path, decisions_path: Path, output: Path) -> dict[str,
     if not rows or not decisions:
         raise ValueError("dataset manifest and review decisions must be nonempty")
     indexed_rows = {row["sample_id"]: row for row in rows}
-    expected = {row["sample_id"] for row in rows if row.get("review_asset")}
+    expected_primary = {
+        row["sample_id"]
+        for row in rows
+        if row.get("review_asset") and row.get("review_selection") == "PRIMARY"
+    }
+    allowed_review = {row["sample_id"] for row in rows if row.get("review_asset")}
     decision_ids = [row["sample_id"] for row in decisions]
     if len(decision_ids) != len(set(decision_ids)):
         raise ValueError("duplicate review decisions")
-    if set(decision_ids) != expected:
-        missing = sorted(expected.difference(decision_ids))
-        extra = sorted(set(decision_ids).difference(expected))
+    if not expected_primary.issubset(decision_ids) or not set(decision_ids).issubset(allowed_review):
+        missing = sorted(expected_primary.difference(decision_ids))
+        extra = sorted(set(decision_ids).difference(allowed_review))
         raise ValueError(f"review decision coverage mismatch: missing={missing[:3]}, extra={extra[:3]}")
     promoted = 0
     for decision in decisions:
         row = indexed_rows[decision["sample_id"]]
-        for field in IDENTITY_FIELDS:
-            if decision.get(field, "") != row.get(field, ""):
-                raise ValueError(f"review identity mismatch for {field}: {row['sample_id']}")
+        for decision_field, manifest_field in IDENTITY_FIELD_PAIRS:
+            if decision.get(decision_field, "") != row.get(manifest_field, ""):
+                raise ValueError(
+                    f"review identity mismatch for {decision_field}: {row['sample_id']}"
+                )
         if decision.get("class_name", "") != row["candidate_id"]:
             raise ValueError(f"review class mismatch: {row['sample_id']}")
         promoted += int(promote(row, decision))

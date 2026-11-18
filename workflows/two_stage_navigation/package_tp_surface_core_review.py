@@ -69,6 +69,11 @@ def main() -> int:
         "candidate_sample_manifest.csv",
         "dataset_summary.json",
         "label_schema.json",
+        "preprocessing_spec.json",
+        "reserve_candidate_manifest.csv",
+        "selected_patch_arrays.npz",
+        "selected_patch_index.csv",
+        "selection_settings.json",
         "session_split_manifest.csv",
     ):
         copy_one(dataset / name, staging / name)
@@ -76,7 +81,7 @@ def main() -> int:
     review_source = dataset / "review"
     if not review_source.is_dir():
         raise RuntimeError("review overlays are missing")
-    shutil.copytree(review_source, staging / "verified_overlays")
+    shutil.copytree(review_source, staging / "review_assets")
 
     smoke = run_dir / "sessions" / args.smoke_session_id
     copy_one(smoke / "verification_report.json", staging / "smoke_verification_report.json")
@@ -102,29 +107,56 @@ def main() -> int:
         copy_one(source, staging / "geometry" / source.name)
 
     rows = read_csv(dataset / "candidate_sample_manifest.csv")
-    decisions = []
+    primary_decisions = []
+    reserve_decisions = []
     for row in rows:
         if not row.get("review_asset"):
             continue
-        decisions.append(
-            {
-                "sample_id": row["sample_id"],
-                "session_id": row["session_id"],
-                "split": row["split"],
-                "frame_sha256": row["frame_sha256"],
-                "class_name": row["candidate_id"],
-                "review_target": row["review_target"],
-                "review_asset": f"verified_overlays/{Path(row['review_asset']).name}",
-                "geometry_version_sha256": row["geometry_version_sha256"],
-                "anatomical_boundary_decision": "PENDING",
-                "acoustic_visibility": "NOT_REVIEWED",
-                "semantic_identity": "NOT_REVIEWED",
-                "reviewer_identity": "",
-                "reviewer_qualification": "",
-                "notes": "",
-            }
-        )
-    write_csv(staging / "review_decisions_template.csv", decisions)
+        relative_asset = Path(row["review_asset"])
+        if relative_asset.parts[0] != "review":
+            raise RuntimeError(f"review asset is outside the review tree: {relative_asset}")
+        decision = {
+            "sample_id": row["sample_id"],
+            "session_id": row["session_id"],
+            "split": row["split"],
+            "frame_sha256": row["frame_sha256"],
+            "source_array_index": row["image_archive_index"],
+            "track_id": row["track_id"],
+            "patch_row": row["patch_row"],
+            "patch_column": row["patch_column"],
+            "patch_row_start": row["patch_row_start"],
+            "patch_column_start": row["patch_column_start"],
+            "raw_crop_sha256": row["raw_crop_sha256"],
+            "preprocessed_intensity_sha256": row["preprocessed_intensity_sha256"],
+            "feature_sha256": row["feature_sha256"],
+            "preprocessing_spec_sha256": row["preprocessing_spec_sha256"],
+            "class_name": row["candidate_id"],
+            "review_target": row["review_target"],
+            "review_selection": row["review_selection"],
+            "review_asset": str(Path("review_assets", *relative_asset.parts[1:])),
+            "geometry_version_sha256": row["geometry_version_sha256"],
+            "unique_core_pixels": row["unique_core_pixels"],
+            "core_feature_cells": row["core_feature_cells"],
+            "interior_core_feature_cells": row["interior_core_feature_cells"],
+            "near_interface_core_feature_cells": row["near_interface_core_feature_cells"],
+            "nearest_core_distance_feature_cells": row["nearest_core_distance_feature_cells"],
+            "border_core_feature_cell_fraction": row["border_core_feature_cell_fraction"],
+            "selection_reason": row["selection_reason"],
+            "anatomical_boundary_decision": "PENDING",
+            "acoustic_visibility": "NOT_REVIEWED",
+            "semantic_identity": "NOT_REVIEWED",
+            "reviewer_identity": "",
+            "reviewer_qualification": "",
+            "notes": "",
+        }
+        if row["review_selection"] == "PRIMARY":
+            primary_decisions.append(decision)
+        elif row["review_selection"] == "RESERVE":
+            reserve_decisions.append(decision)
+        else:
+            raise RuntimeError(f"exported review row lacks a declared role: {row['sample_id']}")
+    write_csv(staging / "review_decisions_template.csv", primary_decisions)
+    write_csv(staging / "reserve_decisions_template.csv", reserve_decisions)
 
     summary = json.loads((dataset / "dataset_summary.json").read_text(encoding="utf-8"))
     preflight_report = json.loads(
@@ -140,17 +172,21 @@ or injection readiness.
 - Dataset status: `{summary['status']}`
 - Candidate rows: {summary['rows']}
 - Verified geometric intersections: {summary['verified_intersections']}
-- Stratified review assets: {len(decisions)}
+- Primary review assets: {len(primary_decisions)}
+- Reserve review assets: {len(reserve_decisions)}
 - Training-eligible rows before review: {summary['training_eligible_rows']}
 - No-fit status: `{preflight_report['status']}`; `fit_called={str(preflight_report['fit_called']).lower()}`
 
 ## Required decisions
 
-For every row in `review_decisions_template.csv`, inspect the clean ultrasound and the separate
-reviewer-only projection. Record acoustic visibility and semantic identity. For L4/L5 positive
+For every primary row in `review_decisions_template.csv`, inspect the clean ultrasound, exact raw
+patch, exact 16x16 intensity input and separate reviewer-only projection. Record acoustic
+visibility and semantic identity. For L4/L5 positive
 candidates, a qualified anatomical reviewer must also approve or reject the exact geometry checksum.
 Background candidates require semantic rejection as TP but never anatomical approval as TP.
 Ambiguous or occluded examples remain excluded. Do not convert unknown values into negatives.
+If a primary row is rejected, append only the needed reviewed rows from
+`reserve_decisions_template.csv`; reserve rows are not automatically approved.
 
 The source-image coverage deficits recorded in `dataset_summary.json` are acquisition deficits;
 review cannot manufacture missing independent L4 images. Model fitting must remain blocked until
@@ -186,11 +222,12 @@ must report `TRAINING_READY_FOR_APPROVAL` before the separately approved fit com
             archive.write(path, path.relative_to(staging).as_posix())
 
     result = {
-        "schema": "sonogym-tp-surface-core-review-package-v1",
+        "schema": "sonogym-tp-surface-core-review-package-v2",
         "zip": str(output_zip),
         "zip_sha256": sha256(output_zip),
         "file_count": sum(path.is_file() for path in staging.rglob("*")),
-        "review_asset_count": len(decisions),
+        "primary_review_asset_count": len(primary_decisions),
+        "reserve_review_asset_count": len(reserve_decisions),
         "dataset_status": summary["status"],
         "preflight_status": preflight_report["status"],
         "fit_called": preflight_report["fit_called"],

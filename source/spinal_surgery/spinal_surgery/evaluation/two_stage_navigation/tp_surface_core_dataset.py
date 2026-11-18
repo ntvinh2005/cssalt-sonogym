@@ -73,6 +73,93 @@ def count_points_in_patch(
     )
 
 
+def projected_pixel_diagnostics(
+    proposal: PatchProposal,
+    *,
+    core_rows: np.ndarray,
+    core_columns: np.ndarray,
+    uncertain_rows: np.ndarray,
+    uncertain_columns: np.ndarray,
+    patch_spec: PatchSpec,
+) -> dict[str, float | int | bool]:
+    """Measure deduplicated projected support inside one proposed source patch."""
+
+    column_start = int(round(proposal.column - patch_spec.width_pixels / 2.0))
+    row_start = int(round(proposal.row - patch_spec.interface_offset_pixels))
+
+    def inside_unique(rows: np.ndarray, columns: np.ndarray) -> np.ndarray:
+        rows_array = np.asarray(rows, dtype=np.int64)
+        columns_array = np.asarray(columns, dtype=np.int64)
+        inside = (
+            (rows_array >= row_start)
+            & (rows_array < row_start + patch_spec.depth_pixels)
+            & (columns_array >= column_start)
+            & (columns_array < column_start + patch_spec.width_pixels)
+        )
+        if not np.any(inside):
+            return np.empty((0, 2), dtype=np.int64)
+        return np.unique(np.column_stack((rows_array[inside], columns_array[inside])), axis=0)
+
+    core = inside_unique(core_rows, core_columns)
+    uncertain = inside_unique(uncertain_rows, uncertain_columns)
+    size = patch_spec.feature_size_pixels
+    if core.size:
+        relative_rows = core[:, 0] - row_start
+        relative_columns = core[:, 1] - column_start
+        cells = np.unique(
+            np.column_stack(
+                (
+                    np.minimum(relative_rows * size // patch_spec.depth_pixels, size - 1),
+                    np.minimum(relative_columns * size // patch_spec.width_pixels, size - 1),
+                )
+            ),
+            axis=0,
+        )
+        border = (
+            (cells[:, 0] == 0)
+            | (cells[:, 0] == size - 1)
+            | (cells[:, 1] == 0)
+            | (cells[:, 1] == size - 1)
+        )
+        interface_cell_row = patch_spec.interface_offset_pixels * size / patch_spec.depth_pixels
+        centre_cell_column = size / 2.0
+        scaled_distance = np.hypot(
+            cells[:, 0] - interface_cell_row,
+            cells[:, 1] - centre_cell_column,
+        )
+        near_interface = np.abs(cells[:, 0] - interface_cell_row) <= 1.0
+        cell_count = int(len(cells))
+        interior_count = int(np.count_nonzero(~border))
+        nearest = float(np.min(scaled_distance))
+        near_interface_count = int(np.count_nonzero(near_interface))
+        border_fraction = float(np.mean(border))
+    else:
+        cell_count = 0
+        interior_count = 0
+        nearest = float("inf")
+        near_interface_count = 0
+        border_fraction = 1.0
+    adequate = bool(
+        cell_count >= 2
+        and interior_count >= 1
+        and nearest <= 3.0
+        and near_interface_count >= 1
+        and len(uncertain) == 0
+    )
+    return {
+        "unique_core_pixels": int(len(core)),
+        "unique_uncertain_pixels": int(len(uncertain)),
+        "core_feature_cells": cell_count,
+        "interior_core_feature_cells": interior_count,
+        "near_interface_core_feature_cells": near_interface_count,
+        "nearest_core_distance_feature_cells": nearest,
+        "border_core_feature_cell_fraction": border_fraction,
+        "adequate_projected_support": adequate,
+        "patch_row_start": row_start,
+        "patch_column_start": column_start,
+    }
+
+
 def proposed_review_target(
     core_counts: dict[str, int], uncertain_counts: dict[str, int]
 ) -> tuple[str, int | None, str]:
