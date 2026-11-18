@@ -1,0 +1,45 @@
+{
+  "schema": "sonogym-tp-surface-core-dataset-result-v1",
+  "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v5",
+  "job_id": 51810449,
+  "execution_commit": "baa3522aa70651223fb8521c82c9510b9de4ceae",
+  "scheduler_state": "FAILED",
+  "elapsed_seconds": 44,
+  "exit_code": "3:0",
+  "final_readiness": "DATASET_INCOMPLETE",
+  "smoke": {
+    "frames": 8,
+    "trajectories": 3,
+    "distinct_ultrasound_hashes": 8,
+    "passed_frames": 8,
+    "coordinate_hash_mismatch_count": 0,
+    "maximum_coordinate_error_index": 0.00003092895819634123,
+    "minimum_raw_label_agreement": 1.0,
+    "minimum_bone_mask_iou": 1.0,
+    "original_verdict": "PROJECTION_REPAIR_BLOCKED",
+    "corrected_verdict": "PROJECTION_PARITY_PASS"
+  },
+  "original_verifier_failure": {
+    "gate": "ACQUISITION_FRESHNESS",
+    "affected_frame_sequences": [3, 6],
+    "cause": "first frames of reset segments were compared using the single-trajectory rule"
+  },
+  "corrected_cpu_verification": {
+    "job_id": 51810728,
+    "focused_tests_passed": 14,
+    "all_five_gates_passed": true,
+    "pixels_or_poses_changed": false,
+    "report": "sessions/s0010tpscv5_smoke/verification_report_corrected.json"
+  },
+  "development_dataset": {
+    "planned_frames": 300,
+    "saved_frames": 0,
+    "planned_sessions": 6,
+    "completed_sessions": 0,
+    "training_eligible_samples": 0
+  },
+  "historical_results_modified": false,
+  "model_training_run": "NOT_RUN",
+  "next_protocol": "sonogym-s0010-tp-surface-core-dataset-v6",
+  "stage3": "OUT_OF_SCOPE"
+}

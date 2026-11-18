@@ -1,30 +1,31 @@
 # Setup status
 
-## 2026-11-17: TP dataset capture v4 verifies smoke and exposes episode-horizon blocker
+## 2026-11-17: segmented TP smoke passes after reset-boundary verifier correction
 
 The trainer partitions eligible rows before fitting: only `train` enters `fit()`, calibration
 selects operating thresholds, and development evaluation remains read-only.  Actor-visible
 background proposals, per-split unique-image gates, checkpoint save/reload verification and the
 strict serialized-coordinate hash gate are implemented.
 
-Approved GPU job `51808727` passed all five v4 smoke gates on 8 / 8 synchronized frames, with zero
-coordinate-hash mismatches, raw-label agreement and bone-mask IoU both 1.0, and maximum coordinate
-error `2.7224e-05` index.  The first dataset session then reached the fixed 600-step episode horizon:
-11 waypoints completed in memory, action 599 returned `truncated=true`, and no development frame was
-persisted.
+GPU job `51810449` acquired 8 / 8 synchronized v5 smoke frames across three reset segments.  All
+frames passed native/full-pose replay, serialized hashes and viewpoint diversity; maximum coordinate
+error was `3.0929e-05` index.  The original verifier incorrectly marked frame 3 and frame 6 stale
+because it applied the single-trajectory rule to the first frame after a reset, so the job stopped
+before dataset capture.
 
-Protocol v5 now resets at most every three frames.  Its declared worst-case segment budget is
-`350 + 2*100 = 550` actions, below the unchanged 600-step horizon; each segment has a distinct reset
-identity and no cross-reset viewpoint history.  Pinned CPU job `51809584` passed 65 / 65 tests in 8
-seconds with four CPUs and zero GPUs.  V5 has not run.
+The correction requires real action, accepted/completed movement and a technically valid image at
+every segment start, but does not compare that frame with the prior reset.  CPU job `51810728`
+reverified the unchanged v5 files with all five gates passing and preserved the original report.
+Protocol v6 changes no acquisition setting.  Pinned CPU job `51810903` passed 72 / 72 tests in 9
+seconds with four CPUs and zero GPUs.  V6 has not run.
 
 The readiness state remains **`DATASET_INCOMPLETE`**: 0 / 300 development frames and zero
 training-eligible samples.  L4/L5 RIGHT TP surface-core anatomy and image-semantic decisions remain
-pending; no real model was fitted.  The next approval is one smoke-gated v5 capture, followed by
+pending; no real model was fitted.  The next approval is one smoke-gated v6 capture, followed by
 import of exact per-overlay review decisions before any fitting.
 
-- Protocol-v5 commit: `86a043b`; segmented implementation commit: `11cd5a4`.
-- V4 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v4_result.json`.
+- Protocol-v6 commit: `ce5e06c`; corrected implementation commit: `a3d0c8f`.
+- V5 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v5_result.json`.
 - Readiness report: `docs/research/sonogym_s0010_tp_surface_core_dataset_readiness.md`.
 
 ## 2026-11-17: synchronized TP surface-core smoke passes; dataset remains incomplete

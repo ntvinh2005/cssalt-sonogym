@@ -3,23 +3,22 @@
 | Result | Value |
 |---|---|
 | Final readiness | `DATASET_INCOMPLETE` |
-| Verified real acquisition | job `51808727`; synchronized v4 smoke 8/8; dataset 0/300 |
-| Repair executions | v2/v3 failures preserved; v4 job `51808727` smoke pass then dataset timeout |
+| Verified real acquisition | job `51810449`; synchronized segmented v5 smoke 8/8; dataset 0/300 |
+| Repair executions | v4 timeout preserved; v5 job `51810449` captured segmented smoke then verifier mismatch |
 | Synchronized smoke | **PASS**, 8/8 reloaded frames pass all five gates |
 | Development dataset | **NOT COLLECTED**, 0/300 frames across the six preassigned sessions |
 | Review candidates | 3 verified geometric intersections: 1 L4 RIGHT TP core and 2 L5 RIGHT TP core |
 | Training eligibility | 0 samples; anatomy and image-semantic review remain pending |
 | Training implementation | train-only fit, calibration-only threshold selection, development-only evaluation, background class, save/reload |
-| Current CPU regression | job `51809584`; 65/65 tests; 4 CPUs; 8 s; exit `0:0` |
-| Next sealed protocol | v5, SHA-256 `7b6cbef22a8e0e564f25c3bdad21bc20714fdd389ef108c4e45a0eed678ddac2`; not run |
+| Current CPU regression | job `51810903`; 72/72 tests; 4 CPUs; 9 s; exit `0:0` |
+| Next sealed protocol | v6, SHA-256 `55fc3d7a426e8475421e6c77b3c98acaa22289fa7667633447ea4e4a7cb9142d`; not run |
 
-The bounded job fixed and verified synchronized acquisition, but it stopped after smoke because the
-verifier compared the saved float32 coordinate map against a hash computed before the collector's
-float64-to-float32 serialization.  Ultrasound and raw-label hashes matched.  The post-run CPU audit
-preserved that defect, added hashes of the actual saved arrays, and demonstrated exact replay from
-the reloaded files.  Because the one authorized GPU job had already ended, no second job was
-submitted in that protocol and the required six-session dataset remains absent.  Later repair jobs
-are preserved separately in Section 4; none collected a development-dataset frame.
+The first bounded capture exposed a float64-to-float32 hash mismatch, and later repairs preserved
+that result while fixing serialized hashing.  V4 then passed smoke but reached the 600-step episode
+horizon during its first development session.  Segmented V5 acquired 8/8 synchronized smoke frames
+across three reset trajectories.  Its original verifier incorrectly rejected the first frames after
+reset; CPU re-verification of the unchanged saved arrays passed all five gates after that rule was
+corrected.  The V5 wrapper had already stopped, so the required six-session dataset remains absent.
 
 ## 1. Acquisition synchronization and physical viewpoints
 
@@ -175,9 +174,9 @@ cover all three classes and all three splits; no real research model is fitted.
 
 | what | value | spec |
 |---|---|---|
-| CPU job | `51809584` | 4 CPUs, 8 GB, pinned environment |
-| source | `86a043b` | segmented protocol-v5 revision |
-| capture retry | protocol v5 | same waypoint bank, gates, splits and resources as v4; reset every 3 frames |
+| CPU job | `51810903` | 4 CPUs, 8 GB, pinned environment |
+| source | `ce5e06c` | corrected segmented protocol-v6 revision |
+| capture retry | protocol v6 | acquisition contract unchanged from v5; corrected reset-boundary verifier |
 
 ```bash
 python tests/test_acquisition_integrity.py
@@ -189,7 +188,7 @@ python tests/test_tp_surface_core_capture_contract.py
 
 ### Results and verdict
 
-The pinned run passed `11 + 11 + 23 + 4 + 16 = 65` tests.  The synthetic end-to-end test resolved
+The pinned run passed `14 + 11 + 23 + 4 + 20 = 72` tests.  The synthetic end-to-end test resolved
 180 feature rows, fitted only training IDs, calibrated only on calibration IDs, evaluated only on
 development IDs, and verified checkpoint reload identity.  Job `51798167` independently passed all
 five strict smoke gates before the first bulk session exposed float32 rotation validation; job
@@ -198,8 +197,11 @@ allow-list.  Both source defects have focused regression coverage.  V4 subsequen
 smoke, then the first dataset session reached the fixed episode horizon at action 599 after 11
 completed waypoints.  Protocol v5 splits the unchanged waypoint sequence into at-most-three-frame
 reset segments; its worst-case declared segment budget is 550 actions against the 600-step horizon.
+V5 acquired all 8 smoke frames across three resets, but its verifier treated segment-start frames 3
+and 6 as stale.  CPU job `51810728` applied the corrected reset rule to the unchanged stored files
+and returned all five gates true.
 
-**Verdict: v4 synchronized smoke PASS; dataset capture FAIL; segmented v5 CPU preflight PASS.**
+**Verdict: segmented v5 acquisition PASS after corrected replay; dataset NOT RUN; v6 CPU preflight PASS.**
 
 ### Reading it
 
@@ -213,14 +215,14 @@ reset segments; its worst-case declared segment budget is 550 actions against th
 
 - `workflows/two_stage_navigation/train_tp_surface_core.py`
 - `source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/tp_surface_core_dataset.py`
-- `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v5.yaml`
-- `hpg/jobs/s0010_tp_surface_core_dataset_v5.sbatch`
+- `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.yaml`
+- `hpg/jobs/s0010_tp_surface_core_dataset_v6.sbatch`
 
 ## 5. Exact remaining gate
 
 ### Criterion
 
-Training can start only after protocol v5 captures all 300 frames, every session passes strict
+Training can start only after protocol v6 captures all 300 frames, every session passes strict
 reloaded correspondence/hash/freshness checks, and review imports produce at least 40/10/10 unique
 positive images per active class plus reviewed background examples in each split.
 
@@ -230,8 +232,8 @@ No additional method is run in this section.
 
 ### Setup
 
-The next execution requires separate approval because the approved v4 GPU allocation has been
-consumed.  The ready job is `hpg/jobs/s0010_tp_surface_core_dataset_v5.sbatch`.
+The next execution requires separate approval because the approved v5 GPU allocation has been
+consumed.  The ready job is `hpg/jobs/s0010_tp_surface_core_dataset_v6.sbatch`.
 
 ### Results and verdict
 
@@ -243,13 +245,13 @@ checksums; SAP remains excluded.
 
 ### Reading it
 
-- The next bounded action is one v5 smoke-gated segmented capture, not model training.
+- The next bounded action is one v6 smoke-gated segmented capture, not model training.
 - After capture, the reviewer must classify exact overlays as supported, ambiguous, occluded or
   rejected and approve or reject the exact L4/L5 surface-core geometry.
 - If imported review counts pass no-fit, the supplied fit command can run without another capture.
 
 ### Files
 
-- Protocol: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v5.yaml`
-- Protocol seal: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v5.sha256`
+- Protocol: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.yaml`
+- Protocol seal: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.sha256`
 
