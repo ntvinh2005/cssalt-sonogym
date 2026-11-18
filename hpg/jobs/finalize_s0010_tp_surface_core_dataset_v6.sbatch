@@ -4,8 +4,6 @@ set -euo pipefail
 : "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported by the submit command}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
-# shellcheck source=common.sh
-source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811"
 PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.yaml"
