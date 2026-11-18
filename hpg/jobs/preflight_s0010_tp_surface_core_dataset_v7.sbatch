@@ -25,3 +25,4 @@ cd "$SONOGYM_PROJECT_DIR"
     workflows/two_stage_navigation/prepare_tp_surface_core_dataset.py \
     workflows/two_stage_navigation/package_tp_surface_core_review.py
 bash -n hpg/jobs/s0010_tp_surface_core_dataset_v7.sbatch
+bash -n hpg/jobs/s0010_tp_surface_core_dataset_v8.sbatch

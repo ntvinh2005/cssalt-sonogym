@@ -61,6 +61,12 @@ PROTOCOL_V7 = (
 )
 SEAL_V7 = PROTOCOL_V7.with_suffix(".sha256")
 JOB_V7 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v7.sbatch"
+PROTOCOL_V8 = (
+    ROOT
+    / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v8.yaml"
+)
+SEAL_V8 = PROTOCOL_V8.with_suffix(".sha256")
+JOB_V8 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v8.sbatch"
 
 
 class CaptureContractTests(unittest.TestCase):
@@ -330,6 +336,49 @@ class CaptureV7ContractTests(unittest.TestCase):
 
     def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
         protocol_id = yaml.safe_load(PROTOCOL_V7.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+        self.assertIn(
+            protocol_id,
+            (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text(),
+        )
+
+
+class CaptureV8ContractTests(unittest.TestCase):
+    def test_protocol_seal_and_job_pointer(self) -> None:
+        expected = SEAL_V8.read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V8.read_bytes()).hexdigest(), expected)
+        job = JOB_V8.read_text()
+        self.assertIn(PROTOCOL_V8.name, job)
+        self.assertIn(SEAL_V8.name, job)
+
+    def test_recovery_preserves_tolerance_and_episode_budget(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V8.read_text())
+        sampling = protocol["sampling"]
+        self.assertEqual(protocol["amendment"]["prior_job"], 51815016)
+        self.assertEqual(sampling["physical_tracking_position_tolerance_mm"], 1.5)
+        self.assertEqual(sampling["physical_tracking_orientation_tolerance_deg"], 1.0)
+        self.assertEqual(sampling["maximum_action_steps_per_waypoint"], 150)
+        self.assertEqual(sampling["trajectory_start_frames"], list(range(0, 24, 2)))
+        self.assertLessEqual(
+            sampling["maximum_initial_positioning_steps"]
+            + sampling["maximum_action_steps_per_waypoint"],
+            600,
+        )
+
+    def test_only_verified_v7_train_is_inherited(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V8.read_text())
+        inherited_v7 = [
+            row["session_id"]
+            for row in protocol["sessions"]
+            if row["role"] == "inherited_supplement"
+        ]
+        self.assertEqual(inherited_v7, ["s0010tpscv7_train_l4_00"])
+        self.assertNotIn("s0010tpscv7_cal_l4_00", inherited_v7)
+
+    def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V8.read_text())["protocol_id"]
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))

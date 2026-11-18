@@ -1,0 +1,182 @@
+protocol_id: sonogym-s0010-tp-surface-core-dataset-v8
+status: PRE_GPU_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-s0010-tp-surface-core-dataset-v7
+  prior_job: 51815016
+  reason: >-
+    Preserve the valid V7 smoke and train supplement. Recover calibration/development after one
+    calibration waypoint reached 0.137 mm position error but remained at 1.729 degrees orientation
+    error after the frozen 100-step limit. Use 150 steps with at most two frames per reset segment,
+    keeping the worst-case 350 + 150 = 500 steps below the 600-step episode horizon.
+source:
+  implementation_commit: adb5a6d88ecf1481dca64f6f3edfe099af0ad97b
+  base_capture_job: 51811811
+  partial_supplement_job: 51815016
+  correction_geometry_job: 51779234
+  correction_geometry_status: PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_coverage_collection: true
+  semantic_training_authorized: false
+  active_landmarks: [L4_RIGHT_transverse_process, L5_RIGHT_transverse_process]
+  excluded_landmarks: [SAP, whole_TP, MBB_target]
+information_boundaries:
+  actor: [clean_ultrasound_pixels, executed_relative_motion, acquisition_feedback]
+  privileged_collection: [candidate_surface_geometry, raw_labels, full_transforms, native_pixel_to_volume_coordinates]
+sampling:
+  expected_frames_per_session: 24
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.0
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 3600
+  trajectory_start_frames: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio: [0.02, 0.02, 0.6]
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    smoke:
+      - [138, 134, 2.84]
+      - [144, 134, 2.88]
+      - [150, 134, 2.92]
+      - [156, 134, 2.96]
+      - [162, 134, 2.84]
+      - [162, 140, 2.88]
+      - [156, 140, 2.92]
+      - [150, 140, 2.96]
+    l4_train_supplement:
+      - [138, 136, 2.86]
+      - [144, 136, 2.90]
+      - [150, 136, 2.94]
+      - [156, 136, 2.86]
+      - [162, 136, 2.90]
+      - [162, 142, 2.94]
+      - [156, 142, 2.86]
+      - [150, 142, 2.90]
+      - [144, 142, 2.94]
+      - [138, 142, 2.86]
+      - [138, 148, 2.90]
+      - [144, 148, 2.94]
+    l4_supplement:
+      - [138, 134, 2.84]
+      - [144, 134, 2.88]
+      - [150, 134, 2.92]
+      - [156, 134, 2.96]
+      - [162, 134, 2.84]
+      - [162, 140, 2.88]
+      - [156, 140, 2.92]
+      - [150, 140, 2.96]
+      - [144, 140, 2.84]
+      - [138, 140, 2.88]
+      - [138, 146, 2.92]
+      - [144, 146, 2.96]
+      - [150, 146, 2.84]
+      - [156, 146, 2.88]
+      - [162, 146, 2.92]
+      - [162, 152, 2.96]
+      - [156, 152, 2.84]
+      - [150, 152, 2.88]
+      - [144, 152, 2.92]
+      - [138, 152, 2.96]
+      - [138, 158, 2.84]
+      - [144, 158, 2.88]
+      - [150, 158, 2.92]
+      - [156, 158, 2.96]
+sessions:
+  - {session_id: s0010tpscv6_train_00, role: inherited_dataset, split: train, seed: 2026111710, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_01, role: inherited_dataset, split: train, seed: 2026111711, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_02, role: inherited_dataset, split: train, seed: 2026111712, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_03, role: inherited_dataset, split: train, seed: 2026111713, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_cal_00, role: inherited_dataset, split: calibration, seed: 2026111720, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_dev_00, role: inherited_dataset, split: development_evaluation, seed: 2026111730, expected_frame_count: 50}
+  - {session_id: s0010tpscv7_train_l4_00, role: inherited_supplement, split: train, seed: 2026111810, expected_frame_count: 24}
+  - session_id: s0010tpscv8_smoke
+    role: smoke
+    split: opened_development_smoke
+    seed: 2026111900
+    reset_id: s0010tpscv8_smoke
+    absolute_waypoint_bank_id: smoke
+    waypoint_offset_index: [0.0, 0.0, 0.0]
+    expected_frame_count: 8
+  - session_id: s0010tpscv8_train_l4_00
+    role: supplemental_dataset
+    split: train
+    seed: 2026111910
+    reset_id: s0010tpscv8_train_l4_00
+    absolute_waypoint_bank_id: l4_train_supplement
+    waypoint_offset_index: [-3.0, 2.0, 0.02]
+    expected_frame_count: 12
+  - session_id: s0010tpscv8_cal_l4_00
+    role: supplemental_dataset
+    split: calibration
+    seed: 2026111920
+    reset_id: s0010tpscv8_cal_l4_00
+    absolute_waypoint_bank_id: l4_supplement
+    waypoint_offset_index: [0.5, -1.5, -0.02]
+    expected_frame_count: 24
+  - session_id: s0010tpscv8_dev_l4_00
+    role: supplemental_dataset
+    split: development_evaluation
+    seed: 2026111930
+    reset_id: s0010tpscv8_dev_l4_00
+    absolute_waypoint_bank_id: l4_supplement
+    waypoint_offset_index: [2.5, 2.5, 0.025]
+    expected_frame_count: 24
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity: {maximum_position_error_mm: 10.0, maximum_orientation_error_deg: 10.0, minimum_l4_visible_fraction: 0.05}
+  quality: {visibility_normalization_fraction: 0.20}
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 8
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.90
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+  require_serialized_array_hash_integrity: true
+label_preparation:
+  surface_slab_tolerance_mm: 1.5
+  proposal_column_stride_pixels: 12
+  patch_width_pixels: 48
+  patch_depth_pixels: 80
+  feature_size_pixels: 16
+  anatomy_approval_required: true
+  image_semantic_review_required: true
+training_preflight:
+  estimator: ExtraTreesClassifier
+  n_estimators: 240
+  cpu_threads: 4
+  minimum_reviewed_positive_images_per_class: {train: 40, calibration: 10, development_evaluation: 10}
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  maximum_storage_growth_gb: 1.0
+  maximum_new_gpu_jobs: 1
+change_policy:
+  - Reuse only V6 and verified V7 train frames; never use the failed V7 calibration partial state.
+  - Smoke failure stops the job before supplemental capture.
+  - Candidate coverage deficits must be empty before packaging.
+  - Do not weaken replay, freshness, anatomy, or semantic-review gates.
+  - Do not fit a detector in this protocol.
