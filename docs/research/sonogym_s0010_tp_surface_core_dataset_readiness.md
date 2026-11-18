@@ -3,22 +3,22 @@
 | Result | Value |
 |---|---|
 | Final readiness | `DATASET_INCOMPLETE` |
-| Verified real acquisition | job `51810449`; synchronized segmented v5 smoke 8/8; dataset 0/300 |
-| Repair executions | v4 timeout preserved; v5 job `51810449` captured segmented smoke then verifier mismatch |
+| Verified real acquisition | job `51811811`; v6 smoke 8/8 plus development 300/300 |
+| Repair executions | v4 timeout and v5 verifier mismatch preserved; v6 completed `0:0` |
 | Synchronized smoke | **PASS**, 8/8 reloaded frames pass all five gates |
-| Development dataset | **NOT COLLECTED**, 0/300 frames across the six preassigned sessions |
-| Review candidates | 3 verified geometric intersections: 1 L4 RIGHT TP core and 2 L5 RIGHT TP core |
+| Development dataset | **COLLECTED**, 300/300 distinct frames across six preassigned sessions |
+| Review candidates | 414 geometric-intersection patches; 168 split-stratified review assets |
 | Training eligibility | 0 samples; anatomy and image-semantic review remain pending |
 | Training implementation | train-only fit, calibration-only threshold selection, development-only evaluation, background class, save/reload |
-| Current CPU regression | job `51810903`; 72/72 tests; 4 CPUs; 9 s; exit `0:0` |
-| Next sealed protocol | v6, SHA-256 `55fc3d7a426e8475421e6c77b3c98acaa22289fa7667633447ea4e4a7cb9142d`; not run |
+| CPU finalization | job `51813176`; 26/26 tests; 4 CPUs; 1:16; exit `0:0` |
+| Final package | SHA-256 `259746e83b127c573f47eda31dbecd3d6e8edcb4e62f4953eda442420191402d` |
 
-The first bounded capture exposed a float64-to-float32 hash mismatch, and later repairs preserved
-that result while fixing serialized hashing.  V4 then passed smoke but reached the 600-step episode
-horizon during its first development session.  Segmented V5 acquired 8/8 synchronized smoke frames
-across three reset trajectories.  Its original verifier incorrectly rejected the first frames after
-reset; CPU re-verification of the unchanged saved arrays passed all five gates after that rule was
-corrected.  The V5 wrapper had already stopped, so the required six-session dataset remains absent.
+The first bounded capture exposed a float64-to-float32 hash mismatch, V4 reached the fixed episode
+horizon, and V5 exposed a reset-boundary verifier error.  Those failures remain preserved.  V6
+passed strict smoke and automatically collected all six 50-frame development sessions.  Post-run
+auditing then found that 414 candidate patches represented fewer independent L4 source images than
+the preregistered planning gate; the corrected summary therefore remains `DATASET_INCOMPLETE`
+instead of treating correlated patches as independent evidence.
 
 ## 1. Acquisition synchronization and physical viewpoints
 
@@ -93,20 +93,29 @@ are excluded.
 
 ### Results and verdict
 
-Only the smoke session exists.  Its 16 candidate/frame rows contain 3 verified geometric
-intersections: smoke frame 1 with L4 core (336 projected core vertices, 165 uncertain), and frames
-6 and 7 with L5 core (312/0 and 469/180).  All three remain `NOT_REVIEWED` for acoustic visibility
-and semantic identity, `PENDING` for anatomy, and `training_eligible=false`.  The six planned
-dataset sessions and all train/calibration/development-evaluation counts are zero.
+All six dataset sessions contain 50 distinct synchronized observations, for 300 development images
+plus eight smoke images.  The actor-visible proposal path produced 2,940 candidate patches: 414
+geometric positive-review targets, 2,038 hard-negative review targets and 488 ambiguous rows.  The
+independent source-image counts are:
+
+| class | train | calibration | development evaluation |
+|---|---:|---:|---:|
+| background / other structure | 199 | 50 | 49 |
+| L4 RIGHT TP surface core | 33 | 7 | 8 |
+| L5 RIGHT TP surface core | 53 | 13 | 16 |
+
+L4 is below the declared 40/10/10 planning target in every split.  All rows remain `NOT_REVIEWED`
+for acoustic visibility and semantic identity, `PENDING` for positive anatomy, and
+`training_eligible=false`.
 
 **Verdict: `DATASET_INCOMPLETE`.**
 
 ### Reading it
 
-- The three overlays are actionable review examples, not positive training labels.
+- The final package contains 168 unique-image review assets: background 40/10/10, all available
+  L4 candidates 33/7/8, and L5 40/10/10.
 - A geometric surface intersection does not prove a visible or distinguishable TP interface.
-- The exact missing data are the six named 50-frame sessions in the frozen protocol; no split can
-  be activated from the smoke alone.
+- Review cannot manufacture the missing 7/3/2 independent L4 candidate images.
 
 ### Files
 
@@ -132,11 +141,11 @@ export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/
 
 ### Results and verdict
 
-The real path resolved all 3 available candidate crops and produced finite 774-value features.  It
+The real path resolved all 2,940 candidate crops and produced finite 774-value features.  It
 instantiated a deterministic 240-tree `ExtraTreesClassifier`, found no cross-split exact duplicates,
-and recorded `fit_called=false`.  It returned code 3 with `ENGINEERING_PREFLIGHT_ONLY` because the
-dataset is incomplete, geometry approval is pending, reviewed hard negatives are absent and every
-required split/class count is zero.
+and recorded `fit_called=false`.  It returned code 3 with `ENGINEERING_PREFLIGHT_ONLY` because L4
+candidate coverage is incomplete, geometry approval is pending, and all semantic labels remain
+excluded.
 
 **Verdict: implementation path works; fitting is correctly blocked.**
 
@@ -174,9 +183,9 @@ cover all three classes and all three splits; no real research model is fitted.
 
 | what | value | spec |
 |---|---|---|
-| CPU job | `51810903` | 4 CPUs, 8 GB, pinned environment |
-| source | `ce5e06c` | corrected segmented protocol-v6 revision |
-| capture retry | protocol v6 | acquisition contract unchanged from v5; corrected reset-boundary verifier |
+| capture job | `51811811` | one L4, 4 CPUs, 30 GB; 6:58; exit `0:0` |
+| finalization job | `51813176` | 4 CPUs, 16 GB; 1:16; exit `0:0` |
+| source | `6ed6259` capture; `0e5b3c7` finalization | clean worktree at capture |
 
 ```bash
 python tests/test_acquisition_integrity.py
@@ -201,7 +210,7 @@ V5 acquired all 8 smoke frames across three resets, but its verifier treated seg
 and 6 as stale.  CPU job `51810728` applied the corrected reset rule to the unchanged stored files
 and returned all five gates true.
 
-**Verdict: segmented v5 acquisition PASS after corrected replay; dataset NOT RUN; v6 CPU preflight PASS.**
+**Verdict: v6 acquisition and replay PASS; 300-frame dataset collected; L4 coverage and review gates keep the dataset incomplete.**
 
 ### Reading it
 
@@ -222,9 +231,9 @@ and returned all five gates true.
 
 ### Criterion
 
-Training can start only after protocol v6 captures all 300 frames, every session passes strict
-reloaded correspondence/hash/freshness checks, and review imports produce at least 40/10/10 unique
-positive images per active class plus reviewed background examples in each split.
+Training can start only after review imports produce at least 40/10/10 unique positive images per
+active class plus reviewed background examples in each split.  V6 already satisfies capture and
+correspondence gates but lacks 7/3/2 L4 candidate images in train/calibration/development.
 
 ### Method
 
@@ -232,26 +241,26 @@ No additional method is run in this section.
 
 ### Setup
 
-The next execution requires separate approval because the approved v5 GPU allocation has been
-consumed.  The ready job is `hpg/jobs/s0010_tp_surface_core_dataset_v6.sbatch`.
+No further GPU execution is authorized.  The review-ready ZIP contains the exact geometry assets,
+168 stratified overlays, a decision template, synchronized smoke arrays and fail-closed preflight.
 
 ### Results and verdict
 
-Current counts remain 0/300 development frames and zero training-eligible samples.  L4 and L5 RIGHT
+Current counts are 300/300 development frames and zero training-eligible samples.  L4 and L5 RIGHT
 distal TP surface-core geometry and image-semantic decisions remain pending for the exact candidate
-checksums; SAP remains excluded.
+checksums; L4 candidate coverage is short; SAP remains excluded.
 
 **Verdict: `DATASET_INCOMPLETE`; real model fitting remains blocked.**
 
 ### Reading it
 
-- The next bounded action is one v6 smoke-gated segmented capture, not model training.
-- After capture, the reviewer must classify exact overlays as supported, ambiguous, occluded or
+- The reviewer must classify exact overlays as supported, ambiguous, occluded or
   rejected and approve or reject the exact L4/L5 surface-core geometry.
-- If imported review counts pass no-fit, the supplied fit command can run without another capture.
+- Even perfect review of all available L4 candidates cannot meet 40/10/10; a separately approved
+  targeted L4 supplement or a preregistered smaller feasibility claim is required before fitting.
 
 ### Files
 
-- Protocol: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.yaml`
-- Protocol seal: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.sha256`
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6_result.json`
+- Review ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/s0010_tp_surface_core_review_51811811_final.zip`
 

@@ -1,31 +1,31 @@
 # Setup status
 
-## 2026-11-17: segmented TP smoke passes after reset-boundary verifier correction
+## 2026-11-17: TP V6 captures 300 frames; L4 unique-image coverage remains short
 
 The trainer partitions eligible rows before fitting: only `train` enters `fit()`, calibration
 selects operating thresholds, and development evaluation remains read-only.  Actor-visible
 background proposals, per-split unique-image gates, checkpoint save/reload verification and the
 strict serialized-coordinate hash gate are implemented.
 
-GPU job `51810449` acquired 8 / 8 synchronized v5 smoke frames across three reset segments.  All
-frames passed native/full-pose replay, serialized hashes and viewpoint diversity; maximum coordinate
-error was `3.0929e-05` index.  The original verifier incorrectly marked frame 3 and frame 6 stale
-because it applied the single-trajectory rule to the first frame after a reset, so the job stopped
-before dataset capture.
+GPU job `51811811` completed `0:0` in 6:58 on one L4 and four CPUs.  The eight-frame smoke and all
+six 50-frame development sessions passed native-map replay, synchronized full-pose replay,
+freshness, viewpoint-diversity and serialized-hash gates.  The 300 development observations have
+300 distinct exact hashes; maximum smoke coordinate disagreement was `3.0929e-05` volume index.
 
-The correction requires real action, accepted/completed movement and a technically valid image at
-every segment start, but does not compare that frame with the prior reset.  CPU job `51810728`
-reverified the unchanged v5 files with all five gates passing and preserved the original report.
-Protocol v6 changes no acquisition setting.  Pinned CPU job `51810903` passed 72 / 72 tests in 9
-seconds with four CPUs and zero GPUs.  V6 has not run.
+The actor-visible morphology proposal path produced 2,940 finite candidate patches: 414 geometric
+positive-review targets, 2,038 hard-negative review targets and 488 ambiguous rows.  Independent
+source-image coverage is background `199/50/49`, L4 RIGHT TP core `33/7/8`, and L5 RIGHT TP core
+`53/13/16` for train/calibration/development.  L4 is below the declared `40/10/10` planning target
+in every split, so correlated patches cannot turn this into a trainable complete dataset.
 
-The readiness state remains **`DATASET_INCOMPLETE`**: 0 / 300 development frames and zero
-training-eligible samples.  L4/L5 RIGHT TP surface-core anatomy and image-semantic decisions remain
-pending; no real model was fitted.  The next approval is one smoke-gated v6 capture, followed by
-import of exact per-overlay review decisions before any fitting.
+CPU finalization job `51813176` passed 5 training and 21 capture-contract tests, created 168
+split-stratified review assets, and verified 184 / 184 package checksums.  The readiness state is
+**`DATASET_INCOMPLETE`**: anatomical and image-semantic review is pending, zero rows are training
+eligible, and no real model was fitted.  SAP remains excluded.
 
-- Protocol-v6 commit: `ce5e06c`; corrected implementation commit: `a3d0c8f`.
-- V5 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v5_result.json`.
+- Capture commit: `6ed6259`; finalization commit: `0e5b3c7`.
+- V6 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6_result.json`.
+- Final review ZIP SHA-256: `259746e83b127c573f47eda31dbecd3d6e8edcb4e62f4953eda442420191402d`.
 - Readiness report: `docs/research/sonogym_s0010_tp_surface_core_dataset_readiness.md`.
 
 ## 2026-11-17: synchronized TP surface-core smoke passes; dataset remains incomplete
