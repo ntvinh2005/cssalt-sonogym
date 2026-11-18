@@ -620,6 +620,13 @@ def main() -> int:
             for root in capture_roots
             if (root / "sessions" / session["session_id"]).is_dir()
         ]
+        # A later capture root may preserve an earlier verified session through a
+        # symlink (V9 retains the V8 smoke session).  Treat references to the
+        # same canonical directory as one source, while continuing to fail on
+        # genuinely different directories with the same session identifier.
+        matching_session_dirs = list(
+            dict.fromkeys(path.resolve() for path in matching_session_dirs)
+        )
         if not matching_session_dirs:
             missing_sessions.append(session["session_id"])
             continue
