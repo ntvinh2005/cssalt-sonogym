@@ -49,6 +49,12 @@ PROTOCOL_V5 = (
 )
 SEAL_V5 = PROTOCOL_V5.with_suffix(".sha256")
 JOB_V5 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v5.sbatch"
+PROTOCOL_V6 = (
+    ROOT
+    / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.yaml"
+)
+SEAL_V6 = PROTOCOL_V6.with_suffix(".sha256")
+JOB_V6 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v6.sbatch"
 
 
 class CaptureContractTests(unittest.TestCase):
@@ -215,6 +221,54 @@ class CaptureV5ContractTests(unittest.TestCase):
 
     def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
         protocol_id = yaml.safe_load(PROTOCOL_V5.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+        self.assertIn(
+            protocol_id,
+            (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text(),
+        )
+
+
+class CaptureV6ContractTests(unittest.TestCase):
+    def test_protocol_seal_and_job_pointer(self) -> None:
+        expected = SEAL_V6.read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V6.read_bytes()).hexdigest(), expected)
+        job = JOB_V6.read_text()
+        self.assertIn(PROTOCOL_V6.name, job)
+        self.assertIn(SEAL_V6.name, job)
+        self.assertNotIn("dataset_protocol_v5", job)
+
+    def test_every_job_session_is_frozen_in_protocol(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V6.read_text())
+        frozen = {row["session_id"] for row in protocol["sessions"]}
+        job = JOB_V6.read_text()
+        declared = set(
+            re.findall(r"\bs0010tpscv6_(?:smoke|train_\d\d|cal_00|dev_00)\b", job)
+        )
+        self.assertEqual(declared, frozen)
+
+    def test_retry_preserves_the_v5_acquisition_contract(self) -> None:
+        previous = yaml.safe_load(PROTOCOL_V5.read_text())
+        current = yaml.safe_load(PROTOCOL_V6.read_text())
+        self.assertEqual(current["amendment"]["prior_job"], 51810449)
+        self.assertEqual(
+            current["source"]["implementation_commit"],
+            "a3d0c8f5acabd65f28f0d451551b1e7d107a52ec",
+        )
+        for key in (
+            "sampling",
+            "labels",
+            "dataset_gate",
+            "exact_pose_replay",
+            "label_preparation",
+            "training_preflight",
+            "resource_bound",
+        ):
+            self.assertEqual(current[key], previous[key])
+
+    def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V6.read_text())["protocol_id"]
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
