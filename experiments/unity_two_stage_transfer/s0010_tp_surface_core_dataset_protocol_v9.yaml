@@ -1,0 +1,141 @@
+protocol_id: sonogym-s0010-tp-surface-core-dataset-v9
+status: PRE_GPU_FROZEN
+amendment:
+  supersedes_protocol_id: sonogym-s0010-tp-surface-core-dataset-v8
+  prior_job: 51817719
+  reason: >-
+    Preserve all projection-verified V6, V7 and V8 sessions. The V8 development session failed
+    before materialization because its +0.025 rad offset requested 2.985 rad; the native command
+    saturated at 3.00 rad while the realized probe plateaued at 2.93649 rad, leaving 2.7796 degrees
+    tracking error against the requested pose. Capture only the missing development split with a
+    predeclared bank bounded at 2.94 rad, inside the demonstrated realized angular envelope.
+source:
+  implementation_commit: 924a2f05ed37ba90a86fb879d558ba3021c9b83e
+  base_capture_job: 51811811
+  partial_supplement_job: 51815016
+  verified_v8_job: 51817719
+  correction_geometry_job: 51779234
+  correction_geometry_status: PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_coverage_collection: true
+  semantic_training_authorized: false
+  active_landmarks: [L4_RIGHT_transverse_process, L5_RIGHT_transverse_process]
+  excluded_landmarks: [SAP, whole_TP, MBB_target]
+information_boundaries:
+  actor: [clean_ultrasound_pixels, executed_relative_motion, acquisition_feedback]
+  privileged_collection: [candidate_surface_geometry, raw_labels, full_transforms, native_pixel_to_volume_coordinates]
+sampling:
+  expected_frames_per_session: 24
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.0
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 3600
+  trajectory_start_frames: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio: [0.02, 0.02, 0.6]
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    l4_dev_completion:
+      - [138, 134, 2.82]
+      - [144, 134, 2.86]
+      - [150, 134, 2.90]
+      - [156, 134, 2.94]
+      - [162, 134, 2.82]
+      - [162, 140, 2.86]
+      - [156, 140, 2.90]
+      - [150, 140, 2.94]
+      - [144, 140, 2.82]
+      - [138, 140, 2.86]
+      - [138, 146, 2.90]
+      - [144, 146, 2.94]
+      - [150, 146, 2.82]
+      - [156, 146, 2.86]
+      - [162, 146, 2.90]
+      - [162, 152, 2.94]
+      - [156, 152, 2.82]
+      - [150, 152, 2.86]
+      - [144, 152, 2.90]
+      - [138, 152, 2.94]
+      - [138, 158, 2.82]
+      - [144, 158, 2.86]
+      - [150, 158, 2.90]
+      - [156, 158, 2.94]
+sessions:
+  - {session_id: s0010tpscv6_train_00, role: inherited_dataset, split: train, seed: 2026111710, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_01, role: inherited_dataset, split: train, seed: 2026111711, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_02, role: inherited_dataset, split: train, seed: 2026111712, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_train_03, role: inherited_dataset, split: train, seed: 2026111713, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_cal_00, role: inherited_dataset, split: calibration, seed: 2026111720, expected_frame_count: 50}
+  - {session_id: s0010tpscv6_dev_00, role: inherited_dataset, split: development_evaluation, seed: 2026111730, expected_frame_count: 50}
+  - {session_id: s0010tpscv7_train_l4_00, role: inherited_supplement, split: train, seed: 2026111810, expected_frame_count: 24}
+  - {session_id: s0010tpscv8_smoke, role: smoke, split: opened_development_smoke, seed: 2026111900, expected_frame_count: 8}
+  - {session_id: s0010tpscv8_train_l4_00, role: inherited_supplement, split: train, seed: 2026111910, expected_frame_count: 12}
+  - {session_id: s0010tpscv8_cal_l4_00, role: inherited_supplement, split: calibration, seed: 2026111920, expected_frame_count: 24}
+  - session_id: s0010tpscv9_dev_l4_00
+    role: supplemental_dataset
+    split: development_evaluation
+    seed: 2026112030
+    reset_id: s0010tpscv9_dev_l4_00
+    absolute_waypoint_bank_id: l4_dev_completion
+    waypoint_offset_index: [2.5, 2.5, 0.0]
+    expected_frame_count: 24
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity: {maximum_position_error_mm: 10.0, maximum_orientation_error_deg: 10.0, minimum_l4_visible_fraction: 0.05}
+  quality: {visibility_normalization_fraction: 0.20}
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 8
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.90
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+  require_serialized_array_hash_integrity: true
+label_preparation:
+  surface_slab_tolerance_mm: 1.5
+  proposal_column_stride_pixels: 12
+  patch_width_pixels: 48
+  patch_depth_pixels: 80
+  feature_size_pixels: 16
+  anatomy_approval_required: true
+  image_semantic_review_required: true
+training_preflight:
+  estimator: ExtraTreesClassifier
+  n_estimators: 240
+  cpu_threads: 4
+  minimum_reviewed_positive_images_per_class: {train: 40, calibration: 10, development_evaluation: 10}
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  maximum_storage_growth_gb: 1.0
+  maximum_new_gpu_jobs: 1
+change_policy:
+  - Reuse only projection-verified sessions; never use failed V7 calibration or failed V8 development partial state.
+  - The completion bank contains no requested angle above 2.94 rad.
+  - Candidate coverage deficits must be empty before packaging.
+  - Do not weaken replay, freshness, anatomy, or semantic-review gates.
+  - Do not fit a detector in this protocol.

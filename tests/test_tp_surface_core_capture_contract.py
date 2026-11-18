@@ -67,6 +67,12 @@ PROTOCOL_V8 = (
 )
 SEAL_V8 = PROTOCOL_V8.with_suffix(".sha256")
 JOB_V8 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v8.sbatch"
+PROTOCOL_V9 = (
+    ROOT
+    / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v9.yaml"
+)
+SEAL_V9 = PROTOCOL_V9.with_suffix(".sha256")
+JOB_V9 = ROOT / "hpg/jobs/s0010_tp_surface_core_dataset_v9.sbatch"
 
 
 class CaptureContractTests(unittest.TestCase):
@@ -379,6 +385,57 @@ class CaptureV8ContractTests(unittest.TestCase):
 
     def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
         protocol_id = yaml.safe_load(PROTOCOL_V8.read_text())["protocol_id"]
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+        self.assertIn(
+            protocol_id,
+            (ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text(),
+        )
+
+
+class CaptureV9ContractTests(unittest.TestCase):
+    def test_protocol_seal_and_job_pointer(self) -> None:
+        expected = SEAL_V9.read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V9.read_bytes()).hexdigest(), expected)
+        job = JOB_V9.read_text()
+        self.assertIn(PROTOCOL_V9.name, job)
+        self.assertIn(SEAL_V9.name, job)
+
+    def test_only_missing_development_session_is_captured(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V9.read_text())
+        captured = [
+            row for row in protocol["sessions"] if row["role"] == "supplemental_dataset"
+        ]
+        self.assertEqual([row["session_id"] for row in captured], ["s0010tpscv9_dev_l4_00"])
+        self.assertEqual(captured[0]["split"], "development_evaluation")
+        job = JOB_V9.read_text()
+        self.assertIn("SESSION_ID=s0010tpscv9_dev_l4_00", job)
+        self.assertNotIn("s0010tpscv8_dev_l4_00", job)
+
+    def test_completion_bank_excludes_demonstrated_unreachable_angles(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V9.read_text())
+        sampling = protocol["sampling"]
+        bank = sampling["absolute_waypoint_banks_index"]["l4_dev_completion"]
+        session = next(
+            row for row in protocol["sessions"] if row["session_id"] == "s0010tpscv9_dev_l4_00"
+        )
+        requested_angles = [float(row[2]) + float(session["waypoint_offset_index"][2]) for row in bank]
+        self.assertEqual(len(requested_angles), 24)
+        self.assertLessEqual(max(requested_angles), 2.94)
+        self.assertNotIn(2.985, requested_angles)
+        self.assertEqual(sampling["physical_tracking_orientation_tolerance_deg"], 1.0)
+
+    def test_failed_partials_are_not_inherited(self) -> None:
+        protocol = yaml.safe_load(PROTOCOL_V9.read_text())
+        inherited = {row["session_id"] for row in protocol["sessions"]}
+        self.assertNotIn("s0010tpscv7_cal_l4_00", inherited)
+        self.assertNotIn("s0010tpscv8_dev_l4_00", inherited)
+        self.assertIn("s0010tpscv8_train_l4_00", inherited)
+        self.assertIn("s0010tpscv8_cal_l4_00", inherited)
+
+    def test_collector_and_verifier_accept_segmented_protocol(self) -> None:
+        protocol_id = yaml.safe_load(PROTOCOL_V9.read_text())["protocol_id"]
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
