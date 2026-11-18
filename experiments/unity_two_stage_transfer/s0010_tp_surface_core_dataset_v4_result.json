@@ -1,0 +1,42 @@
+{
+  "schema": "sonogym-tp-surface-core-dataset-result-v1",
+  "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v4",
+  "job_id": 51808727,
+  "execution_commit": "4078b53efd8bbd54ef55d0caf3dea090d45af7ee",
+  "scheduler_state": "FAILED",
+  "elapsed_seconds": 91,
+  "exit_code": "5:0",
+  "final_readiness": "DATASET_INCOMPLETE",
+  "smoke": {
+    "frames": 8,
+    "distinct_ultrasound_hashes": 8,
+    "passed_frames": 8,
+    "coordinate_hash_mismatch_count": 0,
+    "maximum_coordinate_error_index": 0.00002722403920074612,
+    "minimum_raw_label_agreement": 1.0,
+    "minimum_bone_mask_iou": 1.0,
+    "verdict": "PROJECTION_PARITY_PASS"
+  },
+  "development_dataset": {
+    "planned_frames": 300,
+    "saved_frames": 0,
+    "planned_sessions": 6,
+    "completed_sessions": 0,
+    "training_eligible_samples": 0
+  },
+  "failure": {
+    "session_id": "s0010tpscv4_train_00",
+    "failure_stage": "DATASET_SESSION_BEFORE_PERSISTENCE",
+    "completed_waypoints_in_memory": 11,
+    "recorded_action_rows": 599,
+    "maximum_episode_steps": 600,
+    "failed_frame_sequence": 11,
+    "truncated": true,
+    "command_position_mapping_error_index": 42.320460653784835,
+    "cause": "continuous 50-view session reached the fixed episode horizon"
+  },
+  "historical_results_modified": false,
+  "model_training_run": "NOT_RUN",
+  "next_protocol": "sonogym-s0010-tp-surface-core-dataset-v5",
+  "stage3": "OUT_OF_SCOPE"
+}

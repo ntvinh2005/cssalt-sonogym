@@ -1,27 +1,30 @@
 # Setup status
 
-## 2026-11-17: TP dataset capture remains incomplete after bounded technical repairs
+## 2026-11-17: TP dataset capture v4 verifies smoke and exposes episode-horizon blocker
 
-The trainer now partitions eligible rows before fitting: only `train` enters `fit()`, calibration
+The trainer partitions eligible rows before fitting: only `train` enters `fit()`, calibration
 selects operating thresholds, and development evaluation remains read-only.  Actor-visible
 background proposals, per-split unique-image gates, checkpoint save/reload verification and the
-strict serialized-coordinate hash gate are implemented.  Final pinned CPU job `51807926` passed
-59 / 59 tests in 8 seconds with four CPUs and zero GPUs.
+strict serialized-coordinate hash gate are implemented.
 
-GPU job `51798167` passed all five strict smoke gates, then stopped before saving the first bulk
-session because float32 quaternion-to-matrix conversion exceeded the unchanged orthonormality
-tolerance.  Job `51798995` stopped before its first smoke frame because protocol v3 was missing from
-the explicit collector/verifier allow-lists.  Both defects now have focused regression tests, and
-sealed protocol v4 preserves the prior waypoint bank, splits, gates and resources, but v4 was not
-run because the bounded GPU allocation was consumed.
+Approved GPU job `51808727` passed all five v4 smoke gates on 8 / 8 synchronized frames, with zero
+coordinate-hash mismatches, raw-label agreement and bone-mask IoU both 1.0, and maximum coordinate
+error `2.7224e-05` index.  The first dataset session then reached the fixed 600-step episode horizon:
+11 waypoints completed in memory, action 599 returned `truncated=true`, and no development frame was
+persisted.
+
+Protocol v5 now resets at most every three frames.  Its declared worst-case segment budget is
+`350 + 2*100 = 550` actions, below the unchanged 600-step horizon; each segment has a distinct reset
+identity and no cross-reset viewpoint history.  Pinned CPU job `51809584` passed 65 / 65 tests in 8
+seconds with four CPUs and zero GPUs.  V5 has not run.
 
 The readiness state remains **`DATASET_INCOMPLETE`**: 0 / 300 development frames and zero
 training-eligible samples.  L4/L5 RIGHT TP surface-core anatomy and image-semantic decisions remain
-pending; no real model was fitted.  The next approval is one smoke-gated v4 capture, followed by
+pending; no real model was fitted.  The next approval is one smoke-gated v5 capture, followed by
 import of exact per-overlay review decisions before any fitting.
 
-- Protocol-v4 commit: `f8a4dbf`; registered implementation commit: `707e9ca`.
-- V3 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v3_result.json`.
+- Protocol-v5 commit: `86a043b`; segmented implementation commit: `11cd5a4`.
+- V4 result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v4_result.json`.
 - Readiness report: `docs/research/sonogym_s0010_tp_surface_core_dataset_readiness.md`.
 
 ## 2026-11-17: synchronized TP surface-core smoke passes; dataset remains incomplete
