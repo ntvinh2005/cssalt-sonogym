@@ -135,7 +135,7 @@ def locate_geometry(root: Path, candidate: str) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
-    parser.add_argument("--capture-root", type=Path, required=True)
+    parser.add_argument("--capture-root", type=Path, action="append", required=True)
     parser.add_argument("--geometry-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser.parse_args()
@@ -146,6 +146,7 @@ def main() -> int:
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
     if not protocol["protocol_id"].startswith("sonogym-s0010-tp-surface-core-dataset-v"):
         raise RuntimeError("unexpected protocol")
+    capture_roots = [path.resolve() for path in args.capture_root]
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
     geometries: dict[str, dict[str, Any]] = {}
@@ -175,10 +176,17 @@ def main() -> int:
     }
     overlay_seen: set[tuple[str, str, str]] = set()
     for session in protocol["sessions"]:
-        session_dir = args.capture_root / "sessions" / session["session_id"]
-        if not session_dir.is_dir():
+        matching_session_dirs = [
+            root / "sessions" / session["session_id"]
+            for root in capture_roots
+            if (root / "sessions" / session["session_id"]).is_dir()
+        ]
+        if not matching_session_dirs:
             missing_sessions.append(session["session_id"])
             continue
+        if len(matching_session_dirs) != 1:
+            raise RuntimeError(f"session appears in multiple capture roots: {session['session_id']}")
+        session_dir = matching_session_dirs[0]
         processed_sessions.append(session["session_id"])
         report = json.loads((session_dir / "verification_report.json").read_text())
         if report["verdict"] != "PROJECTION_PARITY_PASS":

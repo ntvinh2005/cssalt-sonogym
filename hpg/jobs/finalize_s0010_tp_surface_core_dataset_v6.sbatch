@@ -49,7 +49,8 @@ set -e
 
 "$PYTHON" workflows/two_stage_navigation/package_tp_surface_core_review.py \
     --run-dir "$RUN_DIR" --dataset-dir "$DATASET_DIR" --preflight-dir "$PREFLIGHT_DIR" \
-    --geometry-root "$GEOMETRY_ROOT" --output-zip "$OUTPUT_ZIP" \
+    --geometry-root "$GEOMETRY_ROOT" --smoke-session-id s0010tpscv6_smoke \
+    --output-zip "$OUTPUT_ZIP" \
     > "$RUN_DIR/results/review-package-final.log" 2>&1
 
 STAGING="${OUTPUT_ZIP%.zip}"

@@ -41,6 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--preflight-dir", type=Path, required=True)
     parser.add_argument("--geometry-root", type=Path, required=True)
+    parser.add_argument("--smoke-session-id", required=True)
     parser.add_argument("--output-zip", type=Path, required=True)
     return parser.parse_args()
 
@@ -77,7 +78,7 @@ def main() -> int:
         raise RuntimeError("review overlays are missing")
     shutil.copytree(review_source, staging / "verified_overlays")
 
-    smoke = run_dir / "sessions" / "s0010tpscv6_smoke"
+    smoke = run_dir / "sessions" / args.smoke_session_id
     copy_one(smoke / "verification_report.json", staging / "smoke_verification_report.json")
     copy_one(smoke / "public" / "ultrasound.npz", staging / "smoke_ultrasound.npz")
     copy_one(smoke / "privileged" / "raw_labels.npz", staging / "smoke_raw_labels.npz")
@@ -135,7 +136,7 @@ This simulator-only package contains synchronized ultrasound correspondence for 
 distal TP surface cores. It does not annotate whole TP, SAP, a medial branch nerve, an MBB target,
 or injection readiness.
 
-- Capture job: 51811811
+- Capture job: {run_dir.name}
 - Dataset status: `{summary['status']}`
 - Candidate rows: {summary['rows']}
 - Verified geometric intersections: {summary['verified_intersections']}
