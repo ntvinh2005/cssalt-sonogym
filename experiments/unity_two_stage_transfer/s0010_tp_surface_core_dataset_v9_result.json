@@ -1,0 +1,76 @@
+{
+  "schema": "sonogym-tp-surface-core-dataset-result-v2",
+  "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v9",
+  "job_id": 51818619,
+  "execution_commit": "8ddf9d9df70bd9a76ec183b3bba2d432be0b465a",
+  "implementation_commit": "924a2f05ed37ba90a86fb879d558ba3021c9b83e",
+  "review_import_commit": "46e25d96eb02b6022b7c3218d6d4a1850a540366",
+  "scheduler_state": "COMPLETED",
+  "elapsed_seconds": 128,
+  "exit_code": "0:0",
+  "resources": {
+    "gpu": "1x NVIDIA L4",
+    "cpu_cores": 4,
+    "requested_memory_gb": 30,
+    "maximum_rss_kb": 3394452,
+    "storage_bytes": 86061285
+  },
+  "completion_capture": {
+    "session_id": "s0010tpscv9_dev_l4_00",
+    "split": "development_evaluation",
+    "frames": 24,
+    "trajectories": 12,
+    "distinct_ultrasound_hashes": 24,
+    "total_action_steps": 1784,
+    "maximum_coordinate_error_index": 0.0000391379034425654,
+    "minimum_raw_label_agreement": 0.9999666666666667,
+    "minimum_bone_mask_iou": 1.0,
+    "clipped_samples": 0,
+    "coordinate_hash_mismatches": 0,
+    "gates": {
+      "NATIVE_MAP_REPLAY": true,
+      "SYNCHRONIZED_FULL_POSE_REPLAY": true,
+      "ACQUISITION_FRESHNESS": true,
+      "VIEWPOINT_DIVERSITY": true,
+      "ARRAY_HASH_INTEGRITY": true
+    },
+    "verdict": "PROJECTION_PARITY_PASS"
+  },
+  "combined_dataset": {
+    "development_frames_excluding_smoke": 384,
+    "sessions_excluding_smoke": 10,
+    "candidate_rows_including_opened_smoke": 3732,
+    "verified_geometric_intersection_rows": 558,
+    "cross_split_exact_duplicate_count": 0,
+    "candidate_unique_image_counts": {
+      "BACKGROUND_OR_OTHER_STRUCTURE": {"train": 234, "calibration": 74, "development_evaluation": 73},
+      "L4_RIGHT_TP_SURFACE_CORE": {"train": 49, "calibration": 14, "development_evaluation": 14},
+      "L5_RIGHT_TP_SURFACE_CORE": {"train": 55, "calibration": 15, "development_evaluation": 16}
+    },
+    "coverage_deficits": [],
+    "status": "ENGINEERING_READY_LABEL_REVIEW_PENDING"
+  },
+  "annotation": {
+    "geometry_status": "PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW",
+    "semantic_image_status": "NOT_REVIEWED",
+    "training_eligible_samples": 0,
+    "sap_included": false
+  },
+  "no_fit_preflight": {
+    "resolved_feature_rows": 3732,
+    "feature_width": 774,
+    "fit_called": false,
+    "checkpoint_saved": false,
+    "status": "ENGINEERING_PREFLIGHT_ONLY"
+  },
+  "review_package": {
+    "review_assets": 180,
+    "files": 197,
+    "zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9/51818619/s0010_tp_surface_core_review_51818619_final.zip",
+    "zip_sha256": "aec872965c310c8659a483a393f92efefb98ba7eca9e5af26f059b998876bb8b"
+  },
+  "final_readiness": "ENGINEERING_READY_LABEL_REVIEW_PENDING",
+  "model_training_run": "NOT_RUN",
+  "historical_results_modified": false,
+  "stage3": "OUT_OF_SCOPE"
+}

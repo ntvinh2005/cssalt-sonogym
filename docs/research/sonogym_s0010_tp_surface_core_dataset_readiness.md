@@ -227,40 +227,55 @@ and returned all five gates true.
 - `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v6.yaml`
 - `hpg/jobs/s0010_tp_surface_core_dataset_v6.sbatch`
 
-## 5. Exact remaining gate
+## 5. Completed coverage supplement and exact remaining gate
 
 ### Criterion
 
 Training can start only after review imports produce at least 40/10/10 unique positive images per
-active class plus reviewed background examples in each split.  V6 already satisfies capture and
-correspondence gates but lacks 7/3/2 L4 candidate images in train/calibration/development.
+active class plus reviewed background examples in each split.  The combined V6/V7/V8/V9 dataset
+must first close the prior 7/3/2 L4 image deficit without using failed partial sessions.
 
 ### Method
 
-No additional method is run in this section.
+V7 supplied a verified 24-frame training supplement but stopped before calibration.  V8 preserved
+that session and added verified 12-frame training and 24-frame calibration sessions; its
+development session failed because a 2.985-rad waypoint was outside the demonstrated realized
+angular envelope.  V9 replaced only that missing split with a sealed 24-frame bank bounded at
+2.94 rad, then rebuilt the dataset from verified sessions only.
 
 ### Setup
 
-No further GPU execution is authorized.  The review-ready ZIP contains the exact geometry assets,
-168 stratified overlays, a decision template, synchronized smoke arrays and fail-closed preflight.
+GPU completion job `51818619` used one L4, four CPUs and 30 GB and completed `0:0` in 2:08.  CPU
+jobs `51818555` and `51819343` passed 87 and 89 focused tests respectively.  The review-ready ZIP
+contains exact geometry assets, 180 stratified overlays, a decision template, synchronized smoke
+arrays and fail-closed preflight.
 
 ### Results and verdict
 
-Current counts are 300/300 development frames and zero training-eligible samples.  L4 and L5 RIGHT
-distal TP surface-core geometry and image-semantic decisions remain pending for the exact candidate
-checksums; L4 candidate coverage is short; SAP remains excluded.
+The combined dataset contains 384 development observations across ten sessions, plus the separate
+eight-frame opened smoke set.  Unique source-image coverage is background `234/74/73`, L4 RIGHT TP
+surface core `49/14/14`, and L5 RIGHT TP surface core `55/15/16` for
+train/calibration/development.  All exceed `40/10/10`; no session is missing and no exact image hash
+crosses splits.  All 3,732 actor-visible patches resolve to finite 774-value features.  Training
+eligibility remains zero solely because exact geometry and image-semantic decisions have not been
+approved; SAP remains excluded.
 
-**Verdict: `DATASET_INCOMPLETE`; real model fitting remains blocked.**
+**Verdict: `ENGINEERING_READY_LABEL_REVIEW_PENDING`; acquisition and coverage are complete, while
+real model fitting remains fail-closed on exact review decisions.**
 
 ### Reading it
 
-- The reviewer must classify exact overlays as supported, ambiguous, occluded or
-  rejected and approve or reject the exact L4/L5 surface-core geometry.
-- Even perfect review of all available L4 candidates cannot meet 40/10/10; a separately approved
-  targeted L4 supplement or a preregistered smaller feasibility claim is required before fitting.
+- The reviewer must complete all 180 checksum-bound rows: exact L4/L5 surface-core geometry,
+  acoustic visibility, semantic identity, reviewer identity and qualification.
+- `apply_tp_surface_core_review.py` rejects missing, duplicate or identity-mismatched decisions and
+  promotes only exact approved positives and visible reviewed negatives.
+- After import, `train_tp_surface_core.py --no-fit` must report `TRAINING_READY_FOR_APPROVAL`; only
+  then may the separately authorized fit command train on `train`, calibrate on `calibration` and
+  evaluate once on `development_evaluation`.
 
 ### Files
 
-- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6_result.json`
-- Review ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/s0010_tp_surface_core_review_51811811_final.zip`
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9_result.json`
+- Review ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9/51818619/s0010_tp_surface_core_review_51818619_final.zip`
+- Review ZIP SHA-256: `aec872965c310c8659a483a393f92efefb98ba7eca9e5af26f059b998876bb8b`
 

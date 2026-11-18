@@ -1,5 +1,29 @@
 # Setup status
 
+## 2026-11-17: TP candidate coverage complete; exact label review remains
+
+V9 completion job `51818619` completed `0:0` in 2:08 on one L4 and four CPUs.  Its 24/24
+development frames passed native-map replay, synchronized full-pose replay, freshness,
+viewpoint-diversity and array-hash integrity.  The prior V8 failure remains recorded: its requested
+2.985-rad development waypoint saturated physically and never reached the frozen 1-degree tracking
+tolerance.
+
+The verified combined dataset now has 384 development observations across ten sessions.  Unique
+image coverage is background `234/74/73`, L4 RIGHT TP surface core `49/14/14`, and L5 RIGHT TP
+surface core `55/15/16` for train/calibration/development, with no deficits or cross-split exact
+duplicates.  No-fit resolved all 3,732 actor-visible proposals to finite features and did not call
+fit.
+
+Readiness is **`ENGINEERING_READY_LABEL_REVIEW_PENDING`**, not training success: 180 exact review
+rows still need checksum-bound boundary and image-semantic decisions, so zero rows are currently
+training eligible and no research model was fitted.  Commit `46e25d9` adds a fail-closed importer;
+after a qualified review, import plus no-fit is sufficient to reach `TRAINING_READY_FOR_APPROVAL`
+without another simulator capture.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9_result.json`.
+- Review ZIP SHA-256: `aec872965c310c8659a483a393f92efefb98ba7eca9e5af26f059b998876bb8b`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9/51818619/`.
+
 ## 2026-11-17: TP V6 captures 300 frames; L4 unique-image coverage remains short
 
 The trainer partitions eligible rows before fitting: only `train` enters `fit()`, calibration

@@ -1,0 +1,25 @@
+{
+  "schema": "sonogym-tp-surface-core-supplement-result-v1",
+  "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v8",
+  "job_id": 51817719,
+  "execution_commit": "ced71eb5a174acd0b1bd56ce29667cc346790c39",
+  "scheduler_state": "FAILED",
+  "elapsed_seconds": 160,
+  "exit_code": "1:0",
+  "verified_sessions": {
+    "smoke": {"frames": 8, "verdict": "PROJECTION_PARITY_PASS"},
+    "train": {"frames": 12, "verdict": "PROJECTION_PARITY_PASS"},
+    "calibration": {"frames": 24, "verdict": "PROJECTION_PARITY_PASS"}
+  },
+  "failed_session": {
+    "session_id": "s0010tpscv8_dev_l4_00",
+    "saved_frames": 0,
+    "error": "coupled pose did not converge after 150 steps",
+    "requested_angle_rad": 2.985,
+    "realized_angle_rad": 2.9364867210388184,
+    "remaining_orientation_error_deg": 2.7796061348165115,
+    "position_error_mm": 0.02390490808647596
+  },
+  "verdict": "DATASET_INCOMPLETE",
+  "historical_results_modified": false
+}
