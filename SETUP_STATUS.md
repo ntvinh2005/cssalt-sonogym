@@ -1,5 +1,23 @@
 # Setup status
 
+## 2026-11-18: isolated TP simulator-geometry proxy pilot completed
+
+CPU job `51836756` completed `0:0` in 27 seconds with four CPUs, 16 GB requested memory and zero
+GPUs at commit `4d0500e`.  The separate `SIMULATOR_GEOMETRY_PROXY` no-fit path audited all 5,469
+v3 manifest rows, matched the sealed ZIP/manifest/geometry/source-image hashes, excluded smoke,
+found no cross-split exact duplicates and returned `PROXY_TRAINING_READY` with `fit_called=false`.
+
+The 240-tree ExtraTrees pilot then fitted 463 train samples, selected both target thresholds using
+151 calibration samples, and evaluated 139 development patches plus every actor-visible proposal
+across 103 development images.  Patch accuracy was 125/139 (89.93%); whole-image L4 precision was
+12/26 (46.15%) and L5 precision was 16/20 (80.00%).  The checkpoint was saved and reload-verified,
+but the result is explicitly simulator-proxy performance, not anatomical recognition or MBB
+readiness.  The verified-label status below remains `ENGINEERING_READY_LABEL_REVIEW_PENDING`.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_simulator_proxy_exploratory_v1_result.json`.
+- Report: `docs/research/sonogym_s0010_tp_surface_core_simulator_proxy_exploratory_v1.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_simulator_proxy_exploratory_v1/51836756/`.
+
 ## 2026-11-17: TP support-qualified coverage complete; exact label decisions remain
 
 GPU job `51831979` completed `0:0` in 7:02 on one L4 and four CPUs after CPU preflight job

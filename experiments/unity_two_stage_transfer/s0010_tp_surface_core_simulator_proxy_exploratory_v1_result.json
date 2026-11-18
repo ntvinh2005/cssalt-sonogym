@@ -1,0 +1,54 @@
+{
+  "experiment_id": "s0010_tp_surface_core_simulator_proxy_exploratory_v1",
+  "label_mode": "SIMULATOR_GEOMETRY_PROXY",
+  "status": "EXPLORATORY_PROXY_TRAINING_COMPLETED",
+  "scientific_scope": "Simulator geometry proxy performance on fixed anatomy s0010; not anatomical recognition",
+  "job_id": "51836756",
+  "job_state": "COMPLETED",
+  "job_exit_code": "0:0",
+  "elapsed_seconds": 27,
+  "resources": {
+    "account": "anest-dept",
+    "cpus": 4,
+    "gpus": 0,
+    "memory_mb": 16384
+  },
+  "source_commit": "4d0500ef80f35966b9ea5c6965e5aae3a39550b7",
+  "source_zip_sha256": "dd24c07541bf8e5d6ffe07c7904ec104996a3bb11d39f421f90e4c75fbcc423e",
+  "source_manifest_sha256": "5a60e34e5a2abd0032a2f40f689844aa570194fa2a83bd94353b5a1c6d17a426",
+  "label_contract_sha256": "e33a17cf0e9618a1a6b56d3dafb2e747c0653be86f92059f566fb15250ce9adc",
+  "preflight": {
+    "status": "PROXY_TRAINING_READY",
+    "source_rows_audited": 5469,
+    "blocking_conditions": [],
+    "cross_split_duplicate_count": 0,
+    "fit_called": false
+  },
+  "selected_unique_images": {
+    "BACKGROUND_OR_OTHER_STRUCTURE": {"train": 347, "calibration": 110, "development_evaluation": 103},
+    "L4_RIGHT_TP_SURFACE_CORE": {"train": 55, "calibration": 12, "development_evaluation": 17},
+    "L5_RIGHT_TP_SURFACE_CORE": {"train": 61, "calibration": 29, "development_evaluation": 19}
+  },
+  "fit_sample_counts": {"train": 463, "calibration": 151, "development_evaluation": 139},
+  "thresholds": {"L4_RIGHT_TP_SURFACE_CORE": 0.5, "L5_RIGHT_TP_SURFACE_CORE": 0.5},
+  "patch_level_development": {
+    "sample_count": 139,
+    "accuracy": 0.8992805755395683,
+    "BACKGROUND_OR_OTHER_STRUCTURE": {"tp": 103, "fp": 14, "fn": 0, "precision": 0.8803418803418803, "recall": 1.0},
+    "L4_RIGHT_TP_SURFACE_CORE": {"tp": 9, "fp": 0, "fn": 8, "precision": 1.0, "recall": 0.5294117647058824},
+    "L5_RIGHT_TP_SURFACE_CORE": {"tp": 13, "fp": 0, "fn": 6, "precision": 1.0, "recall": 0.6842105263157895}
+  },
+  "full_image_proposal_development": {
+    "image_count": 103,
+    "BACKGROUND_OR_OTHER_STRUCTURE": {"tp": 52, "fp": 8, "fn": 15, "precision": 0.8666666666666667, "recall": 0.7761194029850746},
+    "L4_RIGHT_TP_SURFACE_CORE": {"tp": 12, "fp": 14, "fn": 5, "precision": 0.46153846153846156, "recall": 0.7058823529411765},
+    "L5_RIGHT_TP_SURFACE_CORE": {"tp": 16, "fp": 4, "fn": 3, "precision": 0.8, "recall": 0.8421052631578947}
+  },
+  "checkpoint": {
+    "saved": true,
+    "reload_verified": true,
+    "sha256": "338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b"
+  },
+  "tests": {"new_proxy_tests": "4/4 pass", "existing_training_tests": "11/11 pass"},
+  "runtime_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_simulator_proxy_exploratory_v1/51836756/"
+}
