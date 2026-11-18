@@ -155,6 +155,21 @@ Ambiguous or occluded examples remain excluded. Do not convert unknown values in
 The source-image coverage deficits recorded in `dataset_summary.json` are acquisition deficits;
 review cannot manufacture missing independent L4 images. Model fitting must remain blocked until
 the launcher reports `TRAINING_READY_FOR_APPROVAL`.
+
+After completing every row, apply the checksum-bound decisions without editing the source dataset:
+
+```bash
+python workflows/two_stage_navigation/apply_tp_surface_core_review.py \
+  --dataset-dir <capture-run>/dataset \
+  --decisions review_decisions_template.csv \
+  --output-dir <capture-run>/dataset_reviewed
+python workflows/two_stage_navigation/train_tp_surface_core.py \
+  --dataset-dir <capture-run>/dataset_reviewed \
+  --output-dir <capture-run>/preflight_reviewed --no-fit
+```
+
+The first command requires exact sample, image, split, class and geometry identities. The second
+must report `TRAINING_READY_FOR_APPROVAL` before the separately approved fit command is run.
 """
     (staging / "README.md").write_text(readme, encoding="utf-8")
 

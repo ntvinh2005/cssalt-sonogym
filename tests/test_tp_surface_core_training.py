@@ -41,6 +41,13 @@ PREPARE = importlib.util.module_from_spec(PREPARE_SPEC)
 sys.modules[PREPARE_SPEC.name] = PREPARE
 PREPARE_SPEC.loader.exec_module(PREPARE)
 
+REVIEW_PATH = ROOT / "workflows/two_stage_navigation/apply_tp_surface_core_review.py"
+REVIEW_SPEC = importlib.util.spec_from_file_location("tp_surface_core_review", REVIEW_PATH)
+assert REVIEW_SPEC is not None and REVIEW_SPEC.loader is not None
+REVIEW = importlib.util.module_from_spec(REVIEW_SPEC)
+sys.modules[REVIEW_SPEC.name] = REVIEW
+REVIEW_SPEC.loader.exec_module(REVIEW)
+
 
 class ProposalTests(unittest.TestCase):
     def test_actor_visible_proposals_do_not_need_privileged_coordinates(self) -> None:
@@ -176,6 +183,93 @@ class TrainingTests(unittest.TestCase):
             self.assertTrue(all(value.startswith("train:") for value in result["fit_sample_ids"]))
             self.assertTrue(all(value.startswith("calibration:") for value in result["calibration_sample_ids"]))
             self.assertTrue(all(value.startswith("development_evaluation:") for value in result["development_sample_ids"]))
+
+
+class ReviewApplicationTests(unittest.TestCase):
+    def test_exact_review_contract_promotes_disjoint_minimum_dataset(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            dataset = root / "dataset"
+            dataset.mkdir()
+            rows = []
+            decisions = []
+            class_ids = {
+                "BACKGROUND_OR_OTHER_STRUCTURE": -1,
+                "L4_RIGHT_TP_SURFACE_CORE": 1,
+                "L5_RIGHT_TP_SURFACE_CORE": 2,
+            }
+            for class_name, class_id in class_ids.items():
+                for split, count in REVIEW.MINIMUM_UNIQUE_IMAGES.items():
+                    for index in range(count):
+                        sample_id = f"{class_name}:{split}:{index}"
+                        geometry = "background" if class_id == -1 else f"geometry:{class_id}"
+                        row = {
+                            "sample_id": sample_id,
+                            "session_id": f"{split}_session",
+                            "split": split,
+                            "frame_sha256": f"hash:{sample_id}",
+                            "candidate_id": class_name,
+                            "class_id": class_id,
+                            "geometry_version_sha256": geometry,
+                            "review_asset": f"review/{sample_id}.png",
+                            "acoustic_visibility": "NOT_REVIEWED",
+                            "semantic_identity": "NOT_REVIEWED",
+                            "anatomical_approval": "PENDING",
+                            "training_label": "EXCLUDED",
+                            "training_eligible": False,
+                            "exclusion_reason": "pending",
+                        }
+                        rows.append(row)
+                        negative = class_id == -1
+                        decisions.append(
+                            {
+                                "sample_id": sample_id,
+                                "session_id": row["session_id"],
+                                "split": split,
+                                "frame_sha256": row["frame_sha256"],
+                                "class_name": class_name,
+                                "geometry_version_sha256": geometry,
+                                "anatomical_boundary_decision": "NOT_APPLICABLE" if negative else "ACCEPT_BOUNDARY",
+                                "acoustic_visibility": "VISIBLE_OTHER_STRUCTURE" if negative else "VISIBLE",
+                                "semantic_identity": "REJECTED_AS_TP" if negative else "SUPPORTED",
+                                "reviewer_identity": "reviewer",
+                                "reviewer_qualification": "documented qualification",
+                                "notes": "",
+                            }
+                        )
+            with (dataset / "candidate_sample_manifest.csv").open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+                writer.writeheader()
+                writer.writerows(rows)
+            (dataset / "dataset_summary.json").write_text(
+                json.dumps({"status": "ENGINEERING_READY_LABEL_REVIEW_PENDING"})
+            )
+            decisions_path = root / "decisions.csv"
+            with decisions_path.open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(decisions[0]))
+                writer.writeheader()
+                writer.writerows(decisions)
+            result = REVIEW.apply_review(dataset, decisions_path, root / "reviewed")
+            self.assertEqual(result["status"], "TRAINING_READY_FOR_PREFLIGHT")
+            self.assertEqual(result["promoted_rows"], 180)
+            reviewed = REVIEW.read_csv(root / "reviewed/candidate_sample_manifest.csv")
+            self.assertTrue(all(row["training_eligible"] == "True" for row in reviewed))
+
+    def test_identity_mismatch_and_unqualified_acceptance_fail_closed(self) -> None:
+        row = {
+            "sample_id": "positive",
+            "candidate_id": "L4_RIGHT_TP_SURFACE_CORE",
+            "class_id": "1",
+        }
+        decision = {
+            "anatomical_boundary_decision": "ACCEPT_BOUNDARY",
+            "acoustic_visibility": "VISIBLE",
+            "semantic_identity": "SUPPORTED",
+            "reviewer_identity": "",
+            "reviewer_qualification": "",
+        }
+        with self.assertRaisesRegex(ValueError, "reviewer provenance"):
+            REVIEW.promote(row, decision)
 
 
 if __name__ == "__main__":
