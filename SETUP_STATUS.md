@@ -1,5 +1,28 @@
 # Setup status
 
+## 2026-11-17: TP support-qualified coverage complete; exact label decisions remain
+
+GPU job `51831979` completed `0:0` in 7:02 on one L4 and four CPUs after CPU preflight job
+`51831912` passed 98/98 tests.  All 180 predeclared supplemental observations passed movement,
+freshness, synchronized exact-pose replay and serialized-array gates.  No new capture frame was
+dropped.
+
+The unchanged support-aware builder now reports background `347/110/103`, L4 RIGHT TP surface core
+`55/12/17`, and L5 RIGHT TP surface core `61/29/19` unique source images for
+train/calibration/development.  All three classes clear 40/10/10; the prior five coverage deficits
+are closed, there are no cross-split exact-image duplicates, and the v3 package contains 180
+primary plus 63 reserve exact-patch assets.
+
+Readiness is **`ENGINEERING_READY_LABEL_REVIEW_PENDING`**.  The user has authorized the bounded CPU
+pilot once ready, but zero rows are currently eligible because the checksum-bound geometry,
+visibility and semantic decision template has not been completed.  No-fit resolved all 5,469 real
+features and recorded `fit_called=false`; fitting must follow automatically only after review import
+and `TRAINING_READY_FOR_APPROVAL`.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10_result.json`.
+- Review ZIP SHA-256: `dd24c07541bf8e5d6ffe07c7904ec104996a3bb11d39f421f90e4c75fbcc423e`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10/51831979/`.
+
 ## 2026-11-17: TP exact-crop reselection exposes a real support-qualified data deficit
 
 CPU jobs `51824166` and `51825014` passed 93/93 regressions and rebuilt the complete review

@@ -2,16 +2,16 @@
 
 | Result | Value |
 |---|---|
-| Final readiness | `DATASET_INCOMPLETE` |
-| Verified real acquisition | V6/V7/V8/V9; 384 opened development observations plus smoke |
+| Final readiness | `ENGINEERING_READY_LABEL_REVIEW_PENDING` |
+| Verified real acquisition | V6--V10; V10 adds 180/180 verified supplemental observations |
 | Repair executions | v4 timeout and v5 verifier mismatch preserved; v6 completed `0:0` |
 | Synchronized smoke | **PASS**, 8/8 reloaded frames pass all five gates |
-| Development dataset | **COLLECTED**, but support-qualified L4/L5 crop coverage remains short |
-| Review candidates | 137 primary + 24 reserve exact-patch assets after support-aware reselection |
+| Development dataset | **COLLECTED**; support-qualified coverage clears 40/10/10 for all three classes |
+| Review candidates | 180 primary + 63 reserve exact-patch assets |
 | Training eligibility | 0 samples; anatomy and image-semantic review remain pending |
 | Training implementation | train-only fit, calibration-only threshold selection, development-only evaluation, background class, save/reload |
-| CPU validation | jobs `51824166` and `51825014`; 93/93 regressions; 4 CPUs; zero GPUs |
-| Current review package | SHA-256 `e75a31fb4b600ed901eba7e5deb072c3d11eeda36ae0dc5701f19efb2d7aaf6f` |
+| CPU validation | job `51831912`; 98/98 regressions; 4 CPUs; zero GPUs |
+| Current review package | SHA-256 `dd24c07541bf8e5d6ffe07c7904ec104996a3bb11d39f421f90e4c75fbcc423e` |
 
 The first bounded capture exposed a float64-to-float32 hash mismatch, V4 reached the fixed episode
 horizon, and V5 exposed a reset-boundary verifier error.  Those failures remain preserved.  V6
@@ -407,4 +407,90 @@ calibration alone selects thresholds, and development evaluation remains read-on
 - Review ZIP: `s0010_tp_surface_core_review_selection_v2_51825014.zip`
 - ZIP SHA-256: `e75a31fb4b600ed901eba7e5deb072c3d11eeda36ae0dc5701f19efb2d7aaf6f`
 - Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_review_selection_v2_result.json`
+
+## 7. Support supplement — whether the five split deficits are closed
+
+### Criterion
+
+Every class must expose at least 40 support-qualified unique source images in train, 10 in
+calibration and 10 in development evaluation under the unchanged v2 crop-selection settings.
+Every newly acquired frame must pass synchronized exact-pose replay, freshness, movement and
+serialized-array integrity.  Closing coverage does not promote any label: model fitting still
+requires checksum-bound geometry, visibility and semantic decisions followed by a no-fit result of
+`TRAINING_READY_FOR_APPROVAL`.
+
+### Method
+
+Protocol v10 freezes four supplemental sessions around previously observed support-bearing probe
+regions: 42 L4-train, 72 L5-train, 36 L5-calibration and 30 mixed development viewpoints.  The
+waypoint perturbations were fixed before execution, all requested angles are at most 2.935 rad,
+and every consecutive waypoint clears twice the existing movement tolerances.  Privileged
+geometry is used only for offline development-data coverage; detector inputs remain the clean
+48x80 actor-visible patch and its production feature representation.
+
+### Setup
+
+| what | value | spec |
+|---|---|---|
+| CPU preflight | job `51831912`; 4 CPUs, 8 GB | 98 tests; exit `0:0` |
+| supplemental capture | job `51831979`; one L4, 4 CPUs, 30 GB | 7:02; exit `0:0` |
+| execution source | `7497f4ebe0be75f9395f620e728a919cc151d93f` | clean checkout |
+| protocol | `s0010_tp_surface_core_dataset_protocol_v10.yaml` | SHA-256 `b8c87400449608208fa3853688757990a22714be722912cf368c8b30fba42259` |
+
+```bash
+sbatch --account=anest-dept --qos=anest-dept --partition=hpg-turin \
+  --constraint=l4 --gres=gpu:l4:1 --nodes=1 --ntasks=1 \
+  --cpus-per-task=4 --mem=30G --time=00:30:00 \
+  --job-name=sg-tp-core-v10 \
+  hpg/jobs/s0010_tp_surface_core_dataset_v10.sbatch
+```
+
+| sample accounting | value |
+|---|---:|
+| attempted new viewpoints | 180 |
+| dropped by movement, freshness or replay | 0 |
+| **verified new observations** | **180** |
+
+### Results
+
+All four supplemental sessions passed exact-pose replay: 42/42 L4-train, 72/72 L5-train,
+36/36 L5-calibration and 30/30 development observations.  Maximum recorded coordinate-grid error
+was `4.123905895880853e-05` volume index against the unchanged 0.001 gate.  The combined builder
+resolved 5,469 actor-visible proposals, found no cross-split exact-image duplicates and produced:
+
+| class | train | calibration | development evaluation |
+|---|---:|---:|---:|
+| background / other structure | 347 | 110 | 103 |
+| L4 RIGHT TP surface core | 55 | 12 | 17 |
+| L5 RIGHT TP surface core | 61 | 29 | 19 |
+
+The package selects exactly 40/10/10 primary source images for every class and includes 63 reserve
+images.  Of the 180 primaries, 110 retain the complete v2 identity and 70 are new or changed.  No
+review decision is carried automatically: actual training eligibility remains zero.  No-fit
+resolved all 5,469 features, reported zero split duplicates and returned
+`ENGINEERING_PREFLIGHT_ONLY` with `fit_called=false` because the review decisions are absent.
+
+**Verdict: coverage PASS; overall readiness remains `ENGINEERING_READY_LABEL_REVIEW_PENDING`, so
+real fitting is correctly not run.**
+
+### Reading it
+
+- The five source-image deficits are closed with support-qualified images, not extra crops from the
+  same image.
+- The user's approval to run the CPU pilot is recorded; no further compute approval is needed after
+  label import and a passing no-fit result.
+- The missing artifact is a completed `review_decisions_template.csv` for the exact v3 identities,
+  including reviewer identity/qualification and per-row geometry, visibility and semantic fields.
+- The prior advisory CSV was not available on HiPerGator and was explicitly described as
+  non-importable; its counts cannot be converted into sample decisions without the file and formal
+  reviewer provenance.
+
+### Files
+
+| file | contents |
+|---|---|
+| `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v10.yaml` | frozen capture and split contract |
+| `experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10_result.json` | compact execution result |
+| `.../s0010_tp_surface_core_dataset_v10/51831979/dataset/` | combined candidate dataset |
+| `.../s0010_tp_surface_core_dataset_v10/51831979/s0010_tp_surface_core_review_v3_51831979.zip` | checksum-bound review package |
 

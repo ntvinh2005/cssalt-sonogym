@@ -1,0 +1,57 @@
+{
+  "schema": "sonogym-tp-surface-core-dataset-result-v10",
+  "date": "2026-11-17",
+  "source_commit": "7497f4ebe0be75f9395f620e728a919cc151d93f",
+  "protocol_sha256": "b8c87400449608208fa3853688757990a22714be722912cf368c8b30fba42259",
+  "cpu_preflight_job": 51831912,
+  "capture_job": 51831979,
+  "resources": {
+    "gpus": 1,
+    "gpu_model": "NVIDIA L4",
+    "cpus": 4,
+    "requested_memory_gb": 30,
+    "elapsed_seconds": 422,
+    "storage_bytes": 350273549
+  },
+  "new_capture": {
+    "attempted_frames": 180,
+    "verified_frames": 180,
+    "sessions": {
+      "s0010tpscv10_train_l4_00": 42,
+      "s0010tpscv10_train_l5_00": 72,
+      "s0010tpscv10_cal_l5_00": 36,
+      "s0010tpscv10_dev_l4l5_00": 30
+    },
+    "projection_verdict": "PROJECTION_PARITY_PASS",
+    "maximum_coordinate_error_index": 0.00004123905895880853
+  },
+  "support_qualified_unique_source_images": {
+    "BACKGROUND_OR_OTHER_STRUCTURE": {"train": 347, "calibration": 110, "development_evaluation": 103},
+    "L4_RIGHT_TP_SURFACE_CORE": {"train": 55, "calibration": 12, "development_evaluation": 17},
+    "L5_RIGHT_TP_SURFACE_CORE": {"train": 61, "calibration": 29, "development_evaluation": 19}
+  },
+  "candidate_coverage_deficits": [],
+  "candidate_rows": 5469,
+  "cross_split_exact_duplicates": 0,
+  "review": {
+    "primary_samples": 180,
+    "reserve_samples": 63,
+    "v2_exact_identity_primary_samples": 110,
+    "new_or_changed_primary_samples": 70,
+    "eligible_samples": 0
+  },
+  "no_fit": {
+    "status": "ENGINEERING_PREFLIGHT_ONLY",
+    "resolved_feature_rows": 5469,
+    "fit_called": false
+  },
+  "review_package": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10/51831979/s0010_tp_surface_core_review_v3_51831979.zip",
+    "sha256": "dd24c07541bf8e5d6ffe07c7904ec104996a3bb11d39f421f90e4c75fbcc423e",
+    "listed_checksums": 1483,
+    "checksums_verified": true
+  },
+  "training_authorized_when_ready": true,
+  "real_fit_run": false,
+  "final_status": "ENGINEERING_READY_LABEL_REVIEW_PENDING"
+}
