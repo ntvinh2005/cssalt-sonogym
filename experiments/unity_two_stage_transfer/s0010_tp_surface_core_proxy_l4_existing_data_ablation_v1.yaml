@@ -1,0 +1,58 @@
+experiment_id: s0010_tp_surface_core_proxy_l4_existing_data_ablation_v1
+scientific_scope: fixed-anatomy simulator-proxy exploratory improvement
+source_checkpoint_sha256: 338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b
+source_dataset_manifest_sha256: 5a60e34e5a2abd0032a2f40f689844aa570194fa2a83bd94353b5a1c6d17a426
+source_proxy_label_audit_sha256: 67dfdfe482b0fe689f29ea25be077b31e5a9d4f0db3c67366c4c2a4bbecf3175
+source_proxy_sample_manifest_sha256: 72f74f704adf8d9519c484c60f444f0b2aa09f12c515294b93869a941047c871
+source_hard_negative_manifest_sha256: c67f8f529254f340a45e8cbad359473f02f9eb618167f73d35abeb86d3eae97b
+base_l4_threshold: 0.5
+estimator:
+  n_estimators: 240
+  random_state: 20261117
+  class_weight: balanced
+  n_jobs: 4
+arms:
+  - arm_id: multiclass_hn10
+    target: three_class
+    hard_negatives: include_as_background
+    hard_negative_weight: 1.0
+  - arm_id: l4_ovr_hn10
+    target: l4_one_vs_rest
+    hard_negatives: include_as_l4_negative
+    hard_negative_weight: 1.0
+  - arm_id: l4_ovr_hn10_weight4
+    target: l4_one_vs_rest
+    hard_negatives: include_as_l4_negative
+    hard_negative_weight: 4.0
+  - arm_id: l4_ovr_selected
+    target: l4_one_vs_rest
+    hard_negatives: exclude
+    hard_negative_weight: 1.0
+calibration_selection:
+  minimum_true_positive_images: 9
+  maximum_clean_negative_false_positive_images: 0
+  fixed_threshold: 0.5
+  order:
+    - maximum_true_positive_images
+    - minimum_clean_negative_false_positive_images
+    - minimum_clean_negative_false_detections
+    - arm_order
+expected_frozen_baseline:
+  calibration: {tp: 9, fp: 0, fn: 3, tn: 88, ambiguous_activations: 3}
+  opened_development: {tp: 12, fp: 7, fn: 5, tn: 66, ambiguous_activations: 7}
+opened_development_success:
+  baseline_true_positive_images: 12
+  minimum_true_positive_images: 11
+  baseline_clean_negative_false_positive_images: 7
+  maximum_clean_negative_false_positive_images: 4
+  baseline_ambiguous_activation_images: 7
+  maximum_ambiguous_activation_images: 7
+  l5_control_required: unchanged
+information_boundaries:
+  fit_split: train
+  selection_split: calibration
+  opened_diagnostic_split: development_evaluation
+  ambiguous_training_role: excluded
+  privileged_geometry_in_model_features: forbidden
+  new_capture: conditional_only_after_opened_development_success
+historical_results: immutable

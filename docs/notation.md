@@ -104,6 +104,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It measures whether existing training captures contain enough clear L4 confusers to justify a separately approved L4 v2 fit.
 - **Source:** approved by user, 2026-11-19.
 
+### L4 one-vs-rest proxy classifier
+- **Kind:** method
+- **Definition:** A binary image-patch classifier whose positive class is the complete L4 RIGHT TP surface-core proxy contract and whose negative class contains only verified L4 proxy-negative patches, including L5-positive patches when they contain no L4 core or L4 uncertainty.
+- **Intuition:** It asks only whether a patch contains the L4 proxy, so L5 evidence is a valid L4-negative confuser without being relabelled as three-class background.
+- **Source:** approved by user, 2026-11-19.
+
+### s0010_tp_surface_core_proxy_l4_existing_data_ablation_v1
+- **Kind:** object
+- **Definition:** The bounded CPU experiment that compares the frozen proxy-v1 detector with one multiclass hard-negative arm and three L4 one-vs-rest arms, selects an arm using calibration images only, and evaluates the selected arm once on previously opened development images.
+- **Intuition:** It tests whether the ten clear training hard negatives and existing L5-positive patches can improve L4 full-image proxy recognition before additional capture.
+- **Source:** approved by user, 2026-11-19.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.
