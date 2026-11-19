@@ -1,0 +1,97 @@
+{
+  "schema": "sonogym-tp-surface-core-proxy-tristate-hard-negative-v1-result",
+  "experiment_id": "s0010_tp_surface_core_proxy_tristate_hard_negative_v1",
+  "status": "DATA_INSUFFICIENT",
+  "job_id": "51956725",
+  "job_state": "COMPLETED",
+  "job_exit_code": "0:0",
+  "execution_commit": "0a5ebe54d32fdb26d2364c0b9c187c00cc83374c",
+  "resources": {
+    "account": "anest-dept",
+    "cpus": 4,
+    "gpus": 0,
+    "requested_memory_gb": 16,
+    "elapsed_seconds": 70,
+    "max_rss_kib": 193564
+  },
+  "frozen_inputs": {
+    "protocol_sha256": "cce6506e49b9bd46ac350aaa0a5097070b69bffed8a06c7627e538cb31fcefd",
+    "checkpoint_sha256": "338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b",
+    "proxy_label_audit_sha256": "67dfdfe482b0fe689f29ea25be077b31e5a9d4f0db3c67366c4c2a4bbecf3175",
+    "proxy_sample_manifest_sha256": "72f74f704adf8d9519c484c60f444f0b2aa09f12c515294b93869a941047c871",
+    "l4_failure_audit_sha256": "2efff1a034ed18fb4d02f1cf34a2744d06945d460d89b85971d4f5fee207aae2"
+  },
+  "proposal_state_counts": {
+    "PROXY_POSITIVE": 183,
+    "PROXY_NEGATIVE": 4496,
+    "PROXY_AMBIGUOUS": 790
+  },
+  "image_state_counts_by_split": {
+    "train": {
+      "PROXY_POSITIVE": 55,
+      "PROXY_NEGATIVE": 242,
+      "PROXY_AMBIGUOUS": 50
+    },
+    "calibration": {
+      "PROXY_POSITIVE": 12,
+      "PROXY_NEGATIVE": 88,
+      "PROXY_AMBIGUOUS": 10
+    },
+    "development_evaluation": {
+      "PROXY_POSITIVE": 17,
+      "PROXY_NEGATIVE": 73,
+      "PROXY_AMBIGUOUS": 13
+    }
+  },
+  "opened_development_false_positive_reclassification": {
+    "total": 14,
+    "PROXY_AMBIGUOUS": 7,
+    "PROXY_NEGATIVE": 7,
+    "training_eligible": 0
+  },
+  "hard_negative_mining": {
+    "source_split": "train",
+    "candidate_proposals": 16,
+    "independent_source_images": 10,
+    "maximum_per_source_image": 1,
+    "minimum_required_source_images": 40,
+    "deficit_source_images": 30,
+    "subtypes": {
+      "OTHER_BONE_INTERFACE": 10,
+      "COMPETING_L5_CORE": 0
+    },
+    "sessions": {
+      "s0010tpscv6_train_00": 3,
+      "s0010tpscv6_train_01": 2,
+      "s0010tpscv6_train_02": 3,
+      "s0010tpscv6_train_03": 2
+    },
+    "l4_probability_minimum": 0.5125,
+    "l4_probability_mean": 0.595,
+    "l4_probability_maximum": 0.6875,
+    "selected_manifest_sha256": "c67f8f529254f340a45e8cbad359473f02f9eb618167f73d35abeb86d3eae97b"
+  },
+  "scope_integrity": {
+    "fit_called": false,
+    "new_capture_run": false,
+    "development_image_arrays_loaded": false,
+    "development_rows_used_for_training": 0,
+    "historical_results_modified": false,
+    "l5_checkpoint_role": "frozen_control"
+  },
+  "tests": {
+    "focused_tristate_and_mining": {"passed": 11, "failed": 0},
+    "proxy_training_regression": {"passed": 4, "failed": 0}
+  },
+  "future_l4_v2": {
+    "protocol_prepared": false,
+    "fit_run": false,
+    "reason": "Only 10 independent high-L4-probability clear hard-negative training images exist under the frozen contract; 40 are required."
+  },
+  "research_decisions_preserved": {
+    "l4_margin_v1": "FAIL_CLOSED",
+    "proxy_training": "EXPLORATORY_TRAINING_PASS",
+    "active_acquisition_integration": "ACTIVE_ACQUISITION_INTEGRATION_HOLD"
+  },
+  "runtime_directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_tristate_hard_negative_v1/51956725/"
+}

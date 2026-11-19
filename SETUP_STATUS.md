@@ -1,5 +1,26 @@
 # Setup status
 
+## 2026-11-19: tri-state proxy audit passes, but existing L4 hard negatives are insufficient
+
+CPU job `51956725` completed `0:0` in 70 seconds with four CPUs, 16 GB requested memory and zero
+GPUs at commit `0a5ebe54`. It assigned all 5,469 existing proposals to explicit L4 proxy-positive,
+proxy-negative or proxy-ambiguous states without fitting, capture or development training use.
+
+The 14 opened-development L4 false positives divide into seven ambiguous and seven clean-negative
+images; historical results remain unchanged. Training-only mining found 16 false-trigger proposal
+rows but only ten independent clear hard-negative images after retaining at most one patch per
+source image. This is below the predeclared 40-image gate, and no competing-L5-core hard negative
+qualified.
+
+Readiness is **`DATA_INSUFFICIENT`** for L4 v2: no retraining protocol or checkpoint was produced.
+The exact deficit is 30 independent clear hard-negative training images, with supported L5
+confusers needed if L4-versus-L5 repair is part of the next experiment. The margin result remains
+`FAIL`, proxy v1 remains `EXPLORATORY_TRAINING_PASS`, and active acquisition remains `HOLD`.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_proxy_tristate_hard_negative_v1_result.json`.
+- Report: `docs/research/sonogym_s0010_tp_surface_core_proxy_tristate_hard_negative_v1.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_tristate_hard_negative_v1/51956725/`.
+
 ## 2026-11-19: L4 margin calibration fails the clean-negative repair gate
 
 CPU job `51953988` completed `0:0` in 39 seconds with four CPUs, 16 GB requested memory and zero
