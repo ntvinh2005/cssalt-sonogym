@@ -33,7 +33,7 @@ def main() -> int:
             raise RuntimeError(f"missing Stage 2 evaluation: {path}")
         stage2_reports.append(json.loads(path.read_text()))
     target_rows = [row for report in stage2_reports for row in report["target_reports"]]
-    target_successes = sum(bool(row["proxy_target_view_successful"]) for row in target_rows)
+    target_successes = sum(bool(row["proxy_target_view_success"]) for row in target_rows)
     all_target_views = target_successes == len(target_rows) == 8
     partial_pass = bool(stage1_pass and all_target_views)
     errors = [

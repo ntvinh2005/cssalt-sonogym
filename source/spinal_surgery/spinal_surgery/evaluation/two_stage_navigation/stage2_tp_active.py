@@ -184,7 +184,8 @@ def select_target_view(
     if not candidates:
         return TargetDecision("ABSTAIN", None, (), 0, 0, "NO_ELIGIBLE_TARGET_VIEW")
 
-    best: tuple[tuple[int, float, int], TargetView, tuple[TargetView, ...]] | None = None
+    best_supported: tuple[tuple[float, int, int], TargetView, tuple[TargetView, ...]] | None = None
+    best_insufficient: tuple[tuple[int, float, int], TargetView, tuple[TargetView, ...]] | None = None
     for candidate in candidates:
         local = []
         for view in candidates:
@@ -210,14 +211,22 @@ def select_target_view(
                 for prior in distinct
             ):
                 distinct.append(view)
-        rank = (len(distinct), candidate.probability, -candidate.frame_sequence)
-        record = (rank, candidate, tuple(distinct))
-        if best is None or record[0] > best[0]:
-            best = record
+        if len(distinct) >= required_support:
+            # Evidence is a gate.  Among supported candidates, preserve the
+            # Unity best-valid-view philosophy and rank target utility first.
+            rank = (candidate.probability, len(distinct), -candidate.frame_sequence)
+            record = (rank, candidate, tuple(distinct))
+            if best_supported is None or record[0] > best_supported[0]:
+                best_supported = record
+        else:
+            rank = (len(distinct), candidate.probability, -candidate.frame_sequence)
+            record = (rank, candidate, tuple(distinct))
+            if best_insufficient is None or record[0] > best_insufficient[0]:
+                best_insufficient = record
 
-    assert best is not None
-    _, selected, support = best
-    if len(support) < required_support:
+    if best_supported is None:
+        assert best_insufficient is not None
+        _, _, support = best_insufficient
         return TargetDecision(
             "ABSTAIN",
             None,
@@ -226,6 +235,7 @@ def select_target_view(
             len(support),
             "INSUFFICIENT_DISTINCT_SUPPORT",
         )
+    _, selected, support = best_supported
     result = TargetDecision(
         "ACCEPT",
         selected,

@@ -17,24 +17,24 @@ import cv2
 import numpy as np
 import yaml
 
-from spinal_surgery.evaluation.two_stage_navigation.stage1_features import (
+from two_stage_navigation.stage1_features import (
     UNITY_REFERENCE_PATCH_SPEC,
 )
-from spinal_surgery.evaluation.two_stage_navigation.stage2_mbb_landmarks import (
+from two_stage_navigation.stage2_mbb_landmarks import (
     FacetLevel,
     LandmarkReadiness,
     LandmarkType,
     Laterality,
     evaluate_landmark_evidence,
 )
-from spinal_surgery.evaluation.two_stage_navigation.tp_surface_core_dataset import (
+from two_stage_navigation.tp_surface_core_dataset import (
     L4_CLASS,
     L5_CLASS,
     PatchProposal,
     count_points_in_patch,
     projected_pixel_diagnostics,
 )
-from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (
+from two_stage_navigation.ultrasound_plane_geometry import (
     plane_from_full_pose,
     project_points_to_pixels,
 )

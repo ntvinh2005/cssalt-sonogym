@@ -478,7 +478,12 @@ def main() -> int:
                     float(motion["coarse_orientation_tolerance_deg"]),
                 ))
             coarse_views = list(views)
-            if any(not row.eligible for row in coarse_views):
+            if any(
+                not row.transition_valid
+                or not row.image_valid
+                or not row.producer_advanced
+                for row in coarse_views
+            ):
                 raise RuntimeError("coarse search produced invalid or stale evidence")
             if len({row.frame_sha256 for row in coarse_views}) != len(coarse_views):
                 raise RuntimeError("coarse search produced duplicate images")
@@ -617,6 +622,20 @@ def main() -> int:
             env.close()
         summary["elapsed_seconds"] = round(time.monotonic() - started, 3)
         write_json(output / "summary.json", summary)
+        # Preserve a failed run's causal evidence for diagnosis.  These files are
+        # explicitly partial and can never be mistaken for a sealed actor result.
+        if public_rows and not (public_dir / "frames.jsonl").exists():
+            public_dir.mkdir(parents=True, exist_ok=True)
+            write_jsonl(public_dir / "frames_partial.jsonl", public_rows)
+            np.savez_compressed(public_dir / "ultrasound_partial.npz", ultrasound=np.stack(images))
+        if pose_rows and not (privileged_dir / "full_pose_replay.jsonl").exists():
+            privileged_dir.mkdir(parents=True, exist_ok=True)
+            write_jsonl(privileged_dir / "full_pose_replay_partial.jsonl", pose_rows)
+            np.savez_compressed(
+                privileged_dir / "pixel_to_volume_coordinates_partial.npz",
+                human_img_coords=np.stack(coordinate_maps),
+                native_local_image_coordinates_m=np.asarray(local_coordinates, dtype=np.float32),
+            )
 
 
 if __name__ == "__main__":

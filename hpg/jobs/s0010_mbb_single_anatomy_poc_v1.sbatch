@@ -93,6 +93,19 @@ if [[ "$STAGE1_EVALUATOR_RC" -eq 0 ]]; then
             > "$session_dir/actor.log" 2>&1
         actor_rc=$?
         if [[ "$actor_rc" -eq 0 ]]; then
+            "$PYTHON" - "$session_dir/summary.json" "$session_dir/results/actor_result.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+summary_path, actor_path = map(Path, sys.argv[1:])
+if not summary_path.is_file() or not actor_path.is_file():
+    raise SystemExit(2)
+if json.loads(summary_path.read_text()).get("status") != "COMPLETED":
+    raise SystemExit(2)
+PY
+            actor_rc=$?
+        fi
+        if [[ "$actor_rc" -eq 0 ]]; then
             "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/evaluate_stage2_tp_active.py" \
                 --protocol "$PROTOCOL" --run-dir "$session_dir" --geometry-root "$GEOMETRY_ROOT" \
                 --output "$session_dir/results/evaluation_report.json" \

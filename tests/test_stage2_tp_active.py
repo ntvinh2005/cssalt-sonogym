@@ -128,6 +128,17 @@ class TargetSelectionTests(unittest.TestCase):
         self.assertEqual(first.selected.frame_sequence, 1)
         self.assertEqual(first.distinct_viewpoint_count, 3)
 
+    def test_support_is_gate_then_highest_probability_wins(self) -> None:
+        rows = [
+            view(0, pose=(0.0, 0.0, 2.8), probability=0.60),
+            view(1, pose=(1.0, 0.0, 2.8), probability=0.61),
+            view(2, pose=(2.0, 0.0, 2.8), probability=0.62),
+            view(3, pose=(3.0, 0.0, 2.8), probability=0.95),
+        ]
+        result = select_target_view(rows, **self.settings())
+        self.assertEqual(result.status, "ACCEPT")
+        self.assertEqual(result.selected.frame_sequence, 3)
+
     def test_invalid_movement_and_future_target_do_not_support(self) -> None:
         rows = [
             view(0, pose=(0.0, 0.0, 2.8)),
