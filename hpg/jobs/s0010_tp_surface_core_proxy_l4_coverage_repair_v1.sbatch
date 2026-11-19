@@ -13,7 +13,7 @@ OLD_TRAINING="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core
 OLD_HARD="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core_proxy_tristate_hard_negative_v1/51956725/preparation/l4_hard_negative_selected.csv"
 GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234"
 PLANNER_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_waypoint_plan_v1/52006787"
-export PYTHONPATH="$SONOGYM_PROJECT_DIR/source/spinal_surgery:${PYTHONPATH:-}"
+export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 mkdir -p "$RUN_DIR"/{sessions,dataset,training,metrics,context,results}
 capture_run_context "$RUN_DIR"
