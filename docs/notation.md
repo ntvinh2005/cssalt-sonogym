@@ -68,6 +68,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It separates a completed exploratory fit from readiness to control physical evidence acquisition.
 - **Source:** approved by user, 2026-11-18.
 
+### IMPROVEMENT_DEMONSTRATED
+- **Kind:** object
+- **Definition:** The autonomous L4 proxy improvement-cycle result in which a protocol-frozen candidate clears its calibration and evidence-sufficiency gates, retains at least 90% of the frozen baseline's true-positive development images, strictly reduces false-positive development images, and does not increase PROXY_AMBIGUOUS activations.
+- **Intuition:** It records a reproducible improvement in the intended simulator-proxy failure mode without promoting that result to anatomical, clinical, or active-acquisition validation.
+- **Source:** approved by user, 2026-11-19.
+
 ### L4 margin
 - **Kind:** metric
 - **Definition:** For one actor-visible proposal, the frozen L4 class probability minus the larger of the frozen background and L5 class probabilities; an added decision rule may require this value to exceed a calibration-selected bound after the unchanged 0.50 L4 threshold and L4 argmax rule pass.

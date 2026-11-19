@@ -1,18 +1,36 @@
 {
   "schema": "sonogym-tp-surface-core-proxy-l4-improvement-cycle-result-v1",
-  "status": "SCIENTIFIC_NO_GO_WITH_DIAGNOSIS",
+  "status": "IMPROVEMENT_DEMONSTRATED",
   "active_acquisition_integration": "HOLD",
+  "active_acquisition_review_ready": true,
   "patient_id": "s0010",
+  "scope": "SIMULATOR_GEOMETRY_PROXY",
   "frozen_v1_checkpoint_sha256": "338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b",
   "existing_data_ablation": {
     "job_id": 51961297,
     "status": "OPENED_DEVELOPMENT_NO_GO",
     "selected_arm": "l4_ovr_hn10",
     "selected_checkpoint_sha256": "96db332d579dfd0aaf8efa8ac4f2f2882496531fbdffe68e521dcc6d2cbd72ed",
-    "baseline": {"tp": 12, "fp": 7, "fn": 5, "precision": 0.631578947368421, "recall": 0.7058823529411765},
-    "candidate": {"tp": 10, "fp": 0, "fn": 7, "precision": 1.0, "recall": 0.5882352941176471},
+    "baseline": {
+      "tp": 12,
+      "fp": 7,
+      "fn": 5,
+      "precision": 0.631578947368421,
+      "recall": 0.7058823529411765
+    },
+    "candidate": {
+      "tp": 10,
+      "fp": 0,
+      "fn": 7,
+      "precision": 1.0,
+      "recall": 0.5882352941176471
+    },
     "required_candidate_tp": 11,
-    "l5_frozen_control": {"tp": 16, "fp": 4, "fn": 3}
+    "l5_frozen_control": {
+      "tp": 16,
+      "fp": 4,
+      "fn": 3
+    }
   },
   "targeted_supplement": {
     "failed_v11_job_id": 51992362,
@@ -20,11 +38,16 @@
     "execution_commit": "dc4d26d13b194ad84182ae3ccbf5a9e42bd9d250",
     "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v12",
     "protocol_sha256": "a699216f29cec1b4ef543b1dbc18c5bc056d320440add93a8fae9ab63859668e",
+    "status": "SCIENTIFIC_NO_GO_WITH_DIAGNOSIS",
     "capture": {
       "sessions": 3,
       "frames": 96,
       "distinct_image_hashes": 96,
-      "split_frames": {"train": 48, "calibration": 24, "development_evaluation": 24},
+      "split_frames": {
+        "train": 48,
+        "calibration": 24,
+        "development_evaluation": 24
+      },
       "all_projection_and_acquisition_gates_passed": true,
       "candidate_proposals": 925,
       "verified_intersections": 132
@@ -42,34 +65,231 @@
       "development_feature_rows_loaded_before_calibration": 0
     },
     "calibration": {
-      "baseline": {"tp": 2, "fp": 2, "fn": 0, "precision": 0.5, "recall": 1.0, "ambiguous_activation_images": 1},
-      "candidate": {"tp": 2, "fp": 1, "fn": 0, "precision": 0.6666666666666666, "recall": 1.0, "ambiguous_activation_images": 0},
+      "baseline": {
+        "tp": 2,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "ambiguous_activation_images": 1
+      },
+      "candidate": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "ambiguous_activation_images": 0
+      },
       "gate_passed": true
     },
     "sealed_development": {
-      "baseline": {"tp": 1, "fp": 1, "fn": 2, "precision": 0.5, "recall": 0.3333333333333333, "ambiguous_activation_images": 2, "clean_negative_false_detections": 2},
-      "candidate": {"tp": 1, "fp": 1, "fn": 2, "precision": 0.5, "recall": 0.3333333333333333, "ambiguous_activation_images": 0, "clean_negative_false_detections": 1},
+      "baseline": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 2,
+        "precision": 0.5,
+        "recall": 0.3333333333333333,
+        "ambiguous_activation_images": 2,
+        "clean_negative_false_detections": 2
+      },
+      "candidate": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 2,
+        "precision": 0.5,
+        "recall": 0.3333333333333333,
+        "ambiguous_activation_images": 0,
+        "clean_negative_false_detections": 1
+      },
       "evidence_sufficient": false,
       "improvement_demonstrated": false
     },
     "l5_frozen_control": {
       "modified": false,
-      "calibration": {"tp": 5, "fp": 0, "fn": 0, "precision": 1.0, "recall": 1.0},
-      "sealed_development": {"tp": 2, "fp": 1, "fn": 0, "precision": 0.6666666666666666, "recall": 1.0}
+      "calibration": {
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "sealed_development": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.6666666666666666,
+        "recall": 1.0
+      }
+    }
+  },
+  "protocol_v16": {
+    "waypoint_planner_job_id": 52006787,
+    "cpu_gate_job_id": 52009562,
+    "execution_job_id": 52009585,
+    "execution_commit": "3be07395f320e282eda35200a5a85f95e5fe2766",
+    "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v16",
+    "protocol_sha256": "b8b899d787bfb7f23cf5c5099d71e7d61c44edb2c25c5b1457fd6cddca28b287",
+    "waypoint_plan_sha256": "496781bd01761f59dce837716de3c3b2c000d20f302cf9ab6edb155ff1abc78e",
+    "status": "IMPROVEMENT_DEMONSTRATED",
+    "capture": {
+      "sessions": 4,
+      "frames": 192,
+      "passed_frames": 192,
+      "distinct_image_hashes": 192,
+      "coordinate_hash_mismatches": 0,
+      "all_projection_and_acquisition_gates_passed": true,
+      "split_frames": {
+        "train": 96,
+        "calibration": 48,
+        "development_evaluation": 48
+      },
+      "coverage": {
+        "train": {
+          "positive": 31,
+          "negative": 60,
+          "ambiguous": 5
+        },
+        "calibration": {
+          "positive": 16,
+          "negative": 25,
+          "ambiguous": 7
+        },
+        "development_evaluation": {
+          "positive": 14,
+          "negative": 28,
+          "ambiguous": 6
+        }
+      }
+    },
+    "fit": {
+      "selected_arm": "coverage_balanced",
+      "samples": 534,
+      "unique_source_images": 408,
+      "new_l4_positive_images": 31,
+      "new_negative_images": 30,
+      "new_frozen_false_trigger_images": 12,
+      "new_competing_l5_images": 18,
+      "threshold": 0.5,
+      "checkpoint_sha256": "6188c7713cac2f21485d030ac79f4e26ac9c4f0f179008aee57a6d891fe9e8c0",
+      "checkpoint_reload_verified": true,
+      "development_feature_rows_loaded_before_calibration": 0,
+      "development_used_for_fit_or_calibration": false
+    },
+    "calibration": {
+      "baseline": {
+        "image_count": 48,
+        "tp": 12,
+        "fp": 5,
+        "fn": 4,
+        "tn": 20,
+        "precision": 0.7058823529411765,
+        "recall": 0.75,
+        "ambiguous_image_count": 7,
+        "ambiguous_activation_images": 4,
+        "clean_negative_false_detections": 8
+      },
+      "candidate": {
+        "image_count": 48,
+        "tp": 13,
+        "fp": 2,
+        "fn": 3,
+        "tn": 23,
+        "precision": 0.8666666666666667,
+        "recall": 0.8125,
+        "ambiguous_image_count": 7,
+        "ambiguous_activation_images": 3,
+        "clean_negative_false_detections": 2
+      },
+      "gate_passed": true
+    },
+    "sealed_development": {
+      "baseline": {
+        "image_count": 48,
+        "tp": 10,
+        "fp": 5,
+        "fn": 4,
+        "tn": 23,
+        "precision": 0.6666666666666666,
+        "recall": 0.7142857142857143,
+        "ambiguous_image_count": 6,
+        "ambiguous_activation_images": 3,
+        "clean_negative_false_detections": 7
+      },
+      "candidate": {
+        "image_count": 48,
+        "tp": 11,
+        "fp": 1,
+        "fn": 3,
+        "tn": 27,
+        "precision": 0.9166666666666666,
+        "recall": 0.7857142857142857,
+        "ambiguous_image_count": 6,
+        "ambiguous_activation_images": 2,
+        "clean_negative_false_detections": 1
+      },
+      "minimum_required_candidate_tp": 9,
+      "evidence_sufficient": true,
+      "improvement_demonstrated": true
+    },
+    "l5_frozen_control": {
+      "modified": false,
+      "calibration": {
+        "image_count": 48,
+        "tp": 7,
+        "fp": 0,
+        "fn": 2,
+        "tn": 36,
+        "precision": 1.0,
+        "recall": 0.7777777777777778,
+        "ambiguous_image_count": 3,
+        "ambiguous_activation_images": 1,
+        "checkpoint_modified": false
+      },
+      "sealed_development": {
+        "image_count": 48,
+        "tp": 6,
+        "fp": 1,
+        "fn": 1,
+        "tn": 37,
+        "precision": 0.8571428571428571,
+        "recall": 0.8571428571428571,
+        "ambiguous_image_count": 3,
+        "ambiguous_activation_images": 0,
+        "checkpoint_modified": false
+      }
     }
   },
   "resource_ledger": {
-    "cpu_ablation": {"job_id": 51961297, "elapsed_seconds": 44, "cpus": 4},
-    "cpu_v12_gate": {"job_id": 51992778, "elapsed_seconds": 6, "cpus": 4, "tests_passed": 93},
-    "gpu_v11": {"job_id": 51992362, "elapsed_seconds": 93, "gpu": "1x NVIDIA L4", "status": "FAILED_TECHNICAL"},
-    "gpu_v12": {"job_id": 51992814, "elapsed_seconds": 226, "gpu": "1x NVIDIA L4", "status": "COMPLETED"},
-    "new_capture_storage_bytes": 124239412
+    "cpu_ablation": {
+      "job_id": 51961297,
+      "elapsed_seconds": 44,
+      "cpus": 4
+    },
+    "cpu_waypoint_plan": {
+      "job_id": 52006787,
+      "cpus": 4,
+      "tests_passed": 4
+    },
+    "cpu_v16_gate": {
+      "job_id": 52009562,
+      "elapsed_seconds": 4,
+      "cpus": 4,
+      "tests_passed": 43
+    },
+    "gpu_v16": {
+      "job_id": 52009585,
+      "elapsed_seconds": 415,
+      "cpus": 4,
+      "gpu": "1x NVIDIA L4",
+      "status": "COMPLETED"
+    },
+    "protocol_v16_storage_bytes": 179857146
   },
-  "minimum_next_change": "Redesign and CPU-preflight the privileged waypoint planner to yield substantially more independent L4 proxy-positive views before any further fit or capture.",
   "limitations": [
     "Fixed patient s0010 only",
     "Simulator geometry proxy labels only",
-    "Sealed development contained three L4-positive images and one false-positive image",
-    "No whole-TP, SAP, medial-branch, MBB-target, active-acquisition, or Stage 3 claim"
+    "No whole-TP, SAP, medial-branch, MBB-target, active-acquisition, or Stage 3 claim",
+    "The protocol v16 development split supports a bounded development comparison, not patient-level generalization"
   ]
 }

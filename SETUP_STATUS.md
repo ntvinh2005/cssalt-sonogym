@@ -1,5 +1,29 @@
 # Setup status
 
+## 2026-11-19: L4 simulator-proxy improvement demonstrated on protocol v16
+
+GPU job `52009585` completed `0:0` in 6 minutes 55 seconds with one NVIDIA L4,
+four CPUs and 30 GB requested memory at commit `3be07395`. All 192 observations
+across two train, one calibration and one development session passed native-map
+replay, synchronized full-pose replay, freshness, viewpoint-diversity and
+serialized-array integrity; each session contained 48 distinct image hashes.
+
+The selected 240-tree L4 one-vs-rest proxy classifier improved sealed-development
+TP/FP/FN from `10/5/4` to `11/1/3`: precision increased from `0.6667` to `0.9167`,
+recall from `0.7143` to `0.7857`, ambiguous activations decreased from three to two,
+and clean-negative detections decreased from seven to one. The checkpoint SHA-256
+is `6188c7713cac2f21485d030ac79f4e26ac9c4f0f179008aee57a6d891fe9e8c0`, and
+save/reload verification passed. L5 remained frozen.
+
+The cycle status is **`IMPROVEMENT_DEMONSTRATED`**. This remains fixed-anatomy
+`SIMULATOR_GEOMETRY_PROXY` evidence: `ACTIVE_ACQUISITION_INTEGRATION_HOLD` remains
+until researcher review, and no whole-TP, SAP, MBB-target, patient-generalization,
+or Stage 3 claim is made.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_improvement_cycle_result.json`.
+- Report: `docs/research/sonogym_s0010_tp_surface_core_proxy_l4_improvement_cycle.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/`.
+
 ## 2026-11-19: tri-state proxy audit passes, but existing L4 hard negatives are insufficient
 
 CPU job `51956725` completed `0:0` in 70 seconds with four CPUs, 16 GB requested memory and zero
