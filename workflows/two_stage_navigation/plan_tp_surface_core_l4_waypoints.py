@@ -191,18 +191,24 @@ def build_bank(
     # Each two-frame trajectory contains one positive-targeted view and one
     # confuser-targeted view.  This yields 24 declared views of each type while
     # keeping the within-trajectory movement comfortably executable.
+    session_shift = list(SESSION_SPECS).index(session_name)
     for pair_index in range(24):
-        offset_index = pair_index % len(BASE_OFFSETS)
-        positive = positives[(pair_index * 3 + len(session_name)) % len(positives)]
-        # Seven is coprime to both the observed 12-confuser set and the
-        # synthetic 10-confuser regression set, preventing a short cycle.
-        confuser = confusers[(pair_index * 7 + 1 + len(session_name)) % len(confusers)]
+        positive_index = pair_index % len(positives)
+        positive_cycle = pair_index // len(positives)
+        offset_index = (positive_cycle + 2 * session_shift) % len(BASE_OFFSETS)
+        positive = positives[positive_index]
+        confuser_index = pair_index % len(confusers)
+        confuser_cycle = pair_index // len(confusers)
+        confuser_offset_index = (
+            confuser_cycle + 3 + 2 * session_shift
+        ) % len(BASE_OFFSETS)
+        confuser = confusers[confuser_index]
         positive_pose = offset_pose(
             positive["requested_pose_index"], BASE_OFFSETS[offset_index], scale
         )
         confuser_pose = offset_pose(
             confuser["requested_pose_index"],
-            BASE_OFFSETS[(offset_index + 3) % len(BASE_OFFSETS)],
+            BASE_OFFSETS[confuser_offset_index],
             scale,
         )
         translation_mm, angle_deg = pose_separation(positive_pose, confuser_pose)
@@ -222,7 +228,7 @@ def build_bank(
                     "target_role": confuser["anchor_type"],
                     "anchor_id": confuser["anchor_id"],
                     "anchor_frame_sha256": confuser["frame_sha256"],
-                    "offset_index": (offset_index + 3) % len(BASE_OFFSETS),
+                    "offset_index": confuser_offset_index,
                 },
             ]
         )
