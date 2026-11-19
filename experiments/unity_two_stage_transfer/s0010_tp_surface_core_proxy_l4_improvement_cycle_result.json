@@ -1,0 +1,75 @@
+{
+  "schema": "sonogym-tp-surface-core-proxy-l4-improvement-cycle-result-v1",
+  "status": "SCIENTIFIC_NO_GO_WITH_DIAGNOSIS",
+  "active_acquisition_integration": "HOLD",
+  "patient_id": "s0010",
+  "frozen_v1_checkpoint_sha256": "338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b",
+  "existing_data_ablation": {
+    "job_id": 51961297,
+    "status": "OPENED_DEVELOPMENT_NO_GO",
+    "selected_arm": "l4_ovr_hn10",
+    "selected_checkpoint_sha256": "96db332d579dfd0aaf8efa8ac4f2f2882496531fbdffe68e521dcc6d2cbd72ed",
+    "baseline": {"tp": 12, "fp": 7, "fn": 5, "precision": 0.631578947368421, "recall": 0.7058823529411765},
+    "candidate": {"tp": 10, "fp": 0, "fn": 7, "precision": 1.0, "recall": 0.5882352941176471},
+    "required_candidate_tp": 11,
+    "l5_frozen_control": {"tp": 16, "fp": 4, "fn": 3}
+  },
+  "targeted_supplement": {
+    "failed_v11_job_id": 51992362,
+    "execution_job_id": 51992814,
+    "execution_commit": "dc4d26d13b194ad84182ae3ccbf5a9e42bd9d250",
+    "protocol_id": "sonogym-s0010-tp-surface-core-dataset-v12",
+    "protocol_sha256": "a699216f29cec1b4ef543b1dbc18c5bc056d320440add93a8fae9ab63859668e",
+    "capture": {
+      "sessions": 3,
+      "frames": 96,
+      "distinct_image_hashes": 96,
+      "split_frames": {"train": 48, "calibration": 24, "development_evaluation": 24},
+      "all_projection_and_acquisition_gates_passed": true,
+      "candidate_proposals": 925,
+      "verified_intersections": 132
+    },
+    "fit": {
+      "samples": 490,
+      "unique_source_images": 364,
+      "new_l4_positive_images": 5,
+      "new_negative_images": 12,
+      "new_frozen_false_trigger_images": 5,
+      "new_competing_l5_images": 7,
+      "threshold": 0.5,
+      "checkpoint_sha256": "ab0ca634796c1af9e4b2824999e54f2096b68142854a51ff29516f6b79b1afa9",
+      "checkpoint_reload_verified": true,
+      "development_feature_rows_loaded_before_calibration": 0
+    },
+    "calibration": {
+      "baseline": {"tp": 2, "fp": 2, "fn": 0, "precision": 0.5, "recall": 1.0, "ambiguous_activation_images": 1},
+      "candidate": {"tp": 2, "fp": 1, "fn": 0, "precision": 0.6666666666666666, "recall": 1.0, "ambiguous_activation_images": 0},
+      "gate_passed": true
+    },
+    "sealed_development": {
+      "baseline": {"tp": 1, "fp": 1, "fn": 2, "precision": 0.5, "recall": 0.3333333333333333, "ambiguous_activation_images": 2, "clean_negative_false_detections": 2},
+      "candidate": {"tp": 1, "fp": 1, "fn": 2, "precision": 0.5, "recall": 0.3333333333333333, "ambiguous_activation_images": 0, "clean_negative_false_detections": 1},
+      "evidence_sufficient": false,
+      "improvement_demonstrated": false
+    },
+    "l5_frozen_control": {
+      "modified": false,
+      "calibration": {"tp": 5, "fp": 0, "fn": 0, "precision": 1.0, "recall": 1.0},
+      "sealed_development": {"tp": 2, "fp": 1, "fn": 0, "precision": 0.6666666666666666, "recall": 1.0}
+    }
+  },
+  "resource_ledger": {
+    "cpu_ablation": {"job_id": 51961297, "elapsed_seconds": 44, "cpus": 4},
+    "cpu_v12_gate": {"job_id": 51992778, "elapsed_seconds": 6, "cpus": 4, "tests_passed": 93},
+    "gpu_v11": {"job_id": 51992362, "elapsed_seconds": 93, "gpu": "1x NVIDIA L4", "status": "FAILED_TECHNICAL"},
+    "gpu_v12": {"job_id": 51992814, "elapsed_seconds": 226, "gpu": "1x NVIDIA L4", "status": "COMPLETED"},
+    "new_capture_storage_bytes": 124239412
+  },
+  "minimum_next_change": "Redesign and CPU-preflight the privileged waypoint planner to yield substantially more independent L4 proxy-positive views before any further fit or capture.",
+  "limitations": [
+    "Fixed patient s0010 only",
+    "Simulator geometry proxy labels only",
+    "Sealed development contained three L4-positive images and one false-positive image",
+    "No whole-TP, SAP, medial-branch, MBB-target, active-acquisition, or Stage 3 claim"
+  ]
+}
