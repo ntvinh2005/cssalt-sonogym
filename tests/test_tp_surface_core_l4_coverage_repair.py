@@ -17,6 +17,7 @@ SCRIPT = ROOT / "workflows/two_stage_navigation/train_tp_surface_core_l4_coverag
 PROTOCOL_V13 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v13.yaml"
 PROTOCOL_V14 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v14.yaml"
 PROTOCOL_V15 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v15.yaml"
+PROTOCOL_V16 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v16.yaml"
 SPEC = importlib.util.spec_from_file_location("l4_coverage_repair", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 REPAIR = importlib.util.module_from_spec(SPEC)
@@ -70,6 +71,19 @@ class CoverageRepairTests(unittest.TestCase):
             v15["sampling"]["absolute_waypoint_banks_index"],
         )
         self.assertEqual(v14["model_comparison_gate"], v15["model_comparison_gate"])
+
+    def test_v16_changes_only_tracking_tolerance_and_session_identity(self) -> None:
+        expected = PROTOCOL_V16.with_suffix(".sha256").read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V16.read_bytes()).hexdigest(), expected)
+        v15 = yaml.safe_load(PROTOCOL_V15.read_text())
+        v16 = yaml.safe_load(PROTOCOL_V16.read_text())
+        self.assertEqual(v16["sampling"]["physical_tracking_orientation_tolerance_deg"], 1.2)
+        self.assertEqual(v16["sampling"]["maximum_initial_positioning_steps"], 350)
+        self.assertEqual(
+            v15["sampling"]["absolute_waypoint_banks_index"],
+            v16["sampling"]["absolute_waypoint_banks_index"],
+        )
+        self.assertEqual(v15["model_comparison_gate"], v16["model_comparison_gate"])
 
     def test_calibration_selection_is_deterministic(self) -> None:
         baseline = {"tp": 8, "fp": 4, "ambiguous_activation_images": 2}
