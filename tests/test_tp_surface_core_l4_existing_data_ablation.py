@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 import numpy as np
+import joblib
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -120,6 +122,15 @@ class ExistingDataAblationTests(unittest.TestCase):
         feature_call = source[source.index("def load_features") : source.index("def assign_states")]
         for forbidden in ("core_points", "uncertain_points", "proxy_state"):
             self.assertNotIn(forbidden, feature_call)
+
+    def test_patch_spec_checkpoint_payload_is_plain_data(self) -> None:
+        from dataclasses import asdict
+
+        payload = {"patch_spec": asdict(ABLATION.PATCH_SPEC)}
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "payload.joblib"
+            joblib.dump(payload, path)
+            self.assertEqual(joblib.load(path), payload)
 
 
 if __name__ == "__main__":

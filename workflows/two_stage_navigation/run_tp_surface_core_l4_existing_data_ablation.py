@@ -10,6 +10,7 @@ import importlib.util
 import json
 import sys
 from collections import Counter, defaultdict
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -535,7 +536,7 @@ def main() -> int:
             "arm": arm,
             "estimator": chosen_estimator,
             "threshold": threshold,
-            "patch_spec": PATCH_SPEC,
+            "patch_spec": asdict(PATCH_SPEC),
             "fit_sample_ids": [row["sample_id"] for row in training_rows_by_arm[chosen]],
             "frozen_l5_checkpoint_sha256": protocol["source_checkpoint_sha256"],
         }
