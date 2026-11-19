@@ -72,10 +72,32 @@ class TargetedSupplementTests(unittest.TestCase):
         state, _ = TARGETED.new_proposal_state(row)
         self.assertEqual(state, TARGETED.ABLATION.TRISTATE.PROXY_NEGATIVE)
 
+    def test_l5_control_keeps_l4_core_as_clear_negative(self) -> None:
+        row = {
+            "projection_status": "VERIFIED",
+            "candidate_id": "L4_RIGHT_TP_SURFACE_CORE",
+            "review_target": "REVIEW_POSITIVE",
+            "l4_core_points_in_patch": "12",
+            "l5_core_points_in_patch": "0",
+            "l4_uncertain_points_in_patch": "0",
+            "l5_uncertain_points_in_patch": "0",
+            "adequate_projected_support": "True",
+        }
+        self.assertEqual(
+            TARGETED.new_l5_proposal_state(row),
+            TARGETED.ABLATION.TRISTATE.PROXY_NEGATIVE,
+        )
+
     def test_fit_guard_is_explicit(self) -> None:
         source = SCRIPT.read_text()
         self.assertIn('row["split"] != "train"', source)
         self.assertIn('development_used_for_fit_or_calibration": False', source)
+        self.assertIn('"development_feature_rows_loaded_before_calibration": 0', source)
+        self.assertIn('if calibration_pass:', source)
+        self.assertLess(
+            source.index('if calibration_pass:'),
+            source.index('evaluation_features = ABLATION.load_features'),
+        )
 
 
 if __name__ == "__main__":

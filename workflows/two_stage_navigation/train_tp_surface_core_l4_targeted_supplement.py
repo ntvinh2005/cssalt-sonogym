@@ -89,6 +89,99 @@ def add_states(rows: list[dict[str, str]]) -> tuple[list[dict[str, Any]], dict[s
     return enriched, states
 
 
+def new_l5_proposal_state(row: dict[str, str]) -> str:
+    """Return the frozen L5 one-vs-rest proxy state for control reporting."""
+    if row["projection_status"] != "VERIFIED":
+        return ABLATION.TRISTATE.PROXY_AMBIGUOUS
+    l4 = int(row["l4_core_points_in_patch"])
+    l5 = int(row["l5_core_points_in_patch"])
+    l4u = int(row["l4_uncertain_points_in_patch"])
+    l5u = int(row["l5_uncertain_points_in_patch"])
+    positive = bool(
+        row["candidate_id"] == ABLATION.CLASS_NAMES[2]
+        and row["review_target"] == "REVIEW_POSITIVE"
+        and l5 > 0
+        and l4 == 0
+        and l4u == 0
+        and l5u == 0
+        and row["adequate_projected_support"].lower() == "true"
+    )
+    if positive:
+        return ABLATION.TRISTATE.PROXY_POSITIVE
+    if l5u > 0 or (l5 > 0 and not positive):
+        return ABLATION.TRISTATE.PROXY_AMBIGUOUS
+    return ABLATION.TRISTATE.PROXY_NEGATIVE
+
+
+def evaluate_frozen_l5(
+    rows: list[dict[str, str]],
+    features: dict[str, np.ndarray],
+    estimator: Any,
+    *,
+    split: str,
+) -> dict[str, Any]:
+    """Evaluate the unchanged frozen L5 head as a control."""
+    grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in rows:
+        if row["split"] == split:
+            grouped[row["frame_sha256"]].append(row)
+    classes = np.asarray(estimator.classes_)
+    columns = np.flatnonzero(classes == ABLATION.CLASS_L5)
+    if len(columns) != 1:
+        raise ValueError("frozen estimator does not contain L5 class")
+    column = int(columns[0])
+    records: list[tuple[str, bool]] = []
+    ambiguous_activations = 0
+    for proposals in grouped.values():
+        matrix = np.stack([features[row["sample_id"]] for row in proposals])
+        probabilities = estimator.predict_proba(matrix)
+        scores = probabilities[:, column]
+        accepted = (classes[np.argmax(probabilities, axis=1)] == ABLATION.CLASS_L5) & (
+            scores >= 0.5
+        )
+        proposal_states = [new_l5_proposal_state(row) for row in proposals]
+        image_state = ABLATION.TRISTATE.image_state(proposal_states)
+        predicted = bool(np.any(accepted))
+        if image_state == ABLATION.TRISTATE.PROXY_AMBIGUOUS:
+            ambiguous_activations += int(predicted)
+        records.append((image_state, predicted))
+    primary = [
+        (state, predicted)
+        for state, predicted in records
+        if state != ABLATION.TRISTATE.PROXY_AMBIGUOUS
+    ]
+    tp = sum(
+        state == ABLATION.TRISTATE.PROXY_POSITIVE and predicted
+        for state, predicted in primary
+    )
+    fp = sum(
+        state == ABLATION.TRISTATE.PROXY_NEGATIVE and predicted
+        for state, predicted in primary
+    )
+    fn = sum(
+        state == ABLATION.TRISTATE.PROXY_POSITIVE and not predicted
+        for state, predicted in primary
+    )
+    tn = sum(
+        state == ABLATION.TRISTATE.PROXY_NEGATIVE and not predicted
+        for state, predicted in primary
+    )
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+        "precision": None if tp + fp == 0 else tp / (tp + fp),
+        "recall": None if tp + fn == 0 else tp / (tp + fn),
+        "ambiguous_image_count": sum(
+            state == ABLATION.TRISTATE.PROXY_AMBIGUOUS for state, _ in records
+        ),
+        "ambiguous_activation_images": ambiguous_activations,
+        "image_count": len(records),
+        "checkpoint_modified": False,
+    }
+
+
 def best_by_frame(rows: list[dict[str, Any]], key) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -168,19 +261,28 @@ def main() -> int:
     old_selected = read_csv(old_dir / "proxy_sample_manifest.csv")
     old_hard = read_csv(args.old_hard_negatives.resolve())
     new_rows_raw = read_csv(args.new_dataset_manifest.resolve())
-    new_rows, new_states = add_states(new_rows_raw)
+    allowed_splits = {"train", "calibration", "development_evaluation"}
+    unexpected_splits = sorted({row["split"] for row in new_rows_raw} - allowed_splits)
+    if unexpected_splits:
+        raise ValueError(f"unexpected dataset splits: {unexpected_splits}")
+    design_rows_raw = [
+        row for row in new_rows_raw if row["split"] in {"train", "calibration"}
+    ]
+    design_rows, design_states = add_states(design_rows_raw)
 
     old_features = ABLATION.load_features(old_audit)
-    new_features = ABLATION.load_features(new_rows_raw)
+    design_features = ABLATION.load_features(design_rows_raw)
     frozen_bundle = joblib.load(old_dir / "tp_surface_core_simulator_proxy_extratrees.joblib")
     frozen = frozen_bundle["estimator"]
     old_arm = {"target": "l4_one_vs_rest", "hard_negatives": "include_as_l4_negative", "hard_negative_weight": 1.0}
     old_train = ABLATION.build_training_rows(old_selected, old_hard, old_arm)
-    new_train, supplement_counts = select_new_training_rows(new_rows, new_features, frozen)
+    new_train, supplement_counts = select_new_training_rows(
+        design_rows, design_features, frozen
+    )
     training_rows = old_train + new_train
     if any(row["split"] != "train" for row in training_rows):
         raise RuntimeError("non-training sample reached fit")
-    features = {**old_features, **new_features}
+    features = {**old_features, **design_features}
     estimator = ExtraTreesClassifier(
         n_estimators=240,
         class_weight="balanced",
@@ -193,11 +295,11 @@ def main() -> int:
     estimator.fit(matrix, targets, sample_weight=weights)
 
     baseline_cal, _ = ABLATION.evaluate_l4(
-        new_rows, new_features, new_states, frozen, 0.5,
+        design_rows, design_features, design_states, frozen, 0.5,
         target="three_class", split="calibration", arm_id="frozen_v1"
     )
     candidate_cal, _ = ABLATION.evaluate_l4(
-        new_rows, new_features, new_states, estimator, 0.5,
+        design_rows, design_features, design_states, estimator, 0.5,
         target="l4_one_vs_rest", split="calibration", arm_id="targeted_candidate"
     )
     calibration_pass = bool(
@@ -218,6 +320,10 @@ def main() -> int:
         "development_used_for_fit_or_calibration": False,
         "threshold": 0.5,
         "l5_modified": False,
+        "l5_frozen_control_calibration": evaluate_frozen_l5(
+            design_rows_raw, design_features, frozen, split="calibration"
+        ),
+        "development_feature_rows_loaded_before_calibration": 0,
     }
     checkpoint = output / "l4_targeted_supplement_candidate.joblib"
     joblib.dump(
@@ -240,12 +346,17 @@ def main() -> int:
     result["checkpoint_reload_verified"] = True
 
     if calibration_pass:
+        evaluation_rows_raw = [
+            row for row in new_rows_raw if row["split"] == "development_evaluation"
+        ]
+        evaluation_rows, evaluation_states = add_states(evaluation_rows_raw)
+        evaluation_features = ABLATION.load_features(evaluation_rows_raw)
         baseline_eval, baseline_records = ABLATION.evaluate_l4(
-            new_rows, new_features, new_states, frozen, 0.5,
+            evaluation_rows, evaluation_features, evaluation_states, frozen, 0.5,
             target="three_class", split="development_evaluation", arm_id="frozen_v1"
         )
         candidate_eval, candidate_records = ABLATION.evaluate_l4(
-            new_rows, new_features, new_states, estimator, 0.5,
+            evaluation_rows, evaluation_features, evaluation_states, estimator, 0.5,
             target="l4_one_vs_rest", split="development_evaluation", arm_id="targeted_candidate"
         )
         required_tp = math.ceil(0.9 * baseline_eval["tp"])
@@ -265,6 +376,13 @@ def main() -> int:
             minimum_required_candidate_tp=required_tp,
             sealed_evaluation_evidence_sufficient=enough_evidence,
             improvement_demonstrated=success,
+            l5_frozen_control_sealed_evaluation=evaluate_frozen_l5(
+                evaluation_rows_raw,
+                evaluation_features,
+                frozen,
+                split="development_evaluation",
+            ),
+            development_feature_rows_loaded_after_calibration=len(evaluation_rows_raw),
         )
     write_csv(output / "supplement_training_samples.csv", new_train)
     (output / "result.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
