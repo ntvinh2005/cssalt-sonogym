@@ -4,13 +4,17 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import sys
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "workflows/two_stage_navigation/train_tp_surface_core_l4_coverage_repair.py"
+PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v13.yaml"
 SPEC = importlib.util.spec_from_file_location("l4_coverage_repair", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 REPAIR = importlib.util.module_from_spec(SPEC)
@@ -19,6 +23,22 @@ SPEC.loader.exec_module(REPAIR)
 
 
 class CoverageRepairTests(unittest.TestCase):
+    def test_protocol_is_sealed_and_split_before_capture(self) -> None:
+        expected = PROTOCOL.with_suffix(".sha256").read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(PROTOCOL.read_text())
+        self.assertEqual(protocol["protocol_id"], "sonogym-s0010-tp-surface-core-dataset-v13")
+        self.assertEqual(
+            [row["split"] for row in protocol["sessions"]],
+            ["train", "train", "calibration", "development_evaluation"],
+        )
+        self.assertTrue(
+            all(
+                len(rows) == 48
+                for rows in protocol["sampling"]["absolute_waypoint_banks_index"].values()
+            )
+        )
+
     def test_calibration_selection_is_deterministic(self) -> None:
         baseline = {"tp": 8, "fp": 4, "ambiguous_activation_images": 2}
         candidates = {
