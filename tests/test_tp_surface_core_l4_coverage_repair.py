@@ -14,7 +14,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "workflows/two_stage_navigation/train_tp_surface_core_l4_coverage_repair.py"
-PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v13.yaml"
+PROTOCOL_V13 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v13.yaml"
+PROTOCOL_V14 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v14.yaml"
 SPEC = importlib.util.spec_from_file_location("l4_coverage_repair", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 REPAIR = importlib.util.module_from_spec(SPEC)
@@ -24,9 +25,9 @@ SPEC.loader.exec_module(REPAIR)
 
 class CoverageRepairTests(unittest.TestCase):
     def test_protocol_is_sealed_and_split_before_capture(self) -> None:
-        expected = PROTOCOL.with_suffix(".sha256").read_text().split()[0]
-        self.assertEqual(hashlib.sha256(PROTOCOL.read_bytes()).hexdigest(), expected)
-        protocol = yaml.safe_load(PROTOCOL.read_text())
+        expected = PROTOCOL_V13.with_suffix(".sha256").read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V13.read_bytes()).hexdigest(), expected)
+        protocol = yaml.safe_load(PROTOCOL_V13.read_text())
         self.assertEqual(protocol["protocol_id"], "sonogym-s0010-tp-surface-core-dataset-v13")
         self.assertEqual(
             [row["split"] for row in protocol["sessions"]],
@@ -38,6 +39,19 @@ class CoverageRepairTests(unittest.TestCase):
                 for rows in protocol["sampling"]["absolute_waypoint_banks_index"].values()
             )
         )
+
+    def test_v14_changes_only_convergence_budget_and_session_identity(self) -> None:
+        expected = PROTOCOL_V14.with_suffix(".sha256").read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V14.read_bytes()).hexdigest(), expected)
+        v13 = yaml.safe_load(PROTOCOL_V13.read_text())
+        v14 = yaml.safe_load(PROTOCOL_V14.read_text())
+        self.assertEqual(v13["sampling"]["maximum_initial_positioning_steps"], 350)
+        self.assertEqual(v14["sampling"]["maximum_initial_positioning_steps"], 450)
+        self.assertEqual(
+            v13["sampling"]["absolute_waypoint_banks_index"],
+            v14["sampling"]["absolute_waypoint_banks_index"],
+        )
+        self.assertEqual(v13["model_comparison_gate"], v14["model_comparison_gate"])
 
     def test_calibration_selection_is_deterministic(self) -> None:
         baseline = {"tp": 8, "fp": 4, "ambiguous_activation_images": 2}

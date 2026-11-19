@@ -1,0 +1,763 @@
+protocol_id: sonogym-s0010-tp-surface-core-dataset-v14
+status: PRE_GPU_FROZEN_TECHNICAL_CORRECTION
+purpose: L4 proxy coverage repair with balanced positive and confuser targeted acquisition
+source:
+  implementation_commit: c257088a6885f9daf3a5b81c25789dbaefc754c8
+  superseded_protocol: sonogym-s0010-tp-surface-core-dataset-v13
+  superseded_failed_job: 52007784
+  correction_scope: increase_initial_convergence_budget_only
+  waypoint_planner_job: 52006787
+  waypoint_plan_sha256: 496781bd01761f59dce837716de3c3b2c000d20f302cf9ab6edb155ff1abc78e
+  frozen_v1_checkpoint_sha256: 338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_coverage_collection: true
+  semantic_training_authorized: simulator_geometry_proxy_only
+  active_landmarks:
+  - L4_RIGHT_transverse_process
+  - L5_RIGHT_transverse_process
+  excluded_landmarks:
+  - SAP
+  - whole_TP
+  - MBB_target
+information_boundaries:
+  actor:
+  - clean_ultrasound_pixels
+  - executed_relative_motion
+  - acquisition_feedback
+  privileged_collection:
+  - candidate_surface_geometry
+  - raw_labels
+  - full_transforms
+  - native_pixel_to_volume_coordinates
+sampling:
+  expected_frames_per_session: 48
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.0
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 450
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 10000
+  trajectory_start_frames:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  - 12
+  - 14
+  - 16
+  - 18
+  - 20
+  - 22
+  - 24
+  - 26
+  - 28
+  - 30
+  - 32
+  - 34
+  - 36
+  - 38
+  - 40
+  - 42
+  - 44
+  - 46
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio:
+    - 0.02
+    - 0.02
+    - 0.6
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    calibration:
+    - - 150.6
+      - 141.45
+      - 2.8414
+    - - 162.95
+      - 127.9
+      - 2.9191
+    - - 144.1
+      - 142.95
+      - 2.95
+    - - 154.95
+      - 158.0
+      - 2.8391
+    - - 136.0
+      - 147.45
+      - 2.9214
+    - - 165.0
+      - 156.9
+      - 2.8791
+    - - 136.1
+      - 148.95
+      - 2.95
+    - - 160.95
+      - 158.0
+      - 2.8191
+    - - 160.1
+      - 136.95
+      - 2.8314
+    - - 154.95
+      - 127.9
+      - 2.8391
+    - - 149.6
+      - 140.45
+      - 2.8614
+    - - 157.95
+      - 131.9
+      - 2.8
+    - - 157.6
+      - 140.45
+      - 2.9414
+    - - 152.95
+      - 125.9
+      - 2.8991
+    - - 152.1
+      - 142.95
+      - 2.8314
+    - - 160.95
+      - 125.9
+      - 2.8191
+    - - 154.4
+      - 139.55
+      - 2.8186
+    - - 157.95
+      - 156.9
+      - 2.8
+    - - 147.9
+      - 141.05
+      - 2.9286
+    - - 149.95
+      - 131.9
+      - 2.8791
+    - - 138.4
+      - 145.55
+      - 2.8986
+    - - 144.95
+      - 125.9
+      - 2.8191
+    - - 139.9
+      - 147.05
+      - 2.9286
+    - - 149.95
+      - 156.9
+      - 2.8791
+    - - 163.9
+      - 135.05
+      - 2.8086
+    - - 160.575
+      - 125.525
+      - 2.9229
+    - - 153.4
+      - 138.55
+      - 2.8386
+    - - 152.575
+      - 157.525
+      - 2.8429
+    - - 161.4
+      - 138.55
+      - 2.9186
+    - - 163.575
+      - 154.525
+      - 2.8829
+    - - 155.9
+      - 141.05
+      - 2.8086
+    - - 158.575
+      - 157.525
+      - 2.8229
+    - - 151.55
+      - 138.6
+      - 2.8509
+    - - 152.575
+      - 125.525
+      - 2.8429
+    - - 145.05
+      - 140.1
+      - 2.95
+    - - 155.575
+      - 129.525
+      - 2.8029
+    - - 136.0
+      - 144.6
+      - 2.9309
+    - - 150.575
+      - 123.525
+      - 2.9029
+    - - 137.05
+      - 146.1
+      - 2.95
+    - - 158.575
+      - 123.525
+      - 2.8229
+    - - 161.05
+      - 134.1
+      - 2.8409
+    - - 155.575
+      - 154.525
+      - 2.8029
+    - - 150.55
+      - 137.6
+      - 2.8709
+    - - 147.575
+      - 129.525
+      - 2.8829
+    - - 158.55
+      - 137.6
+      - 2.95
+    - - 142.575
+      - 123.525
+      - 2.8229
+    - - 153.05
+      - 140.1
+      - 2.8409
+    - - 147.575
+      - 154.525
+      - 2.8829
+    development_evaluation:
+    - - 151.3
+      - 138.1
+      - 2.8564
+    - - 163.8
+      - 126.6
+      - 2.95
+    - - 144.8
+      - 139.6
+      - 2.95
+    - - 155.8
+      - 158.0
+      - 2.8816
+    - - 136.0
+      - 144.1
+      - 2.9364
+    - - 165.0
+      - 155.6
+      - 2.9216
+    - - 136.8
+      - 145.6
+      - 2.95
+    - - 161.8
+      - 158.0
+      - 2.8616
+    - - 160.8
+      - 133.6
+      - 2.8464
+    - - 155.8
+      - 126.6
+      - 2.8816
+    - - 150.3
+      - 137.1
+      - 2.8764
+    - - 158.8
+      - 130.6
+      - 2.8416
+    - - 158.3
+      - 137.1
+      - 2.95
+    - - 153.8
+      - 124.6
+      - 2.9416
+    - - 152.8
+      - 139.6
+      - 2.8464
+    - - 161.8
+      - 124.6
+      - 2.8616
+    - - 153.7
+      - 142.9
+      - 2.8036
+    - - 158.8
+      - 155.6
+      - 2.8416
+    - - 147.2
+      - 144.4
+      - 2.9136
+    - - 150.8
+      - 130.6
+      - 2.9216
+    - - 137.7
+      - 148.9
+      - 2.8836
+    - - 145.8
+      - 124.6
+      - 2.8616
+    - - 139.2
+      - 150.4
+      - 2.9136
+    - - 150.8
+      - 155.6
+      - 2.9216
+    - - 163.2
+      - 138.4
+      - 2.8
+    - - 161.4
+      - 127.8
+      - 2.95
+    - - 152.7
+      - 141.9
+      - 2.8236
+    - - 153.4
+      - 158.0
+      - 2.8936
+    - - 160.7
+      - 141.9
+      - 2.9036
+    - - 164.4
+      - 156.8
+      - 2.9336
+    - - 155.2
+      - 144.4
+      - 2.8
+    - - 159.4
+      - 158.0
+      - 2.8736
+    - - 150.7
+      - 139.9
+      - 2.8084
+    - - 153.4
+      - 127.8
+      - 2.8936
+    - - 144.2
+      - 141.4
+      - 2.9184
+    - - 156.4
+      - 131.8
+      - 2.8536
+    - - 136.0
+      - 145.9
+      - 2.8884
+    - - 151.4
+      - 125.8
+      - 2.95
+    - - 136.2
+      - 147.4
+      - 2.9184
+    - - 159.4
+      - 125.8
+      - 2.8736
+    - - 160.2
+      - 135.4
+      - 2.8
+    - - 156.4
+      - 156.8
+      - 2.8536
+    - - 149.7
+      - 138.9
+      - 2.8284
+    - - 148.4
+      - 131.8
+      - 2.9336
+    - - 157.7
+      - 138.9
+      - 2.9084
+    - - 143.4
+      - 125.8
+      - 2.8736
+    - - 152.2
+      - 141.4
+      - 2.8
+    - - 148.4
+      - 156.8
+      - 2.9336
+    train_a:
+    - - 151.825
+      - 140.275
+      - 2.8219
+    - - 162.225
+      - 125.325
+      - 2.9274
+    - - 145.325
+      - 141.775
+      - 2.9319
+    - - 154.225
+      - 157.325
+      - 2.8474
+    - - 136.0
+      - 146.275
+      - 2.9019
+    - - 165.0
+      - 154.325
+      - 2.8874
+    - - 137.325
+      - 147.775
+      - 2.9319
+    - - 160.225
+      - 157.325
+      - 2.8274
+    - - 161.325
+      - 135.775
+      - 2.8119
+    - - 154.225
+      - 125.325
+      - 2.8474
+    - - 150.825
+      - 139.275
+      - 2.8419
+    - - 157.225
+      - 129.325
+      - 2.8074
+    - - 158.825
+      - 139.275
+      - 2.9219
+    - - 152.225
+      - 123.325
+      - 2.9074
+    - - 153.325
+      - 141.775
+      - 2.8119
+    - - 160.225
+      - 123.325
+      - 2.8274
+    - - 153.175
+      - 140.725
+      - 2.8381
+    - - 157.225
+      - 154.325
+      - 2.8074
+    - - 146.675
+      - 142.225
+      - 2.9481
+    - - 149.225
+      - 129.325
+      - 2.8874
+    - - 137.175
+      - 146.725
+      - 2.9181
+    - - 144.225
+      - 123.325
+      - 2.8274
+    - - 138.675
+      - 148.225
+      - 2.9481
+    - - 149.225
+      - 154.325
+      - 2.8874
+    - - 162.675
+      - 136.225
+      - 2.8281
+    - - 161.1
+      - 126.45
+      - 2.9454
+    - - 152.175
+      - 139.725
+      - 2.8581
+    - - 153.1
+      - 158.0
+      - 2.8654
+    - - 160.175
+      - 139.725
+      - 2.9381
+    - - 164.1
+      - 155.45
+      - 2.9054
+    - - 154.675
+      - 142.225
+      - 2.8281
+    - - 159.1
+      - 158.0
+      - 2.8454
+    - - 152.275
+      - 141.175
+      - 2.8426
+    - - 153.1
+      - 126.45
+      - 2.8654
+    - - 145.775
+      - 142.675
+      - 2.95
+    - - 156.1
+      - 130.45
+      - 2.8254
+    - - 136.275
+      - 147.175
+      - 2.9226
+    - - 151.1
+      - 124.45
+      - 2.9254
+    - - 137.775
+      - 148.675
+      - 2.95
+    - - 159.1
+      - 124.45
+      - 2.8454
+    - - 161.775
+      - 136.675
+      - 2.8326
+    - - 156.1
+      - 155.45
+      - 2.8254
+    - - 151.275
+      - 140.175
+      - 2.8626
+    - - 148.1
+      - 130.45
+      - 2.9054
+    - - 159.275
+      - 140.175
+      - 2.9426
+    - - 143.1
+      - 124.45
+      - 2.8454
+    - - 153.775
+      - 142.675
+      - 2.8326
+    - - 148.1
+      - 155.45
+      - 2.9054
+    train_b:
+    - - 152.15
+      - 141.55
+      - 2.8496
+    - - 163.4
+      - 125.3
+      - 2.9316
+    - - 145.65
+      - 143.05
+      - 2.95
+    - - 155.4
+      - 157.3
+      - 2.8516
+    - - 136.15
+      - 147.55
+      - 2.9296
+    - - 165.0
+      - 154.3
+      - 2.8916
+    - - 137.65
+      - 149.05
+      - 2.95
+    - - 161.4
+      - 157.3
+      - 2.8316
+    - - 161.65
+      - 137.05
+      - 2.8396
+    - - 155.4
+      - 125.3
+      - 2.8516
+    - - 151.15
+      - 140.55
+      - 2.8696
+    - - 158.4
+      - 129.3
+      - 2.8116
+    - - 159.15
+      - 140.55
+      - 2.9496
+    - - 153.4
+      - 123.3
+      - 2.9116
+    - - 153.65
+      - 143.05
+      - 2.8396
+    - - 161.4
+      - 123.3
+      - 2.8316
+    - - 152.85
+      - 139.45
+      - 2.8104
+    - - 158.4
+      - 154.3
+      - 2.8116
+    - - 146.35
+      - 140.95
+      - 2.9204
+    - - 150.4
+      - 129.3
+      - 2.8916
+    - - 136.85
+      - 145.45
+      - 2.8904
+    - - 145.4
+      - 123.3
+      - 2.8316
+    - - 138.35
+      - 146.95
+      - 2.9204
+    - - 150.4
+      - 154.3
+      - 2.8916
+    - - 162.35
+      - 134.95
+      - 2.8004
+    - - 161.3
+      - 124.6
+      - 2.95
+    - - 151.85
+      - 138.45
+      - 2.8304
+    - - 153.3
+      - 156.6
+      - 2.8754
+    - - 159.85
+      - 138.45
+      - 2.9104
+    - - 164.3
+      - 153.6
+      - 2.9154
+    - - 154.35
+      - 140.95
+      - 2.8004
+    - - 159.3
+      - 156.6
+      - 2.8554
+    - - 151.1
+      - 141.2
+      - 2.8384
+    - - 153.3
+      - 124.6
+      - 2.8754
+    - - 144.6
+      - 142.7
+      - 2.9484
+    - - 156.3
+      - 128.6
+      - 2.8354
+    - - 136.0
+      - 147.2
+      - 2.9184
+    - - 151.3
+      - 122.6
+      - 2.9354
+    - - 136.6
+      - 148.7
+      - 2.9484
+    - - 159.3
+      - 122.6
+      - 2.8554
+    - - 160.6
+      - 136.7
+      - 2.8284
+    - - 156.3
+      - 153.6
+      - 2.8354
+    - - 150.1
+      - 140.2
+      - 2.8584
+    - - 148.3
+      - 128.6
+      - 2.9154
+    - - 158.1
+      - 140.2
+      - 2.9384
+    - - 143.3
+      - 122.6
+      - 2.8554
+    - - 152.6
+      - 142.7
+      - 2.8284
+    - - 148.3
+      - 153.6
+      - 2.9154
+sessions:
+- session_id: s0010tpscv14_train_targeted_00
+  role: coverage_repair
+  split: train
+  seed: 2026112410
+  reset_id: s0010tpscv14_train_targeted_00
+  absolute_waypoint_bank_id: train_a
+  expected_frame_count: 48
+- session_id: s0010tpscv14_train_targeted_01
+  role: coverage_repair
+  split: train
+  seed: 2026112420
+  reset_id: s0010tpscv14_train_targeted_01
+  absolute_waypoint_bank_id: train_b
+  expected_frame_count: 48
+- session_id: s0010tpscv14_cal_targeted_00
+  role: coverage_repair
+  split: calibration
+  seed: 2026112430
+  reset_id: s0010tpscv14_cal_targeted_00
+  absolute_waypoint_bank_id: calibration
+  expected_frame_count: 48
+- session_id: s0010tpscv14_eval_targeted_00
+  role: sealed_evaluation
+  split: development_evaluation
+  seed: 2026112440
+  reset_id: s0010tpscv14_eval_targeted_00
+  absolute_waypoint_bank_id: development_evaluation
+  expected_frame_count: 48
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 10.0
+    maximum_orientation_error_deg: 10.0
+    minimum_l4_visible_fraction: 0.05
+  quality:
+    visibility_normalization_fraction: 0.2
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 48
+  minimum_l4_proxy_positive_images:
+    train: 16
+    calibration: 8
+    development_evaluation: 8
+  minimum_clear_confuser_images:
+    train: 24
+    calibration: 12
+    development_evaluation: 12
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.9
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+  require_serialized_array_hash_integrity: true
+label_preparation:
+  surface_slab_tolerance_mm: 1.5
+  proposal_column_stride_pixels: 12
+  patch_width_pixels: 48
+  patch_depth_pixels: 80
+  feature_size_pixels: 16
+  anatomy_approval_required: false
+  image_semantic_review_required: false
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA_L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: 00:30:00
+  maximum_storage_growth_gb: 3.0
+waypoint_plan:
+  schema: sonogym-l4-tp-proxy-waypoint-plan-v1
+  positive_anchor_count: 8
+  confuser_anchor_count: 12
+  minimum_unique_core_pixels_for_anchor: 12
+  per_session:
+    frames: 48
+    positive_targeted: 24
+    false_trigger_targeted: 10
+    competing_l5_targeted: 14
+  privileged_collection_only: true
+model_comparison_gate:
+  threshold: 0.5
+  calibration:
+    candidate_tp_at_least_baseline: true
+    candidate_fp_at_most_baseline: true
+    candidate_ambiguous_activations_at_most_baseline: true
+  sealed_evaluation:
+    minimum_baseline_tp: 8
+    minimum_baseline_fp: 3
+    minimum_tp_retention_fraction: 0.9
+    require_strict_fp_reduction: true
+    candidate_ambiguous_activations_at_most_baseline: true
+  l5_control: frozen_checkpoint_only
+
