@@ -116,6 +116,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It tests whether the ten clear training hard negatives and existing L5-positive patches can improve L4 full-image proxy recognition before additional capture.
 - **Source:** approved by user, 2026-11-19.
 
+### s0010_tp_surface_core_proxy_l4_targeted_supplement_v1
+- **Kind:** object
+- **Definition:** The fixed-anatomy simulator-proxy experiment that captures preassigned L4-positive, posterior-bone-confuser and L5-confuser train, calibration and evaluation views, fits the selected L4 one-vs-rest method on train only, gates it on calibration and evaluates it once on the sealed evaluation session.
+- **Intuition:** It tests whether targeted real simulator observations recover L4 recall while retaining the false-positive reduction seen in the existing-data ablation.
+- **Source:** approved by user, 2026-11-19.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.
