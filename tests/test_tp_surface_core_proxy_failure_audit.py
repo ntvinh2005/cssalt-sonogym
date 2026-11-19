@@ -36,6 +36,9 @@ def proposal(
 
 
 class FailureClassificationTests(unittest.TestCase):
+    def test_frozen_checkpoint_feature_module_name_is_registered(self) -> None:
+        self.assertIs(sys.modules["tp_proxy_features"], AUDIT.FEATURES)
+
     def test_competing_l5_overlap_has_direct_geometric_precedence(self) -> None:
         primary, evidence, _ = AUDIT.classify_false_positive([proposal(l5=2)])
         self.assertIn("competing L5", primary)

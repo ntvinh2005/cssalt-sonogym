@@ -25,13 +25,19 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 EVALUATION_ROOT = ROOT / "source/spinal_surgery/spinal_surgery/evaluation"
+FEATURE_PATH = EVALUATION_ROOT / "two_stage_navigation/stage1_features.py"
+FEATURE_SPEC = importlib.util.spec_from_file_location("tp_proxy_features", FEATURE_PATH)
+if FEATURE_SPEC is None or FEATURE_SPEC.loader is None:
+    raise RuntimeError("cannot load the frozen checkpoint feature module")
+FEATURES = importlib.util.module_from_spec(FEATURE_SPEC)
+sys.modules[FEATURE_SPEC.name] = FEATURES
+FEATURE_SPEC.loader.exec_module(FEATURES)
+UNITY_REFERENCE_PATCH_SPEC = FEATURES.UNITY_REFERENCE_PATCH_SPEC
+extract_interface_patch = FEATURES.extract_interface_patch
+extract_patch_feature = FEATURES.extract_patch_feature
+normalized_patch_intensity = FEATURES.normalized_patch_intensity
+
 sys.path.insert(0, str(EVALUATION_ROOT))
-from two_stage_navigation.stage1_features import (  # noqa: E402
-    UNITY_REFERENCE_PATCH_SPEC,
-    extract_interface_patch,
-    extract_patch_feature,
-    normalized_patch_intensity,
-)
 from two_stage_navigation.ultrasound_plane_geometry import (  # noqa: E402
     plane_from_full_pose,
     project_points_to_pixels,
