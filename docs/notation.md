@@ -56,6 +56,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It is an exploratory simulator-label pilot, not the verified-label protocol or evidence of anatomical recognition.
 - **Source:** approved by user, 2026-11-18.
 
+### EXPLORATORY_TRAINING_PASS
+- **Kind:** object
+- **Definition:** The s0010_tp_surface_core_simulator_proxy_exploratory_v1 engineering decision indicating that the sealed proxy labels, split-isolated ExtraTrees fitting, checkpoint persistence, and reported development measurements completed as specified.
+- **Intuition:** It permits failure analysis of the frozen exploratory checkpoint without promoting simulator-proxy performance to anatomical recognition.
+- **Source:** approved by user, 2026-11-18.
+
+### ACTIVE_ACQUISITION_INTEGRATION_HOLD
+- **Kind:** object
+- **Definition:** The decision that the frozen simulator-proxy checkpoint must not enter active acquisition while its whole-image proposal errors remain insufficiently diagnosed or controlled.
+- **Intuition:** It separates a completed exploratory fit from readiness to control physical evidence acquisition.
+- **Source:** approved by user, 2026-11-18.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.
