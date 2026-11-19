@@ -1,0 +1,44 @@
+experiment_id: s0010_tp_surface_core_proxy_tristate_hard_negative_v1
+scientific_scope: fixed-anatomy simulator-proxy data preparation only
+source_experiment: s0010_tp_surface_core_simulator_proxy_exploratory_v1
+source_job_id: 51836756
+source_checkpoint_sha256: 338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b
+source_proxy_label_audit_sha256: 67dfdfe482b0fe689f29ea25be077b31e5a9d4f0db3c67366c4c2a4bbecf3175
+source_proxy_sample_manifest_sha256: 72f74f704adf8d9519c484c60f444f0b2aa09f12c515294b93869a941047c871
+source_l4_failure_audit_sha256: 2efff1a034ed18fb4d02f1cf34a2744d06945d460d89b85971d4f5fee207aae2
+tri_state:
+  positive: complete_existing_l4_proxy_contract
+  negative: verified_projection_and_zero_l4_core_and_zero_l4_uncertainty
+  ambiguous:
+    - l4_uncertainty_intersection
+    - l4_core_without_complete_positive_contract
+    - unverified_projection
+  image_precedence:
+    - PROXY_POSITIVE
+    - PROXY_AMBIGUOUS
+    - PROXY_NEGATIVE
+hard_negative_mining:
+  source_split: train
+  source_proposal: ACTOR_VISIBLE_BRIGHT_INTERFACE
+  minimum_l4_probability: 0.5
+  required_proposal_state: PROXY_NEGATIVE
+  image_state_role: diagnostic_only_patch_label_is_local
+  require_zero_l4_uncertainty: true
+  require_zero_l5_uncertainty: true
+  maximum_selected_per_source_image: 1
+  selection_order:
+    - maximum_l4_probability
+    - sample_id
+  subtypes:
+    - COMPETING_L5_CORE
+    - OTHER_BONE_INTERFACE
+data_sufficiency:
+  minimum_unique_training_images: 40
+  source: existing_proxy_protocol_minimum_train_unique_images
+model_fitting: forbidden
+new_capture: forbidden
+development_use: diagnostic_reclassification_only
+historical_results: immutable
+future_l4_v2:
+  prepare_protocol_only_if_data_sufficiency_passes: true
+  l5_checkpoint: frozen_control

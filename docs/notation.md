@@ -80,6 +80,30 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It determines whether a one-parameter L4 decision rule is worth freezing before any new development acquisition.
 - **Source:** approved by user, 2026-11-18.
 
+### PROXY_POSITIVE
+- **Kind:** object
+- **Definition:** An L4 proposal or image state with verified projection and at least one proposal satisfying the complete frozen L4 SIMULATOR_GEOMETRY_PROXY contract.
+- **Intuition:** It is eligible to act as L4-positive proxy evidence.
+- **Source:** approved by user, 2026-11-19.
+
+### PROXY_NEGATIVE
+- **Kind:** object
+- **Definition:** An L4 proposal or image state with verified projection, no L4 core intersection and no L4 uncertainty intersection within the evaluated proposal support.
+- **Intuition:** It is eligible to act as L4-negative proxy evidence; competing L5 geometry is recorded separately.
+- **Source:** approved by user, 2026-11-19.
+
+### PROXY_AMBIGUOUS
+- **Kind:** object
+- **Definition:** An L4 proposal or image state that is neither PROXY_POSITIVE nor PROXY_NEGATIVE because it intersects L4 uncertainty, contains L4 core evidence that does not satisfy the complete positive contract, or lacks verified projection.
+- **Intuition:** It is excluded from primary positive/negative metrics and reported separately.
+- **Source:** approved by user, 2026-11-19.
+
+### s0010_tp_surface_core_proxy_tristate_hard_negative_v1
+- **Kind:** object
+- **Definition:** The CPU-only preparation experiment that applies PROXY_POSITIVE, PROXY_NEGATIVE and PROXY_AMBIGUOUS to existing s0010 proposals, then selects at most one high-L4-probability PROXY_NEGATIVE actor-visible interface patch per unique training image while excluding every declared uncertainty region.
+- **Intuition:** It measures whether existing training captures contain enough clear L4 confusers to justify a separately approved L4 v2 fit.
+- **Source:** approved by user, 2026-11-19.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.
