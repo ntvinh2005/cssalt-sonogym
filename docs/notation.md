@@ -68,6 +68,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It separates a completed exploratory fit from readiness to control physical evidence acquisition.
 - **Source:** approved by user, 2026-11-18.
 
+### L4 margin
+- **Kind:** metric
+- **Definition:** For one actor-visible proposal, the frozen L4 class probability minus the larger of the frozen background and L5 class probabilities; an added decision rule may require this value to exceed a calibration-selected bound after the unchanged 0.50 L4 threshold and L4 argmax rule pass.
+- **Intuition:** It tests whether L4 evidence separates from its strongest competing class without refitting the checkpoint or modifying L5 decisions.
+- **Source:** approved by user, 2026-11-18.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.

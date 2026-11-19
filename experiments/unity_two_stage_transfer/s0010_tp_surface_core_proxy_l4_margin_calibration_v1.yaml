@@ -1,0 +1,37 @@
+experiment_id: s0010_tp_surface_core_proxy_l4_margin_calibration_v1
+scientific_scope: fixed-anatomy simulator-proxy calibration diagnostic only
+source_experiment: s0010_tp_surface_core_simulator_proxy_exploratory_v1
+source_job_id: 51836756
+source_checkpoint_sha256: 338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b
+source_proxy_label_audit_sha256: 67dfdfe482b0fe689f29ea25be077b31e5a9d4f0db3c67366c4c2a4bbecf3175
+source_proxy_sample_manifest_sha256: 72f74f704adf8d9519c484c60f444f0b2aa09f12c515294b93869a941047c871
+allowed_split: calibration
+forbidden_evaluation_split: development_evaluation
+checkpoint_fitting: forbidden
+l5_modification: forbidden
+l4_base_threshold: 0.5
+l4_margin:
+  definition: p_l4 - max(p_background, p_l5)
+  grid_start: 0.0
+  grid_stop: 0.5
+  grid_step: 0.025
+  proposal_rule: l4_argmax_and_base_threshold_and_margin
+  image_rule: any_proposal_passes
+selection:
+  retain_baseline_true_positive_fraction: 0.9
+  require_clean_negative_false_positive_reduction: true
+  tie_break_order:
+    - minimum_clean_negative_false_positives
+    - maximum_true_positives
+    - minimum_total_false_positives
+    - minimum_margin
+reporting:
+  - total_false_positives
+  - clean_negative_false_positives
+  - competing_l5_false_positives
+  - uncertainty_false_positives
+  - other_proxy_exclusion_false_positives
+  - true_positives
+  - false_negatives
+stop_rule: stop_without_new_capture_when_no_margin_passes_calibration
+future_evaluation: one_new_session_disjoint_development_set_after_margin_freeze
