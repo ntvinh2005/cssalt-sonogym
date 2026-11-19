@@ -80,7 +80,10 @@ from stage2_sim import (  # noqa: E402
 )
 
 
-PROTOCOL_ID = "sonogym-s0010-mbb-single-anatomy-poc-v1"
+PROTOCOL_IDS = {
+    "sonogym-s0010-mbb-single-anatomy-poc-v1",
+    "sonogym-s0010-mbb-single-anatomy-poc-v2",
+}
 FEATURE_PATH = (
     Path(__file__).resolve().parents[2]
     / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/stage1_features.py"
@@ -199,7 +202,7 @@ def main() -> int:
     protocol_path = Path(args.protocol).resolve()
     protocol_hash = validate_seal(protocol_path)
     protocol = yaml.safe_load(protocol_path.read_text())
-    if protocol.get("protocol_id") != PROTOCOL_ID:
+    if protocol.get("protocol_id") not in PROTOCOL_IDS:
         raise RuntimeError("unexpected protocol")
     session_spec = next(
         (row for row in protocol["execution"]["sessions"] if row["stage1_session_id"] == args.stage1_session_id),

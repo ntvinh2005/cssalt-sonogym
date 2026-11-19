@@ -40,7 +40,10 @@ from two_stage_navigation.ultrasound_plane_geometry import (
 )
 
 
-PROTOCOL_ID = "sonogym-s0010-mbb-single-anatomy-poc-v1"
+PROTOCOL_IDS = {
+    "sonogym-s0010-mbb-single-anatomy-poc-v1",
+    "sonogym-s0010-mbb-single-anatomy-poc-v2",
+}
 CANDIDATES = {
     L4_CLASS: "L4_RIGHT_transverse_process",
     L5_CLASS: "L5_RIGHT_transverse_process",
@@ -205,7 +208,7 @@ def save_trajectory(path: Path, frames: list[dict[str, Any]], actor: dict[str, A
 def main() -> int:
     args = parse_args()
     protocol = yaml.safe_load(args.protocol.read_text())
-    if protocol.get("protocol_id") != PROTOCOL_ID:
+    if protocol.get("protocol_id") not in PROTOCOL_IDS:
         raise RuntimeError("unexpected protocol")
     expected_protocol = args.protocol.with_suffix(".sha256").read_text().split()[0]
     if sha256(args.protocol) != expected_protocol:
