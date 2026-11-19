@@ -141,8 +141,11 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     protocol_path = args.protocol.resolve()
     protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-s0010-tp-surface-core-dataset-v13":
-        raise ValueError("coverage repair requires the sealed v13 protocol")
+    if protocol["protocol_id"] not in {
+        "sonogym-s0010-tp-surface-core-dataset-v13",
+        "sonogym-s0010-tp-surface-core-dataset-v14",
+    }:
+        raise ValueError("coverage repair requires a sealed v13/v14 protocol")
     expected_seal = protocol_path.with_suffix(".sha256").read_text().split()[0]
     if sha256(protocol_path) != expected_seal:
         raise ValueError("v13 protocol seal mismatch")
