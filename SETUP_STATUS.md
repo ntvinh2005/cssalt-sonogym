@@ -1,5 +1,25 @@
 # Setup status
 
+## 2026-11-19: L4 margin calibration fails the clean-negative repair gate
+
+CPU job `51953988` completed `0:0` in 39 seconds with four CPUs, 16 GB requested memory and zero
+GPUs at commit `a841e25`.  It scored 1,062 proposals across 110 calibration images using the frozen
+checkpoint and unchanged 0.50 L4/L5 thresholds; no fitting or development-image access occurred.
+
+The whole-image L4 baseline was TP/FP/FN/TN `9/3/3/95`.  All three false positives had accepted
+proposals overlapping uncertainty, so clean-negative FP was already zero.  Margin 0.175 retained all nine TP and reduced
+total FP from three to two, but it removed only one of those cases and therefore failed the
+predeclared clean-negative reduction criterion.  No margin was selected, no frozen-margin file was
+written and no new development acquisition is justified for this rule.
+
+`EXPLORATORY_TRAINING_PASS` and `ACTIVE_ACQUISITION_INTEGRATION_HOLD` remain unchanged.  Subsequent
+work should address coverage of proxy-negative bone-interface examples and the simulator-proxy uncertainty/label contract
+rather than further margin tuning.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_margin_calibration_v1_result.json`.
+- Report: `docs/research/sonogym_s0010_tp_surface_core_proxy_l4_margin_calibration_v1.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_margin_calibration_v1/51953988/`.
+
 ## 2026-11-18: frozen L4 full-image failure audit isolates proxy coverage and model errors
 
 CPU job `51936904` completed `0:0` in 29 seconds with four CPUs, 16 GB requested memory and zero
@@ -15,7 +35,7 @@ session; L5 false positives are confined to V6.
 
 The researcher decisions remain **`EXPLORATORY_TRAINING_PASS`** and
 **`ACTIVE_ACQUISITION_INTEGRATION_HOLD`**.  The next proposed test keeps the checkpoint and base
-threshold frozen, selects an L4 one-vs-rest probability margin using calibration only, and evaluates
+threshold frozen, selects an L4 margin using calibration only, and evaluates
 once on a newly designated session-disjoint development set while reporting proxy-uncertainty
 activations separately.
 

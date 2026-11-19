@@ -1,0 +1,89 @@
+{
+  "schema": "sonogym-tp-surface-core-proxy-l4-margin-calibration-v1-result",
+  "experiment_id": "s0010_tp_surface_core_proxy_l4_margin_calibration_v1",
+  "status": "FAIL",
+  "job_id": "51953988",
+  "job_state": "COMPLETED",
+  "job_exit_code": "0:0",
+  "execution_commit": "a841e25cedc4144417fa23929e96a16b2df2ccde",
+  "resources": {
+    "account": "anest-dept",
+    "cpus": 4,
+    "gpus": 0,
+    "requested_memory_gb": 16,
+    "elapsed_seconds": 39,
+    "calibration_peak_rss_kib": 135168
+  },
+  "frozen_inputs": {
+    "protocol_sha256": "e561901e5dd6cd39336532dfc60196e5182e6e6357885e27f794c86e0804ee7a",
+    "checkpoint_sha256": "338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b",
+    "proxy_label_audit_sha256": "67dfdfe482b0fe689f29ea25be077b31e5a9d4f0db3c67366c4c2a4bbecf3175",
+    "proxy_sample_manifest_sha256": "72f74f704adf8d9519c484c60f444f0b2aa09f12c515294b93869a941047c871"
+  },
+  "scope_integrity": {
+    "fit_called": false,
+    "development_images_opened": false,
+    "future_development_evaluation_run": false,
+    "l5_modified": false,
+    "base_l4_threshold": 0.5
+  },
+  "calibration_data": {
+    "image_count": 110,
+    "proposal_count": 1062,
+    "sessions": [
+      "s0010tpscv6_cal_00",
+      "s0010tpscv8_cal_l4_00",
+      "s0010tpscv10_cal_l5_00"
+    ]
+  },
+  "baseline_l4": {
+    "margin": 0.0,
+    "tp": 9,
+    "fp": 3,
+    "fn": 3,
+    "tn": 95,
+    "precision": 0.75,
+    "recall": 0.75,
+    "clean_negative_fp": 0,
+    "competing_l5_fp": 0,
+    "uncertainty_fp": 3,
+    "other_proxy_exclusion_fp": 0
+  },
+  "retention_gate": {
+    "fraction": 0.9,
+    "minimum_true_positive_images": 9
+  },
+  "best_total_fp_reduction_with_full_tp_retention": {
+    "margin": 0.175,
+    "tp": 9,
+    "fp": 2,
+    "fn": 3,
+    "tn": 96,
+    "precision": 0.8181818181818182,
+    "recall": 0.75,
+    "clean_negative_fp": 0,
+    "competing_l5_fp": 0,
+    "uncertainty_fp": 2,
+    "other_proxy_exclusion_fp": 0,
+    "passes_primary_gate": false
+  },
+  "selected_margin": null,
+  "frozen_margin_written": false,
+  "stop_without_new_capture": true,
+  "l5_calibration_metrics_unchanged": {
+    "tp": 28,
+    "fp": 4,
+    "fn": 1,
+    "tn": 77
+  },
+  "tests": {
+    "margin_tests": {"passed": 9, "failed": 0},
+    "proxy_training_regression": {"passed": 4, "failed": 0}
+  },
+  "research_decisions_preserved": {
+    "proxy_training": "EXPLORATORY_TRAINING_PASS",
+    "active_acquisition_integration": "ACTIVE_ACQUISITION_INTEGRATION_HOLD"
+  },
+  "runtime_directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_margin_calibration_v1/51953988/",
+  "next_direction": "Do not acquire new development images for this margin. Focus subsequent work on coverage of proxy-negative bone-interface examples and the simulator-proxy uncertainty/label contract."
+}

@@ -74,6 +74,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It tests whether L4 evidence separates from its strongest competing class without refitting the checkpoint or modifying L5 decisions.
 - **Source:** approved by user, 2026-11-18.
 
+### s0010_tp_surface_core_proxy_l4_margin_calibration_v1
+- **Kind:** object
+- **Definition:** The calibration-only fixed-checkpoint experiment that applies the L4 margin on whole-image actor-visible proposals, requires at least 90% retention of baseline L4 true-positive images and a reduction in false-positive images whose accepted proposals contain no projected core or uncertainty, and leaves L5 unchanged.
+- **Intuition:** It determines whether a one-parameter L4 decision rule is worth freezing before any new development acquisition.
+- **Source:** approved by user, 2026-11-18.
+
 ### Stage 2 temporal evidence
 - **Kind:** method
 - **Definition:** Support for a candidate from causally ordered, technically admissible observations in the same trajectory and local actor-relative neighborhood, after duplicate image hashes are given at most one vote.

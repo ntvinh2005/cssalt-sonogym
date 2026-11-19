@@ -160,12 +160,12 @@ See `l4_false_negative_audit.csv`, `session_l4_l5_comparison.csv`, and
 **Criterion.** Keep the checkpoint and original 0.50 class gate frozen; select any additional rule
 using calibration only; evaluate once on a newly designated, session-disjoint development set; and
 retain at least 90% of the original paired true positives while reducing clean-negative L4 false
-accepts.  Proxy-uncertainty activations must be reported separately, not silently converted into
+accepts.  Cases whose accepted proposals overlap proxy uncertainty must be reported separately, not silently converted into
 negatives or positives.
 
 ### 4.1 Proposed test
 
-Add one L4 one-vs-rest margin after the existing gate:
+Add one L4 margin after the existing gate:
 
 1. A proposal must still satisfy L4 probability at least 0.50.
 2. On calibration only, choose the smallest margin between L4 probability and the larger of
@@ -173,7 +173,7 @@ Add one L4 one-vs-rest margin after the existing gate:
    maximizing recall.
 3. Freeze that margin before opening a new development session.
 4. On new development, report paired original-gate and margin-gate results, clean negatives,
-   competing-L5 negatives, and proxy-uncertainty activations separately.
+   competing-L5 negatives, and cases whose accepted proposals overlap proxy uncertainty separately.
 
 This directly tests the four clean morphology cases and two cross-level cases.  It does not claim
 to repair the seven proxy-coverage cases; those remain an evaluator-label question and are kept as
