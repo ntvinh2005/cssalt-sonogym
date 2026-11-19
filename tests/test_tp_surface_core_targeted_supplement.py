@@ -14,7 +14,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v11.yaml"
+PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v12.yaml"
 SEAL = PROTOCOL.with_suffix(".sha256")
 SCRIPT = ROOT / "workflows/two_stage_navigation/train_tp_surface_core_l4_targeted_supplement.py"
 SPEC = importlib.util.spec_from_file_location("targeted_supplement", SCRIPT)
@@ -29,6 +29,8 @@ class TargetedSupplementTests(unittest.TestCase):
         expected = SEAL.read_text().split()[0]
         self.assertEqual(hashlib.sha256(PROTOCOL.read_bytes()).hexdigest(), expected)
         protocol = yaml.safe_load(PROTOCOL.read_text())
+        self.assertRegex(protocol["source"]["implementation_commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(protocol["source"]["superseded_failed_job"], 51992362)
         self.assertEqual(
             [(row["split"], row["expected_frame_count"]) for row in protocol["sessions"]],
             [("train", 48), ("calibration", 24), ("development_evaluation", 24)],
