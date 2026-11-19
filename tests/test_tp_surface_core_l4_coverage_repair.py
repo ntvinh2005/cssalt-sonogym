@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "workflows/two_stage_navigation/train_tp_surface_core_l4_coverage_repair.py"
 PROTOCOL_V13 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v13.yaml"
 PROTOCOL_V14 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v14.yaml"
+PROTOCOL_V15 = ROOT / "experiments/unity_two_stage_transfer/s0010_tp_surface_core_dataset_protocol_v15.yaml"
 SPEC = importlib.util.spec_from_file_location("l4_coverage_repair", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 REPAIR = importlib.util.module_from_spec(SPEC)
@@ -52,6 +53,23 @@ class CoverageRepairTests(unittest.TestCase):
             v14["sampling"]["absolute_waypoint_banks_index"],
         )
         self.assertEqual(v13["model_comparison_gate"], v14["model_comparison_gate"])
+
+    def test_v15_segment_budget_stays_below_episode_horizon(self) -> None:
+        expected = PROTOCOL_V15.with_suffix(".sha256").read_text().split()[0]
+        self.assertEqual(hashlib.sha256(PROTOCOL_V15.read_bytes()).hexdigest(), expected)
+        v14 = yaml.safe_load(PROTOCOL_V14.read_text())
+        v15 = yaml.safe_load(PROTOCOL_V15.read_text())
+        self.assertEqual(v15["sampling"]["maximum_initial_positioning_steps"], 440)
+        self.assertLess(
+            v15["sampling"]["maximum_initial_positioning_steps"]
+            + v15["sampling"]["maximum_action_steps_per_waypoint"],
+            600,
+        )
+        self.assertEqual(
+            v14["sampling"]["absolute_waypoint_banks_index"],
+            v15["sampling"]["absolute_waypoint_banks_index"],
+        )
+        self.assertEqual(v14["model_comparison_gate"], v15["model_comparison_gate"])
 
     def test_calibration_selection_is_deterministic(self) -> None:
         baseline = {"tp": 8, "fp": 4, "ambiguous_activation_images": 2}
