@@ -1,5 +1,28 @@
 # Setup status
 
+## 2026-11-18: frozen L4 full-image failure audit isolates proxy coverage and model errors
+
+CPU job `51936904` completed `0:0` in 29 seconds with four CPUs, 16 GB requested memory and zero
+GPUs at commit `6688af7`.  It reproduced the frozen full-image confusion exactly: L4 TP/FP/FN/TN
+`12/14/5/72` and L5 `16/4/3/80`; no fitting or threshold change occurred.
+
+The 14 L4 false positives are heterogeneous: seven contain projected L4 core evidence excluded by
+the strict uncertainty/support contract, four are clean proxy-negative morphology confusions, two
+overlap the competing L5 core, and one is primarily proposal multiplicity.  Three images have
+multiple L4-triggering proposals (18 total triggers), but multiplicity alone does not explain the
+precision loss.  L4 errors occur in every development session and are worst in the L4-focused V9
+session; L5 false positives are confined to V6.
+
+The researcher decisions remain **`EXPLORATORY_TRAINING_PASS`** and
+**`ACTIVE_ACQUISITION_INTEGRATION_HOLD`**.  The next proposed test keeps the checkpoint and base
+threshold frozen, selects an L4 one-vs-rest probability margin using calibration only, and evaluates
+once on a newly designated session-disjoint development set while reporting proxy-uncertainty
+activations separately.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_failure_audit_v1_result.json`.
+- Report: `docs/research/sonogym_s0010_tp_surface_core_proxy_l4_failure_audit_v1.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_failure_audit_v1/51936904/`.
+
 ## 2026-11-18: isolated TP simulator-geometry proxy pilot completed
 
 CPU job `51836756` completed `0:0` in 27 seconds with four CPUs, 16 GB requested memory and zero

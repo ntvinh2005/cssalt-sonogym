@@ -45,7 +45,7 @@ if result["fit_called"]:
 PY
 
 ZIP="$RUN_DIR/s0010_tp_surface_core_proxy_l4_failure_audit_v1_${SLURM_JOB_ID}.zip"
-(cd "$OUTPUT" && find . -type f -print0 | sort -z | xargs -0 sha256sum > checksums.sha256)
+(cd "$OUTPUT" && find . -type f ! -name checksums.sha256 -print0 | sort -z | xargs -0 sha256sum > checksums.sha256)
 (cd "$OUTPUT" && zip -qr "$ZIP" .)
 sha256sum "$ZIP" > "$ZIP.sha256"
 capture_cpu_run_end "$RUN_DIR"

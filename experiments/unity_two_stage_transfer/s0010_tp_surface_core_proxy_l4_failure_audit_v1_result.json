@@ -1,0 +1,88 @@
+{
+  "schema": "sonogym-tp-surface-core-proxy-l4-failure-audit-v1",
+  "status": "ACTIVE_ACQUISITION_INTEGRATION_HOLD",
+  "researcher_decision_preserved": "EXPLORATORY_TRAINING_PASS",
+  "job_id": "51936904",
+  "execution_commit": "6688af7854ced99d4f29577520b6e75e24819147",
+  "resources": {
+    "account": "anest-dept",
+    "cpus": 4,
+    "gpus": 0,
+    "requested_memory_gb": 16,
+    "elapsed_seconds": 29,
+    "audit_peak_rss_kib": 454932
+  },
+  "frozen_checkpoint": {
+    "sha256": "338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b",
+    "l4_threshold": 0.5,
+    "l5_threshold": 0.5,
+    "fit_called": false
+  },
+  "baseline_reproduced": {
+    "source_images": 103,
+    "L4": {"tp": 12, "fp": 14, "fn": 5, "tn": 72},
+    "L5": {"tp": 16, "fp": 4, "fn": 3, "tn": 80}
+  },
+  "l4_false_positive_primary_causes": {
+    "proxy_coverage_or_uncertainty_exclusion": 7,
+    "clean_proxy_negative_morphology_confusion": 4,
+    "competing_l5_proxy_core": 2,
+    "proposal_multiplicity": 1
+  },
+  "l4_false_positive_nonexclusive": {
+    "images_with_multiple_l4_triggering_proposals": 3,
+    "total_l4_triggering_proposals": 18
+  },
+  "l4_false_positive_probability": {
+    "minimum": 0.5,
+    "maximum": 0.6708333333333333,
+    "mean": 0.5595238095238095
+  },
+  "l4_false_negative_probability": {
+    "minimum": 0.3333333333333333,
+    "maximum": 0.4791666666666667,
+    "mean": 0.41916666666666663
+  },
+  "session_results": {
+    "s0010tpscv6_dev_00": {
+      "L4": {"tp": 4, "fp": 5, "fn": 1, "tn": 39},
+      "L5": {"tp": 7, "fp": 4, "fn": 1, "tn": 37}
+    },
+    "s0010tpscv9_dev_l4_00": {
+      "L4": {"tp": 2, "fp": 6, "fn": 2, "tn": 14},
+      "L5": {"tp": 0, "fp": 0, "fn": 0, "tn": 24}
+    },
+    "s0010tpscv10_dev_l4l5_00": {
+      "L4": {"tp": 6, "fp": 3, "fn": 2, "tn": 19},
+      "L5": {"tp": 9, "fp": 0, "fn": 2, "tn": 19}
+    }
+  },
+  "tests": {
+    "focused_failure_audit": {"passed": 7, "failed": 0},
+    "existing_proxy_training_regression": {"passed": 4, "failed": 0}
+  },
+  "next_test": {
+    "name": "frozen_checkpoint_l4_one_vs_rest_margin",
+    "selection_data": "calibration_only",
+    "evaluation_data": "new_session_disjoint_development",
+    "checkpoint_frozen": true,
+    "base_threshold_frozen": true,
+    "required_reporting": [
+      "strict_proxy_metrics",
+      "clean_negative_errors",
+      "competing_l5_errors",
+      "proxy_uncertainty_activations"
+    ],
+    "not_executed": true
+  },
+  "runtime_directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_failure_audit_v1/51936904/",
+  "review_zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_failure_audit_v1/51936904/s0010_tp_surface_core_proxy_l4_failure_audit_v1_51936904.zip",
+  "review_zip_sha256": "6278ff84d1cb7e582fef5beb61f6be8baa1c0da39aa25ce00ee1d2302b3964cd",
+  "listed_artifact_checksums": 86,
+  "listed_artifact_checksums_passed": 86,
+  "limitations": [
+    "the development data were already opened during dataset design",
+    "projection overlap does not prove acoustic or anatomical identity",
+    "the audit is fixed-anatomy simulator-proxy evidence only"
+  ]
+}
