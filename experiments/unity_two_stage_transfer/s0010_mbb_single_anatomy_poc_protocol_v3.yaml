@@ -1,0 +1,163 @@
+protocol_id: sonogym-s0010-mbb-single-anatomy-poc-v3
+status: PRE_GPU_FROZEN_DEVELOPMENT
+purpose: >-
+  Test three fresh return-to-best observations after the v2 run exposed one isolated evaluator-ambiguous second return, while connecting frozen seven-landmark discovery
+  to actor-visible RIGHT L4/L5 TP surface-core
+  active acquisition, physical return and fresh confirmation on fixed anatomy s0010.
+  Evaluate provisional simulator proxy geometry offline and fail closed before MBB
+  intervention when SAP, branch-specific target geometry or needle execution is unavailable.
+source:
+  implementation_commit: cb6e4140a8a41d8bc6986bb8ef065a4173322a8e
+  superseded_development_job: 52036845
+  superseded_issue: one_of_sixteen_v2_fresh_returns_intersected_proxy_uncertainty
+  upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
+  unity_verified_main: f7e182b5e2ac71cc73ac41f8b2a928ce10e220c0
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  patient_count: 1
+  ultrasound_mode: conv
+  simulator_environments: 1
+  development_only: true
+  simulator_geometry_proxy: true
+  clinician_validation_claim: forbidden
+  patient_generalization_claim: forbidden
+  stage3_claim: forbidden
+stage1:
+  actor_protocol: experiments/unity_two_stage_transfer/stage1_group_a_confirmation_actor_protocol_v1.yaml
+  actor_protocol_sha256: d3723417bc56f39c7d99ffb39ac3df5d2541e2126f90fa728cd4cf0c787aa4f2
+  evaluation_protocol: experiments/unity_two_stage_transfer/stage1_group_a_confirmation_evaluation_protocol_v1.yaml
+  evaluation_protocol_sha256: f4619d12c2c246af9a5a0d27ffa982f123682c835ef5cc8532ad0806c204791c
+  required_levels: [sacrum, S1, L5, L4, L3, L2, L1]
+targets:
+  - L4_RIGHT_TP_SURFACE_CORE
+  - L5_RIGHT_TP_SURFACE_CORE
+models:
+  l4:
+    path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/training/l4_coverage_repair_candidate.joblib
+    sha256: 6188c7713cac2f21485d030ac79f4e26ac9c4f0f179008aee57a6d891fe9e8c0
+    threshold: 0.5
+    task: l4_one_vs_rest_simulator_proxy
+  l5:
+    path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_simulator_proxy_exploratory_v1/51836756/training/tp_surface_core_simulator_proxy_extratrees.joblib
+    sha256: 338351fdee5a8444dee5a6ec250d828b8f1eedbc3f76e79495aa1aafbdeb2f8b
+    threshold: 0.5
+    task: three_class_simulator_proxy_class_2
+perception:
+  patch_width_columns: 48
+  patch_depth_rows: 80
+  interface_row_offset: 34
+  feature_size_pixels: 16
+  proposal_column_stride_pixels: 12
+  runtime_inputs: [clean_ultrasound_pixels]
+geometry:
+  label_resolution_mm: 1.5
+  ultrasound_pixel_resolution_mm: 0.5
+  home_z_index: 195.0
+  stage2_angle_rad: 2.875
+search:
+  coarse_x_offsets_index: [8.0, 14.0, 20.0]
+  coarse_z_offsets_index: [-6.0, 0.0, 6.0]
+  coarse_angle_offsets_rad: [-0.075, 0.0, 0.075]
+  traversal: serpentine
+  fine_offsets:
+    - [-1.0, 0.0, 0.0]
+    - [1.0, 0.0, 0.0]
+    - [0.0, -1.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, -0.04]
+    - [0.0, 0.0, 0.04]
+  micro_offsets:
+    - [-0.5, 0.0, 0.0]
+    - [0.5, 0.0, 0.0]
+    - [0.0, -0.5, 0.0]
+    - [0.0, 0.5, 0.0]
+    - [0.0, 0.0, -0.02]
+    - [0.0, 0.0, 0.02]
+  confirmation_dither_offsets:
+    - [0.75, 0.0, 0.0]
+    - [-0.75, 0.0, 0.0]
+    - [0.0, 0.75, 0.0]
+  required_fresh_confirmation_count: 3
+decision:
+  required_supporting_viewpoints: 3
+  maximum_neighbor_translation_mm: 12.0
+  maximum_neighbor_angle_deg: 6.0
+  minimum_view_translation_mm: 0.5
+  minimum_view_angle_deg: 0.5
+  selection_order: [required_distinct_support_gate, target_probability, distinct_support_count, earliest_frame]
+motion:
+  controller_ratio: [0.02, 0.02, 0.6]
+  episode_length_s: 150.0
+  maximum_steps_per_move: 180
+  maximum_total_action_steps: 8000
+  coarse_position_tolerance_mm: 1.0
+  coarse_orientation_tolerance_deg: 1.0
+  fine_position_tolerance_mm: 0.5
+  fine_orientation_tolerance_deg: 0.75
+  micro_position_tolerance_mm: 0.25
+  micro_orientation_tolerance_deg: 0.5
+  confirmation_position_tolerance_mm: 0.25
+  confirmation_orientation_tolerance_deg: 0.5
+evaluator:
+  geometry_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234
+  l4_geometry_sha256: f60c11ccd572678e7ad485726d548087cf8a75b60101a7c2f523710499486259
+  l5_geometry_sha256: 01c910898f1463d89ac2e694c0466ff84967a0bc7dd2a464c700a8d62d5bb565
+  geometry_status: PROPOSED_REVISION_PENDING_ANATOMICAL_REVIEW
+  surface_slab_tolerance_mm: 1.0
+  maximum_coordinate_error_index: 0.001
+  maximum_tp_interface_localization_error_mm: 10.0
+  minimum_proxy_positive_fresh_confirmations: 2
+  target_view_gate:
+    - selected_patch_is_proxy_positive
+    - at_least_two_of_three_fresh_confirmations_are_proxy_positive
+    - mean_interface_point_to_core_error_at_most_10mm
+  mbb_contract:
+    required_landmarks: [L4_RIGHT_SAP, L4_RIGHT_TP, L5_RIGHT_SAP, L5_RIGHT_TP]
+    sap_status: UNRESOLVED
+    target_region_mapping: UNAVAILABLE
+    needle_injection_simulator: UNAVAILABLE
+execution:
+  sessions:
+    - {session_id: mbbpoc_v3_00, stage1_session_id: cf7_00, seed: 2026111920}
+    - {session_id: mbbpoc_v3_01, stage1_session_id: cf7_01, seed: 2026111921}
+    - {session_id: mbbpoc_v3_02, stage1_session_id: cf7_02, seed: 2026111922}
+    - {session_id: mbbpoc_v3_03, stage1_session_id: cf7_03, seed: 2026111923}
+  aggregate_rule: all_four_stage1_maps_and_both_tp_targets_per_session_must_pass_for_PARTIAL_PASS
+visualization:
+  record_robot_video: true
+  camera_eye_world_m: [1.8, -1.8, 1.6]
+  camera_target_world_m: [0.0, -0.35, 0.9]
+  framing_contract: full_available_patient_asset_plus_robot_and_probe
+  fps: 15
+  action_stride: 10
+information_boundary:
+  actor_allowed:
+    - frozen_stage1_anatomical_map
+    - clean_ultrasound_pixels
+    - frozen_image_model_probabilities
+    - executed_probe_pose_and_motion_feedback
+    - acquisition_freshness
+    - actor_owned_candidate_memory
+  evaluator_only:
+    - CT_and_mesh_geometry
+    - raw_labels
+    - native_pixel_to_volume_coordinates
+    - full_pose_replay
+    - target_localization_errors
+    - anatomical_readiness
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30gb
+  walltime: "00:30:00"
+  maximum_storage_growth_gb: 2.0
+historical_results_preserved:
+  V16: CONFIRMATION_NO_GO
+  V17: CONFIRMATION_NO_GO
+  V18: CONFIRMATION_NO_GO
+  stage2_new_start_confirmation_v1: CONFIRMATION_NO_GO
+  full_mbb_intervention: NOT_RUN
+
