@@ -476,8 +476,14 @@ def finalize_review(review_root: Path, output: Path) -> dict[str, Any]:
 
 
 def package_review(review_root: Path, zip_path: Path) -> None:
-    files = sorted(path for path in review_root.rglob("*") if path.is_file())
     checksums = review_root / "checksums.sha256"
+    # The checksum manifest cannot contain a checksum of its previous contents.
+    # Excluding it also makes repeated packaging deterministic and verifiable.
+    files = sorted(
+        path
+        for path in review_root.rglob("*")
+        if path.is_file() and path != checksums
+    )
     checksums.write_text(
         "".join(f"{sha256(path)}  {path.relative_to(review_root)}\n" for path in files),
         encoding="utf-8",

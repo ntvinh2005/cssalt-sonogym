@@ -150,6 +150,18 @@ class SapObservabilityTests(unittest.TestCase):
             result = MODULE.finalize_review(root, root / "result.json")
             self.assertEqual(result["structures"]["L4"]["verdict"], "AMBIGUOUS")
 
+    def test_repeated_packaging_does_not_checksum_its_checksum_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "review"
+            root.mkdir()
+            (root / "evidence.txt").write_text("evidence\n", encoding="utf-8")
+            zip_path = Path(temp) / "review.zip"
+            MODULE.package_review(root, zip_path)
+            MODULE.package_review(root, zip_path)
+            manifest = (root / "checksums.sha256").read_text(encoding="utf-8")
+            self.assertIn("evidence.txt", manifest)
+            self.assertNotIn("checksums.sha256", manifest)
+
 
 if __name__ == "__main__":
     unittest.main()

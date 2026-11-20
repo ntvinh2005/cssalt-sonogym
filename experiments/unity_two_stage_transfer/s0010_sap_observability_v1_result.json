@@ -1,0 +1,98 @@
+{
+  "schema": "sonogym-s0010-sap-observability-experiment-result-v1",
+  "experiment_id": "s0010_sap_observability_v1r1",
+  "anatomy_id": "s0010",
+  "scope": "simulator_only_right_l4_l5_pseudo_sap_observability",
+  "historical_v1_technical_failure": {
+    "job_id": "52091634",
+    "state": "FAILED",
+    "exit_code": "1:0",
+    "elapsed": "00:00:48",
+    "scientific_frame_count": 0,
+    "cause": "unused minimum_l4_visible_fraction was 0.0 but the existing configuration contract requires a positive threshold"
+  },
+  "execution": {
+    "job_id": "52092083",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:01:32",
+    "resources": {
+      "gpu": "1 x NVIDIA L4",
+      "cpus": 4,
+      "requested_memory": "30G"
+    },
+    "execution_commit": "b1e7f3ba5ca216550fcb1738ef8beed301b9ee9c",
+    "implementation_commit": "7107f9e3df1fd2e812a0755debc6095271c68cb5",
+    "protocol_id": "sonogym-s0010-sap-observability-v1r1",
+    "protocol_sha256": "5a78091b205f59579199b4a88e222ffc07cfcd5a5c331604df933c0da05cf179",
+    "output_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v1r1/52092083"
+  },
+  "acquisition": {
+    "sessions": 2,
+    "frames": 12,
+    "distinct_image_hashes": 12,
+    "total_action_steps": 748,
+    "exact_pose_replay_passed_frames": 12,
+    "native_map_replay_passed_frames": 12,
+    "array_hash_integrity_passed_frames": 12,
+    "clipped_sample_count": 0,
+    "maximum_coordinate_error_index": 0.00003726996806108218,
+    "gates_passed_in_both_sessions": [
+      "NATIVE_MAP_REPLAY",
+      "SYNCHRONIZED_FULL_POSE_REPLAY",
+      "ACQUISITION_FRESHNESS",
+      "VIEWPOINT_DIVERSITY",
+      "ARRAY_HASH_INTEGRITY"
+    ]
+  },
+  "review": {
+    "design": "single_agent_phase_separated_not_independent",
+    "blind_decisions_sha256": "b9c43a9d82484d563317af23183f8441b674f4d9998762f8d3b4eb31c7b7df28",
+    "interface_alignment_tolerance_pixels": 4.0,
+    "target_projection_gate": {
+      "minimum_core_image_pixels": 20,
+      "minimum_core_image_margin_pixels": 4,
+      "passed_target_views": 7,
+      "total_target_views": 8
+    },
+    "RIGHT_L4_SAP": {
+      "target_views": 4,
+      "projection_gated_views": 3,
+      "clean_visible": 1,
+      "clean_ambiguous": 3,
+      "aligned_visible_views": 0,
+      "qualifying_sessions": 0,
+      "verdict": "AMBIGUOUS"
+    },
+    "RIGHT_L5_SAP": {
+      "target_views": 4,
+      "projection_gated_views": 4,
+      "clean_visible": 4,
+      "clean_ambiguous": 0,
+      "aligned_visible_views": 0,
+      "qualifying_sessions": 0,
+      "verdict": "AMBIGUOUS"
+    },
+    "context_controls_with_visible_interface": 4,
+    "context_control_count": 4
+  },
+  "tests": {
+    "pre_capture_job_tests_passed": 29,
+    "pre_capture_job_tests_failed": 0,
+    "post_run_focused_tests_passed": 33,
+    "post_run_focused_tests_failed": 0,
+    "post_run_stage2_regression_tests_passed": 92,
+    "post_run_stage2_regression_tests_failed": 0
+  },
+  "engineering_outcome": "PASS",
+  "scientific_outcome": "SAP_ULTRASOUND_OBSERVABILITY_INCONCLUSIVE",
+  "training_release": false,
+  "mbb_target_release": false,
+  "stage3_release": false,
+  "limitations": [
+    "The clean-image review was phase-separated but performed by the same agent and is not independent anatomical review.",
+    "Visible bone interfaces did not align with the projected pseudo-SAP cores.",
+    "The frozen model-generated SAP masks remain provisional research proposals.",
+    "No classifier was trained and no MBB target or intervention contract was created."
+  ]
+}

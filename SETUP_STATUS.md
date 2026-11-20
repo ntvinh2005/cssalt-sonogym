@@ -1,5 +1,31 @@
 # Setup status
 
+## 2026-11-20: synchronized SAP observability capture succeeds but both levels remain ambiguous
+
+GPU job `52092083` completed `0:0` in 1 minute 32 seconds at execution
+revision `b1e7f3ba` with one NVIDIA L4, four CPUs and 30 GB requested memory.
+Across two reset sessions, all 12 observations were fresh, physically distinct,
+hash-consistent and exactly replayable; both sessions passed native-map,
+full-pose, freshness, viewpoint-diversity and array-integrity gates. The maximum
+coordinate disagreement was `3.727e-05` volume index.
+
+The phase-separated clean-image review was committed before privileged overlays
+were opened. Seven of eight target views passed the frozen pseudo-SAP projection
+gate, but zero marked visible interfaces were within four pixels of the
+projected core. RIGHT L4 and RIGHT L5 therefore both receive `AMBIGUOUS`; four
+of four context controls showed generic bone interfaces, so global image quality
+is not the demonstrated blocker.
+
+Engineering status is **pass** and scientific status is
+**`SAP_ULTRASOUND_OBSERVABILITY_INCONCLUSIVE`**. No SAP training label, MBB
+target or Stage 3 capability is released. The initial V1 job `52091634` remains
+a preserved zero-frame technical failure; V1R1 changed only the invalid unused
+positive-threshold setting.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_observability_v1_result.json`.
+- Report: `docs/research/sonogym_s0010_sap_observability_v1.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v1r1/52092083/`.
+
 ## 2026-11-20: SAP V3 review metric and conflict categories corrected
 
 CPU job `52085026` completed `0:0` in 20 seconds at source revision
