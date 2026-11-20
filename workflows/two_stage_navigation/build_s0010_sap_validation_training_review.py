@@ -145,9 +145,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--first-dataset", type=Path, required=True)
     parser.add_argument("--followup-dataset", type=Path, required=True)
+    parser.add_argument("--archive-dataset", type=Path)
     parser.add_argument("--merged-dataset", type=Path, required=True)
     parser.add_argument("--evaluation-dataset", type=Path, required=True)
     parser.add_argument("--training-dir", type=Path, required=True)
+    parser.add_argument("--correspondence-validation", type=Path)
     parser.add_argument("--evaluation-report", type=Path, required=True)
     parser.add_argument("--prediction", type=Path, required=True)
     parser.add_argument("--segmentation", type=Path, required=True)
@@ -198,15 +200,33 @@ def main() -> int:
     shutil.copy2(args.merged_dataset / "readiness_report.json", package / "02_DATASET_READINESS.json")
     shutil.copy2(args.first_dataset / "readiness_report.json", package / "02A_INITIAL_DATASET_READINESS.json")
     shutil.copy2(args.followup_dataset / "readiness_report.json", package / "02B_FOLLOWUP_DATASET_READINESS.json")
+    if args.archive_dataset is not None:
+        shutil.copy2(
+            args.archive_dataset / "readiness_report.json",
+            package / "02C_ARCHIVE_DATASET_READINESS.json",
+        )
     shutil.copy2(args.merged_dataset / "sample_manifest.csv", package / "03_SAMPLE_MANIFEST.csv")
     if (args.training_dir / "training_result.json").exists():
         shutil.copy2(args.training_dir / "training_result.json", package / "04_TRAINING_RESULT.json")
     if args.evaluation_report.exists():
         shutil.copy2(args.evaluation_report, package / "05_HELDOUT_EVALUATION.json")
+    if args.correspondence_validation is not None:
+        shutil.copy2(
+            args.correspondence_validation,
+            package / "05A_CORRESPONDENCE_VALIDATION.json",
+        )
+    checkpoints = sorted(args.training_dir.glob("s0010_*_sap_classifier_v1.joblib"))
+    for checkpoint in checkpoints:
+        shutil.copy2(checkpoint, package / checkpoint.name)
     plot_correspondence(
         [
             args.first_dataset / "correspondence_controls.csv",
             args.followup_dataset / "correspondence_controls.csv",
+            *(
+                [args.archive_dataset / "correspondence_controls.csv"]
+                if args.archive_dataset is not None
+                else []
+            ),
         ],
         figures_dir / "matched_mismatched_alignment.png",
     )
@@ -249,6 +269,19 @@ def main() -> int:
         "first_dataset_readiness_sha256": file_sha256(args.first_dataset / "readiness_report.json"),
         "followup_dataset_readiness_sha256": file_sha256(args.followup_dataset / "readiness_report.json"),
         "merged_dataset_readiness_sha256": file_sha256(args.merged_dataset / "readiness_report.json"),
+        "archive_dataset_readiness_sha256": (
+            file_sha256(args.archive_dataset / "readiness_report.json")
+            if args.archive_dataset is not None
+            else None
+        ),
+        "correspondence_validation_sha256": (
+            file_sha256(args.correspondence_validation)
+            if args.correspondence_validation is not None
+            else None
+        ),
+        "checkpoint_sha256": {
+            checkpoint.name: file_sha256(checkpoint) for checkpoint in checkpoints
+        },
         "evaluation_dataset_present": args.evaluation_dataset.exists(),
     }
     write_json(package / "06_PROVENANCE.json", provenance)
