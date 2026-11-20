@@ -142,6 +142,35 @@ class BoundaryVerifierTests(unittest.TestCase):
             )
         )
 
+    def test_proposal_metrics_keep_ambiguity_separate(self) -> None:
+        metrics = VERIFIER.summarize_proposal_decisions(
+            [
+                {"proxy_state": VERIFIER.POSITIVE, "predicted_positive": True,
+                 "positive_probability": 0.8},
+                {"proxy_state": VERIFIER.NEGATIVE, "predicted_positive": True,
+                 "positive_probability": 0.7},
+                {"proxy_state": VERIFIER.AMBIGUOUS, "predicted_positive": True,
+                 "positive_probability": 0.9},
+            ]
+        )
+        self.assertEqual(metrics["tp"], 1)
+        self.assertEqual(metrics["fp_on_clear_negative"], 1)
+        self.assertEqual(metrics["ambiguous_activation_count"], 1)
+        self.assertEqual(metrics["precision_excluding_ambiguous"], 0.5)
+
+    def test_session_metrics_do_not_pool_sessions(self) -> None:
+        records = [
+            {"session_id": "a", "truth_state": VERIFIER.POSITIVE,
+             "predicted_positive": True, "selected_state": VERIFIER.POSITIVE,
+             "positive_available": True, "top3_primary_contains_positive": True},
+            {"session_id": "b", "truth_state": VERIFIER.NEGATIVE,
+             "predicted_positive": True, "selected_state": VERIFIER.AMBIGUOUS,
+             "positive_available": False, "top3_primary_contains_positive": False},
+        ]
+        by_session = VERIFIER.image_metrics_by_session(records)
+        self.assertEqual(by_session["a"]["tp"], 1)
+        self.assertEqual(by_session["b"]["fp"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

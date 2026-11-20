@@ -351,6 +351,106 @@ def summarize_image_decisions(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def image_metrics_by_session(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in records:
+        grouped[row["session_id"]].append(row)
+    return {
+        session: summarize_image_decisions(values)
+        for session, values in sorted(grouped.items())
+    }
+
+
+def summarize_proposal_decisions(records: list[dict[str, Any]]) -> dict[str, Any]:
+    positive = [row for row in records if row["proxy_state"] == POSITIVE]
+    negative = [row for row in records if row["proxy_state"] == NEGATIVE]
+    ambiguous = [row for row in records if row["proxy_state"] == AMBIGUOUS]
+    tp = sum(row["predicted_positive"] for row in positive)
+    fn = len(positive) - tp
+    fp = sum(row["predicted_positive"] for row in negative)
+    tn = len(negative) - fp
+    ambiguous_activations = sum(row["predicted_positive"] for row in ambiguous)
+    clear = positive + negative
+    brier = None
+    if clear:
+        brier = float(
+            np.mean(
+                [
+                    (float(row["positive_probability"]) - float(row["proxy_state"] == POSITIVE))
+                    ** 2
+                    for row in clear
+                ]
+            )
+        )
+    calibration_error = None
+    if clear:
+        weighted_error = 0.0
+        edges = np.linspace(0.0, 1.0, 6)
+        for lower, upper in zip(edges[:-1], edges[1:]):
+            bucket = [
+                row
+                for row in clear
+                if lower <= float(row["positive_probability"])
+                < (upper if upper < 1.0 else upper + 1e-12)
+            ]
+            if bucket:
+                confidence = float(np.mean([float(row["positive_probability"]) for row in bucket]))
+                frequency = float(np.mean([row["proxy_state"] == POSITIVE for row in bucket]))
+                weighted_error += len(bucket) / len(clear) * abs(confidence - frequency)
+        calibration_error = weighted_error
+    return {
+        "runtime_primary_accepted_proposals": len(records),
+        "positive_proposals": len(positive),
+        "negative_proposals": len(negative),
+        "ambiguous_proposals": len(ambiguous),
+        "tp": tp,
+        "fp_on_clear_negative": fp,
+        "fn": fn,
+        "tn": tn,
+        "precision_excluding_ambiguous": None if tp + fp == 0 else tp / (tp + fp),
+        "recall": None if tp + fn == 0 else tp / (tp + fn),
+        "clear_negative_false_positive_rate": None if not negative else fp / len(negative),
+        "ambiguous_activation_count": ambiguous_activations,
+        "ambiguous_activation_rate": None
+        if not ambiguous
+        else ambiguous_activations / len(ambiguous),
+        "brier_excluding_ambiguous": brier,
+        "five_bin_calibration_error_excluding_ambiguous": calibration_error,
+        "ambiguous_mean_positive_probability": None
+        if not ambiguous
+        else float(np.mean([float(row["positive_probability"]) for row in ambiguous])),
+    }
+
+
+def proposal_discrimination(
+    rows: list[dict[str, Any]],
+    features: dict[str, np.ndarray],
+    verifier: Any,
+    threshold: float,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    eligible = [row for row in rows if row["primary_accepted"]]
+    if not eligible:
+        return summarize_proposal_decisions([]), []
+    matrix = np.stack([features[row["sample_id"]] for row in eligible])
+    probabilities = class_probability(verifier, matrix, STATE_ID[POSITIVE])
+    predictions = np.asarray(verifier.classes_)[
+        np.argmax(verifier.predict_proba(matrix), axis=1)
+    ]
+    records = [
+        {
+            "session_id": row["session_id"],
+            "sample_id": row["sample_id"],
+            "proxy_state": row["proxy_state"],
+            "positive_probability": float(probability),
+            "predicted_positive": bool(
+                int(prediction) == STATE_ID[POSITIVE] and probability >= threshold
+            ),
+        }
+        for row, probability, prediction in zip(eligible, probabilities, predictions)
+    ]
+    return summarize_proposal_decisions(records), records
+
+
 def choose_threshold(
     baseline: dict[str, Any], candidates: dict[float, dict[str, Any]], gate: dict[str, Any]
 ) -> float | None:
@@ -588,6 +688,14 @@ def reconstruct_v3(
         if not actual["proposal_available"]:
             raise ValueError("actor selected a frame without a proposal")
         available_positive = [row for row in candidate_search if row["proxy_state"] == POSITIVE]
+        actor_eligible = [
+            row
+            for row in candidate_search
+            if row["primary_probability"] >= 0.5
+        ]
+        actor_eligible_positive = [
+            row for row in actor_eligible if row["proxy_state"] == POSITIVE
+        ]
         verified = [row for row in candidate_search if row["verifier_pass"]]
         verifier_selected = None if not verified else max(
             verified,
@@ -601,6 +709,13 @@ def reconstruct_v3(
             "search_candidate_frames": len(candidate_search),
             "missing_proposal_search_frames": len(search) - len(candidate_search),
             "proxy_positive_search_frames": len(available_positive),
+            "actor_eligible_proxy_positive_search_frames": len(actor_eligible_positive),
+            "actor_eligible_search_frame_proxy_counts": dict(
+                Counter(row["proxy_state"] for row in actor_eligible)
+            ),
+            "verifier_pass_search_frame_proxy_counts": dict(
+                Counter(row["proxy_state"] for row in verified)
+            ),
             "actual_selected_frame": actual["frame_sequence"],
             "actual_selected_state": actual["proxy_state"],
             "actual_selected_probability": actual["primary_probability"],
@@ -763,6 +878,10 @@ def main() -> int:
         (output / "result.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
         return 0
 
+    calibration_proposal_metrics, calibration_proposal_records = proposal_discrimination(
+        calibration_rows, design_features, verifier, selected_threshold
+    )
+
     checkpoint = output / "l4_boundary_verifier.joblib"
     joblib.dump(
         {
@@ -792,6 +911,9 @@ def main() -> int:
     candidate_development, candidate_development_records = decisions_by_image(
         development_rows, development_features, verifier, selected_threshold
     )
+    development_proposal_metrics, development_proposal_records = proposal_discrimination(
+        development_rows, development_features, verifier, selected_threshold
+    )
     v3_records, v3_sessions = reconstruct_v3(protocol, verifier, selected_threshold, output)
     selected_v3 = [row for row in v3_records if row["selected"]]
     result.update(
@@ -799,8 +921,19 @@ def main() -> int:
         checkpoint_sha256=sha256(checkpoint),
         checkpoint_reload_verified=True,
         candidate_calibration_selected=threshold_metrics[selected_threshold],
+        candidate_calibration_by_session=image_metrics_by_session(
+            threshold_records[selected_threshold]
+        ),
+        candidate_calibration_proposal_discrimination=calibration_proposal_metrics,
         baseline_opened_development=baseline_development,
+        baseline_opened_development_by_session=image_metrics_by_session(
+            baseline_development_records
+        ),
         candidate_opened_development=candidate_development,
+        candidate_opened_development_by_session=image_metrics_by_session(
+            candidate_development_records
+        ),
+        candidate_opened_development_proposal_discrimination=development_proposal_metrics,
         opened_development_is_independent=False,
         v3_sessions=v3_sessions,
         v3_selected_state_counts=dict(Counter(row["proxy_state"] for row in selected_v3)),
@@ -818,6 +951,16 @@ def main() -> int:
             *({**row, "arm": "verifier_calibration"} for row in threshold_records[selected_threshold]),
             *({**row, "arm": "baseline_opened_development"} for row in baseline_development_records),
             *({**row, "arm": "verifier_opened_development"} for row in candidate_development_records),
+        ],
+    )
+    write_csv(
+        output / "proposal_discrimination.csv",
+        [
+            *({**row, "split_role": "calibration"} for row in calibration_proposal_records),
+            *(
+                {**row, "split_role": "opened_development"}
+                for row in development_proposal_records
+            ),
         ],
     )
     save_plots(output, v3_records, threshold_records[selected_threshold])
