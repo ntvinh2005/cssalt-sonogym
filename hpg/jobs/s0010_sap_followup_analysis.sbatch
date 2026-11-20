@@ -26,6 +26,7 @@ FOLLOWUP_DEVELOPMENT="$FOLLOWUP_CAPTURE/dataset_development_v1"
 MERGED="$FOLLOWUP_CAPTURE/dataset_merged_v1"
 TRAINING="$FOLLOWUP_CAPTURE/training_v1"
 EVALUATION="$FOLLOWUP_CAPTURE/dataset_evaluation_v1"
+REVIEW="$FOLLOWUP_CAPTURE/review_v1"
 PROTOCOL_FIRST="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_validation_development_protocol_v1.yaml"
 PROTOCOL_FOLLOWUP="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_validation_followup_protocol_v1.yaml"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
@@ -35,6 +36,17 @@ export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
 mkdir -p "$FIRST_DATASET" "$FOLLOWUP_DEVELOPMENT" "$MERGED" "$TRAINING" "$EVALUATION" "$MPLCONFIGDIR"
+
+package_review() {
+    mkdir -p "$REVIEW"
+    "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/build_s0010_sap_validation_training_review.py" \
+        --first-dataset "$FIRST_DATASET" --followup-dataset "$FOLLOWUP_DEVELOPMENT" \
+        --merged-dataset "$MERGED" --evaluation-dataset "$EVALUATION" \
+        --training-dir "$TRAINING" --evaluation-report "$FOLLOWUP_CAPTURE/heldout_evaluation.json" \
+        --prediction "$PREDICTION" --segmentation "$SEGMENTATION" --label-conversion "$LABELS" \
+        --source-commit "$(git -C "$SONOGYM_PROJECT_DIR" rev-parse HEAD)" \
+        --output-dir "$REVIEW" > "$REVIEW/builder.log" 2>&1
+}
 
 build_dataset() {
     local protocol="$1"
@@ -70,6 +82,7 @@ READY_LEVELS=$(
 )
 echo "$READY_LEVELS" > "$MERGED/ready-levels.txt"
 if [[ -z "$READY_LEVELS" ]]; then
+    package_review
     exit 3
 fi
 
@@ -81,13 +94,25 @@ done
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/train_s0010_sap_classifier.py" \
     --dataset-dir "$MERGED" --output-dir "$TRAINING" "${LEVEL_ARGS[@]}" \
     > "$TRAINING/preflight-stdout.json" 2> "$TRAINING/preflight-stderr.log"
+set +e
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/train_s0010_sap_classifier.py" \
     --dataset-dir "$MERGED" --output-dir "$TRAINING" --fit "${LEVEL_ARGS[@]}" \
     > "$TRAINING/training-stdout.json" 2> "$TRAINING/training-stderr.log"
+TRAIN_RC=$?
+set -e
+if [[ "$TRAIN_RC" -ne 0 ]]; then
+    package_review
+    exit "$TRAIN_RC"
+fi
 
 build_dataset "$PROTOCOL_FOLLOWUP" "$FOLLOWUP_CAPTURE" "$EVALUATION" evaluation
+set +e
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py" \
     --dataset-dir "$EVALUATION" --training-dir "$TRAINING" \
     --output "$FOLLOWUP_CAPTURE/heldout_evaluation.json" \
     > "$FOLLOWUP_CAPTURE/heldout-evaluation-stdout.json" \
     2> "$FOLLOWUP_CAPTURE/heldout-evaluation-stderr.log"
+EVALUATION_RC=$?
+set -e
+package_review
+exit "$EVALUATION_RC"

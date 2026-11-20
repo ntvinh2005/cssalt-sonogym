@@ -141,6 +141,31 @@ def main() -> int:
             proposal_features=proposal_features,
         )
         image_metrics = training.metrics(image_labels, image_scores, threshold)
+        hash_metadata = {
+            row["frame_sha256"]: {
+                "session_id": row["session_id"],
+                "frame_sequence": int(row["frame_sequence"]),
+            }
+            for row in selected
+        }
+        image_predictions = []
+        for frame_hash, label, score in zip(hashes, image_labels, image_scores):
+            predicted = int(score >= threshold)
+            image_predictions.append(
+                {
+                    "frame_sha256": frame_hash,
+                    **hash_metadata[frame_hash],
+                    "label": int(label),
+                    "score": float(score),
+                    "predicted": predicted,
+                    "outcome": (
+                        "TP" if label == 1 and predicted == 1
+                        else "FN" if label == 1
+                        else "FP" if predicted == 1
+                        else "TN"
+                    ),
+                }
+            )
         heuristic_threshold = bundle.get("heuristic_gradient_threshold")
         heuristic: dict[str, Any]
         if heuristic_threshold is None:
@@ -182,6 +207,7 @@ def main() -> int:
             ),
             "gradient_baseline": heuristic,
             "evaluated_image_hashes": hashes,
+            "full_image_predictions": image_predictions,
             "geometry_used_as_model_input": False,
         }
     report = {
