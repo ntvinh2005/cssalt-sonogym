@@ -2,6 +2,36 @@
 
 This is the single registry for project-specific methods, metrics, states, and named objects used in research documentation.
 
+### s0010_right_l4l5_sap_review_v2
+- **Kind:** object
+- **Definition:** The second static, simulator-only external-review package for anatomy `s0010`, containing a source-STL quality audit, a separately reconstructed segmentation surface, paired-facet geometric context, exact-pose ultrasound correspondence, and versioned RIGHT L4/L5 SAP region proposals without anatomical promotion.
+- **Intuition:** It tests whether the original SAP candidates can be partitioned from actual source evidence instead of repeating their coordinate-selected boundaries.
+- **Source:** approved by user, 2026-11-19.
+
+### PROPOSED_SAP_SURFACE_CORE
+- **Kind:** object
+- **Definition:** The subset of an original RIGHT SAP candidate whose unique physical locations are supported by valid source faces on the lower vertebra and coincide with valid source-face locations on the articulating upper vertebra; it is a simulator geometric articulation surrogate pending anatomical review.
+- **Intuition:** It isolates the strongest paired-facet evidence without claiming a complete SAP or accepted anatomy.
+- **Source:** approved by user, 2026-11-19.
+
+### BOUNDARY_UNCERTAIN
+- **Kind:** object
+- **Definition:** The subset of an original RIGHT SAP candidate not assigned to PROPOSED_SAP_SURFACE_CORE and not supported strongly enough to classify as a non-SAP neighbor from the available whole-vertebra labels and CT resolution.
+- **Intuition:** It retains unresolved extent rather than forcing it into positive or negative anatomy.
+- **Source:** approved by user, 2026-11-19.
+
+### LIKELY_NON_SAP_NEIGHBOR
+- **Kind:** object
+- **Definition:** The subset of an original RIGHT SAP candidate supported by explicit adjacent-structure evidence as belonging to a neighboring posterior element rather than SAP; it remains empty when those semantics are unavailable.
+- **Intuition:** It separates evidence-based exclusion from merely uncertain boundary extent.
+- **Source:** approved by user, 2026-11-19.
+
+### SOURCE_SEMANTICS_INSUFFICIENT
+- **Kind:** object
+- **Definition:** The review verdict used when whole-vertebra meshes, CT labels, adjacent-level geometry, and exact-pose projection support a reproducible geometric candidate but do not identify SAP, IAP, lamina, pars, or their boundaries well enough to establish a semantic SAP annotation.
+- **Intuition:** Geometry can narrow review targets while still being insufficient to promote them to semantic ground truth.
+- **Source:** approved by user, 2026-11-19.
+
 ### s0010_right_l4l5_sap_review_v1
 - **Kind:** object
 - **Definition:** The static, simulator-only external-review package for the versioned RIGHT L4/L5 SAP candidates on anatomy s0010, containing privileged geometry, curated exact-pose ultrasound correspondence, explicit uncertainty, and no promoted semantic label or MBB target.
