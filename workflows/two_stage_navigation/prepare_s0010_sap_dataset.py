@@ -167,6 +167,9 @@ def main() -> int:
     parser.add_argument("--segmentation", type=Path, required=True)
     parser.add_argument("--label-conversion", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--phase", choices=("development", "evaluation"), default="development"
+    )
     args = parser.parse_args()
 
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
@@ -427,10 +430,13 @@ def main() -> int:
     readiness: dict[str, Any] = {}
     for level in LEVELS:
         deficits: list[str] = []
-        for split, requirements in MINIMUM_UNIQUE.items():
+        required_splits = (
+            ("train", "calibration") if args.phase == "development" else ("evaluation",)
+        )
+        for split in required_splits:
+            requirements = MINIMUM_UNIQUE[split]
             if split not in counts[level]:
-                if split != "evaluation":
-                    deficits.append(f"missing split {split}")
+                deficits.append(f"missing split {split}")
                 continue
             for label, minimum in requirements.items():
                 actual = counts[level][split].get(label, 0)
@@ -448,6 +454,7 @@ def main() -> int:
 
     report = {
         "schema": "s0010-sap-level-conditioned-dataset-v1",
+        "phase": args.phase,
         "protocol_id": protocol["protocol_id"],
         "protocol_sha256": sha256(args.protocol),
         "prediction_sha256": sha256(args.prediction),

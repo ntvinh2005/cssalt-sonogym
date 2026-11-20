@@ -16,8 +16,8 @@ set -euo pipefail
 : "${SAP_CAPTURE_JOB:?SAP_CAPTURE_JOB must identify the development capture}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
-# shellcheck source=common.sh
-source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
+# shellcheck source=common_cpu.sh
+source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
 CAPTURE_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_development_v1/$SAP_CAPTURE_JOB"
 OUTPUT="$CAPTURE_ROOT/dataset_v1"
