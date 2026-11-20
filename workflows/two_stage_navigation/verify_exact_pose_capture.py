@@ -118,6 +118,8 @@ def main() -> int:
         "sonogym-s0010-sap-observability-v1r1",
         "sonogym-s0010-sap-observability-v2",
         "sonogym-s0010-sap-observability-v2r1",
+        "sonogym-s0010-sap-validation-development-v1",
+        "sonogym-s0010-sap-validation-holdout-v1",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
