@@ -169,7 +169,10 @@ def load_protocol(path: Path) -> dict[str, Any]:
     seal = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
     if sha256(path) != seal:
         raise ValueError("protocol seal mismatch")
-    if protocol["protocol_id"] != "sonogym-s0010-sap-observability-v1":
+    if protocol["protocol_id"] not in {
+        "sonogym-s0010-sap-observability-v1",
+        "sonogym-s0010-sap-observability-v1r1",
+    }:
         raise ValueError("unexpected protocol")
     return protocol
 
