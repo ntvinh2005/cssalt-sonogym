@@ -41,8 +41,8 @@ UPPER_LEVEL = {"L4": "L3", "L5": "L4"}
 LABEL_VALUE = {"L3": 29, "L4": 28, "L5": 27}
 STRUCTURE_IDS = {level: f"RIGHT_{level}_SAP" for level in LEVELS}
 COLORS = {
-    "lower": "#d9d9d9",
-    "upper": "#8c8c8c",
+    "lower": "#dce6f1",
+    "upper": "#b3a6c7",
     "core": "#00bcd4",
     "uncertain": "#f28e2b",
     "neighbor": "#d627a8",
@@ -234,11 +234,13 @@ def render_articulation_view(
 ) -> None:
     figure = plt.figure(figsize=(8, 7), dpi=190)
     axis = figure.add_subplot(111, projection="3d")
-    for geometry, color, alpha in ((lower, COLORS["lower"], 0.85), (upper, COLORS["upper"], 0.30)):
+    for geometry, color in ((lower, COLORS["lower"]), (upper, COLORS["upper"])):
         valid = face_areas(geometry["vertices"], geometry["faces"]) > 0.0
         faces = geometry["faces"][valid][::2]
         axis.add_collection3d(
-            Poly3DCollection(geometry["vertices"][faces], facecolor=color, edgecolor="none", alpha=alpha)
+            Poly3DCollection(
+                geometry["vertices"][faces], facecolor=color, edgecolor="none", alpha=1.0
+            )
         )
     vertices = lower["vertices"]
     axis.scatter(*vertices[regions["core"]].T, s=13, c=COLORS["core"], alpha=0.95)
@@ -315,7 +317,7 @@ def render_ct_facet_context(
             axis.set_axis_off()
     figure.suptitle(
         f"RIGHT {level} facet-focused CT — cyan={level}; magenta={UPPER_LEVEL[level]}; "
-        "blue=paired surface; orange=uncertain"
+        "cyan points=paired surface; orange points=uncertain"
     )
     figure.tight_layout()
     figure.savefig(output)
@@ -377,16 +379,21 @@ def select_ultrasound_examples(records: list[dict[str, Any]], images: dict[str, 
                 used.add(row["frame_sha256"])
                 return
 
+    interior = [row for row in present if not row["boundary_touching"]]
     ranked = sorted(
-        present,
+        interior or present,
         key=lambda row: (-row["brightness_score"], -row["unique_projected_pixels"], row["session_id"], row["frame_sequence"]),
     )
-    add("potential_visible_interface", ranked, "high local clean-image intensity with nonzero core projection")
+    add(
+        "potential_visible_interface",
+        ranked,
+        "high local clean-image intensity with nonzero core projection; interior field-of-view preferred",
+    )
     first_session = selected[0]["session_id"] if selected else None
     add(
         "different_session_core_intersection",
         [row for row in ranked if row["session_id"] != first_session],
-        "nonzero core projection from a different reset session",
+        "nonzero core projection from a different reset session; interior field-of-view preferred",
     )
     add(
         "weak_or_ambiguous_core_intersection",
