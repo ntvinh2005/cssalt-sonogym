@@ -89,7 +89,12 @@ def main() -> int:
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--fit", action="store_true")
+    parser.add_argument(
+        "--level", action="append", choices=LEVELS, dest="levels",
+        help="Level to preflight or fit; repeat to select both (default: both).",
+    )
     args = parser.parse_args()
+    requested_levels = tuple(args.levels or LEVELS)
     dataset = args.dataset_dir.resolve()
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -127,7 +132,7 @@ def main() -> int:
     level_results: dict[str, Any] = {}
     blocked = False
     fitted = False
-    for level in LEVELS:
+    for level in requested_levels:
         level_rows = [row for row in rows if row["conditioned_level"] == level]
         deficits: list[str] = []
         if report["readiness"][level]["dataset_status"] != "READY":
@@ -217,6 +222,7 @@ def main() -> int:
             "maximum_false_positive_rate": MAXIMUM_FALSE_POSITIVE_RATE,
         },
         "levels": level_results,
+        "requested_levels": list(requested_levels),
         "status": (
             "ENGINEERING_PREFLIGHT_ONLY_BLOCKED"
             if blocked and not args.fit

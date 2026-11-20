@@ -252,9 +252,14 @@ def main() -> int:
         trajectory_start_frames = [0]
         trajectory_seed_stride = 0
         if uses_segmented_stage2_dataset_capture(protocol["protocol_id"]):
+            frozen_starts = sampling.get("trajectory_start_frames_by_session", {}).get(
+                session["session_id"], sampling.get("trajectory_start_frames")
+            )
+            if frozen_starts is None:
+                raise RuntimeError("segmented capture is missing frozen trajectory boundaries")
             trajectory_start_frames = [
                 int(value)
-                for value in sampling["trajectory_start_frames"]
+                for value in frozen_starts
                 if int(value) < expected_frame_count
             ]
             trajectory_seed_stride = int(sampling["trajectory_seed_stride"])

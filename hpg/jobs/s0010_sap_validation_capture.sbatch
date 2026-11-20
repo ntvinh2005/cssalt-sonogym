@@ -36,8 +36,20 @@ case "$SAP_VALIDATION_PHASE" in
         EXPERIMENT_BASENAME="s0010_sap_validation_holdout_v1"
         SESSIONS=(s0010sapval_evaluation_00 s0010sapval_evaluation_01)
         ;;
+    followup)
+        PROTOCOL_BASENAME="s0010_sap_validation_followup_protocol_v1"
+        EXPERIMENT_BASENAME="s0010_sap_validation_followup_v1"
+        SESSIONS=(
+            s0010sapval_train_03
+            s0010sapval_train_04
+            s0010sapval_train_05
+            s0010sapval_calibration_01
+            s0010sapval_evaluation_00
+            s0010sapval_evaluation_01
+        )
+        ;;
     *)
-        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE" >&2
+        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE (expected development, holdout, or followup)" >&2
         exit 2
         ;;
 esac

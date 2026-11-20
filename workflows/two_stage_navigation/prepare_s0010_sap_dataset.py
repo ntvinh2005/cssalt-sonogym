@@ -82,8 +82,16 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
-def intended_level(protocol: dict[str, Any], frame_sequence: int) -> str:
-    for item in protocol["sampling"]["waypoint_level_order"]:
+def intended_level(
+    protocol: dict[str, Any], frame_sequence: int, session_id: str | None = None
+) -> str:
+    sampling = protocol["sampling"]
+    order = sampling.get("waypoint_level_order")
+    if order is None and session_id is not None:
+        order = sampling.get("waypoint_level_order_by_session", {}).get(session_id)
+    if order is None:
+        raise ValueError("protocol lacks a frozen waypoint level order")
+    for item in order:
         if int(item["start_index"]) <= frame_sequence < int(item["stop_index_exclusive"]):
             return str(item["level"])
     raise ValueError(f"frame {frame_sequence} has no frozen target level")
@@ -203,6 +211,10 @@ def main() -> int:
         session = sessions_by_id.get(session_dir.name)
         if session is None:
             raise ValueError(f"unexpected capture session: {session_dir.name}")
+        if args.phase == "development" and session["split"] == "evaluation":
+            continue
+        if args.phase == "evaluation" and session["split"] != "evaluation":
+            continue
         verification = json.loads((session_dir / "verification_report.json").read_text())
         if verification.get("verdict") != "PROJECTION_PARITY_PASS":
             raise ValueError(f"exact-pose replay failed for {session_dir.name}")
@@ -220,7 +232,9 @@ def main() -> int:
             tracks = correspondence.track_bright_interfaces(image)
             frame_tracks[frame_key] = tracks
             tracks_by_id = {track.track_id: track for track in tracks}
-            intended[frame_key] = intended_level(protocol, frame_sequence)
+            intended[frame_key] = intended_level(
+                protocol, frame_sequence, session_dir.name
+            )
             projections: dict[str, dict[str, np.ndarray]] = {}
             for level in LEVELS:
                 diagnostics = observability.projection_diagnostics(
