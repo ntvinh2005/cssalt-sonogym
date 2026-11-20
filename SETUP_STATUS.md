@@ -1,5 +1,30 @@
 # Setup status
 
+## 2026-11-19: integrated fixed-s0010 MBB POC remains BLOCKED
+
+GPU job `52039283` completed `0:0` in 11 minutes 36 seconds with one NVIDIA L4,
+four CPUs and 30 GB requested memory at execution commit `79d3f355`. Stage 1
+again passed 4/4 sessions with 28/28 correct landmarks, 3.0 mm median and 10.0
+mm maximum localization error.
+
+The integrated Stage 2 actor accepted both RIGHT L4/L5 TP surface-core targets
+in all four starts, acquired 336 distinct frames and returned within 0.250 mm
+and 0.141 degrees. Independent proxy evaluation passed 6/8 targets: RIGHT L5
+was 4/4, while RIGHT L4 was 2/4 because high-probability views overlapped the
+provisional boundary-uncertainty region. The run therefore failed its frozen
+all-target gate.
+
+No simulated MBB intervention ran. RIGHT L4/L5 SAP boundaries, branch-specific
+MBB target-region construction and an MBB needle/injection simulator contract
+remain unavailable; the existing guided-surgery environment is a pedicle
+drill/screw task and cannot be relabelled as MBB. The milestone verdict is
+**`BLOCKED`**, end-to-end success is 0/4, and historical NO_GO results remain
+unchanged.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3_result.json`.
+- Report: `docs/research/sonogym_s0010_mbb_single_anatomy_poc.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3/52039283/`.
+
 ## 2026-11-19: L4 simulator-proxy improvement demonstrated on protocol v16
 
 GPU job `52009585` completed `0:0` in 6 minutes 55 seconds with one NVIDIA L4,

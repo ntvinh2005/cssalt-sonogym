@@ -2,6 +2,24 @@
 
 This is the single registry for project-specific methods, metrics, states, and named objects used in research documentation.
 
+### END_TO_END_PASS
+- **Kind:** object
+- **Definition:** The fixed-`s0010` MBB milestone verdict requiring every declared start to complete ultrasound anatomical discovery, both RIGHT L4/L5 target localizations, valid-view return and fresh confirmation, validated MBB target-region construction, simulated intervention, and independent final evaluation.
+- **Intuition:** Module-level success cannot substitute for an executed complete procedure.
+- **Source:** approved by user, 2026-11-19.
+
+### PARTIAL_PASS
+- **Kind:** object
+- **Definition:** The fixed-`s0010` MBB milestone verdict requiring all declared Stage 1 maps and all RIGHT L4/L5 TP surface-core target-view gates to pass while the validated target-region or simulated intervention remains unavailable and fail-closed.
+- **Intuition:** It records a complete ultrasound localization subsystem without claiming MBB procedure completion.
+- **Source:** approved by user, 2026-11-19.
+
+### BLOCKED
+- **Kind:** object
+- **Definition:** The fixed-`s0010` MBB milestone verdict used when either the declared ultrasound localization gates fail or required anatomical/intervention contracts are unavailable, so neither END_TO_END_PASS nor PARTIAL_PASS is supported.
+- **Intuition:** It preserves the maximum verified milestone without inventing missing anatomy or procedure capability.
+- **Source:** approved by user, 2026-11-19.
+
 ### Unity Stage 1
 - **Kind:** method
 - **Definition:** Physical longitudinal ultrasound acquisition followed by supervised image-patch scoring, aggregation of image-derived evidence in a Home-relative spatial frame, ordered landmark inference, and abstention when the accumulated evidence is insufficient.

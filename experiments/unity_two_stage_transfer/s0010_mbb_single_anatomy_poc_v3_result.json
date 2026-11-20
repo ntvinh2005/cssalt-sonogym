@@ -1,0 +1,99 @@
+{
+  "schema": "sonogym-s0010-mbb-single-anatomy-poc-v3-result",
+  "protocol_id": "sonogym-s0010-mbb-single-anatomy-poc-v3",
+  "protocol_sha256": "9ed7680856e64e54270d33f36867021732de7de8da77821fcaf951d4f4e65a55",
+  "execution_commit": "79d3f35560d36addf5185af55993a449118c6043",
+  "job_id": "52039283",
+  "job_state": "COMPLETED",
+  "job_exit_code": "0:0",
+  "milestone_verdict": "BLOCKED",
+  "patient_id": "s0010",
+  "patient_count": 1,
+  "resources": {
+    "account": "anest-dept",
+    "gpu": "1 NVIDIA L4",
+    "cpu_cores": 4,
+    "requested_memory_gb": 30,
+    "elapsed_seconds": 696,
+    "maximum_resident_memory_kib": 6754556,
+    "output_bytes": 264480824
+  },
+  "stage1": {
+    "sessions": 4,
+    "frames": 844,
+    "complete_maps": 4,
+    "correct_landmarks": 28,
+    "expected_landmarks": 28,
+    "precision": 1.0,
+    "recall": 1.0,
+    "median_localization_error_mm": 3.0,
+    "p90_localization_error_mm": 6.375000000000001,
+    "maximum_localization_error_mm": 10.0,
+    "abstentions": 0,
+    "verdict": "PASS"
+  },
+  "stage2_tp_surface_core": {
+    "sessions": 4,
+    "frames": 336,
+    "distinct_frame_hashes": 336,
+    "action_steps": 13592,
+    "actor_accept_sessions": 4,
+    "target_attempts": 8,
+    "target_successes": 6,
+    "valid_view_success_rate": 0.75,
+    "actor_session_abstention_rate": 0.0,
+    "l4_target_successes": 2,
+    "l4_target_attempts": 4,
+    "l5_target_successes": 4,
+    "l5_target_attempts": 4,
+    "fresh_confirmation_frames": 24,
+    "fresh_proxy_positive_frames": 17,
+    "fresh_proxy_ambiguous_frames": 7,
+    "mean_interface_to_core_error_mm": 1.460453767485237,
+    "maximum_interface_to_core_error_mm": 2.6973053742696855,
+    "mean_return_position_error_mm": 0.2394057156838534,
+    "maximum_return_position_error_mm": 0.24966427647765663,
+    "mean_return_orientation_error_deg": 0.027262700072105895,
+    "maximum_return_orientation_error_deg": 0.14064725538890258,
+    "verdict": "BLOCKED"
+  },
+  "simulated_mbb_intervention": {
+    "target_region_localized": false,
+    "executed": false,
+    "success": false,
+    "status": "BLOCKED_GROUND_TRUTH",
+    "reasons": [
+      "L4 RIGHT SUPERIOR_ARTICULAR_PROCESS: UNRESOLVED",
+      "L4 RIGHT TRANSVERSE_PROCESS: PROVISIONAL",
+      "L5 RIGHT SUPERIOR_ARTICULAR_PROCESS: UNRESOLVED",
+      "L5 RIGHT TRANSVERSE_PROCESS: PROVISIONAL",
+      "No validated branch-specific MBB target-region mapping",
+      "The existing guided-surgery task controls a pedicle drill/screw trajectory, not an MBB needle/injection"
+    ]
+  },
+  "end_to_end": {
+    "successful_sessions": 0,
+    "attempted_sessions": 4,
+    "success_rate": 0.0,
+    "failure_rate": 1.0
+  },
+  "technical_retries": [
+    {
+      "job_id": "52038551",
+      "state": "CANCELLED",
+      "reason": "launcher bound the V3 output namespace to the V2 protocol; cancelled before Stage 2 evidence collection"
+    },
+    {
+      "job_id": "52038792",
+      "state": "CANCELLED",
+      "reason": "runtime protocol allowlist rejected V3; cancelled after Stage 1 and before Stage 2 evidence collection"
+    }
+  ],
+  "historical_results_preserved": {
+    "V16": "CONFIRMATION_NO_GO",
+    "V17": "CONFIRMATION_NO_GO",
+    "V18": "CONFIRMATION_NO_GO",
+    "stage2_new_start_confirmation_v1": "CONFIRMATION_NO_GO"
+  },
+  "runtime_directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3/52039283"
+}
