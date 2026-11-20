@@ -14,7 +14,7 @@
 set -euo pipefail
 
 : "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported by the submit command}"
-: "${SAP_VALIDATION_PHASE:?SAP_VALIDATION_PHASE must be development or holdout}"
+: "${SAP_VALIDATION_PHASE:?SAP_VALIDATION_PHASE must be development, holdout, followup, or resume}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common.sh
@@ -48,8 +48,17 @@ case "$SAP_VALIDATION_PHASE" in
             s0010sapval_evaluation_01
         )
         ;;
+    resume)
+        PROTOCOL_BASENAME="s0010_sap_validation_resume_protocol_v1"
+        EXPERIMENT_BASENAME="s0010_sap_validation_resume_v1"
+        SESSIONS=(
+            s0010sapval_calibration_02
+            s0010sapval_evaluation_02
+            s0010sapval_evaluation_03
+        )
+        ;;
     *)
-        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE (expected development, holdout, or followup)" >&2
+        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE (expected development, holdout, followup, or resume)" >&2
         exit 2
         ;;
 esac
@@ -68,6 +77,7 @@ cp "$PROTOCOL" "$PROTOCOL_SEAL" "$RUN_DIR/context/"
 "$PYTHON" -m unittest -q \
     tests.test_s0010_sap_validation_protocols \
     tests.test_s0010_sap_correspondence \
+    tests.test_s0010_sap_validation_resume_protocol \
     tests.test_ultrasound_plane_geometry \
     tests.test_acquisition_integrity \
     > "$RUN_DIR/results/preflight-tests.log" 2>&1

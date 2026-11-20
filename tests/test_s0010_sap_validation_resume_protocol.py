@@ -89,6 +89,22 @@ class SapResumeProtocolTests(unittest.TestCase):
         )
         self.assertEqual(document["source"]["implementation_commit"], "test-commit")
 
+    def test_capture_job_has_explicit_resume_mode(self) -> None:
+        job = (ROOT / "hpg/jobs/s0010_sap_validation_capture.sbatch").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("    resume)", job)
+        self.assertIn(
+            'PROTOCOL_BASENAME="s0010_sap_validation_resume_protocol_v1"', job
+        )
+        self.assertIn('EXPERIMENT_BASENAME="s0010_sap_validation_resume_v1"', job)
+        for session_id in (
+            "s0010sapval_calibration_02",
+            "s0010sapval_evaluation_02",
+            "s0010sapval_evaluation_03",
+        ):
+            self.assertIn(session_id, job)
+
 
 if __name__ == "__main__":
     unittest.main()
