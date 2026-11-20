@@ -1,0 +1,23 @@
+schema: sonogym-s0010-sap-semantic-review-v3-targeted-correction-protocol
+experiment_id: s0010_sap_semantic_review_v3_correction
+anatomy_id: s0010
+execution: cpu_only_no_inference
+frozen_inputs:
+  raw_prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  original_v3_zip_sha256: ce55b17345507a5baa2ee6552daeb63c924e162be285507f3bfb9c8750f3a442
+  ct_sha256: eff5e5f5829cf8cc3e413b3ac09ce455e45bc0f91f5ba37fab9b37b1fe683546
+  segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+  label_conversion_sha256: 4ce73c412ef26f69fefe0caf003a531f4fd0928ac24f2248af0a019c4d76ff9a
+validation:
+  vertebral_source_labels: [25, 26, 27, 28, 29, 30, 31]
+  acoustic_bone_class: 13
+comparison:
+  proximity_tolerance_mm: 1.5
+  sampled_class_reported_separately: true
+  flag_sampled_iap_regardless_of_distance: true
+  flag_distance_outliers: true
+invariants:
+  raw_prediction_modified: false
+  original_v3_package_modified: false
+  semantic_ground_truth_accepted: false
+  ultrasound_observability_confirmed: false

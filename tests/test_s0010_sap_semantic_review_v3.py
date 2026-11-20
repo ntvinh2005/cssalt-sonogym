@@ -97,6 +97,41 @@ class SapSemanticReviewV3Tests(unittest.TestCase):
         self.assertEqual(report["v2_core_unsupported_location_count"], 1)
         self.assertGreater(np.count_nonzero(masks["agreement"]), 0)
 
+    def test_proximity_does_not_hide_sampled_iap_conflict(self) -> None:
+        mask = np.zeros((12, 12, 12), dtype=bool)
+        mask[6:8, 5:7, 5:7] = True
+        prediction = mask.astype(np.uint8) * 6
+        prediction[6, 5, 5] = 7
+        v2 = {
+            "core_index": np.asarray([[6.0, 5.0, 5.0]]),
+            "sha256": "frozen-v2",
+        }
+        report, masks = MODULE.compare_v2_model(
+            level="L4", model_mask=mask, prediction=prediction,
+            v2=v2, affine=self.affine,
+        )
+        self.assertEqual(report["v2_core_supported_location_count"], 1)
+        self.assertEqual(
+            masks["v2_categories"].tolist(), ["CLASS_CONFLICT_SAMPLED_IAP"]
+        )
+
+    def test_anatomical_consistency_uses_explicit_source_labels(self) -> None:
+        prediction = np.zeros((4, 4, 4), dtype=np.uint8)
+        segmentation = np.zeros_like(prediction)
+        prediction[0, 0, 0] = 6
+        segmentation[0, 0, 0] = 28
+        prediction[1, 1, 1] = 6
+        segmentation[1, 1, 1] = 120
+        conversion = {label: 13 for label in MODULE.VERTEBRAL_SOURCE_LABELS}
+        conversion[120] = 12
+        report = MODULE.anatomical_consistency_report(
+            prediction, segmentation, conversion
+        )
+        self.assertEqual(report["vertebral_labels_only"]["inside_count"], 1)
+        self.assertEqual(report["vertebral_labels_only"]["outside_count"], 1)
+        self.assertEqual(report["acoustic_bone_labels"]["inside_count"], 1)
+        self.assertEqual(report["foreground_by_source_label"], {"28": 1, "120": 1})
+
     def test_compact_mask_roundtrip_preserves_crop_affine(self) -> None:
         prediction = np.zeros_like(self.segmentation)
         level_masks, _ = MODULE.split_level_and_laterality(

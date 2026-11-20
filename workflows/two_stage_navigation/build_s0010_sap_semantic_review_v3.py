@@ -32,11 +32,13 @@ import numpy as np
 from scipy import ndimage
 from scipy.spatial import cKDTree
 from skimage.measure import marching_cubes, mesh_surface_area
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_NAME = "s0010_right_l4l5_sap_semantic_review_v3"
 LABEL_VALUE = {"L3": 29, "L4": 28, "L5": 27}
+VERTEBRAL_SOURCE_LABELS = tuple(range(25, 32))
 UPPER_LEVEL = {"L4": "L3", "L5": "L4"}
 MODEL_LABEL = {
     0: "background",
@@ -99,6 +101,84 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
+
+
+def load_label_conversion(path: Path) -> dict[int, int]:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise RuntimeError(f"invalid label conversion: {path}")
+    conversion = {int(source): int(target) for source, target in raw.items()}
+    missing = sorted(set(VERTEBRAL_SOURCE_LABELS) - set(conversion))
+    if missing:
+        raise RuntimeError(f"label conversion misses vertebral labels: {missing}")
+    if any(conversion[label] != 13 for label in VERTEBRAL_SOURCE_LABELS):
+        raise RuntimeError("vertebral labels do not share acoustic bone class 13")
+    return conversion
+
+
+def anatomical_consistency_report(
+    prediction: np.ndarray,
+    segmentation: np.ndarray,
+    label_conversion: dict[int, int],
+) -> dict[str, Any]:
+    foreground = prediction > 0
+    vertebral = np.isin(segmentation, VERTEBRAL_SOURCE_LABELS)
+    acoustic_bone_source_labels = tuple(
+        sorted(label for label, acoustic in label_conversion.items() if acoustic == 13)
+    )
+    acoustic_bone = np.isin(segmentation, acoustic_bone_source_labels)
+
+    def summarize(mask: np.ndarray) -> dict[str, Any]:
+        inside = foreground & mask
+        outside = foreground & ~mask
+        return {
+            "foreground_voxel_count": int(np.count_nonzero(foreground)),
+            "inside_count": int(np.count_nonzero(inside)),
+            "outside_count": int(np.count_nonzero(outside)),
+            "inside_fraction": float(
+                np.count_nonzero(inside) / max(1, np.count_nonzero(foreground))
+            ),
+            "per_model_class": {
+                MODEL_LABEL[label]: {
+                    "total": int(np.count_nonzero(prediction == label)),
+                    "inside": int(np.count_nonzero((prediction == label) & mask)),
+                    "outside": int(np.count_nonzero((prediction == label) & ~mask)),
+                }
+                for label in range(1, 8)
+            },
+        }
+
+    per_level: dict[str, Any] = {}
+    for level, source_label in LABEL_VALUE.items():
+        level_mask = segmentation == source_label
+        per_level[level] = {
+            "source_label": source_label,
+            "foreground_voxel_count": int(np.count_nonzero(foreground & level_mask)),
+            "per_model_class": {
+                MODEL_LABEL[label]: int(
+                    np.count_nonzero((prediction == label) & level_mask)
+                )
+                for label in range(1, 8)
+            },
+        }
+    source_label_counts = {
+        str(int(label)): int(np.count_nonzero(foreground & (segmentation == label)))
+        for label in np.unique(segmentation[foreground])
+    }
+    return {
+        "vertebral_source_labels": list(VERTEBRAL_SOURCE_LABELS),
+        "acoustic_bone_class": 13,
+        "acoustic_bone_source_labels": list(acoustic_bone_source_labels),
+        "vertebral_labels_only": summarize(vertebral),
+        "acoustic_bone_labels": summarize(acoustic_bone),
+        "per_level": per_level,
+        "foreground_by_source_label": source_label_counts,
+        "note": (
+            "Source label > 0 is not a bone definition. Vertebral consistency uses "
+            "the explicit s0010 spinal labels 25-31; acoustic-bone consistency uses "
+            "only source labels mapped to renderer class 13."
+        ),
+    }
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -330,11 +410,24 @@ def compare_v2_model(
     v2_agreement = distances <= tolerance_mm
     sampled_labels = np.full(len(v2_voxels), -1, dtype=np.int16)
     sampled_labels[inside] = prediction[tuple(v2_voxels[inside].T)].astype(np.int16)
-    categories = np.full(len(v2_voxels), "V2_ONLY_CORE", dtype="<U24")
-    categories[v2_agreement] = "MODEL_V2_AGREEMENT"
-    categories[(~v2_agreement) & (sampled_labels > 0) & (sampled_labels != 6)] = (
-        "UNRESOLVED_OR_CONFLICT"
-    )
+    categories = np.empty(len(v2_voxels), dtype="<U48")
+    for index, (proximal, sampled_label) in enumerate(
+        zip(v2_agreement, sampled_labels)
+    ):
+        if sampled_label == 7:
+            categories[index] = "CLASS_CONFLICT_SAMPLED_IAP"
+        elif sampled_label not in (-1, 0, 6):
+            categories[index] = "CLASS_CONFLICT_SAMPLED_OTHER"
+        elif sampled_label == 6 and proximal:
+            categories[index] = "PROXIMAL_SAMPLED_SAP"
+        elif sampled_label == 6:
+            categories[index] = "DISTANT_SAMPLED_SAP_UNRESOLVED"
+        elif sampled_label == 0 and proximal:
+            categories[index] = "PROXIMAL_BACKGROUND_UNCERTAIN"
+        elif sampled_label == 0:
+            categories[index] = "DISTANT_BACKGROUND_UNRESOLVED"
+        else:
+            categories[index] = "OUTSIDE_VOLUME_UNRESOLVED"
     voxel_volume_mm3 = float(np.prod(spacing))
     result = {
         "structure_id": f"RIGHT_{level}_SAP",
@@ -344,6 +437,11 @@ def compare_v2_model(
         "v2_core_supported_location_count": int(np.count_nonzero(v2_agreement)),
         "v2_core_unsupported_location_count": int(np.count_nonzero(~v2_agreement)),
         "v2_core_supported_fraction": float(np.mean(v2_agreement)) if len(v2_agreement) else 0.0,
+        "distance_proximity_is_not_semantic_agreement": True,
+        "v2_sampled_model_label_counts": {
+            MODEL_LABEL.get(int(label), "outside_or_unknown"): int(count)
+            for label, count in zip(*np.unique(sampled_labels, return_counts=True))
+        },
         "v2_to_model_surface_median_mm": float(np.median(distances)),
         "v2_to_model_surface_p95_mm": float(np.percentile(distances, 95)),
         "v2_to_model_surface_maximum_mm": float(np.max(distances)),
@@ -755,7 +853,8 @@ The actual CT intensity volume, not a vertebral mask or STL rasterization, was s
 - License: University of Zurich academic non-commercial license; weights are not included in this package.
 - Input/output affine maximum absolute difference: `{inference['input_output_affine_max_abs_difference']}`.
 - Prediction labels present: `{inference['labels_present']}`.
-- Model foreground inside the existing whole-bone segmentation: `{inference['whole_vertebra_consistency']['foreground_inside_existing_bone_count']}` / `{inference['whole_vertebra_consistency']['foreground_voxel_count']}` voxels.
+- Model foreground inside explicit vertebral source labels 25-31: `{inference['anatomical_consistency']['vertebral_labels_only']['inside_count']}` / `{inference['anatomical_consistency']['vertebral_labels_only']['foreground_voxel_count']}` voxels.
+- Model foreground inside source labels mapped to acoustic bone class 13: `{inference['anatomical_consistency']['acoustic_bone_labels']['inside_count']}` / `{inference['anatomical_consistency']['acoustic_bone_labels']['foreground_voxel_count']}` voxels.
 - Runtime: `{inference['elapsed_seconds']}` seconds on `{inference['gpu_name']}` with `{inference['cpus']}` CPUs.
 - Command: `{inference['command']}`
 
@@ -849,24 +948,9 @@ def run_build(args: argparse.Namespace) -> None:
     ct_image = nib.load(args.ct)
     ct = np.asanyarray(ct_image.dataobj)
     prediction_image, prediction, segmentation, prediction_report = validate_prediction(args.prediction, args.ct, args.segmentation)
-    whole_bone = segmentation > 0
-    foreground = prediction > 0
-    prediction_report["whole_vertebra_consistency"] = {
-        "foreground_voxel_count": int(np.count_nonzero(foreground)),
-        "foreground_inside_existing_bone_count": int(np.count_nonzero(foreground & whole_bone)),
-        "foreground_outside_existing_bone_count": int(np.count_nonzero(foreground & ~whole_bone)),
-        "foreground_inside_existing_bone_fraction": float(
-            np.count_nonzero(foreground & whole_bone) / max(1, np.count_nonzero(foreground))
-        ),
-        "per_model_class": {
-            MODEL_LABEL[label]: {
-                "total": int(np.count_nonzero(prediction == label)),
-                "inside_existing_bone": int(np.count_nonzero((prediction == label) & whole_bone)),
-                "outside_existing_bone": int(np.count_nonzero((prediction == label) & ~whole_bone)),
-            }
-            for label in range(1, 8)
-        },
-    }
+    prediction_report["anatomical_consistency"] = anatomical_consistency_report(
+        prediction, segmentation, load_label_conversion(args.label_conversion)
+    )
     level_masks, midlines = split_level_and_laterality(prediction, segmentation, prediction_image.affine)
     comparisons: list[dict[str, Any]] = []
     comparison_masks: dict[str, dict[str, np.ndarray]] = {}
@@ -1049,6 +1133,7 @@ def parse_args() -> argparse.Namespace:
     build.add_argument("--ct", type=Path, required=True)
     build.add_argument("--segmentation", type=Path, required=True)
     build.add_argument("--prediction", type=Path, required=True)
+    build.add_argument("--label-conversion", type=Path, required=True)
     build.add_argument("--model-archive", type=Path, required=True)
     build.add_argument("--expected-model-sha256", required=True)
     build.add_argument("--v2-package", type=Path, required=True)

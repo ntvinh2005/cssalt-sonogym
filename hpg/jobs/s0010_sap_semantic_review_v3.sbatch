@@ -40,6 +40,7 @@ SEAL="${PROTOCOL%.yaml}.sha256"
 MODEL_ARCHIVE="$SONOGYM_RUNTIME_DIR/external/Spine_Subregions/V1/nnUNetTrainerV2__nnUNetPlansv2.1.zip"
 CT="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset/s0010/ct.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
+LABEL_CONVERSION="$PROJECT/source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml"
 V2_PACKAGE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_static_review_v2/manual_20261120T0120/review_packages/s0010_right_l4l5_sap_review_v2"
 ARCHIVED_US="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3/52039283"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/$SLURM_JOB_ID"
@@ -83,6 +84,7 @@ ELAPSED_SECONDS=$(awk '/Elapsed \(wall clock\) time/{value=$NF} END{split(value,
     "$PYTHON" workflows/two_stage_navigation/build_s0010_sap_semantic_review_v3.py build \
     --ct "$CT" --segmentation "$SEGMENTATION" \
     --prediction "$RUN_DIR/raw_prediction/s0010.nii.gz" \
+    --label-conversion "$LABEL_CONVERSION" \
     --model-archive "$MODEL_ARCHIVE" \
     --expected-model-sha256 384b6ead3dd4df2b34d3fc6dc1d72c845dab76807b237a488c91d56758c06938 \
     --v2-package "$V2_PACKAGE" --archived-ultrasound-root "$ARCHIVED_US" \
