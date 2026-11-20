@@ -67,6 +67,28 @@ class SapObservabilityCorrectionTests(unittest.TestCase):
             "OCCLUDED_BY_OTHER_BONE",
         )
 
+    def test_structure_verdict_requires_projection_gate_in_two_sessions(self) -> None:
+        targets = [
+            {
+                "session_id": "session_00",
+                "corrected_surface_status": "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "corrected_projection_gate_passed": False,
+            },
+            {
+                "session_id": "session_01",
+                "corrected_surface_status": "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "corrected_projection_gate_passed": True,
+            },
+            {
+                "session_id": "session_01",
+                "corrected_surface_status": "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "corrected_projection_gate_passed": True,
+            },
+        ]
+        result = MODULE.summarize_structure(targets)
+        self.assertEqual(result["verdict"], "INCONCLUSIVE")
+        self.assertEqual(result["qualifying_visible_session_count"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

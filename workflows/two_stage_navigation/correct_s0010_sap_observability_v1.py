@@ -139,6 +139,43 @@ def frame_status(
     return "UNRESOLVED"
 
 
+def summarize_structure(targets: list[dict[str, Any]]) -> dict[str, Any]:
+    statuses = [row["corrected_surface_status"] for row in targets]
+    qualifying = [
+        row
+        for row in targets
+        if row["corrected_surface_status"] == "SAP_SURFACE_CANDIDATE_VISIBLE"
+        and bool(row["corrected_projection_gate_passed"])
+    ]
+    qualifying_sessions = {row["session_id"] for row in qualifying}
+    if len(qualifying) >= 2 and len(qualifying_sessions) >= 2:
+        verdict = "SAP_SURFACE_VISIBLE_PROVISIONAL"
+    elif statuses and all(status == "OCCLUDED_BY_OTHER_BONE" for status in statuses):
+        verdict = "OCCLUDED_BY_OTHER_BONE"
+    elif statuses and all(status == "NO_VISIBLE_INTERFACE" for status in statuses):
+        verdict = "NO_VISIBLE_INTERFACE"
+    else:
+        verdict = "INCONCLUSIVE"
+    return {
+        "target_frame_count": len(targets),
+        "corrected_projection_gate_passed_count": sum(
+            bool(row["corrected_projection_gate_passed"]) for row in targets
+        ),
+        "qualifying_visible_frame_count": len(qualifying),
+        "qualifying_visible_session_count": len(qualifying_sessions),
+        "status_counts": {
+            status: statuses.count(status)
+            for status in (
+                "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "OCCLUDED_BY_OTHER_BONE",
+                "NO_VISIBLE_INTERFACE",
+                "UNRESOLVED",
+            )
+        },
+        "verdict": verdict,
+    }
+
+
 def overlay(ax: Any, masks: dict[str, np.ndarray], *, title: str) -> None:
     colors = {
         "uncertainty": "#ff9f1c",
@@ -487,40 +524,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             for row in metrics
             if row["level"] == level and row["role"] == TARGET_ROLE
         ]
-        statuses = [row["corrected_surface_status"] for row in targets]
-        visible_sessions = {
-            row["session_id"]
-            for row in targets
-            if row["corrected_surface_status"]
-            == "SAP_SURFACE_CANDIDATE_VISIBLE"
-        }
-        if statuses.count("SAP_SURFACE_CANDIDATE_VISIBLE") >= 2 and len(
-            visible_sessions
-        ) >= 2:
-            verdict = "SAP_SURFACE_VISIBLE_PROVISIONAL"
-        elif statuses and all(status == "OCCLUDED_BY_OTHER_BONE" for status in statuses):
-            verdict = "OCCLUDED_BY_OTHER_BONE"
-        elif statuses and all(status == "NO_VISIBLE_INTERFACE" for status in statuses):
-            verdict = "NO_VISIBLE_INTERFACE"
-        else:
-            verdict = "INCONCLUSIVE"
-        structures[level] = {
-            "target_frame_count": len(targets),
-            "corrected_projection_gate_passed_count": sum(
-                str(row["corrected_projection_gate_passed"]).lower() == "true"
-                for row in targets
-            ),
-            "status_counts": {
-                status: statuses.count(status)
-                for status in (
-                    "SAP_SURFACE_CANDIDATE_VISIBLE",
-                    "OCCLUDED_BY_OTHER_BONE",
-                    "NO_VISIBLE_INTERFACE",
-                    "UNRESOLVED",
-                )
-            },
-            "verdict": verdict,
-        }
+        structures[level] = summarize_structure(targets)
 
     result = {
         "schema": "sonogym-s0010-sap-observability-correction-v1",
