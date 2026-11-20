@@ -1,0 +1,21 @@
+review_id,polyline_id,clean_image_decision,polyline_points_rc,notes
+R_33f0713d8a77,left_01,VISIBLE,77:14;78:16;80:18;82:20,short left cortical-looking interface with shadow
+R_33f0713d8a77,right_01,VISIBLE,108:112;106:120;104:128;104:136;106:143,curved right cortical-looking interface
+R_3b6a0e777a28,left_01,VISIBLE,88:34;86:38;84:42;84:46,short left cortical-looking interface
+R_3b6a0e777a28,right_01,VISIBLE,118:132;116:138;114:144;115:149,right interface partly at image edge
+R_6276911c8235,left_01,VISIBLE,74:19;71:23;69:27;70:31,left interface with posterior shadow
+R_6276911c8235,right_01,VISIBLE,122:99;120:105;119:111;120:117,smaller right cortical-looking interface
+R_65c429fc66c3,left_01,VISIBLE,73:14;70:18;69:22;71:26,left interface with shadow
+R_65c429fc66c3,right_01,VISIBLE,113:110;111:117;109:124;110:132,curved right cortical-looking interface
+R_7f396b288c90,right_01,VISIBLE,115:133;112:138;110:143;111:148,right-edge curved interface
+R_849fb59f6d82,deep_right_01,AMBIGUOUS,124:134;122:139;121:144;122:149,weak deep interface partly at image edge
+R_a90baca613ba,right_01,AMBIGUOUS,113:134;110:139;109:144;110:149,right-edge interface partly contained
+R_c915d783a87c,left_01,VISIBLE,103:3;100:7;99:11;101:15,left-edge cortical-looking interface
+R_c915d783a87c,right_01,VISIBLE,113:121;111:128;109:135;110:142,right cortical-looking interface with shadow
+R_ccc9d102ec92,left_01,VISIBLE,98:14;95:18;94:22;96:26,left interface with posterior shadow
+R_ccc9d102ec92,right_01,VISIBLE,108:116;106:123;104:131;104:139;106:146,strong curved right interface
+R_d7e53708a61c,left_01,VISIBLE,108:3;105:8;104:13;106:18,left-edge interface
+R_d7e53708a61c,right_01,VISIBLE,115:117;113:124;111:132;112:140,right cortical-looking interface
+R_f025923d126f,left_01,VISIBLE,81:34;78:38;76:42;77:46,strong left interface with shadow
+R_f025923d126f,right_01,VISIBLE,115:126;113:133;111:140;112:147,right interface
+R_fac3c80a9f60,right_01,AMBIGUOUS,113:134;110:139;109:144;110:149,weak right-edge interface partly outside image

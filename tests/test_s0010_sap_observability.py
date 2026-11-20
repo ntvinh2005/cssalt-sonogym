@@ -46,6 +46,41 @@ class SapObservabilityTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(projected)), 9)
         self.assertEqual(len(source), 1)
 
+    def test_off_center_native_pixel_keeps_row_and_column(self) -> None:
+        mask = np.zeros((3, 3, 3), dtype=bool)
+        mask[1, 1, 1] = True
+        coordinates = np.zeros((200 * 150, 3), dtype=np.float64)
+        row, column = 100, 40
+        coordinates[column * 200 + row] = (1.0, 1.0, 1.0)
+        projected, _ = MODULE.project_mask(coordinates, mask)
+        self.assertEqual(projected.shape, (200, 150))
+        self.assertTrue(bool(projected[row, column]))
+        self.assertEqual(int(np.count_nonzero(projected)), 1)
+        legacy, _ = MODULE.project_mask_legacy_v1(coordinates, mask)
+        self.assertTrue(bool(legacy[54, 0]))
+        self.assertFalse(bool(legacy[row, column]))
+
+    def test_asymmetric_native_pattern_matches_raw_label_rasterization(self) -> None:
+        mask = np.zeros((4, 4, 4), dtype=bool)
+        mask[1, 1, 1] = True
+        coordinates = np.zeros((200 * 150, 3), dtype=np.float64)
+        expected_pixels = ((7, 2), (113, 49), (191, 140))
+        for row, column in expected_pixels:
+            coordinates[column * 200 + row] = (1.0, 1.0, 1.0)
+        projected, _ = MODULE.project_mask(coordinates, mask)
+        expected = np.zeros((200, 150), dtype=bool)
+        for row, column in expected_pixels:
+            expected[row, column] = True
+        np.testing.assert_array_equal(projected, expected)
+
+        sampled = mask[
+            coordinates[:, 0].astype(np.int64),
+            coordinates[:, 1].astype(np.int64),
+            coordinates[:, 2].astype(np.int64),
+        ]
+        native_raw_label_image = sampled.reshape(150, 200).T
+        np.testing.assert_array_equal(projected, native_raw_label_image)
+
     def test_finalize_requires_two_sessions_and_aligned_visible_points(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -25,7 +25,9 @@ from scipy import ndimage
 
 LEVEL_LABEL = {"L4": 28, "L5": 27}
 SAP_LABEL = 6
-IMAGE_SHAPE = (200, 150)
+IMAGE_DEPTH = 200
+IMAGE_WIDTH = 150
+IMAGE_SHAPE = (IMAGE_DEPTH, IMAGE_WIDTH)
 STRUCTURE = ndimage.generate_binary_structure(3, 1)
 MINIMUM_CORE_PIXELS = 20
 MINIMUM_CORE_MARGIN_PIXELS = 4
@@ -115,6 +117,30 @@ def project_mask(
     hits[valid] = mask[
         valid_indices[:, 0], valid_indices[:, 1], valid_indices[:, 2]
     ]
+    # The native slicer flattens (width, depth, elevation), then the actor image
+    # transposes width/depth. A direct (depth, width) reshape moves pixels.
+    image_hits = hits.reshape(IMAGE_WIDTH, IMAGE_DEPTH).T
+    source_hits = mask[
+        valid_indices[:, 0], valid_indices[:, 1], valid_indices[:, 2]
+    ]
+    source_voxels = np.unique(valid_indices[source_hits], axis=0)
+    return image_hits, source_voxels
+
+
+def project_mask_legacy_v1(
+    coordinates: np.ndarray, mask: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Reproduce the invalid V1/V1R1 rasterization for explicit comparison."""
+    coords = np.asarray(coordinates, dtype=np.float64)
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        raise ValueError("coordinate map must be N x 3")
+    indices = np.trunc(coords).astype(np.int64)
+    valid = np.all((indices >= 0) & (indices < np.asarray(mask.shape)), axis=1)
+    hits = np.zeros(len(indices), dtype=bool)
+    valid_indices = indices[valid]
+    hits[valid] = mask[
+        valid_indices[:, 0], valid_indices[:, 1], valid_indices[:, 2]
+    ]
     image_hits = hits.reshape(IMAGE_SHAPE)
     source_hits = mask[
         valid_indices[:, 0], valid_indices[:, 1], valid_indices[:, 2]
@@ -124,12 +150,15 @@ def project_mask(
 
 
 def projection_diagnostics(
-    coordinates: np.ndarray, masks: dict[str, np.ndarray]
+    coordinates: np.ndarray,
+    masks: dict[str, np.ndarray],
+    *,
+    projector: Any = project_mask,
 ) -> dict[str, Any]:
     projected: dict[str, np.ndarray] = {}
     source_counts: dict[str, int] = {}
     for name in ("pseudo", "core", "uncertainty"):
-        projected[name], source = project_mask(coordinates, masks[name])
+        projected[name], source = projector(coordinates, masks[name])
         source_counts[name] = int(len(source))
     rows, columns = np.where(projected["core"])
     if len(rows):
