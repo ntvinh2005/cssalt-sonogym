@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_sap_observability_protocol_v1.yaml"
+PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_sap_observability_protocol_v1r1.yaml"
 COORDINATES_PATH = (
     ROOT
     / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/coordinates.py"

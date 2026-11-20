@@ -1,0 +1,177 @@
+protocol_id: sonogym-s0010-sap-observability-v1r1
+status: PRE_GPU_FROZEN_TECHNICAL_AMENDMENT
+purpose: >-
+  Capture a bounded set of exact-mapped ultrasound views targeted offline by
+  frozen RIGHT L4/L5 pseudo-SAP CT proposals, then assess clean-image cortical
+  visibility before opening privileged overlays.
+source:
+  implementation_commit: 7107f9e3df1fd2e812a0755debc6095271c68cb5
+  amendment:
+    implementation_commit: 42c81e27458910d2f0165bb73bf349024e968f3d
+    supersedes_protocol_id: sonogym-s0010-sap-observability-v1
+    prior_failed_job: 52091634
+    reason: >-
+      V1 stopped before acquisition because its unused Stage 2 label threshold
+      was zero; restore the established positive 0.05 value without changing
+      masks, waypoints, capture gates, observability gates or resource bounds.
+    changed_fields:
+      - protocol_id
+      - status
+      - source.amendment
+      - labels.validity.minimum_l4_visible_fraction
+  frozen_prediction_job: 52078067
+  frozen_prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  correction_job: 52085026
+  correction_zip_sha256: 06e7719b228382dcba04dc4dbb5e9b3ca7ec45d8a4204f86ff696c5bacc4405c
+  reference_capture_job: 52039283
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_pose_design: true
+  model_training_authorized: false
+  stage3_authorized: false
+information_boundaries:
+  image_review:
+    - clean_ultrasound_pixels
+    - randomized_review_id
+  privileged_offline:
+    - pretrained_CT_subregion_prediction
+    - whole_vertebra_segmentation
+    - native_pixel_to_volume_coordinates
+    - full_probe_transform
+    - pseudo_SAP_projection
+  actor_or_image_review_forbidden:
+    - raw_label_slice
+    - CT_pixels
+    - pseudo_SAP_mask
+    - projected_geometry_overlay
+    - target_level_or_role
+pseudo_sap:
+  prediction_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz
+  prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  segmentation_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz
+  segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+  structures:
+    L4:
+      source_level_label: 28
+      model_SAP_label: 6
+      right_rule: physical_RAS_x_above_level_median
+      pseudo_voxels: 259
+      one_voxel_eroded_core_voxels: 66
+    L5:
+      source_level_label: 27
+      model_SAP_label: 6
+      right_rule: physical_RAS_x_above_level_median
+      pseudo_voxels: 338
+      one_voxel_eroded_core_voxels: 108
+  uncertainty_rule: >-
+    One 6-connected source-voxel band spanning the pseudo-SAP boundary and
+    its immediate exterior; target support is counted only in the eroded core.
+sampling:
+  expected_frames_per_session: 6
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.2
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 3000
+  trajectory_start_frames: [0, 2, 4]
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio: [0.02, 0.02, 0.6]
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    bank_a:
+      - [157.0, 139.75860287946284, 2.875]
+      - [153.0, 141.4252695461295, 2.8]
+      - [149.0, 131.16387511724508, 2.8]
+      - [149.0, 131.16387511724508, 2.95]
+      - [147.0, 135.4252695461295, 2.95]
+      - [147.0, 122.83054178391173, 2.95]
+    bank_b:
+      - [155.0, 141.4252695461295, 2.875]
+      - [157.0, 140.09193621279616, 2.95]
+      - [157.0, 128.4972084505784, 2.8]
+      - [163.0, 128.4972084505784, 2.875]
+      - [151.0, 134.09193621279616, 2.95]
+      - [151.0, 122.4972084505784, 2.875]
+observability_waypoints:
+  bank_a:
+    - {level: L4, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_01, anchor_frame_sequence: 10}
+    - {level: L4, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_00, anchor_frame_sequence: 11}
+    - {level: L5, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_02, anchor_frame_sequence: 60}
+    - {level: L5, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_02, anchor_frame_sequence: 62}
+    - {level: L4, role: CONTEXT_CONTROL, anchor_session_id: mbbpoc_v3_00, anchor_frame_sequence: 3}
+    - {level: L5, role: CONTEXT_CONTROL, anchor_session_id: mbbpoc_v3_00, anchor_frame_sequence: 56}
+  bank_b:
+    - {level: L4, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_02, anchor_frame_sequence: 13}
+    - {level: L4, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_03, anchor_frame_sequence: 14}
+    - {level: L5, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_03, anchor_frame_sequence: 65}
+    - {level: L5, role: PSEUDO_SAP_TARGET, anchor_session_id: mbbpoc_v3_03, anchor_frame_sequence: 67}
+    - {level: L4, role: CONTEXT_CONTROL, anchor_session_id: mbbpoc_v3_03, anchor_frame_sequence: 2}
+    - {level: L5, role: CONTEXT_CONTROL, anchor_session_id: mbbpoc_v3_03, anchor_frame_sequence: 58}
+sessions:
+  - session_id: s0010sapobs_00
+    split: opened_development_observability
+    seed: 2026112001
+    reset_id: s0010sapobs_00
+    absolute_waypoint_bank_id: bank_a
+    expected_frame_count: 6
+  - session_id: s0010sapobs_01
+    split: opened_development_observability
+    seed: 2026112002
+    reset_id: s0010sapobs_01
+    absolute_waypoint_bank_id: bank_b
+    expected_frame_count: 6
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 10.0
+    maximum_orientation_error_deg: 10.0
+    minimum_l4_visible_fraction: 0.05
+  quality:
+    visibility_normalization_fraction: 0.20
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 6
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.90
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+observability_gate:
+  minimum_core_pixels: 20
+  minimum_core_margin_pixels: 4
+  minimum_positive_views_per_level_per_session: 1
+  minimum_positive_sessions_per_level: 2
+  clean_review_decisions: [VISIBLE, AMBIGUOUS, NOT_VISIBLE]
+  interface_alignment_tolerance_pixels: 4.0
+  overlay_access_only_after_blind_decision_hash: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA L4
+  cpu_cores: 4
+  memory: 30G
+  walltime: 00:30:00
+  maximum_new_jobs: 1
+  maximum_storage_growth_gb: 0.5
+change_policy:
+  - Do not change masks, waypoints, projection gates or review criteria after capture.
+  - Do not use privileged geometry in clean-image decisions.
+  - Do not train a classifier or start Stage 3.
+  - A visibility verdict does not promote pseudo-SAP to verified anatomy.
