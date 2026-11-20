@@ -9,7 +9,7 @@ This records one pretrained CT subregion-inference pass and the resulting static
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
 | 1 | original CT integrity and alignment | every frozen CT preflight gate passes | real HU CT, `259 × 259 × 283`, 1.5 mm isotropic RAS; CT/segmentation affine difference `0.0` | pass |
-| 2 | official checkpoint inference | prediction passes every frozen inference/alignment gate | labels `0–7`; output affine difference `0.0`; correction job `52084265` finds `109,139 / 110,736 (98.56%)` foreground voxels in explicitly mapped acoustic-bone IDs | pass; original nonzero-label metric superseded |
+| 2 | official checkpoint inference | prediction passes every frozen inference/alignment gate | labels `0–7`; output affine difference `0.0`; correction job `52085026` finds `109,139 / 110,736 (98.56%)` foreground voxels in explicitly mapped acoustic-bone IDs | pass; original nonzero-label metric superseded |
 | 3 | level/laterality mapping and V2 comparison | both SAP and paired IAP proposals are nonempty and inspectable; no semantic-accuracy threshold | L4 `51 / 55 (92.7%)`; L5 `70 / 77 (90.9%)` V2 core locations within 1.5 mm of model SAP | ready for review, not accepted anatomy |
 | 4 | static-package integrity | all references, checksums and ZIP members pass | `49 / 49` references; `60 / 60` checksums; ZIP test pass | pass |
 
@@ -116,7 +116,7 @@ Nothing was dropped: one CT case was attempted and one prediction was exported.
 
 - The release archive is a legacy nnU-Net v1 checkpoint despite current repository wording that mentions nnU-Net v2.
 - Successful inference is not proof that the predicted SAP class is correct on s0010.
-- The original `segmentation > 0` consistency metric was invalid because the label map contains non-bone tissues; correction job `52084265` supersedes that metric without changing the raw prediction.
+- The original `segmentation > 0` consistency metric was invalid because the label map contains non-bone tissues; correction job `52085026` supersedes that metric without changing the raw prediction.
 - The academic non-commercial checkpoint is stored outside Git and is not redistributed in the ZIP.
 
 ### 2.5 Files
@@ -181,7 +181,7 @@ build_s0010_sap_semantic_review_v3.py build \
 ### 3.4 Reading it
 
 - Model/V2 distance proximity is strong enough to make external review more decisive, but is not semantic agreement.
-- Correction job `52084265` separately flags seven L4 and one L5 sampled-IAP conflicts, including conflicts that lie within 1.5 mm.
+- Correction job `52085026` separately flags seven L4 and one L5 sampled-IAP conflicts, including conflicts that lie within 1.5 mm.
 - Most model SAP volume is model-only: 685.125 mm³ at L4 and 894.375 mm³ at L5.
 - The L5 maximum-distance outlier requires reviewer attention; it is not hidden by the median.
 - Archived ultrasound projections are too sparse to establish SAP cortical visibility or semantic identity.

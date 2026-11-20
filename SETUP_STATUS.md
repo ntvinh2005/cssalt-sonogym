@@ -2,8 +2,8 @@
 
 ## 2026-11-20: SAP V3 review metric and conflict categories corrected
 
-CPU job `52084265` completed `0:0` in 17 seconds at source revision
-`21330dd4` with one CPU, 8 GB requested memory and zero GPUs. It reused the
+CPU job `52085026` completed `0:0` in 20 seconds at source revision
+`405e7b5d` with one CPU, 8 GB requested memory and zero GPUs. It reused the
 frozen V3 raw prediction and did not repeat inference or modify any model mask.
 
 Independent review correctly identified that `segmentation > 0` was not a
@@ -24,8 +24,8 @@ pass.
 
 - Result: `experiments/unity_two_stage_transfer/s0010_sap_semantic_review_v3_correction_result.json`.
 - Report: `docs/research/sonogym_s0010_sap_semantic_review_v3_correction.md`.
-- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3_correction/52084265/review_packages/s0010_right_l4l5_sap_semantic_review_v3_correction.zip`.
-- ZIP SHA-256: `fdf99daba6e96ea07dd7518dd226b1d0a89e25203f3a81860e6191c5d5789bf0`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3_correction/52085026/review_packages/s0010_right_l4l5_sap_semantic_review_v3_correction.zip`.
+- ZIP SHA-256: `06e7719b228382dcba04dc4dbb5e9b3ca7ec45d8a4204f86ff696c5bacc4405c`.
 
 ## 2026-11-20: pretrained CT model produces inspectable RIGHT L4/L5 SAP proposals
 

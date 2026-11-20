@@ -16,7 +16,7 @@ The model-generated SAP masks remain research proposals. The correction narrows 
 
 ## 1. Anatomical consistency — where model foreground lies in source anatomy
 
-`anatomical_consistency_report` in `workflows/two_stage_navigation/build_s0010_sap_semantic_review_v3.py`, run by CPU job `52084265`. It compares the frozen model foreground against explicit raw source labels.
+`anatomical_consistency_report` in `workflows/two_stage_navigation/build_s0010_sap_semantic_review_v3.py`, run by CPU job `52085026`. It compares the frozen model foreground against explicit raw source labels.
 
 **Criterion.** Vertebral consistency must use source IDs 25–31; renderer-bone consistency must use only IDs mapped to acoustic class 13 by the sealed `label_conversion.yaml`; `segmentation > 0` is prohibited as a bone definition.
 
@@ -31,7 +31,7 @@ The model-generated SAP masks remain research proposals. The correction narrows 
 
 | what | value | spec |
 |---|---|---|
-| run / checkpoint | correction job `52084265`, commit `21330dd470d85f8d3e746af004e06d3d14ff8c56`; original inference job `52078067` | §1 |
+| run / checkpoint | correction job `52085026`, commit `405e7b5f71827a3f631842fb0c09b3a8634c8a2c`; original inference job `52078067` | §1 |
 | inputs | frozen CT, segmentation and raw prediction from V3 | §1 |
 | label mapping | `source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml`, SHA-256 `4ce73c412ef26f69fefe0caf003a531f4fd0928ac24f2248af0a019c4d76ff9a` | §1 |
 | filters | source labels 25–31; acoustic class exactly 13 | §1 |
@@ -146,9 +146,9 @@ The CPU job writes a small package that references, but does not duplicate, the 
 
 | what | value | spec |
 |---|---|---|
-| job | `52084265`, one CPU, 8 GB requested, zero GPUs | §3 |
+| job | `52085026`, one CPU, 8 GB requested, zero GPUs | §3 |
 | original V3 ZIP | SHA-256 `ce55b17345507a5baa2ee6552daeb63c924e162be285507f3bfb9c8750f3a442` | §3 |
-| correction ZIP | SHA-256 `fdf99daba6e96ea07dd7518dd226b1d0a89e25203f3a81860e6191c5d5789bf0` | §3 |
+| correction ZIP | SHA-256 `06e7719b228382dcba04dc4dbb5e9b3ca7ec45d8a4204f86ff696c5bacc4405c` | §3 |
 
 ```bash
 cd <correction package>
@@ -167,8 +167,8 @@ Nothing was dropped.
 | correction tests | `2 / 2` pass |
 | checksums | `8 / 8` pass |
 | ZIP integrity | pass |
-| elapsed / maximum process RSS | 17 seconds / 2,089,392 KB |
-| ZIP size | 1,093,739 bytes |
+| elapsed / maximum process RSS | 20 seconds / 2,089,392 KB |
+| ZIP size | 1,093,756 bytes |
 
 **Verdict: pass**, because every test and integrity gate succeeded and the frozen input hashes match.
 
