@@ -372,6 +372,7 @@ def main() -> int:
 
     gate = protocol["label_gate"]
     correspondence_summary: dict[str, Any] = {}
+    correspondence_rows: list[dict[str, Any]] = []
     for level in LEVELS:
         target_keys = [key for key, value in intended.items() if value == level]
         matched = [
@@ -383,24 +384,56 @@ def main() -> int:
         mismatch: list[correspondence.Alignment] = []
         ranking_wins = 0
         for key, matched_alignment in zip(target_keys, matched):
-            controls = [
-                best_alignment_from_tracks(
-                    frame_images[key],
-                    frame_tracks[key],
-                    session_surfaces[(*key, "L5" if level == "L4" else "L4")],
-                )
-            ]
+            correspondence_rows.append(
+                {
+                    "session_id": key[0],
+                    "frame_sequence": key[1],
+                    "level": level,
+                    "comparison": "MATCHED",
+                    "projection_source": f"{key[0]}:{key[1]}:{level}",
+                    **asdict(matched_alignment),
+                }
+            )
+            other_level = "L5" if level == "L4" else "L4"
+            other_alignment = best_alignment_from_tracks(
+                frame_images[key],
+                frame_tracks[key],
+                session_surfaces[(*key, other_level)],
+            )
+            controls = [other_alignment]
+            correspondence_rows.append(
+                {
+                    "session_id": key[0],
+                    "frame_sequence": key[1],
+                    "level": level,
+                    "comparison": "OTHER_LEVEL",
+                    "projection_source": f"{key[0]}:{key[1]}:{other_level}",
+                    **asdict(other_alignment),
+                }
+            )
             distinct = [
                 other
                 for other in target_keys
                 if other[0] != key[0]
             ][:5]
-            controls.extend(
+            distinct_alignments = [
                 best_alignment_from_tracks(
                     frame_images[key], frame_tracks[key], session_surfaces[(*other, level)]
                 )
                 for other in distinct
-            )
+            ]
+            controls.extend(distinct_alignments)
+            for other, alignment in zip(distinct, distinct_alignments):
+                correspondence_rows.append(
+                    {
+                        "session_id": key[0],
+                        "frame_sequence": key[1],
+                        "level": level,
+                        "comparison": "DISTINCT_POSE",
+                        "projection_source": f"{other[0]}:{other[1]}:{level}",
+                        **asdict(alignment),
+                    }
+                )
             mismatch.extend(controls)
             ranking_wins += int(
                 all(
@@ -428,6 +461,7 @@ def main() -> int:
                 and ranking_rate >= float(gate["minimum_correct_projection_ranking_rate"])
             ),
         }
+    write_csv(output / "correspondence_controls.csv", correspondence_rows)
 
     counts: dict[str, dict[str, dict[str, int]]] = {}
     for level in LEVELS:
