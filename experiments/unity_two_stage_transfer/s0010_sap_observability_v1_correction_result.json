@@ -1,0 +1,100 @@
+{
+  "schema": "sonogym-s0010-sap-observability-correction-result-v1",
+  "experiment_id": "s0010_sap_observability_v1_correction",
+  "anatomy_id": "s0010",
+  "scope": "cpu_only_offline_projection_and_first_bone_surface_correction",
+  "source_experiment": {
+    "job_id": "52092083",
+    "execution_commit": "b1e7f3ba5ca216550fcb1738ef8beed301b9ee9c",
+    "frame_count": 12,
+    "session_count": 2,
+    "new_capture": false,
+    "new_model_inference": false
+  },
+  "execution": {
+    "job_id": "52115861",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:00:31",
+    "build_elapsed_seconds": 24.69,
+    "maximum_resident_memory_kb": 473916,
+    "resources": {
+      "cpus": 1,
+      "requested_memory": "8G",
+      "gpus": 0
+    },
+    "commit": "02ccbbf11bf828765a58ca4770125d164e024373",
+    "output_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v1_correction/52115861"
+  },
+  "superseded_preliminary_execution": {
+    "job_id": "52114287",
+    "state": "COMPLETED",
+    "reason_superseded": "structure aggregation did not require the corrected projection gate before counting visible surface evidence",
+    "scientific_claim_released": false
+  },
+  "projection_correction": {
+    "historical_spatial_evaluation": "INVALIDATED_AXIS_ORDERING",
+    "native_rasterization": "flat.reshape(width, depth).T",
+    "image_shape_row_column": [
+      200,
+      150
+    ],
+    "raw_label_replay_passed_frames": 12,
+    "raw_label_replay_total_frames": 12,
+    "projected_pixel_counts_preserved_frames": 12,
+    "mean_target_core_centroid_shift_pixels": 65.26706695795541,
+    "historical_projection_gate_passed_target_frames": 7,
+    "corrected_projection_gate_passed_target_frames": 6
+  },
+  "first_bone_surface": {
+    "surface_alignment_tolerance_pixels": 4.0,
+    "cortical_polylines_sha256": "b965a384887e8c20cf3bfe211756c05d7f19b11e3aa4141bf9ec5f4707370ee2",
+    "review_scope": "single_agent_opened_development_notes_not_independent_semantic_ground_truth",
+    "RIGHT_L4_SAP": {
+      "target_frames": 4,
+      "corrected_projection_gate_passed_frames": 2,
+      "per_frame_surface_candidate_visible": 3,
+      "per_frame_unresolved": 1,
+      "qualifying_visible_frames": 1,
+      "qualifying_visible_sessions": 1,
+      "verdict": "INCONCLUSIVE"
+    },
+    "RIGHT_L5_SAP": {
+      "target_frames": 4,
+      "corrected_projection_gate_passed_frames": 4,
+      "per_frame_surface_candidate_visible": 0,
+      "per_frame_unresolved": 4,
+      "qualifying_visible_frames": 0,
+      "qualifying_visible_sessions": 0,
+      "verdict": "INCONCLUSIVE"
+    }
+  },
+  "input_sha256": {
+    "source_prediction": "a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f",
+    "source_segmentation": "0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed",
+    "label_conversion": "4ce73c412ef26f69fefe0caf003a531f4fd0928ac24f2248af0a019c4d76ff9a"
+  },
+  "validation": {
+    "focused_tests_passed": 39,
+    "focused_tests_failed": 0,
+    "package_checksums_passed": 59,
+    "package_checksums_failed": 0,
+    "zip_integrity": "PASS"
+  },
+  "artifact": {
+    "zip_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v1_correction/52115861/review_packages/s0010_right_l4l5_sap_observability_v1_correction.zip",
+    "zip_size_bytes": 7531349,
+    "zip_sha256": "9dc92294b354ad56bb6071678cbe0a4ef4aad83b25b06c9c98dea1b462613fbd"
+  },
+  "engineering_outcome": "PASS",
+  "scientific_outcome": "INCONCLUSIVE",
+  "sap_training_label_release": false,
+  "mbb_target_release": false,
+  "stage3_release": false,
+  "limitations": [
+    "The pseudo-SAP masks remain pretrained-model proposals rather than verified semantic anatomy.",
+    "The cortical polylines are single-agent opened-development notes, not independent labels.",
+    "A privileged first-bone hit is not proof that an image-only observer can identify SAP.",
+    "L4 has only one projection-gated aligned frame from one session; L5 has none."
+  ]
+}

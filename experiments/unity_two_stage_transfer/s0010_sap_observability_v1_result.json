@@ -3,6 +3,26 @@
   "experiment_id": "s0010_sap_observability_v1r1",
   "anatomy_id": "s0010",
   "scope": "simulator_only_right_l4_l5_pseudo_sap_observability",
+  "supersession": {
+    "spatial_evaluation_status": "INVALIDATED_AXIS_ORDERING",
+    "invalidated_fields": [
+      "projected pixel positions",
+      "core centroids",
+      "image-boundary margins",
+      "projection gates",
+      "cortical-interface alignment",
+      "structure observability verdicts"
+    ],
+    "preserved_fields": [
+      "acquisition integrity",
+      "frame identity",
+      "freshness",
+      "native-map replay",
+      "full-pose replay",
+      "array hash integrity"
+    ],
+    "correction_result": "experiments/unity_two_stage_transfer/s0010_sap_observability_v1_correction_result.json"
+  },
   "historical_v1_technical_failure": {
     "job_id": "52091634",
     "state": "FAILED",

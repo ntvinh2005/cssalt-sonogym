@@ -1,5 +1,47 @@
 # Project notation
 
+### INVALIDATED_AXIS_ORDERING
+- **Kind:** object
+- **Definition:** The correction status assigned when native ultrasound coordinates were flattened width-major but reconstructed by a direct depth-by-width reshape, invalidating every derived pixel position while preserving per-pixel membership counts and source acquisitions.
+- **Intuition:** It withdraws spatial conclusions without discarding intact recorded frames.
+- **Source:** approved by user, 2026-11-20.
+
+### SAP_ULTRASOUND_OBSERVABILITY_NOT_EVALUABLE_PROJECTION_BUG
+- **Kind:** object
+- **Definition:** The SAP observability verdict used when acquired ultrasound and synchronized native coordinates are intact but a demonstrated width/depth rasterization defect invalidates projected SAP pixel locations, projection gates, and image-interface alignment measurements.
+- **Intuition:** It preserves usable acquisitions while withdrawing every spatial observability claim derived from the invalid projection.
+- **Source:** approved by user, 2026-11-20.
+
+### SAP_SURFACE_CANDIDATE_VISIBLE
+- **Kind:** object
+- **Definition:** A simulator-only per-frame state in which the first source-label bone hit along at least one ultrasound image column belongs to the versioned pseudo-SAP volume and a clean-image cortical polyline lies within the frozen four-pixel image tolerance of those first-hit pixels.
+- **Intuition:** It records provisional agreement between a visible interface and privileged geometry without promoting the pseudo-SAP mask to verified anatomy.
+- **Source:** approved by user, 2026-11-20.
+
+### SAP_SURFACE_VISIBLE_PROVISIONAL
+- **Kind:** object
+- **Definition:** A simulator-only structure verdict requiring at least two projection-gated SAP_SURFACE_CANDIDATE_VISIBLE target frames drawn from two distinct reset sessions.
+- **Intuition:** It requires repeatable surface evidence while remaining weaker than semantic SAP ground truth.
+- **Source:** approved by user, 2026-11-20.
+
+### OCCLUDED_BY_OTHER_BONE
+- **Kind:** object
+- **Definition:** A per-frame or structure-level SAP observability state in which a non-pseudo-SAP source-label bone hit occurs earlier along every evaluated target ray than the projected pseudo-SAP surface and no first-hit pseudo-SAP surface is available.
+- **Intuition:** The target geometry intersects the scan but another bone surface blocks its direct acoustic path.
+- **Source:** approved by user, 2026-11-20.
+
+### NO_VISIBLE_INTERFACE
+- **Kind:** object
+- **Definition:** A SAP observability state in which the clean ultrasound review identifies no cortical interface supporting the evaluated target after corrected spatial mapping.
+- **Intuition:** It distinguishes absent clean-image evidence from geometric occlusion and unresolved identity.
+- **Source:** approved by user, 2026-11-20.
+
+### INCONCLUSIVE
+- **Kind:** object
+- **Definition:** The corrected SAP observability verdict used when the available target frames do not satisfy SAP_SURFACE_VISIBLE_PROVISIONAL and do not consistently support OCCLUDED_BY_OTHER_BONE or NO_VISIBLE_INTERFACE.
+- **Intuition:** The observations contain partial or conflicting evidence and release no SAP training label.
+- **Source:** approved by user, 2026-11-20.
+
 This is the single registry for project-specific methods, metrics, states, and named objects used in research documentation.
 
 ### s0010_right_l4l5_sap_review_v2

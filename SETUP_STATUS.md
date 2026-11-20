@@ -1,5 +1,29 @@
 # Setup status
 
+## 2026-11-20: SAP V1 projection corrected; both levels remain inconclusive
+
+Independent review correctly identified that V1/V1R1 reshaped the native
+width-major coordinate stream directly as depth-by-width. The old projected
+positions, centroids, margins, 7/8 gate result and 0/4 alignment results are
+invalidated; the 12 synchronized acquisitions and their integrity evidence are
+preserved.
+
+CPU job `52115861` completed `0:0` in 31 seconds at revision `02ccbbf` with one
+CPU, 8 GB requested memory and zero GPUs. All 12 raw-label frames reproduce
+exactly from the packaged native coordinate arrays. Corrected target projection
+coverage is 6/8, and target-core centroids move by 65.267 pixels on average.
+
+The first-bone-surface audit finds three frame-level L4 candidate alignments,
+but only one also passes the corrected projection gate and it comes from one
+session. L5 has zero aligned views across four projection-gated frames. Both
+RIGHT L4 and RIGHT L5 therefore remain **`INCONCLUSIVE`**; no SAP training
+label, MBB target or Stage 3 capability is released.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_observability_v1_correction_result.json`.
+- Report: `docs/research/sonogym_s0010_sap_observability_v1_correction.md`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v1_correction/52115861/review_packages/s0010_right_l4l5_sap_observability_v1_correction.zip`.
+- ZIP SHA-256: `9dc92294b354ad56bb6071678cbe0a4ef4aad83b25b06c9c98dea1b462613fbd`.
+
 ## 2026-11-20: synchronized SAP observability capture succeeds but both levels remain ambiguous
 
 GPU job `52092083` completed `0:0` in 1 minute 32 seconds at execution

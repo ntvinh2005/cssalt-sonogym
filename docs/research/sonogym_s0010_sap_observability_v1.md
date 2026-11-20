@@ -1,5 +1,11 @@
 # s0010 RIGHT L4/L5 SAP ultrasound observability pilot
 
+> **Spatial result invalidated.** The V1/V1R1 projection used a direct
+> `(depth, width)` reshape instead of the native `(width, depth)` reshape plus
+> display transpose. Projected positions, gates, alignment counts and both
+> `AMBIGUOUS` structure verdicts below are preserved as historical outputs but
+> are scientifically superseded by the CPU-only correction report.
+
 This report records a bounded simulator-only observability test of the frozen
 model-generated RIGHT L4/L5 SAP proposals. It does not approve SAP anatomy,
 train a classifier, define an MBB target or authorize an intervention.
