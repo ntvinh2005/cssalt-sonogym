@@ -61,6 +61,29 @@ class SapDatasetTests(unittest.TestCase):
                     root,
                 )
 
+    def test_archived_session_identity_and_frozen_hash_fail_closed(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            verification = root / "verification_report.json"
+            verification.write_text('{"verdict":"PROJECTION_PARITY_PASS"}\n')
+            session = {
+                "session_id": "session",
+                "frame_count": 1,
+                "verification_sha256": MODULE.sha256(verification),
+            }
+            public = [{"session_id": "session", "frame_sequence": 0}]
+            MODULE.validate_session_records(session, root, public, 1)
+            with self.assertRaisesRegex(ValueError, "session identity mismatch"):
+                MODULE.validate_session_records(
+                    session,
+                    root,
+                    [{"session_id": "other", "frame_sequence": 0}],
+                    1,
+                )
+            verification.write_text('{"verdict":"changed"}\n')
+            with self.assertRaisesRegex(ValueError, "hash changed"):
+                MODULE.validate_session_records(session, root, public, 1)
+
     def test_ambiguous_row_cannot_be_selected_as_binary_target(self) -> None:
         rows = [
             {

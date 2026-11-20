@@ -107,6 +107,30 @@ def session_directory(session: dict[str, Any], run_root: Path) -> Path:
     return path
 
 
+def validate_session_records(
+    session: dict[str, Any],
+    session_dir: Path,
+    public: list[dict[str, Any]],
+    frame_count: int,
+) -> None:
+    expected_count = session.get("frame_count")
+    if expected_count is not None and int(expected_count) != frame_count:
+        raise ValueError(f"frozen frame count changed: {session_dir.name}")
+    expected_verification = session.get("verification_sha256")
+    verification_path = session_dir / "verification_report.json"
+    if expected_verification is not None and sha256(verification_path) != str(
+        expected_verification
+    ):
+        raise ValueError(f"verification report hash changed: {session_dir.name}")
+    if len(public) != frame_count:
+        raise ValueError(f"public manifest length changed: {session_dir.name}")
+    for index, row in enumerate(public):
+        if row.get("session_id") != session["session_id"]:
+            raise ValueError(f"public session identity mismatch: {session_dir.name}")
+        if int(row.get("frame_sequence", -1)) != index:
+            raise ValueError(f"public frame sequence mismatch: {session_dir.name}")
+
+
 def patch_bounds(proposal: PatchProposal) -> tuple[int, int, int, int]:
     spec = UNITY_REFERENCE_PATCH_SPEC
     column_start = int(round(proposal.column - spec.width_pixels / 2.0))
@@ -254,6 +278,7 @@ def main() -> int:
         public = read_jsonl(session_dir / "public/frames.jsonl")
         if not (len(images) == len(coordinates) == len(raw_labels) == len(public)):
             raise ValueError(f"misaligned capture arrays in {session_dir.name}")
+        validate_session_records(session, session_dir, public, len(images))
         for frame_sequence, image in enumerate(images):
             frame_key = (session_dir.name, frame_sequence)
             frame_images[frame_key] = image
