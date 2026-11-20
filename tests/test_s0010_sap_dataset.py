@@ -8,6 +8,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import numpy as np
+
 
 WORKFLOW_DIR = Path(__file__).resolve().parents[1] / "workflows/two_stage_navigation"
 sys.path.insert(0, str(WORKFLOW_DIR))
@@ -112,6 +114,26 @@ class SapDatasetTests(unittest.TestCase):
         selected = MODULE.choose_candidate([row(0, 5), row(1, 12)], MODULE.POSITIVE)
         self.assertIsNotNone(selected)
         self.assertEqual(selected["proposal_index"], 1)
+
+    def test_correspondence_gate_separates_empty_projections(self) -> None:
+        intended = {("session", 0): "L4", ("session", 1): "L4"}
+        absent = np.zeros((8, 8), dtype=bool)
+        present = absent.copy()
+        present[3, 1:6] = True
+        surfaces = {
+            ("session", 0, "L4"): absent,
+            ("session", 1, "L4"): present,
+        }
+        retained, excluded = MODULE.correspondence_target_keys(
+            intended, surfaces, "L4", 5, True
+        )
+        self.assertEqual(retained, [("session", 1)])
+        self.assertEqual(excluded, 1)
+        historical, excluded = MODULE.correspondence_target_keys(
+            intended, surfaces, "L4", 5, False
+        )
+        self.assertEqual(historical, [("session", 0), ("session", 1)])
+        self.assertEqual(excluded, 0)
 
 
 if __name__ == "__main__":

@@ -18,10 +18,18 @@ source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common_cpu.sh
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_existing_capture_development_v1/$SLURM_JOB_ID"
+SAP_ARCHIVE_PROTOCOL_VERSION="${SAP_ARCHIVE_PROTOCOL_VERSION:-1}"
+case "$SAP_ARCHIVE_PROTOCOL_VERSION" in
+    1|2) ;;
+    *)
+        echo "SAP_ARCHIVE_PROTOCOL_VERSION must be 1 or 2" >&2
+        exit 2
+        ;;
+esac
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_existing_capture_development_v${SAP_ARCHIVE_PROTOCOL_VERSION}/$SLURM_JOB_ID"
 DATASET="$RUN_DIR/dataset_v1"
 TRAINING="$RUN_DIR/training_v1"
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_existing_capture_development_protocol_v1.yaml"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_existing_capture_development_protocol_v${SAP_ARCHIVE_PROTOCOL_VERSION}.yaml"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
 LABELS="$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml"

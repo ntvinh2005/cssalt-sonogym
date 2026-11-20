@@ -40,11 +40,17 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def build_protocol(runtime_root: Path, implementation_commit: str) -> dict[str, Any]:
+def build_protocol(
+    runtime_root: Path,
+    implementation_commit: str,
+    session_specs: tuple[
+        tuple[str, str, tuple[tuple[str, int, int], ...]], ...
+    ] = SESSION_SPECS,
+) -> dict[str, Any]:
     capture_root = runtime_root / "outputs/unity_two_stage_transfer"
     sessions: list[dict[str, Any]] = []
     level_order: dict[str, list[dict[str, Any]]] = {}
-    for relative, split, ranges in SESSION_SPECS:
+    for relative, split, ranges in session_specs:
         session_path = (capture_root / relative).resolve()
         session_id = session_path.name
         required = (

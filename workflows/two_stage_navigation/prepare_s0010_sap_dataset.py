@@ -175,6 +175,25 @@ def best_alignment_from_tracks(
     )
 
 
+def correspondence_target_keys(
+    intended: dict[tuple[str, int], str],
+    surfaces: dict[tuple[str, int, str], np.ndarray],
+    level: str,
+    minimum_surface_columns: int,
+    require_projected_surface: bool,
+) -> tuple[list[tuple[str, int]], int]:
+    intended_keys = [key for key, value in intended.items() if value == level]
+    if not require_projected_surface:
+        return intended_keys, 0
+    retained = [
+        key
+        for key in intended_keys
+        if np.count_nonzero(np.any(surfaces[(*key, level)], axis=0))
+        >= minimum_surface_columns
+    ]
+    return retained, len(intended_keys) - len(retained)
+
+
 def choose_candidate(rows: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
     eligible = [row for row in rows if row["provisional_label"] == label]
     if not eligible:
@@ -426,7 +445,13 @@ def main() -> int:
     correspondence_summary: dict[str, Any] = {}
     correspondence_rows: list[dict[str, Any]] = []
     for level in LEVELS:
-        target_keys = [key for key, value in intended.items() if value == level]
+        target_keys, excluded_without_surface = correspondence_target_keys(
+            intended,
+            session_surfaces,
+            level,
+            int(gate["minimum_surface_columns"]),
+            bool(gate.get("require_projected_surface_for_matched_control", False)),
+        )
         matched = [
             best_alignment_from_tracks(
                 frame_images[key], frame_tracks[key], session_surfaces[(*key, level)]
@@ -506,6 +531,7 @@ def main() -> int:
             "mismatched_false_alignment_rate": mismatch_rate,
             "ranking_wins": ranking_wins,
             "ranking_total": len(matched),
+            "matched_without_projected_surface_excluded": excluded_without_surface,
             "correct_projection_ranking_rate": ranking_rate,
             "label_validation_pass": bool(
                 matched_rate >= float(gate["minimum_matched_acceptance_rate"])
