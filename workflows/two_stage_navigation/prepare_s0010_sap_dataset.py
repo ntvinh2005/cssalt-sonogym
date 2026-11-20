@@ -1,0 +1,448 @@
+#!/usr/bin/env python3
+"""Build fail-closed level-conditioned SAP patch data from synchronized captures."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import json
+import sys
+from dataclasses import asdict
+from pathlib import Path
+from typing import Any
+
+import nibabel as nib
+import numpy as np
+import yaml
+
+import audit_s0010_sap_correspondence as correspondence
+import correct_s0010_sap_observability_v1 as correction
+import run_s0010_sap_observability as observability
+
+EVALUATION_ROOT = (
+    Path(__file__).resolve().parents[2]
+    / "source/spinal_surgery/spinal_surgery/evaluation"
+)
+sys.path.insert(0, str(EVALUATION_ROOT))
+from two_stage_navigation.stage1_features import (  # noqa: E402
+    UNITY_REFERENCE_PATCH_SPEC,
+    extract_interface_patch,
+    normalized_patch_intensity,
+    patch_feature,
+)
+from two_stage_navigation.tp_surface_core_dataset import (  # noqa: E402
+    PatchProposal,
+    actor_visible_patch_proposals,
+    count_points_in_patch,
+)
+
+LEVELS = ("L4", "L5")
+POSITIVE = "SAP_RELATED_CORTICAL_INTERFACE"
+NEGATIVE = "OTHER_OR_BACKGROUND"
+AMBIGUOUS = "BOUNDARY_OR_IDENTITY_AMBIGUOUS"
+TECHNICALLY_INVALID = "TECHNICALLY_INVALID"
+PROPOSAL_STRIDE_PIXELS = 12
+MINIMUM_LOCAL_SURFACE_PIXELS = 5
+MINIMUM_UNIQUE = {
+    "train": {POSITIVE: 30, NEGATIVE: 30},
+    "calibration": {POSITIVE: 10, NEGATIVE: 10},
+    "evaluation": {POSITIVE: 10, NEGATIVE: 10},
+}
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def array_sha256(value: np.ndarray) -> str:
+    array = np.ascontiguousarray(value)
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("ascii"))
+    digest.update(np.asarray(array.shape, dtype="<i8").tobytes())
+    digest.update(array.tobytes())
+    return digest.hexdigest()
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not rows:
+        raise ValueError(f"cannot write empty CSV: {path}")
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def intended_level(protocol: dict[str, Any], frame_sequence: int) -> str:
+    for item in protocol["sampling"]["waypoint_level_order"]:
+        if int(item["start_index"]) <= frame_sequence < int(item["stop_index_exclusive"]):
+            return str(item["level"])
+    raise ValueError(f"frame {frame_sequence} has no frozen target level")
+
+
+def patch_bounds(proposal: PatchProposal) -> tuple[int, int, int, int]:
+    spec = UNITY_REFERENCE_PATCH_SPEC
+    column_start = int(round(proposal.column - spec.width_pixels / 2.0))
+    row_start = int(round(proposal.row - spec.interface_offset_pixels))
+    return row_start, row_start + spec.depth_pixels, column_start, column_start + spec.width_pixels
+
+
+def mask_count(proposal: PatchProposal, mask: np.ndarray) -> int:
+    rows, columns = np.where(mask)
+    return count_points_in_patch(
+        proposal,
+        rows=rows,
+        columns=columns,
+        patch_spec=UNITY_REFERENCE_PATCH_SPEC,
+    )
+
+
+def alignment_for_track(
+    image: np.ndarray, proposal: PatchProposal, surface: np.ndarray
+) -> correspondence.Alignment:
+    tracks = correspondence.track_bright_interfaces(image)
+    track = next(item for item in tracks if item.track_id == proposal.track_id)
+    return correspondence.track_alignment(image, track, surface)
+
+
+def choose_candidate(rows: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
+    eligible = [row for row in rows if row["provisional_label"] == label]
+    if not eligible:
+        return None
+    if label == POSITIVE:
+        return max(
+            eligible,
+            key=lambda row: (
+                int(row["surface_pixels_in_patch"]),
+                int(row["longest_aligned_run_columns"]),
+                float(row["aligned_fraction"]),
+                float(row["feature_gradient_p90"]),
+                -int(row["proposal_index"]),
+            ),
+        )
+    return max(
+        eligible,
+        key=lambda row: (
+            int(row["other_level_surface_pixels_in_patch"]),
+            float(row["feature_gradient_p90"]),
+            float(row["feature_intensity_std"]),
+            -int(row["proposal_index"]),
+        ),
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--protocol", type=Path, required=True)
+    parser.add_argument("--run-root", type=Path, required=True)
+    parser.add_argument("--prediction", type=Path, required=True)
+    parser.add_argument("--segmentation", type=Path, required=True)
+    parser.add_argument("--label-conversion", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args()
+
+    protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
+    if sha256(args.protocol) != args.protocol.with_suffix(".sha256").read_text().split()[0]:
+        raise ValueError("protocol seal mismatch")
+    prediction_image = nib.load(args.prediction)
+    segmentation_image = nib.load(args.segmentation)
+    if not np.array_equal(prediction_image.affine, segmentation_image.affine):
+        raise ValueError("prediction and segmentation affines differ")
+    masks = observability.pseudo_sap_masks(
+        np.asarray(prediction_image.dataobj),
+        np.asarray(segmentation_image.dataobj),
+        prediction_image.affine,
+    )
+    bone_ids = correction.bone_source_ids(args.label_conversion)
+    sessions_by_id = {item["session_id"]: item for item in protocol["sessions"]}
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+
+    proposal_rows: list[dict[str, Any]] = []
+    feature_rows: list[np.ndarray] = []
+    raw_patches: list[np.ndarray] = []
+    session_surfaces: dict[tuple[str, int, str], np.ndarray] = {}
+    frame_images: dict[tuple[str, int], np.ndarray] = {}
+    intended: dict[tuple[str, int], str] = {}
+
+    for session_dir in sorted((args.run_root / "sessions").iterdir()):
+        if not session_dir.is_dir():
+            continue
+        session = sessions_by_id.get(session_dir.name)
+        if session is None:
+            raise ValueError(f"unexpected capture session: {session_dir.name}")
+        verification = json.loads((session_dir / "verification_report.json").read_text())
+        if verification.get("verdict") != "PROJECTION_PARITY_PASS":
+            raise ValueError(f"exact-pose replay failed for {session_dir.name}")
+        images = np.load(session_dir / "public/ultrasound.npz")["ultrasound"]
+        coordinates = np.load(
+            session_dir / "privileged/pixel_to_volume_coordinates.npz"
+        )["human_img_coords"]
+        raw_labels = np.load(session_dir / "privileged/raw_labels.npz")["raw_labels"]
+        public = read_jsonl(session_dir / "public/frames.jsonl")
+        if not (len(images) == len(coordinates) == len(raw_labels) == len(public)):
+            raise ValueError(f"misaligned capture arrays in {session_dir.name}")
+        for frame_sequence, image in enumerate(images):
+            frame_key = (session_dir.name, frame_sequence)
+            frame_images[frame_key] = image
+            intended[frame_key] = intended_level(protocol, frame_sequence)
+            projections: dict[str, dict[str, np.ndarray]] = {}
+            for level in LEVELS:
+                diagnostics = observability.projection_diagnostics(
+                    coordinates[frame_sequence], masks[level]
+                )
+                surface = correction.first_bone_surface(
+                    raw_labels=raw_labels[frame_sequence],
+                    corrected_projection=diagnostics["projected"],
+                    bone_ids=bone_ids,
+                )["visible_pseudo_surface"]
+                session_surfaces[(*frame_key, level)] = surface
+                projections[level] = {
+                    "surface": surface,
+                    "pseudo": diagnostics["projected"]["pseudo"],
+                    "uncertainty": diagnostics["projected"]["uncertainty"],
+                }
+
+            proposals = actor_visible_patch_proposals(
+                image,
+                patch_spec=UNITY_REFERENCE_PATCH_SPEC,
+                column_stride_pixels=PROPOSAL_STRIDE_PIXELS,
+            )
+            for level in LEVELS:
+                other_level = "L5" if level == "L4" else "L4"
+                level_rows: list[dict[str, Any]] = []
+                for proposal_index, proposal in enumerate(proposals):
+                    raw_patch = extract_interface_patch(
+                        image, proposal.row, proposal.column, UNITY_REFERENCE_PATCH_SPEC
+                    )
+                    if raw_patch is None:
+                        raise AssertionError("production proposal returned an invalid patch")
+                    feature = patch_feature(raw_patch, UNITY_REFERENCE_PATCH_SPEC)
+                    if not np.array_equal(feature, proposal.feature):
+                        raise AssertionError("production feature path mismatch")
+                    alignment = alignment_for_track(
+                        image, proposal, projections[level]["surface"]
+                    )
+                    surface_count = mask_count(proposal, projections[level]["surface"])
+                    pseudo_count = mask_count(proposal, projections[level]["pseudo"])
+                    uncertainty_count = mask_count(
+                        proposal, projections[level]["uncertainty"]
+                    )
+                    other_surface_count = mask_count(
+                        proposal, projections[other_level]["surface"]
+                    )
+                    if (
+                        intended[frame_key] == level
+                        and alignment.passes
+                        and surface_count >= MINIMUM_LOCAL_SURFACE_PIXELS
+                    ):
+                        provisional_label = POSITIVE
+                        negative_type = ""
+                    elif (
+                        intended[frame_key] != level
+                        and pseudo_count == 0
+                        and uncertainty_count == 0
+                    ):
+                        provisional_label = NEGATIVE
+                        negative_type = (
+                            "COMPETING_LEVEL_SAP"
+                            if other_surface_count >= MINIMUM_LOCAL_SURFACE_PIXELS
+                            else "OTHER_BONE_OR_BACKGROUND"
+                        )
+                    else:
+                        provisional_label = AMBIGUOUS
+                        negative_type = ""
+                    row_start, row_end, column_start, column_end = patch_bounds(proposal)
+                    row = {
+                        "sample_id": f"{session_dir.name}:{frame_sequence}:{level}:{proposal.track_id}:{proposal_index}",
+                        "session_id": session_dir.name,
+                        "split": session["split"],
+                        "trajectory_group": f"{session_dir.name}:segment_{frame_sequence // 2:02d}",
+                        "frame_sequence": frame_sequence,
+                        "acquisition_id": public[frame_sequence]["acquisition_id"],
+                        "frame_sha256": public[frame_sequence]["frame_sha256"],
+                        "image_archive": str((session_dir / "public/ultrasound.npz").resolve()),
+                        "image_archive_index": frame_sequence,
+                        "intended_capture_level": intended[frame_key],
+                        "conditioned_level": level,
+                        "proposal_index": proposal_index,
+                        "track_id": proposal.track_id,
+                        "patch_row": float(proposal.row),
+                        "patch_column": float(proposal.column),
+                        "patch_row_start": row_start,
+                        "patch_row_end": row_end,
+                        "patch_column_start": column_start,
+                        "patch_column_end": column_end,
+                        "surface_pixels_in_patch": surface_count,
+                        "pseudo_pixels_in_patch": pseudo_count,
+                        "uncertainty_pixels_in_patch": uncertainty_count,
+                        "other_level_surface_pixels_in_patch": other_surface_count,
+                        **asdict(alignment),
+                        "feature_intensity_std": float(feature[-5]),
+                        "feature_gradient_p90": float(feature[-1]),
+                        "provisional_label": provisional_label,
+                        "negative_type": negative_type,
+                        "selected_for_dataset": False,
+                        "training_eligible": False,
+                        "feature_index": -1,
+                        "raw_patch_sha256": array_sha256(raw_patch.astype("<f4")),
+                    }
+                    level_rows.append(row)
+                selected = choose_candidate(
+                    level_rows,
+                    POSITIVE if intended[frame_key] == level else NEGATIVE,
+                )
+                if selected is not None:
+                    selected["selected_for_dataset"] = True
+                    selected["training_eligible"] = True
+                    selected["feature_index"] = len(feature_rows)
+                    proposal = proposals[int(selected["proposal_index"])]
+                    patch = extract_interface_patch(
+                        image, proposal.row, proposal.column, UNITY_REFERENCE_PATCH_SPEC
+                    )
+                    assert patch is not None
+                    feature_rows.append(patch_feature(patch, UNITY_REFERENCE_PATCH_SPEC))
+                    raw_patches.append(patch.astype(np.float32))
+                proposal_rows.extend(level_rows)
+
+    selected_rows = [row for row in proposal_rows if row["selected_for_dataset"]]
+    write_csv(output / "proposal_manifest.csv", proposal_rows)
+    write_csv(output / "sample_manifest.csv", selected_rows)
+    np.savez_compressed(
+        output / "dataset_arrays.npz",
+        features=np.asarray(feature_rows, dtype=np.float64),
+        raw_patches=np.asarray(raw_patches, dtype=np.float32),
+    )
+
+    gate = protocol["label_gate"]
+    correspondence_summary: dict[str, Any] = {}
+    for level in LEVELS:
+        target_keys = [key for key, value in intended.items() if value == level]
+        matched = [
+            correspondence.best_alignment(
+                frame_images[key], session_surfaces[(*key, level)]
+            )
+            for key in target_keys
+        ]
+        mismatch: list[correspondence.Alignment] = []
+        ranking_wins = 0
+        for key, matched_alignment in zip(target_keys, matched):
+            controls = [
+                correspondence.best_alignment(
+                    frame_images[key],
+                    session_surfaces[(*key, "L5" if level == "L4" else "L4")],
+                )
+            ]
+            distinct = [
+                other
+                for other in target_keys
+                if other[0] != key[0]
+            ][:5]
+            controls.extend(
+                correspondence.best_alignment(
+                    frame_images[key], session_surfaces[(*other, level)]
+                )
+                for other in distinct
+            )
+            mismatch.extend(controls)
+            ranking_wins += int(
+                all(
+                    matched_alignment.longest_aligned_run_columns
+                    > control.longest_aligned_run_columns
+                    for control in controls
+                )
+            )
+        matched_rate = float(np.mean([row.passes for row in matched])) if matched else 0.0
+        mismatch_rate = float(np.mean([row.passes for row in mismatch])) if mismatch else 1.0
+        ranking_rate = ranking_wins / len(matched) if matched else 0.0
+        correspondence_summary[level] = {
+            "matched_pass": int(sum(row.passes for row in matched)),
+            "matched_total": len(matched),
+            "matched_acceptance_rate": matched_rate,
+            "mismatched_pass": int(sum(row.passes for row in mismatch)),
+            "mismatched_total": len(mismatch),
+            "mismatched_false_alignment_rate": mismatch_rate,
+            "ranking_wins": ranking_wins,
+            "ranking_total": len(matched),
+            "correct_projection_ranking_rate": ranking_rate,
+            "label_validation_pass": bool(
+                matched_rate >= float(gate["minimum_matched_acceptance_rate"])
+                and mismatch_rate <= float(gate["maximum_mismatched_false_alignment_rate"])
+                and ranking_rate >= float(gate["minimum_correct_projection_ranking_rate"])
+            ),
+        }
+
+    counts: dict[str, dict[str, dict[str, int]]] = {}
+    for level in LEVELS:
+        counts[level] = {}
+        for split in sorted({row["split"] for row in selected_rows}):
+            counts[level][split] = {}
+            for label in (POSITIVE, NEGATIVE):
+                images = {
+                    row["frame_sha256"]
+                    for row in selected_rows
+                    if row["conditioned_level"] == level
+                    and row["split"] == split
+                    and row["provisional_label"] == label
+                    and row["training_eligible"]
+                }
+                counts[level][split][label] = len(images)
+
+    readiness: dict[str, Any] = {}
+    for level in LEVELS:
+        deficits: list[str] = []
+        for split, requirements in MINIMUM_UNIQUE.items():
+            if split not in counts[level]:
+                if split != "evaluation":
+                    deficits.append(f"missing split {split}")
+                continue
+            for label, minimum in requirements.items():
+                actual = counts[level][split].get(label, 0)
+                if actual < minimum:
+                    deficits.append(f"{split}:{label}={actual}<{minimum}")
+        if not correspondence_summary[level]["label_validation_pass"]:
+            deficits.append("matched/mismatched correspondence gate failed")
+        readiness[level] = {
+            "annotation_status": (
+                "SIMULATOR_PROXY_SAP_LABEL_READY" if not deficits else "SIMULATOR_PROXY_SAP_LABEL_NOT_READY"
+            ),
+            "dataset_status": "READY" if not deficits else "BLOCKED",
+            "deficits": deficits,
+        }
+
+    report = {
+        "schema": "s0010-sap-level-conditioned-dataset-v1",
+        "protocol_id": protocol["protocol_id"],
+        "protocol_sha256": sha256(args.protocol),
+        "prediction_sha256": sha256(args.prediction),
+        "segmentation_sha256": sha256(args.segmentation),
+        "preprocessing": {
+            "patch_width": UNITY_REFERENCE_PATCH_SPEC.width_pixels,
+            "patch_depth": UNITY_REFERENCE_PATCH_SPEC.depth_pixels,
+            "interface_offset": UNITY_REFERENCE_PATCH_SPEC.interface_offset_pixels,
+            "feature_width": UNITY_REFERENCE_PATCH_SPEC.feature_width,
+            "proposal_stride_pixels": PROPOSAL_STRIDE_PIXELS,
+        },
+        "counts": counts,
+        "correspondence": correspondence_summary,
+        "readiness": readiness,
+        "actor_feature_privileged_fields": [],
+    }
+    (output / "readiness_report.json").write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(report, sort_keys=True))
+    return 0 if all(item["dataset_status"] == "READY" for item in readiness.values()) else 3
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
