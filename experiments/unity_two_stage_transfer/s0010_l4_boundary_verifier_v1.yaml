@@ -1,0 +1,53 @@
+protocol_id: sonogym-s0010-l4-boundary-verifier-v1
+scope:
+  anatomy: s0010
+  target: L4_RIGHT_TP_SURFACE_CORE
+  runtime_inputs: clean_ultrasound_patch_features_only
+  geometry_use: offline_supervision_and_evaluation_only
+  l5_checkpoint_and_rule_modified: false
+inputs:
+  historical_tristate_manifest:
+    path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_tristate_hard_negative_v1/51956725/preparation/l4_proxy_tristate_proposals.csv
+    sha256: 31a655be213ce7673aa08a2fd1f5310c08f2ece778a7387a79775acb929c8307
+  coverage_repair_manifest:
+    path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/dataset/candidate_sample_manifest.csv
+    sha256: db31b57fa572c7d32d9305d20bd8e6e6c266d99578dd13e4f2cbb839fb8d7336
+  active_l4_checkpoint:
+    path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/training/l4_coverage_repair_candidate.joblib
+    sha256: 6188c7713cac2f21485d030ac79f4e26ac9c4f0f179008aee57a6d891fe9e8c0
+    threshold: 0.50
+  v3_protocol:
+    path: experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v3.yaml
+    sha256: 9ed7680856e64e54270d33f36867021732de7de8da77821fcaf951d4f4e65a55
+  v3_run_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3/52039283
+  geometry_root: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234
+  geometry_sha256:
+    L4_RIGHT_TP_SURFACE_CORE: f60c11ccd572678e7ad485726d548087cf8a75b60101a7c2f523710499486259
+    L5_RIGHT_TP_SURFACE_CORE: 01c910898f1463d89ac2e694c0466ff84967a0bc7dd2a464c700a8d62d5bb565
+labels:
+  classes:
+    0: PROXY_NEGATIVE
+    1: PROXY_POSITIVE
+    2: PROXY_AMBIGUOUS
+  ambiguous_is_negative: false
+training:
+  source_split: train
+  primary_accepted_proposals_only: true
+  one_proposal_per_image_and_state: true
+  estimator:
+    n_estimators: 240
+    class_weight: balanced
+    random_state: 20261124
+    n_jobs: 4
+calibration:
+  split: calibration
+  threshold_candidates: [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80]
+  minimum_positive_recall_retention_fraction: 0.90
+  maximum_proxy_negative_false_positive_delta: 0
+  minimum_ambiguous_selection_reduction: 1
+evaluation:
+  opened_development_split: development_evaluation
+  v3_is_opened_diagnostic: true
+  independent_holdout_available: false
+  active_acquisition_rerun: false
+  full_active_acquisition_success: NOT_RUN

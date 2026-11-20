@@ -2,6 +2,42 @@
 
 This is the single registry for project-specific methods, metrics, states, and named objects used in research documentation.
 
+### s0010_sap_geometry_audit_v1
+- **Kind:** object
+- **Definition:** The privileged, CPU-only inventory of the fixed-`s0010` RIGHT L4/L5 SAP source geometry, semantic labels, exact-pose ultrasound-plane correspondence, and unresolved-boundary evidence; it creates no actor input or semantic training label.
+- **Intuition:** It distinguishes available whole-vertebra geometry and working projection from a verified SAP boundary.
+- **Source:** approved by user, 2026-11-19.
+
+### SAP_CANDIDATES_NEED_REVIEW
+- **Kind:** object
+- **Definition:** The anatomy-audit verdict used when the required vertebral geometry and coordinate transforms exist, but the RIGHT L4/L5 SAP boundaries remain heuristic or uncertain and therefore cannot support semantic labels or MBB target-region coordinates.
+- **Intuition:** The source anatomy is inspectable, but independent boundary review remains necessary.
+- **Source:** approved by user, 2026-11-19.
+
+### s0010_l4_boundary_verifier_v1
+- **Kind:** object
+- **Definition:** The session-separated fixed-`s0010` experiment that fits an image-only three-state L4 TP surface-core verifier on training sessions, selects its operating threshold on calibration sessions, and restricts opened development and V3 observations to retrospective diagnosis.
+- **Intuition:** It tests whether ultrasound morphology can distinguish proxy-positive views from boundary-ambiguous and proxy-negative views without runtime geometry.
+- **Source:** approved by user, 2026-11-19.
+
+### VERIFIER_IMPROVED
+- **Kind:** object
+- **Definition:** The L4 verifier verdict requiring a frozen image-only rule to improve the declared target-view failure measure on previously unopened session-separated observations without violating its recall, false-positive, abstention, L5-control, or information-boundary gates.
+- **Intuition:** Calibration or opened-data gains alone cannot establish this verdict.
+- **Source:** approved by user, 2026-11-19.
+
+### VERIFIER_INCONCLUSIVE
+- **Kind:** object
+- **Definition:** The L4 verifier verdict used when implementation and exploratory evidence are available but no previously unopened session-separated evaluation supports or refutes an improvement claim.
+- **Intuition:** It preserves a testable candidate without promoting retrospective diagnosis to independent evidence.
+- **Source:** approved by user, 2026-11-19.
+
+### VERIFIER_NO_IMPROVEMENT
+- **Kind:** object
+- **Definition:** The L4 verifier verdict used when a frozen candidate is evaluated on the declared independent sessions and fails its predeclared improvement gate.
+- **Intuition:** It records a negative scientific result without changing the frozen V3 baseline.
+- **Source:** approved by user, 2026-11-19.
+
 ### END_TO_END_PASS
 - **Kind:** object
 - **Definition:** The fixed-`s0010` MBB milestone verdict requiring every declared start to complete ultrasound anatomical discovery, both RIGHT L4/L5 target localizations, valid-view return and fresh confirmation, validated MBB target-region construction, simulated intervention, and independent final evaluation.
