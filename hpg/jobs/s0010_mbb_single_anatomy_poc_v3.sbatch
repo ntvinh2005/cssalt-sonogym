@@ -10,7 +10,7 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v2.yaml"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v3.yaml"
 STAGE1_ACTOR_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_group_a_confirmation_actor_protocol_v1.yaml"
 STAGE1_EVALUATION_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_group_a_confirmation_evaluation_protocol_v1.yaml"
 GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234"
@@ -19,7 +19,7 @@ mkdir -p "$RUN_DIR"/{context,metrics,results,stage1/sessions,stage1/results,stag
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "${PROTOCOL%.yaml}.sha256" "$STAGE1_ACTOR_PROTOCOL" \
    "$STAGE1_EVALUATION_PROTOCOL" "$RUN_DIR/context/"
-(cd "$RUN_DIR/context" && sha256sum -c s0010_mbb_single_anatomy_poc_protocol_v2.sha256)
+(cd "$RUN_DIR/context" && sha256sum -c s0010_mbb_single_anatomy_poc_protocol_v3.sha256)
 
 nvidia-smi --query-gpu=timestamp,name,driver_version,utilization.gpu,memory.used,memory.total \
     --format=csv > "$RUN_DIR/metrics/gpu-before.csv"
