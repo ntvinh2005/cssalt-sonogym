@@ -1,0 +1,13 @@
+review_id,decision,interface_points_rc,notes
+R_33f0713d8a77,VISIBLE,80:17;105:125,two coherent bright interfaces with posterior shadow
+R_3b6a0e777a28,VISIBLE,85:40;115:145,clear left cortical interface and a separate right interface
+R_6276911c8235,VISIBLE,70:25;120:105,clear left interface with shadow and a smaller right interface
+R_65c429fc66c3,VISIBLE,70:20;110:118,clear left interface and curved right interface
+R_7f396b288c90,VISIBLE,112:140,right-edge curved bright interface with posterior shadow
+R_849fb59f6d82,AMBIGUOUS,70:75;122:140,superficial line is clear but deeper candidate interfaces are weak
+R_a90baca613ba,AMBIGUOUS,110:140,right-edge interface is only partly contained
+R_c915d783a87c,VISIBLE,100:8;110:130,bilateral edge interfaces are visible with posterior shadow
+R_ccc9d102ec92,VISIBLE,95:20;105:125,coherent left and right bright interfaces
+R_d7e53708a61c,VISIBLE,105:10;112:125,two edge interfaces with darker posterior regions
+R_f025923d126f,VISIBLE,78:40;112:135,clear left cortical echo with shadow and a right interface
+R_fac3c80a9f60,AMBIGUOUS,110:140,deeper right-edge interface is weak and partly outside the image
