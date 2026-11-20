@@ -201,6 +201,7 @@ def load_protocol(path: Path) -> dict[str, Any]:
     if protocol["protocol_id"] not in {
         "sonogym-s0010-sap-observability-v1",
         "sonogym-s0010-sap-observability-v1r1",
+        "sonogym-s0010-sap-observability-v2",
     }:
         raise ValueError("unexpected protocol")
     return protocol
