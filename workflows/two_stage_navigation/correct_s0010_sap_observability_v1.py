@@ -357,14 +357,13 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     masks = obs.pseudo_sap_masks(prediction, segmentation, prediction_image.affine)
     bone_ids = bone_source_ids(args.label_conversion)
 
-    old_review = args.run_root / "review/s0010_right_l4l5_sap_observability_v1"
+    old_review = args.review_root
     old_rows = read_csv(old_review / "projection_manifest.csv")
     row_by_frame = {
         (row["session_id"], int(row["frame_sequence"])): row for row in old_rows
     }
-    clean_decisions = {
-        row["review_id"]: row for row in read_csv(old_review / "blind_decisions.csv")
-    }
+    decision_path = args.decisions or old_review / "blind_decisions.csv"
+    clean_decisions = {row["review_id"]: row for row in read_csv(decision_path)}
     polyline_rows = read_csv(args.polylines)
     polylines_by_review: dict[str, list[np.ndarray]] = {}
     for row in polyline_rows:
@@ -529,7 +528,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
     result = {
         "schema": "sonogym-s0010-sap-observability-correction-v1",
         "historical_spatial_evaluation": "INVALIDATED_AXIS_ORDERING",
-        "source_job": "52092083",
+        "source_job": args.source_job,
         "source_run_root": str(args.run_root),
         "source_prediction_sha256": obs.sha256(args.prediction),
         "source_segmentation_sha256": obs.sha256(args.segmentation),
@@ -594,10 +593,13 @@ def package(output_root: Path, zip_path: Path) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-root", type=Path, required=True)
+    parser.add_argument("--review-root", type=Path, required=True)
     parser.add_argument("--prediction", type=Path, required=True)
     parser.add_argument("--segmentation", type=Path, required=True)
     parser.add_argument("--label-conversion", type=Path, required=True)
     parser.add_argument("--polylines", type=Path, required=True)
+    parser.add_argument("--decisions", type=Path)
+    parser.add_argument("--source-job", required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--zip", type=Path, required=True)
     parser.add_argument("--test-log", type=Path, action="append", default=[])

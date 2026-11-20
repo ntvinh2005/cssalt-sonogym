@@ -1,0 +1,13 @@
+review_id,decision,interface_points_rc,notes
+R_04ebfb6d092b,VISIBLE,92:42;88:46;86:50;87:54,clear left cortical-looking interface and separate right interface
+R_0f444e3f1a16,VISIBLE,92:31;89:36;87:41;88:46,clear left cortical-looking interface with shadow
+R_3864dcc77f68,AMBIGUOUS,103:143;100:146;99:149,weak interface partly outside right image boundary
+R_39a1d1b0c7c8,VISIBLE,97:41;94:46;92:51;93:56,clear left cortical-looking interface with shadow
+R_3b4ccfcc9464,VISIBLE,101:40;98:45;96:50;97:55,clear left cortical-looking interface with shadow
+R_53be7c986d1a,VISIBLE,157:72;153:77;151:82;153:87,small central cortical-looking interface with shadow
+R_7d86fc7a4746,VISIBLE,78:147;88:144;100:141;112:137;126:132,strong curved right-edge interface
+R_85e78c876796,VISIBLE,153:75;151:82;151:90;153:97,central cortical-looking interface with shadow
+R_98081d8e069e,VISIBLE,80:146;91:143;104:140;118:137;132:134,strong curved right-edge interface
+R_be6008904d42,VISIBLE,95:30;92:35;90:40;91:45,clear left cortical-looking interface with shadow
+R_f6e77ea42f61,VISIBLE,152:69;149:77;148:87;149:98,central curved cortical-looking interface
+R_ff368eef0da9,VISIBLE,98:32;95:37;93:42;94:48,clear left cortical-looking interface with shadow

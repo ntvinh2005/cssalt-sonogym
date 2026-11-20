@@ -1,0 +1,22 @@
+review_id,polyline_id,clean_image_decision,polyline_points_rc,notes
+R_04ebfb6d092b,left_01,VISIBLE,92:42;88:46;86:50;87:54,left cortical-looking interface
+R_04ebfb6d092b,right_01,VISIBLE,128:122;125:129;122:136;122:144,right cortical-looking interface
+R_0f444e3f1a16,left_01,VISIBLE,92:31;89:36;87:41;88:46,left cortical-looking interface
+R_0f444e3f1a16,right_01,VISIBLE,128:126;125:133;123:141;124:149,right cortical-looking interface
+R_3864dcc77f68,right_01,AMBIGUOUS,103:143;100:146;99:149,weak right-edge interface
+R_39a1d1b0c7c8,left_01,VISIBLE,97:41;94:46;92:51;93:56,left cortical-looking interface
+R_39a1d1b0c7c8,right_01,VISIBLE,130:124;127:131;125:138;126:146,right cortical-looking interface
+R_3b4ccfcc9464,left_01,VISIBLE,101:40;98:45;96:50;97:55,left cortical-looking interface
+R_3b4ccfcc9464,right_01,VISIBLE,133:124;130:131;128:138;129:146,right cortical-looking interface
+R_53be7c986d1a,center_01,VISIBLE,157:72;153:77;151:82;153:87,central interface with shadow
+R_53be7c986d1a,right_01,VISIBLE,129:130;126:137;125:144;126:149,right interface partly at edge
+R_7d86fc7a4746,right_01,VISIBLE,78:147;88:144;100:141;112:137;126:132,strong curved right-edge interface
+R_85e78c876796,center_01,VISIBLE,153:75;151:82;151:90;153:97,central interface with shadow
+R_85e78c876796,right_01,VISIBLE,138:126;135:133;133:141;134:149,right interface
+R_98081d8e069e,right_01,VISIBLE,80:146;91:143;104:140;118:137;132:134,strong curved right-edge interface
+R_be6008904d42,left_01,VISIBLE,95:30;92:35;90:40;91:45,left interface with shadow
+R_be6008904d42,right_01,VISIBLE,129:127;126:134;124:141;125:149,right interface
+R_f6e77ea42f61,center_01,VISIBLE,152:69;149:77;148:87;149:98,central curved interface
+R_f6e77ea42f61,right_01,VISIBLE,138:126;135:133;133:141;134:149,right interface
+R_ff368eef0da9,left_01,VISIBLE,98:32;95:37;93:42;94:48,left interface with shadow
+R_ff368eef0da9,right_01,VISIBLE,130:124;127:131;125:139;126:147,right interface
