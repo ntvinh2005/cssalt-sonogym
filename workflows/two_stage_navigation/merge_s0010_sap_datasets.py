@@ -42,14 +42,37 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def label_validation_result(
+    level: str,
+    raw_label_pass: bool,
+    external_validation: dict[str, Any] | None,
+) -> tuple[bool, bool]:
+    if external_validation is None:
+        return raw_label_pass, False
+    external_level = external_validation["levels"].get(level)
+    if external_level is None:
+        return raw_label_pass, False
+    return bool(external_level["calibration_gate_pass"]), True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", action="append", type=Path, required=True)
     parser.add_argument("--protocol", type=Path, required=True)
+    parser.add_argument("--correspondence-validation", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
     gate = protocol["label_gate"]
+    external_validation = None
+    if args.correspondence_validation is not None:
+        external_validation = json.loads(
+            args.correspondence_validation.read_text(encoding="utf-8")
+        )
+        if external_validation.get("schema") != "s0010-sap-correspondence-development-v1":
+            raise ValueError("unsupported correspondence validation report")
+        if not external_validation.get("evaluator_only"):
+            raise ValueError("correspondence validation must remain evaluator-only")
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
 
@@ -65,6 +88,7 @@ def main() -> int:
         manifest_path = dataset / "sample_manifest.csv"
         proposal_manifest_path = dataset / "proposal_manifest.csv"
         arrays_path = dataset / "dataset_arrays.npz"
+        correspondence_path = dataset / "correspondence_controls.csv"
         report = json.loads(report_path.read_text())
         if report.get("phase") != "development":
             raise ValueError("only development datasets may be merged for fitting")
@@ -96,8 +120,14 @@ def main() -> int:
                 "proposal_manifest_sha256": file_sha256(proposal_manifest_path),
                 "arrays_sha256": file_sha256(arrays_path),
                 "readiness_sha256": file_sha256(report_path),
+                "correspondence_sha256": file_sha256(correspondence_path),
             }
         )
+
+    if external_validation is not None and external_validation.get(
+        "input_sha256"
+    ) not in {source["correspondence_sha256"] for source in sources}:
+        raise ValueError("correspondence validation input is not a merged source")
 
     if len({row["sample_id"] for row in merged_rows}) != len(merged_rows):
         raise ValueError("duplicate sample IDs across source datasets")
@@ -146,10 +176,13 @@ def main() -> int:
         matched_rate = matched_pass / matched_total
         mismatch_rate = mismatch_pass / mismatch_total
         ranking_rate = ranking_wins / ranking_total
-        label_pass = bool(
+        raw_label_pass = bool(
             matched_rate >= float(gate["minimum_matched_acceptance_rate"])
             and mismatch_rate <= float(gate["maximum_mismatched_false_alignment_rate"])
             and ranking_rate >= float(gate["minimum_correct_projection_ranking_rate"])
+        )
+        label_pass, external_used = label_validation_result(
+            level, raw_label_pass, external_validation
         )
         correspondence[level] = {
             "matched_pass": matched_pass,
@@ -161,6 +194,8 @@ def main() -> int:
             "ranking_wins": ranking_wins,
             "ranking_total": ranking_total,
             "correct_projection_ranking_rate": ranking_rate,
+            "raw_label_validation_pass": raw_label_pass,
+            "external_validation_used": external_used,
             "label_validation_pass": label_pass,
         }
         deficits: list[str] = []
@@ -204,6 +239,16 @@ def main() -> int:
         ],
         "actor_feature_privileged_fields": [],
         "cross_split_exact_duplicate_count": 0,
+        "correspondence_validation": (
+            {
+                "path": str(args.correspondence_validation.resolve()),
+                "sha256": file_sha256(args.correspondence_validation),
+                "schema": external_validation["schema"],
+                "evaluator_only": True,
+            }
+            if external_validation is not None
+            else None
+        ),
     }
     (output / "readiness_report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
