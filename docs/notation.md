@@ -566,6 +566,30 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It stops model-dependent execution without substituting fabricated data.
 - **Source:** approved by user, 2026-11-20.
 
+### ACCEPTED_SIMULATOR_PROXY_POSITIVE
+- **Kind:** object
+- **Definition:** A simulator-only SAP patch label requiring a technically valid acquisition, a clean-image decision of `VISIBLE`, an image-only cortical-interface candidate, privileged first-bone pseudo-SAP correspondence within the frozen spatial tolerance, no competing target identity, and no unresolved boundary condition.
+- **Intuition:** It prevents ambiguous clean images or geometry-only intersections from becoming positive training labels.
+- **Source:** approved by user, 2026-11-20; `workflows/two_stage_navigation/correct_s0010_sap_observability_v1.py:frame_status`.
+
+### CLEAR_NEGATIVE_OR_OTHER_BONE
+- **Kind:** object
+- **Definition:** A technically valid simulator-only SAP patch label with image-visible interface or background evidence and verified absence of the requested pseudo-SAP core and its uncertainty region from the evaluated patch.
+- **Intuition:** It separates supported other-bone or background negatives from unknown anatomy.
+- **Source:** approved by user, 2026-11-20.
+
+### BOUNDARY_OR_IDENTITY_AMBIGUOUS
+- **Kind:** object
+- **Definition:** A simulator-only SAP annotation state in which clean-image visibility, boundary support, requested-structure identity, or matched correspondence is unresolved.
+- **Intuition:** These examples remain auditable but are excluded from hard binary targets.
+- **Source:** approved by user, 2026-11-20.
+
+### TECHNICALLY_INVALID
+- **Kind:** object
+- **Definition:** A SAP annotation state for an acquisition that fails freshness, synchronized mapping, pose, array-integrity, or image-validity requirements.
+- **Intuition:** Technical failures are excluded before semantic evidence is considered.
+- **Source:** approved by user, 2026-11-20.
+
 ### BLOCKED_ALIGNMENT
 - **Kind:** object
 - **Definition:** V3 verdict indicating that a model prediction cannot be mapped reliably into the existing simulator anatomy.

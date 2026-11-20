@@ -54,7 +54,7 @@ class SapObservabilityCorrectionTests(unittest.TestCase):
                 occluded_columns=0,
                 minimum_polyline_distance=4.0,
             ),
-            "SAP_SURFACE_CANDIDATE_VISIBLE",
+            "ACCEPTED_SIMULATOR_PROXY_POSITIVE",
         )
         self.assertEqual(
             MODULE.frame_status(
@@ -64,24 +64,36 @@ class SapObservabilityCorrectionTests(unittest.TestCase):
                 occluded_columns=5,
                 minimum_polyline_distance=None,
             ),
-            "OCCLUDED_BY_OTHER_BONE",
+            "BOUNDARY_OR_IDENTITY_AMBIGUOUS",
+        )
+
+    def test_ambiguous_clean_review_cannot_become_positive(self) -> None:
+        self.assertEqual(
+            MODULE.frame_status(
+                role=MODULE.TARGET_ROLE,
+                clean_decision="AMBIGUOUS",
+                visible_pseudo_surface_count=12,
+                occluded_columns=0,
+                minimum_polyline_distance=0.0,
+            ),
+            "BOUNDARY_OR_IDENTITY_AMBIGUOUS",
         )
 
     def test_structure_verdict_requires_projection_gate_in_two_sessions(self) -> None:
         targets = [
             {
                 "session_id": "session_00",
-                "corrected_surface_status": "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "corrected_surface_status": "ACCEPTED_SIMULATOR_PROXY_POSITIVE",
                 "corrected_projection_gate_passed": False,
             },
             {
                 "session_id": "session_01",
-                "corrected_surface_status": "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "corrected_surface_status": "ACCEPTED_SIMULATOR_PROXY_POSITIVE",
                 "corrected_projection_gate_passed": True,
             },
             {
                 "session_id": "session_01",
-                "corrected_surface_status": "SAP_SURFACE_CANDIDATE_VISIBLE",
+                "corrected_surface_status": "ACCEPTED_SIMULATOR_PROXY_POSITIVE",
                 "corrected_projection_gate_passed": True,
             },
         ]

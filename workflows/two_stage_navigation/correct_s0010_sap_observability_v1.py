@@ -123,20 +123,23 @@ def frame_status(
     visible_pseudo_surface_count: int,
     occluded_columns: int,
     minimum_polyline_distance: float | None,
+    technical_valid: bool = True,
+    clear_negative: bool = False,
+    competing_identity: bool = False,
 ) -> str:
-    if role != TARGET_ROLE:
-        return "CONTEXT_CONTROL"
+    if not technical_valid:
+        return "TECHNICALLY_INVALID"
+    if clear_negative:
+        return "CLEAR_NEGATIVE_OR_OTHER_BONE"
+    if clean_decision != "VISIBLE" or competing_identity or role != TARGET_ROLE:
+        return "BOUNDARY_OR_IDENTITY_AMBIGUOUS"
     if (
         visible_pseudo_surface_count > 0
         and minimum_polyline_distance is not None
         and minimum_polyline_distance <= SURFACE_ALIGNMENT_TOLERANCE_PIXELS
     ):
-        return "SAP_SURFACE_CANDIDATE_VISIBLE"
-    if visible_pseudo_surface_count == 0 and occluded_columns > 0:
-        return "OCCLUDED_BY_OTHER_BONE"
-    if clean_decision == "NOT_VISIBLE":
-        return "NO_VISIBLE_INTERFACE"
-    return "UNRESOLVED"
+        return "ACCEPTED_SIMULATOR_PROXY_POSITIVE"
+    return "BOUNDARY_OR_IDENTITY_AMBIGUOUS"
 
 
 def summarize_structure(targets: list[dict[str, Any]]) -> dict[str, Any]:
@@ -144,16 +147,12 @@ def summarize_structure(targets: list[dict[str, Any]]) -> dict[str, Any]:
     qualifying = [
         row
         for row in targets
-        if row["corrected_surface_status"] == "SAP_SURFACE_CANDIDATE_VISIBLE"
+        if row["corrected_surface_status"] == "ACCEPTED_SIMULATOR_PROXY_POSITIVE"
         and bool(row["corrected_projection_gate_passed"])
     ]
     qualifying_sessions = {row["session_id"] for row in qualifying}
     if len(qualifying) >= 2 and len(qualifying_sessions) >= 2:
         verdict = "SAP_SURFACE_VISIBLE_PROVISIONAL"
-    elif statuses and all(status == "OCCLUDED_BY_OTHER_BONE" for status in statuses):
-        verdict = "OCCLUDED_BY_OTHER_BONE"
-    elif statuses and all(status == "NO_VISIBLE_INTERFACE" for status in statuses):
-        verdict = "NO_VISIBLE_INTERFACE"
     else:
         verdict = "INCONCLUSIVE"
     return {
@@ -166,10 +165,10 @@ def summarize_structure(targets: list[dict[str, Any]]) -> dict[str, Any]:
         "status_counts": {
             status: statuses.count(status)
             for status in (
-                "SAP_SURFACE_CANDIDATE_VISIBLE",
-                "OCCLUDED_BY_OTHER_BONE",
-                "NO_VISIBLE_INTERFACE",
-                "UNRESOLVED",
+                "ACCEPTED_SIMULATOR_PROXY_POSITIVE",
+                "CLEAR_NEGATIVE_OR_OTHER_BONE",
+                "BOUNDARY_OR_IDENTITY_AMBIGUOUS",
+                "TECHNICALLY_INVALID",
             )
         },
         "verdict": verdict,
