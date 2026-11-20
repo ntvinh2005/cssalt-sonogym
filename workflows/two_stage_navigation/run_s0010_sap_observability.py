@@ -202,6 +202,7 @@ def load_protocol(path: Path) -> dict[str, Any]:
         "sonogym-s0010-sap-observability-v1",
         "sonogym-s0010-sap-observability-v1r1",
         "sonogym-s0010-sap-observability-v2",
+        "sonogym-s0010-sap-observability-v2r1",
     }:
         raise ValueError("unexpected protocol")
     return protocol

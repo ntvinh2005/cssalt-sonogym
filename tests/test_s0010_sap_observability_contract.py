@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_sap_observability_protocol_v2.yaml"
+PROTOCOL = ROOT / "experiments/unity_two_stage_transfer/s0010_sap_observability_protocol_v2r1.yaml"
 COORDINATES_PATH = (
     ROOT
     / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/coordinates.py"
@@ -39,7 +39,7 @@ class SapObservabilityContractTests(unittest.TestCase):
     def test_capture_is_small_and_contains_two_sessions_per_level(self) -> None:
         self.assertEqual(len(self.protocol["sessions"]), 2)
         self.assertEqual(
-            self.protocol["sampling"]["trajectory_start_frames"], [0, 3]
+            self.protocol["sampling"]["trajectory_start_frames"], [0, 2, 3, 5]
         )
         for bank_id, rows in self.protocol["observability_waypoints"].items():
             self.assertEqual(len(rows), 6)

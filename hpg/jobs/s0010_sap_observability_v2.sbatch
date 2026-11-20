@@ -19,9 +19,9 @@ source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common.sh
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_observability_protocol_v2.yaml"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_observability_protocol_v2r1.yaml"
 PROTOCOL_SEAL="${PROTOCOL%.yaml}.sha256"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_observability_v2/$SLURM_JOB_ID"
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_observability_v2r1/$SLURM_JOB_ID"
 REFERENCE_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3/52039283/stage2"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
@@ -31,7 +31,7 @@ export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
 mkdir -p "$RUN_DIR"/{sessions,results,metrics,context,review} "$MPLCONFIGDIR"
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "$PROTOCOL_SEAL" "$RUN_DIR/context/"
-(cd "$RUN_DIR/context" && sha256sum -c s0010_sap_observability_protocol_v2.sha256)
+(cd "$RUN_DIR/context" && sha256sum -c s0010_sap_observability_protocol_v2r1.sha256)
 
 "$PYTHON" -m unittest -v \
     tests.test_s0010_sap_observability \
