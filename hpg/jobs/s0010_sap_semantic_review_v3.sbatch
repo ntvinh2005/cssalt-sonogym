@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=sg_sap_sem_v3
 #SBATCH --account=anest-dept
-#SBATCH --qos=anest-dept-b
+#SBATCH --qos=anest-dept
 #SBATCH --partition=hpg-turin
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

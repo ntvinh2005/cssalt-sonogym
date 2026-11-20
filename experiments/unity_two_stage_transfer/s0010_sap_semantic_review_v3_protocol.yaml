@@ -56,7 +56,7 @@ identity_mapping:
 execution:
   account: anest-dept
   partition: hpg-turin
-  qos: anest-dept-b
+  qos: anest-dept
   cpus: 4
   gpus: 1
   memory_gb: 30
