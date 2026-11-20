@@ -1,5 +1,28 @@
 # Setup status
 
+## 2026-11-19: static RIGHT L4/L5 SAP review package is ready
+
+CPU job `52061219` completed `0:0` in 50 seconds with four CPUs, 16 GB
+requested memory and zero GPUs at source revision `e1985885`. It generated the
+self-contained `s0010_right_l4l5_sap_review_v1` package from the existing
+versioned SAP candidates, audit job `52053307` and 336 V3 ultrasound frames.
+
+No annotation geometry was changed. RIGHT L4 SAP remains `UNRESOLVED` with
+2,198 candidate/uncertainty vertices and zero proposed semantic vertices;
+RIGHT L5 SAP remains `UNRESOLVED` with 2,422 candidate/uncertainty vertices and
+zero proposed semantic vertices. The package contains 13 review figures and six
+distinct curated ultrasound examples per structure, editable geometry, decision
+sheets and a response template.
+
+All 66 referenced paths exist, 79/79 checksums pass, the ZIP integrity test
+passes and 5/5 focused tests pass. The 14,792,823-byte ZIP SHA-256 is
+`543886058f7d7c6390b5c008ff787c4bdafae8b0bd56682cf2d62dd0276065fd`.
+This is review evidence only: no semantic label, MBB target, nerve coordinate,
+actor input or intervention capability was created.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_static_review_v1_result.json`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_static_review_v1/52061219/review_packages/s0010_right_l4l5_sap_review_v1.zip`.
+
 ## 2026-11-19: SAP audit needs review; L4 verifier remains inconclusive
 
 CPU job `52053307` completed `0:0` at source revision `097fda3`. The fixed
