@@ -19,6 +19,13 @@ from .tp_surface_core_dataset import PatchProposal, actor_visible_patch_proposal
 
 
 TARGETS = ("L4_RIGHT_TP_SURFACE_CORE", "L5_RIGHT_TP_SURFACE_CORE")
+POC_PROTOCOL_IDS = frozenset(
+    {
+        "sonogym-s0010-mbb-single-anatomy-poc-v1",
+        "sonogym-s0010-mbb-single-anatomy-poc-v2",
+        "sonogym-s0010-mbb-single-anatomy-poc-v3",
+    }
+)
 
 
 def proxy_confirmation_requirement_met(

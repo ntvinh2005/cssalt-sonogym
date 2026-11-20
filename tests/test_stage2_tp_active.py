@@ -11,6 +11,7 @@ EVALUATION_ROOT = ROOT / "source" / "spinal_surgery" / "spinal_surgery" / "evalu
 sys.path.insert(0, str(EVALUATION_ROOT))
 
 from two_stage_navigation.stage2_tp_active import (  # noqa: E402
+    POC_PROTOCOL_IDS,
     TargetView,
     group_a_target_handoff_pose,
     proxy_confirmation_requirement_met,
@@ -153,6 +154,9 @@ class TargetSelectionTests(unittest.TestCase):
 
 
 class ProxyConfirmationEvaluationTests(unittest.TestCase):
+    def test_v3_protocol_is_shared_by_actor_and_evaluator(self) -> None:
+        self.assertIn("sonogym-s0010-mbb-single-anatomy-poc-v3", POC_PROTOCOL_IDS)
+
     def test_two_of_three_positive_confirmations_pass(self) -> None:
         self.assertTrue(
             proxy_confirmation_requirement_met(

@@ -71,6 +71,8 @@ def main() -> int:
             "target_attempt_count": len(target_rows),
             "target_success_count": target_successes,
             "valid_view_success_rate": target_successes / len(target_rows),
+            "valid_view_failure_rate": 1.0 - target_successes / len(target_rows),
+            "actor_session_abstention_rate": 1.0 - actor_accepts / len(stage2_reports),
             "fresh_confirmation_success_count": sum(
                 bool(row["proxy_target_view_success"])
                 for row in target_rows
@@ -112,7 +114,8 @@ def main() -> int:
             "simulator_capability": "no validated MBB target region or needle/injection workflow",
         },
         "end_to_end_success_rate": 0.0,
-        "failure_rate": 0.0 if partial_pass else 1.0,
+        "end_to_end_failure_rate": 1.0,
+        "failure_rate": 1.0,
         "abstention_rate": 1.0 - actor_accepts / len(stage2_reports),
         "milestone_verdict": "PARTIAL_PASS" if partial_pass else "BLOCKED",
         "scientific_scope": (
