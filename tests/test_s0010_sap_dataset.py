@@ -135,6 +135,33 @@ class SapDatasetTests(unittest.TestCase):
         self.assertEqual(historical, [("session", 0), ("session", 1)])
         self.assertEqual(excluded, 0)
 
+    def test_ambiguous_proposal_blocks_clear_negative_image(self) -> None:
+        negative = {
+            "provisional_label": MODULE.NEGATIVE,
+            "other_level_surface_pixels_in_patch": 5,
+            "feature_gradient_p90": 0.5,
+            "feature_intensity_std": 0.2,
+            "proposal_index": 0,
+        }
+        ambiguous = {
+            "provisional_label": MODULE.AMBIGUOUS,
+            "other_level_surface_pixels_in_patch": 0,
+            "feature_gradient_p90": 0.4,
+            "feature_intensity_std": 0.1,
+            "proposal_index": 1,
+        }
+        self.assertIsNone(
+            MODULE.choose_image_candidate(
+                [negative, ambiguous], MODULE.NEGATIVE, True
+            )
+        )
+        self.assertEqual(
+            MODULE.choose_image_candidate(
+                [negative, ambiguous], MODULE.NEGATIVE, False
+            ),
+            negative,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

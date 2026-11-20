@@ -220,6 +220,20 @@ def choose_candidate(rows: list[dict[str, Any]], label: str) -> dict[str, Any] |
     )
 
 
+def choose_image_candidate(
+    rows: list[dict[str, Any]],
+    label: str,
+    require_all_clear_for_negative: bool,
+) -> dict[str, Any] | None:
+    if (
+        label == NEGATIVE
+        and require_all_clear_for_negative
+        and any(row["provisional_label"] != NEGATIVE for row in rows)
+    ):
+        return None
+    return choose_candidate(rows, label)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
@@ -258,6 +272,11 @@ def main() -> int:
     frame_tracks: dict[tuple[str, int], list[Any]] = {}
     intended: dict[tuple[str, int], str] = {}
     incomplete_sessions: list[dict[str, str]] = []
+    require_clear_negative = bool(
+        protocol["label_gate"].get(
+            "require_all_proposals_clear_for_negative_image", False
+        )
+    )
 
     phase_splits = (
         {"train", "calibration"} if args.phase == "development" else {"evaluation"}
@@ -414,9 +433,10 @@ def main() -> int:
                     }
                     proposal_features.append(feature)
                     level_rows.append(row)
-                selected = choose_candidate(
+                selected = choose_image_candidate(
                     level_rows,
                     POSITIVE if intended[frame_key] == level else NEGATIVE,
+                    require_clear_negative,
                 )
                 if selected is not None:
                     selected["selected_for_dataset"] = True
@@ -601,6 +621,7 @@ def main() -> int:
         "readiness": readiness,
         "incomplete_sessions": incomplete_sessions,
         "actor_feature_privileged_fields": [],
+        "require_all_proposals_clear_for_negative_image": require_clear_negative,
     }
     (output / "readiness_report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"

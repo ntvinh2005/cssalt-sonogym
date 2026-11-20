@@ -260,6 +260,7 @@ def main() -> int:
             )
             threshold, diagnostics = select_threshold(image_labels, image_scores)
             result["calibration_thresholds"] = diagnostics
+            heuristic_threshold = None
             if threshold is None:
                 result["status"] = "SAP_TRAINING_INCONCLUSIVE"
                 result["deficits"] = ["no calibration threshold met frozen precision/recall/FPR gates"]
@@ -278,26 +279,6 @@ def main() -> int:
                 heuristic_threshold, heuristic_diagnostics = select_threshold(
                     heuristic_labels, heuristic_scores
                 )
-                bundle = {
-                    "schema": "s0010-sap-level-conditioned-extratrees-v1",
-                    "level": level,
-                    "estimator": estimator,
-                    "threshold": threshold,
-                    "heuristic_gradient_threshold": heuristic_threshold,
-                    "feature_width": int(features.shape[1]),
-                    "patch_spec": report["preprocessing"],
-                    "label_ids": LABEL_ID,
-                    "dataset_manifest_sha256": file_sha256(dataset / "sample_manifest.csv"),
-                    "proposal_manifest_sha256": file_sha256(dataset / "proposal_manifest.csv"),
-                    "dataset_arrays_sha256": file_sha256(dataset / "dataset_arrays.npz"),
-                    "random_seed": RANDOM_SEED,
-                }
-                checkpoint = output / f"s0010_{level.lower()}_sap_classifier_v1.joblib"
-                joblib.dump(bundle, checkpoint)
-                reloaded = joblib.load(checkpoint)
-                reloaded_scores = reloaded["estimator"].predict_proba(partitions["calibration"][0])[:, list(reloaded["estimator"].classes_).index(1)]
-                if not np.array_equal(calibration_scores, reloaded_scores):
-                    raise AssertionError("checkpoint save/reload changed predictions")
                 result.update(
                     status="TRAINED_CALIBRATED_HOLDOUT_UNOPENED",
                     threshold=threshold,
@@ -305,9 +286,34 @@ def main() -> int:
                     calibration_patch_metrics=patch_metrics,
                     calibration_image_hashes=calibration_hashes_ordered,
                     heuristic_calibration_thresholds=heuristic_diagnostics,
-                    checkpoint=str(checkpoint),
-                    checkpoint_sha256=file_sha256(checkpoint),
                 )
+            bundle = {
+                "schema": "s0010-sap-level-conditioned-extratrees-v1",
+                "level": level,
+                "estimator": estimator,
+                "threshold": threshold,
+                "heuristic_gradient_threshold": heuristic_threshold,
+                "feature_width": int(features.shape[1]),
+                "patch_spec": report["preprocessing"],
+                "label_ids": LABEL_ID,
+                "dataset_manifest_sha256": file_sha256(dataset / "sample_manifest.csv"),
+                "proposal_manifest_sha256": file_sha256(dataset / "proposal_manifest.csv"),
+                "dataset_arrays_sha256": file_sha256(dataset / "dataset_arrays.npz"),
+                "random_seed": RANDOM_SEED,
+            }
+            checkpoint = output / f"s0010_{level.lower()}_sap_classifier_v1.joblib"
+            joblib.dump(bundle, checkpoint)
+            reloaded = joblib.load(checkpoint)
+            reloaded_scores = reloaded["estimator"].predict_proba(
+                partitions["calibration"][0]
+            )[:, list(reloaded["estimator"].classes_).index(1)]
+            if not np.array_equal(calibration_scores, reloaded_scores):
+                raise AssertionError("checkpoint save/reload changed predictions")
+            result.update(
+                checkpoint=str(checkpoint),
+                checkpoint_sha256=file_sha256(checkpoint),
+                checkpoint_reload_verified=True,
+            )
         level_results[level] = result
 
     result = {
