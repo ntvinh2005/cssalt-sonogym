@@ -469,3 +469,63 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Definition:** Boundary-review outcome indicating that the available CT, segmentation, and surface mesh do not defensibly separate the requested structure from adjacent anatomy.
 - **Intuition:** It leaves the full candidate as uncertainty instead of presenting a cosmetic re-cut as anatomy truth.
 - **Source:** approved by user, 2026-11-17.
+
+### Spine_Subregions
+- **Kind:** method
+- **Definition:** The MICN-Lab pretrained nnU-Net model that assigns each CT voxel one of eight labels: background, vertebral body, pedicles, lamina, spinous process, transverse process, superior articular process, or inferior articular process.
+- **Intuition:** It supplies semantic subregion proposals that are independent of the project's coordinate-based SAP candidates.
+- **Source:** Da Mutten et al., *Journal of Imaging Informatics in Medicine* (2026), https://doi.org/10.1007/s10278-026-02169-7; approved by user, 2026-11-20.
+
+### s0010_right_l4l5_sap_semantic_review_v3
+- **Kind:** object
+- **Definition:** The static review package that compares Spine_Subregions predictions for s0010 with the frozen RIGHT L4/L5 SAP V2 surface proposals in physical coordinates.
+- **Intuition:** It introduces independent pretrained-model evidence without promoting either method to semantic ground truth.
+- **Source:** approved by user, 2026-11-20.
+
+### MODEL_V2_AGREEMENT
+- **Kind:** object
+- **Definition:** Review category for a Spine_Subregions SAP prediction that overlaps or is spatially consistent with the corresponding frozen V2 SAP core.
+- **Intuition:** It marks agreement between two imperfect proposal methods, not accuracy against ground truth.
+- **Source:** approved by user, 2026-11-20.
+
+### MODEL_ONLY_SAP
+- **Kind:** object
+- **Definition:** Review category for a Spine_Subregions SAP prediction outside the spatial support of the corresponding frozen V2 SAP core.
+- **Intuition:** It exposes semantic-model evidence that the V2 geometry did not propose.
+- **Source:** approved by user, 2026-11-20.
+
+### V2_ONLY_CORE
+- **Kind:** object
+- **Definition:** Review category for a frozen V2 SAP core location without spatial support from the corresponding Spine_Subregions SAP prediction.
+- **Intuition:** It exposes V2 geometric evidence that the semantic model does not reproduce.
+- **Source:** approved by user, 2026-11-20.
+
+### UNRESOLVED_OR_CONFLICT
+- **Kind:** object
+- **Definition:** Review category for meaningful disagreement, registration uncertainty, anatomical ambiguity, or a competing Spine_Subregions class involving a proposed SAP region.
+- **Intuition:** It preserves uncertainty instead of forcing disagreement into a positive or negative label.
+- **Source:** approved by user, 2026-11-20.
+
+### MODEL_SAP_PROPOSAL_READY_FOR_REVIEW
+- **Kind:** object
+- **Definition:** V3 verdict indicating that Spine_Subregions produced geometrically aligned and anatomically plausible SAP/IAP proposals with sufficient static evidence for independent review.
+- **Intuition:** It authorizes review, not semantic-ground-truth acceptance.
+- **Source:** approved by user, 2026-11-20.
+
+### MODEL_PREDICTION_UNRELIABLE
+- **Kind:** object
+- **Definition:** V3 verdict indicating that inference completed but the prediction has serious anatomical, spatial, or domain-shift defects.
+- **Intuition:** It preserves completed inference as negative evidence.
+- **Source:** approved by user, 2026-11-20.
+
+### BLOCKED_INPUT_OR_MODEL
+- **Kind:** object
+- **Definition:** V3 verdict indicating that the actual CT intensity volume, usable pretrained checkpoint, or authorized model access is unavailable.
+- **Intuition:** It stops model-dependent execution without substituting fabricated data.
+- **Source:** approved by user, 2026-11-20.
+
+### BLOCKED_ALIGNMENT
+- **Kind:** object
+- **Definition:** V3 verdict indicating that a model prediction cannot be mapped reliably into the existing simulator anatomy.
+- **Intuition:** It separates inference availability from physical-coordinate validity.
+- **Source:** approved by user, 2026-11-20.

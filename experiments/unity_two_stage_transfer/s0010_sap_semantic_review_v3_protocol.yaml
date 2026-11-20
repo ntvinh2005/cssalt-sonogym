@@ -1,0 +1,84 @@
+schema: sonogym-s0010-right-l4l5-sap-semantic-review-v3-protocol
+experiment_id: s0010_sap_semantic_review_v3
+anatomy_id: s0010
+laterality: RIGHT
+scientific_scope: simulator_only_provisional_semantic_annotation_review
+
+source_data:
+  ct_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data/HumanModels/selected_dataset/s0010/ct.nii.gz
+  ct_sha256: eff5e5f5829cf8cc3e413b3ac09ce455e45bc0f91f5ba37fab9b37b1fe683546
+  segmentation_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz
+  segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+  expected_shape: [259, 259, 283]
+  expected_spacing_mm: [1.5, 1.5, 1.5]
+  expected_orientation: RAS
+  level_labels: {L3: 29, L4: 28, L5: 27}
+
+model:
+  repository: https://github.com/MICN-Lab/Spine_Subregions
+  repository_commit_inspected: cced20c7da387664a423ba416e68f9e81cca936c
+  release: V1
+  release_status: prerelease
+  archive_name: nnUNetTrainerV2__nnUNetPlansv2.1.zip
+  archive_sha256: 384b6ead3dd4df2b34d3fc6dc1d72c845dab76807b237a488c91d56758c06938
+  license: academic_noncommercial_internal_use
+  task: Task005
+  framework: nnunet_legacy_1.7.1
+  trainer: nnUNetTrainerV2
+  plans: nnUNetPlansv2.1
+  configuration: 3d_fullres
+  folds: [0]
+  checkpoint: model_final_checkpoint
+  test_time_augmentation: enabled_official_default
+  output_labels:
+    0: background
+    1: vertebral_body
+    2: pedicles
+    3: lamina
+    4: spinous_process
+    5: transverse_process
+    6: superior_articular_process
+    7: inferior_articular_process
+
+identity_mapping:
+  level_rule: intersect_global_model_label_with_existing_whole_vertebra_label
+  laterality_rule: physical_RAS_x_above_per_level_median_is_RIGHT
+  comparison_tolerance_mm: 1.5
+  comparison_tolerance_basis: one_source_CT_voxel
+  relevant_structures:
+    - RIGHT_L3_IAP
+    - RIGHT_L4_SAP
+    - RIGHT_L4_IAP
+    - RIGHT_L5_SAP
+    - RIGHT_L4_TP
+    - RIGHT_L5_TP
+
+execution:
+  account: anest-dept
+  partition: hpg-turin
+  qos: anest-dept-b
+  cpus: 4
+  gpus: 1
+  memory_gb: 30
+  walltime: 00:30:00
+  inference_threads: 2
+  nifti_save_threads: 1
+  no_training: true
+  no_new_ultrasound_capture: true
+
+gates:
+  - actual_CT_intensity_volume_matches_sha256
+  - CT_and_whole_vertebra_segmentation_affines_match_exactly
+  - checkpoint_archive_matches_official_sha256
+  - prediction_shape_and_affine_match_input
+  - prediction_labels_are_subset_of_0_through_7_and_all_foreground_labels_present
+  - RIGHT_L4_and_RIGHT_L5_SAP_and_adjacent_IAP_proposals_are_nonempty
+  - frozen_V2_artifacts_are_not_modified
+  - static_package_contains_no_pretrained_weights
+  - package_references_checksums_and_zip_integrity_pass
+
+allowed_verdicts:
+  - MODEL_SAP_PROPOSAL_READY_FOR_REVIEW
+  - MODEL_PREDICTION_UNRELIABLE
+  - BLOCKED_INPUT_OR_MODEL
+  - BLOCKED_ALIGNMENT
