@@ -42,8 +42,19 @@
   },
   "prediction": {
     "affine_maximum_absolute_difference": 0.0,
-    "foreground_inside_whole_bone": 110736,
     "foreground_total": 110736,
+    "invalidated_metric": {
+      "foreground_inside_nonzero_source_label": 110736,
+      "reason": "segmentation > 0 includes non-bone source labels",
+      "valid": false
+    },
+    "corrected_anatomical_consistency": {
+      "acoustic_bone_inside_count": 109139,
+      "acoustic_bone_inside_fraction": 0.9855783123826036,
+      "acoustic_bone_outside_count": 1597,
+      "correction_job_id": "52084265",
+      "vertebral_source_labels": [25, 26, 27, 28, 29, 30, 31]
+    },
     "labels_present": [0, 1, 2, 3, 4, 5, 6, 7],
     "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz",
     "sha256": "a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f"

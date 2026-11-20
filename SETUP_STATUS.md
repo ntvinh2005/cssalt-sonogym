@@ -1,5 +1,32 @@
 # Setup status
 
+## 2026-11-20: SAP V3 review metric and conflict categories corrected
+
+CPU job `52084265` completed `0:0` in 17 seconds at source revision
+`21330dd4` with one CPU, 8 GB requested memory and zero GPUs. It reused the
+frozen V3 raw prediction and did not repeat inference or modify any model mask.
+
+Independent review correctly identified that `segmentation > 0` was not a
+bone-only gate. The corrected full-volume audit places `109,139 / 110,736`
+(98.56%) model foreground voxels in raw source IDs mapped to acoustic bone
+class 13; 1,597 are outside, including 1,576 on source label 120. The prior
+100% whole-bone statement is invalid and superseded.
+
+Distance proximity and sampled semantic class are now independent. The compact
+package contains numbered MPR callouts for 4 L4 and 7 L5 distance outliers plus
+7 L4 and 1 L5 sampled-IAP conflicts, 19 points total. The 22.198 mm L5 outlier
+is preserved for review rather than deleted or relabelled.
+
+The proposal verdict remains `MODEL_SAP_PROPOSAL_READY_FOR_REVIEW`; scientific
+status remains `SAP_GT_NOT_VALIDATED`, `ULTRASOUND_SAP_NOT_CONFIRMED` and
+`MBB_END_TO_END_BLOCKED`. All 11 focused tests, 8/8 checksums and ZIP integrity
+pass.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_semantic_review_v3_correction_result.json`.
+- Report: `docs/research/sonogym_s0010_sap_semantic_review_v3_correction.md`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3_correction/52084265/review_packages/s0010_right_l4l5_sap_semantic_review_v3_correction.zip`.
+- ZIP SHA-256: `fdf99daba6e96ea07dd7518dd226b1d0a89e25203f3a81860e6191c5d5789bf0`.
+
 ## 2026-11-20: pretrained CT model produces inspectable RIGHT L4/L5 SAP proposals
 
 GPU job `52078067` completed `0:0` in 5 minutes 29 seconds at source revision
@@ -8,9 +35,9 @@ official MICN-Lab Spine_Subregions `V1` fold-0 checkpoint once on the original
 s0010 CT; no training, fine-tuning, new ultrasound capture or actor change was
 performed.
 
-The raw prediction contains labels 0–7, preserves the input affine exactly and
-places all `110,736 / 110,736` foreground voxels inside the existing whole-bone
-segmentation. RIGHT L4 SAP has 259 model voxels and supports `51 / 55` V2 core
+The raw prediction contains labels 0–7 and preserves the input affine exactly.
+The original `110,736 / 110,736` whole-bone metric was later invalidated and is
+superseded by the explicit-ID correction above. RIGHT L4 SAP has 259 model voxels and supports `51 / 55` V2 core
 locations within 1.5 mm. RIGHT L5 SAP has 338 model voxels and supports
 `70 / 77`; its 22.198 mm maximum V2/model distance remains an explicit review
 outlier despite a 1.5 mm median.

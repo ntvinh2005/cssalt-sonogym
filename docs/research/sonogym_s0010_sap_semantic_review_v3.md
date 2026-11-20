@@ -9,11 +9,11 @@ This records one pretrained CT subregion-inference pass and the resulting static
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
 | 1 | original CT integrity and alignment | every frozen CT preflight gate passes | real HU CT, `259 × 259 × 283`, 1.5 mm isotropic RAS; CT/segmentation affine difference `0.0` | pass |
-| 2 | official checkpoint inference | prediction passes every frozen inference/alignment gate | labels `0–7`; output affine difference `0.0`; all `110,736 / 110,736` foreground voxels lie inside the whole-bone segmentation | pass |
+| 2 | official checkpoint inference | prediction passes every frozen inference/alignment gate | labels `0–7`; output affine difference `0.0`; correction job `52084265` finds `109,139 / 110,736 (98.56%)` foreground voxels in explicitly mapped acoustic-bone IDs | pass; original nonzero-label metric superseded |
 | 3 | level/laterality mapping and V2 comparison | both SAP and paired IAP proposals are nonempty and inspectable; no semantic-accuracy threshold | L4 `51 / 55 (92.7%)`; L5 `70 / 77 (90.9%)` V2 core locations within 1.5 mm of model SAP | ready for review, not accepted anatomy |
 | 4 | static-package integrity | all references, checksums and ZIP members pass | `49 / 49` references; `60 / 60` checksums; ZIP test pass | pass |
 
-V3 adds independent pretrained-model evidence that V2 lacked. Its agreement with V2 is agreement between imperfect proposals, not accuracy against verified SAP anatomy.
+V3 adds independent pretrained-model evidence that V2 lacked. V2/model proximity compares imperfect proposals and is not accuracy against verified SAP anatomy.
 
 ## 1. CT preflight — is the original s0010 input valid for inference
 
@@ -105,7 +105,8 @@ Nothing was dropped: one CT case was attempted and one prediction was exported.
 |---|---:|
 | prediction labels | `[0, 1, 2, 3, 4, 5, 6, 7]` |
 | input/output affine maximum difference | `0.0` |
-| foreground inside whole-bone segmentation | `110,736 / 110,736 (100%)` |
+| foreground inside acoustic-bone source IDs | `109,139 / 110,736 (98.56%)` |
+| foreground outside acoustic-bone source IDs | `1,597 / 110,736 (1.44%)` |
 | inference wall time | `160.43` seconds |
 | inference process maximum RSS | `8,082,652` KB |
 
@@ -115,6 +116,7 @@ Nothing was dropped: one CT case was attempted and one prediction was exported.
 
 - The release archive is a legacy nnU-Net v1 checkpoint despite current repository wording that mentions nnU-Net v2.
 - Successful inference is not proof that the predicted SAP class is correct on s0010.
+- The original `segmentation > 0` consistency metric was invalid because the label map contains non-bone tissues; correction job `52084265` supersedes that metric without changing the raw prediction.
 - The academic non-commercial checkpoint is stored outside Git and is not redistributed in the ZIP.
 
 ### 2.5 Files
@@ -129,13 +131,13 @@ Nothing was dropped: one CT case was attempted and one prediction was exported.
 
 The V3 builder assigns global model classes to vertebral level by intersection with frozen whole-vertebra labels and assigns RIGHT using physical RAS x above each level's median x coordinate.
 
-**Criterion.** Both RIGHT SAP and paired adjacent IAP proposals must be nonempty, aligned and anatomically inspectable. No absolute V2-agreement threshold exists; V2 is an imperfect sparse proposal and is used only for comparison.
+**Criterion.** Both RIGHT SAP and paired adjacent IAP proposals must be nonempty, aligned and anatomically inspectable. No absolute V2-proximity threshold exists; V2 is an imperfect sparse proposal and is used only for comparison.
 
 ### 3.1 Method
 
 - Pair RIGHT L4 SAP with RIGHT L3 IAP and RIGHT L5 SAP with RIGHT L4 IAP.
 - Measure V2 surface-point support within one source CT voxel, 1.5 mm.
-- Preserve `MODEL_V2_AGREEMENT`, `MODEL_ONLY_SAP` and `V2_ONLY_CORE` separately.
+- Preserve model voxels near/not-near the V2 core separately; report V2 sampled class independently from distance proximity.
 - Project model proposals into archived ultrasound only as privileged geometry; visibility and semantic identity remain `NOT_REVIEWED`.
 
 ### 3.2 Setup
@@ -178,7 +180,8 @@ build_s0010_sap_semantic_review_v3.py build \
 
 ### 3.4 Reading it
 
-- Model/V2 agreement is strong enough to make external review more decisive.
+- Model/V2 distance proximity is strong enough to make external review more decisive, but is not semantic agreement.
+- Correction job `52084265` separately flags seven L4 and one L5 sampled-IAP conflicts, including conflicts that lie within 1.5 mm.
 - Most model SAP volume is model-only: 685.125 mm³ at L4 and 894.375 mm³ at L5.
 - The L5 maximum-distance outlier requires reviewer attention; it is not hidden by the median.
 - Archived ultrasound projections are too sparse to establish SAP cortical visibility or semantic identity.

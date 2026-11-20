@@ -434,9 +434,9 @@ def compare_v2_model(
         "v2_regions_sha256": v2["sha256"],
         "v2_core_unique_location_count": int(len(v2_world)),
         "physical_consistency_tolerance_mm": tolerance_mm,
-        "v2_core_supported_location_count": int(np.count_nonzero(v2_agreement)),
-        "v2_core_unsupported_location_count": int(np.count_nonzero(~v2_agreement)),
-        "v2_core_supported_fraction": float(np.mean(v2_agreement)) if len(v2_agreement) else 0.0,
+        "v2_core_within_tolerance_location_count": int(np.count_nonzero(v2_agreement)),
+        "v2_core_outside_tolerance_location_count": int(np.count_nonzero(~v2_agreement)),
+        "v2_core_within_tolerance_fraction": float(np.mean(v2_agreement)) if len(v2_agreement) else 0.0,
         "distance_proximity_is_not_semantic_agreement": True,
         "v2_sampled_model_label_counts": {
             MODEL_LABEL.get(int(label), "outside_or_unknown"): int(count)
@@ -445,10 +445,10 @@ def compare_v2_model(
         "v2_to_model_surface_median_mm": float(np.median(distances)),
         "v2_to_model_surface_p95_mm": float(np.percentile(distances, 95)),
         "v2_to_model_surface_maximum_mm": float(np.max(distances)),
-        "model_agreement_voxel_count": int(np.count_nonzero(agreement)),
-        "model_agreement_volume_mm3": float(np.count_nonzero(agreement) * voxel_volume_mm3),
-        "model_only_voxel_count": int(np.count_nonzero(model_only)),
-        "model_only_volume_mm3": float(np.count_nonzero(model_only) * voxel_volume_mm3),
+        "model_near_v2_core_voxel_count": int(np.count_nonzero(agreement)),
+        "model_near_v2_core_volume_mm3": float(np.count_nonzero(agreement) * voxel_volume_mm3),
+        "model_not_near_v2_core_voxel_count": int(np.count_nonzero(model_only)),
+        "model_not_near_v2_core_volume_mm3": float(np.count_nonzero(model_only) * voxel_volume_mm3),
         "v2_only_volume_mm3": None,
         "v2_only_surface_area_mm2": None,
         "v2_only_measurement_note": "V2 is a sparse surface-point proposal; volumetric and surface-area measures are not defined.",
@@ -546,13 +546,13 @@ def render_disagreement_sheet(
                 v2_only = v2["core_index"][distances > 1.5]
                 x, y = _project_points_to_slice(v2_only, fixed, coordinate)
                 axis.scatter(x, y, s=20, c=COLORS["v2_only"], marker="x")
-                axis.set_title(f"{name}: agreement and disagreement")
+                axis.set_title(f"{name}: distance proximity and non-proximity")
             horizontal, vertical = ((1, 2), (0, 2), (0, 1))[fixed]
             axis.set_xlim(center[horizontal] - 25, center[horizontal] + 25)
             axis.set_ylim(center[vertical] - 25, center[vertical] + 25)
             axis.set_axis_off()
     figure.suptitle(
-        f"RIGHT {level} SAP disagreement review — green=MODEL_V2_AGREEMENT; blue=MODEL_ONLY_SAP; red x=V2_ONLY_CORE"
+        f"RIGHT {level} SAP review — green=MODEL_NEAR_V2_CORE; blue=MODEL_NOT_NEAR_V2_CORE; red x=V2_OUTSIDE_TOLERANCE"
     )
     figure.tight_layout()
     figure.savefig(output)
@@ -750,8 +750,8 @@ def save_crop(
         arrays[f"RIGHT_{level}_SAP"] = level_masks[level]["superior_articular_process"][slices].astype(np.uint8)
         arrays[f"RIGHT_{level}_IAP"] = level_masks[level]["inferior_articular_process"][slices].astype(np.uint8)
         arrays[f"RIGHT_{level}_TP"] = level_masks[level]["transverse_process"][slices].astype(np.uint8)
-        arrays[f"RIGHT_{level}_MODEL_V2_AGREEMENT"] = comparisons[level]["agreement"][slices].astype(np.uint8)
-        arrays[f"RIGHT_{level}_MODEL_ONLY_SAP"] = comparisons[level]["model_only"][slices].astype(np.uint8)
+        arrays[f"RIGHT_{level}_MODEL_NEAR_V2_CORE"] = comparisons[level]["agreement"][slices].astype(np.uint8)
+        arrays[f"RIGHT_{level}_MODEL_NOT_NEAR_V2_CORE"] = comparisons[level]["model_only"][slices].astype(np.uint8)
     records: dict[str, Any] = {
         "crop_start_index": [int(value) for value in start],
         "crop_stop_index_exclusive": [int(value) for value in stop],
@@ -818,8 +818,8 @@ V3 applies the independently pretrained Spine_Subregions model to the original s
 - Source revision: `{source_revision}`
 - Inference job: `{job_id}`
 - Verdict: **`{verdict}`**
-- RIGHT L4 SAP: model voxels={by_level['L4']['model_sap']['voxel_count']}; V2 locations within 1.5 mm={by_level['L4']['v2_core_supported_location_count']} / {by_level['L4']['v2_core_unique_location_count']}.
-- RIGHT L5 SAP: model voxels={by_level['L5']['model_sap']['voxel_count']}; V2 locations within 1.5 mm={by_level['L5']['v2_core_supported_location_count']} / {by_level['L5']['v2_core_unique_location_count']}.
+- RIGHT L4 SAP: model voxels={by_level['L4']['model_sap']['voxel_count']}; V2 locations within 1.5 mm={by_level['L4']['v2_core_within_tolerance_location_count']} / {by_level['L4']['v2_core_unique_location_count']}.
+- RIGHT L5 SAP: model voxels={by_level['L5']['model_sap']['voxel_count']}; V2 locations within 1.5 mm={by_level['L5']['v2_core_within_tolerance_location_count']} / {by_level['L5']['v2_core_unique_location_count']}.
 
 The result is a model-generated research proposal for independent review. It is not accepted semantic ground truth, a nerve annotation, an MBB target, or an actor-visible input.
 """,
@@ -870,7 +870,7 @@ The model predicts global SAP, IAP and TP classes. V3 assigns a prediction to a 
 - RIGHT L4 SAP is reviewed with RIGHT L3 IAP across the L3-L4 facet articulation.
 - RIGHT L5 SAP is reviewed with RIGHT L4 IAP across the L4-L5 facet articulation.
 - Existing whole-vertebra masks support level identity and alignment, not independent SAP correctness.
-- `MODEL_V2_AGREEMENT`, `MODEL_ONLY_SAP`, `V2_ONLY_CORE`, and `UNRESOLVED_OR_CONFLICT` are comparisons between imperfect proposals, not accuracy categories.
+- `MODEL_NEAR_V2_CORE` and `MODEL_NOT_NEAR_V2_CORE` are distance categories, not semantic agreement or accuracy categories. Sampled model class is reported independently.
 - CT resolution is 1.5 mm isotropic; partial volume and model domain shift can affect small articular-process boundaries.
 - Ultrasound projection confirms only where proposed geometry intersects the archived plane. Acoustic visibility and semantic identity remain unreviewed.
 """,
@@ -886,7 +886,7 @@ The model predicts global SAP, IAP and TP classes. V3 assigns a prediction to a 
 ## Evidence
 
 - Model SAP: {row['model_sap']['voxel_count']} voxels, {row['model_sap']['volume_mm3']:.3f} mm³, {row['model_sap']['component_count']} connected components.
-- V2 support within 1.5 mm: {row['v2_core_supported_location_count']} / {row['v2_core_unique_location_count']} locations.
+- V2 locations within 1.5 mm: {row['v2_core_within_tolerance_location_count']} / {row['v2_core_unique_location_count']} locations; this is distance proximity, not semantic agreement.
 - V2-to-model surface distance: median {row['v2_to_model_surface_median_mm']:.3f} mm, p95 {row['v2_to_model_surface_p95_mm']:.3f} mm, maximum {row['v2_to_model_surface_maximum_mm']:.3f} mm.
 - Adjacent model IAP minimum surface distance: {row['sap_to_adjacent_iap_minimum_mm']:.3f} mm.
 

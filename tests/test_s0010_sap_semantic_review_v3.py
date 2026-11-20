@@ -93,8 +93,8 @@ class SapSemanticReviewV3Tests(unittest.TestCase):
             affine=self.affine,
         )
         self.assertEqual(report["physical_consistency_tolerance_mm"], 1.5)
-        self.assertEqual(report["v2_core_supported_location_count"], 1)
-        self.assertEqual(report["v2_core_unsupported_location_count"], 1)
+        self.assertEqual(report["v2_core_within_tolerance_location_count"], 1)
+        self.assertEqual(report["v2_core_outside_tolerance_location_count"], 1)
         self.assertGreater(np.count_nonzero(masks["agreement"]), 0)
 
     def test_proximity_does_not_hide_sampled_iap_conflict(self) -> None:
@@ -110,7 +110,7 @@ class SapSemanticReviewV3Tests(unittest.TestCase):
             level="L4", model_mask=mask, prediction=prediction,
             v2=v2, affine=self.affine,
         )
-        self.assertEqual(report["v2_core_supported_location_count"], 1)
+        self.assertEqual(report["v2_core_within_tolerance_location_count"], 1)
         self.assertEqual(
             masks["v2_categories"].tolist(), ["CLASS_CONFLICT_SAMPLED_IAP"]
         )
