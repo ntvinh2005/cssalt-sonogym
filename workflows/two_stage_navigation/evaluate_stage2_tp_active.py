@@ -27,6 +27,7 @@ from two_stage_navigation.stage2_mbb_landmarks import (
     Laterality,
     evaluate_landmark_evidence,
 )
+from two_stage_navigation.stage2_tp_active import proxy_confirmation_requirement_met
 from two_stage_navigation.tp_surface_core_dataset import (
     L4_CLASS,
     L5_CLASS,
@@ -43,6 +44,7 @@ from two_stage_navigation.ultrasound_plane_geometry import (
 PROTOCOL_IDS = {
     "sonogym-s0010-mbb-single-anatomy-poc-v1",
     "sonogym-s0010-mbb-single-anatomy-poc-v2",
+    "sonogym-s0010-mbb-single-anatomy-poc-v3",
 }
 CANDIDATES = {
     L4_CLASS: "L4_RIGHT_transverse_process",
@@ -327,18 +329,33 @@ def main() -> int:
     save_trajectory(run / "visual_evidence/executed_trajectory.png", frames, actor)
 
     target_reports = []
+    required_confirmation_count = int(protocol["search"]["required_fresh_confirmation_count"])
+    minimum_positive_confirmation_count = int(
+        protocol["evaluator"].get(
+            "minimum_proxy_positive_fresh_confirmations",
+            required_confirmation_count,
+        )
+    )
+    if not 1 <= minimum_positive_confirmation_count <= required_confirmation_count:
+        raise RuntimeError("invalid proxy-positive fresh-confirmation requirement")
     for target in actor["targets"]:
         selected_sequence = target["selected_frame_sequence"]
         selected = None if selected_sequence is None else frame_evaluation[int(selected_sequence)]
         confirmations = [frame_evaluation[int(value)] for value in target["fresh_confirmation_frame_sequences"]]
         errors = [] if selected is None else [selected["interface_point_to_core_error_mm"]]
         errors.extend(row["interface_point_to_core_error_mm"] for row in confirmations)
+        positive_confirmation_count = sum(
+            row["proxy_state"] == "PROXY_POSITIVE" for row in confirmations
+        )
         proxy_pass = bool(
             target["decision"] == "ACCEPT"
             and selected is not None
             and selected["proxy_state"] == "PROXY_POSITIVE"
-            and len(confirmations) == int(protocol["search"]["required_fresh_confirmation_count"])
-            and all(row["proxy_state"] == "PROXY_POSITIVE" for row in confirmations)
+            and proxy_confirmation_requirement_met(
+                [row["proxy_state"] for row in confirmations],
+                required_count=required_confirmation_count,
+                minimum_positive_count=minimum_positive_confirmation_count,
+            )
             and errors
             and float(np.mean(errors))
             <= float(protocol["evaluator"]["maximum_tp_interface_localization_error_mm"])
@@ -349,6 +366,9 @@ def main() -> int:
                 "actor_decision": target["decision"],
                 "selected": selected,
                 "fresh_confirmations": confirmations,
+                "positive_fresh_confirmation_count": positive_confirmation_count,
+                "required_fresh_confirmation_count": required_confirmation_count,
+                "minimum_proxy_positive_fresh_confirmations": minimum_positive_confirmation_count,
                 "proxy_target_view_success": proxy_pass,
                 "localization_error_mm": None if not errors else float(np.mean(errors)),
                 "maximum_localization_error_mm": None if not errors else float(np.max(errors)),

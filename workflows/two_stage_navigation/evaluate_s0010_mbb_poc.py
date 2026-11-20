@@ -42,6 +42,18 @@ def main() -> int:
         if row["localization_error_mm"] is not None
     ]
     actor_accepts = sum(report["actor_outcome"] == "TARGET_VIEWS_CONFIRMED" for report in stage2_reports)
+    actor_results = []
+    summaries = []
+    for session in protocol["execution"]["sessions"]:
+        session_dir = args.run_dir / "stage2" / session["session_id"]
+        actor_results.append(json.loads((session_dir / "results/actor_result.json").read_text()))
+        summaries.append(json.loads((session_dir / "summary.json").read_text()))
+    return_errors = [
+        item
+        for actor in actor_results
+        for target in actor["targets"]
+        for item in target["return_errors"]
+    ]
     report = {
         "schema": "sonogym-s0010-mbb-end-to-end-poc-result-v1",
         "patient_id": "s0010",
@@ -60,10 +72,27 @@ def main() -> int:
             "target_success_count": target_successes,
             "valid_view_success_rate": target_successes / len(target_rows),
             "fresh_confirmation_success_count": sum(
-                bool(row["fresh_confirmations"])
-                and all(item["proxy_state"] == "PROXY_POSITIVE" for item in row["fresh_confirmations"])
+                bool(row["proxy_target_view_success"])
                 for row in target_rows
             ),
+            "frame_count": sum(int(actor["frame_count"]) for actor in actor_results),
+            "distinct_frame_hash_count": sum(
+                int(actor["distinct_frame_hash_count"]) for actor in actor_results
+            ),
+            "action_step_count": sum(int(actor["action_step_count"]) for actor in actor_results),
+            "mean_return_position_error_mm": (
+                None if not return_errors else mean(float(row["position_mm"]) for row in return_errors)
+            ),
+            "maximum_return_position_error_mm": (
+                None if not return_errors else max(float(row["position_mm"]) for row in return_errors)
+            ),
+            "mean_return_orientation_error_deg": (
+                None if not return_errors else mean(float(row["orientation_deg"]) for row in return_errors)
+            ),
+            "maximum_return_orientation_error_deg": (
+                None if not return_errors else max(float(row["orientation_deg"]) for row in return_errors)
+            ),
+            "total_session_runtime_seconds": sum(float(row["elapsed_seconds"]) for row in summaries),
             "mean_tp_interface_localization_error_mm": None if not errors else mean(errors),
             "maximum_tp_interface_localization_error_mm": None if not errors else max(errors),
             "target_reports": target_rows,

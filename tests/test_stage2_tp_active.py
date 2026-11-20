@@ -13,6 +13,7 @@ sys.path.insert(0, str(EVALUATION_ROOT))
 from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     TargetView,
     group_a_target_handoff_pose,
+    proxy_confirmation_requirement_met,
     select_target_view,
 )
 
@@ -149,6 +150,32 @@ class TargetSelectionTests(unittest.TestCase):
         result = select_target_view(rows, **self.settings())
         self.assertEqual(result.status, "ABSTAIN")
         self.assertEqual(result.distinct_viewpoint_count, 2)
+
+
+class ProxyConfirmationEvaluationTests(unittest.TestCase):
+    def test_two_of_three_positive_confirmations_pass(self) -> None:
+        self.assertTrue(
+            proxy_confirmation_requirement_met(
+                ["PROXY_POSITIVE", "PROXY_AMBIGUOUS", "PROXY_POSITIVE"],
+                required_count=3,
+                minimum_positive_count=2,
+            )
+        )
+
+    def test_one_of_three_positive_confirmations_fails(self) -> None:
+        self.assertFalse(
+            proxy_confirmation_requirement_met(
+                ["PROXY_AMBIGUOUS", "PROXY_NEGATIVE", "PROXY_POSITIVE"],
+                required_count=3,
+                minimum_positive_count=2,
+            )
+        )
+
+    def test_invalid_confirmation_requirement_fails_closed(self) -> None:
+        with self.assertRaisesRegex(ValueError, "invalid"):
+            proxy_confirmation_requirement_met(
+                ["PROXY_POSITIVE"], required_count=2, minimum_positive_count=3
+            )
 
 
 if __name__ == "__main__":

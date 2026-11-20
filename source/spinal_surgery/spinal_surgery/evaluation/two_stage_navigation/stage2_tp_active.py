@@ -21,6 +21,19 @@ from .tp_surface_core_dataset import PatchProposal, actor_visible_patch_proposal
 TARGETS = ("L4_RIGHT_TP_SURFACE_CORE", "L5_RIGHT_TP_SURFACE_CORE")
 
 
+def proxy_confirmation_requirement_met(
+    states: Sequence[str], *, required_count: int, minimum_positive_count: int
+) -> bool:
+    """Apply a frozen evaluator confirmation count without changing actor inputs."""
+
+    if required_count < 1 or not 1 <= minimum_positive_count <= required_count:
+        raise ValueError("invalid proxy-positive fresh-confirmation requirement")
+    return bool(
+        len(states) == required_count
+        and sum(state == "PROXY_POSITIVE" for state in states) >= minimum_positive_count
+    )
+
+
 @dataclass(frozen=True)
 class TargetView:
     """One actor-visible observation summarized for target-specific selection."""
