@@ -84,6 +84,73 @@ def select_threshold(labels: np.ndarray, scores: np.ndarray) -> tuple[float | No
     return float(selected["threshold"]), rows
 
 
+def full_image_scores(
+    *,
+    estimator: Any,
+    level: str,
+    split: str,
+    sample_rows: list[dict[str, str]],
+    proposal_rows: list[dict[str, str]],
+    proposal_features: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    targets = {
+        row["frame_sha256"]: LABEL_ID[row["provisional_label"]]
+        for row in sample_rows
+        if row["conditioned_level"] == level and row["split"] == split
+    }
+    grouped: dict[str, list[int]] = {}
+    for row in proposal_rows:
+        if row["conditioned_level"] != level or row["split"] != split:
+            continue
+        if row["frame_sha256"] not in targets:
+            continue
+        grouped.setdefault(row["frame_sha256"], []).append(
+            int(row["proposal_feature_index"])
+        )
+    if set(grouped) != set(targets):
+        missing = set(targets) - set(grouped)
+        raise ValueError(f"missing actor-visible proposals for {len(missing)} labelled images")
+    hashes = sorted(targets)
+    labels = np.asarray([targets[value] for value in hashes], dtype=np.int64)
+    scores: list[float] = []
+    positive_column = list(estimator.classes_).index(1)
+    for frame_hash in hashes:
+        matrix = proposal_features[grouped[frame_hash]]
+        scores.append(float(np.max(estimator.predict_proba(matrix)[:, positive_column])))
+    return labels, np.asarray(scores, dtype=np.float64), hashes
+
+
+def full_image_heuristic_scores(
+    *,
+    level: str,
+    split: str,
+    sample_rows: list[dict[str, str]],
+    proposal_rows: list[dict[str, str]],
+) -> tuple[np.ndarray, np.ndarray]:
+    targets = {
+        row["frame_sha256"]: LABEL_ID[row["provisional_label"]]
+        for row in sample_rows
+        if row["conditioned_level"] == level and row["split"] == split
+    }
+    grouped: dict[str, list[float]] = {}
+    for row in proposal_rows:
+        if (
+            row["conditioned_level"] == level
+            and row["split"] == split
+            and row["frame_sha256"] in targets
+        ):
+            grouped.setdefault(row["frame_sha256"], []).append(
+                float(row["feature_gradient_p90"])
+            )
+    hashes = sorted(targets)
+    if any(value not in grouped for value in hashes):
+        raise ValueError("heuristic baseline is missing an actor-visible proposal")
+    return (
+        np.asarray([targets[value] for value in hashes], dtype=np.int64),
+        np.asarray([max(grouped[value]) for value in hashes], dtype=np.float64),
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset-dir", type=Path, required=True)
@@ -102,10 +169,18 @@ def main() -> int:
     if report.get("phase") != "development":
         raise ValueError("training requires a development dataset")
     rows = read_csv(dataset / "sample_manifest.csv")
+    proposal_rows = read_csv(dataset / "proposal_manifest.csv")
     arrays = np.load(dataset / "dataset_arrays.npz")
     features = arrays["features"]
+    proposal_features = arrays["proposal_features"]
     if features.ndim != 2 or features.shape[1] != 774 or not np.all(np.isfinite(features)):
         raise ValueError("invalid production feature matrix")
+    if (
+        proposal_features.ndim != 2
+        or proposal_features.shape[1] != 774
+        or not np.all(np.isfinite(proposal_features))
+    ):
+        raise ValueError("invalid full-image proposal feature matrix")
     if len({row["sample_id"] for row in rows}) != len(rows):
         raise ValueError("duplicate sample IDs")
     if any(row["training_eligible"].lower() != "true" for row in rows):
@@ -175,23 +250,45 @@ def main() -> int:
             estimator.fit(partitions["train"][0], partitions["train"][1])
             fitted = True
             calibration_scores = estimator.predict_proba(partitions["calibration"][0])[:, list(estimator.classes_).index(1)]
-            threshold, diagnostics = select_threshold(partitions["calibration"][1], calibration_scores)
+            image_labels, image_scores, calibration_hashes_ordered = full_image_scores(
+                estimator=estimator,
+                level=level,
+                split="calibration",
+                sample_rows=rows,
+                proposal_rows=proposal_rows,
+                proposal_features=proposal_features,
+            )
+            threshold, diagnostics = select_threshold(image_labels, image_scores)
             result["calibration_thresholds"] = diagnostics
             if threshold is None:
                 result["status"] = "SAP_TRAINING_INCONCLUSIVE"
                 result["deficits"] = ["no calibration threshold met frozen precision/recall/FPR gates"]
                 blocked = True
             else:
-                selected_metrics = metrics(partitions["calibration"][1], calibration_scores, threshold)
+                selected_metrics = metrics(image_labels, image_scores, threshold)
+                patch_metrics = metrics(
+                    partitions["calibration"][1], calibration_scores, threshold
+                )
+                heuristic_labels, heuristic_scores = full_image_heuristic_scores(
+                    level=level,
+                    split="calibration",
+                    sample_rows=rows,
+                    proposal_rows=proposal_rows,
+                )
+                heuristic_threshold, heuristic_diagnostics = select_threshold(
+                    heuristic_labels, heuristic_scores
+                )
                 bundle = {
                     "schema": "s0010-sap-level-conditioned-extratrees-v1",
                     "level": level,
                     "estimator": estimator,
                     "threshold": threshold,
+                    "heuristic_gradient_threshold": heuristic_threshold,
                     "feature_width": int(features.shape[1]),
                     "patch_spec": report["preprocessing"],
                     "label_ids": LABEL_ID,
                     "dataset_manifest_sha256": file_sha256(dataset / "sample_manifest.csv"),
+                    "proposal_manifest_sha256": file_sha256(dataset / "proposal_manifest.csv"),
                     "dataset_arrays_sha256": file_sha256(dataset / "dataset_arrays.npz"),
                     "random_seed": RANDOM_SEED,
                 }
@@ -205,6 +302,9 @@ def main() -> int:
                     status="TRAINED_CALIBRATED_HOLDOUT_UNOPENED",
                     threshold=threshold,
                     calibration_metrics=selected_metrics,
+                    calibration_patch_metrics=patch_metrics,
+                    calibration_image_hashes=calibration_hashes_ordered,
+                    heuristic_calibration_thresholds=heuristic_diagnostics,
                     checkpoint=str(checkpoint),
                     checkpoint_sha256=file_sha256(checkpoint),
                 )
@@ -215,6 +315,7 @@ def main() -> int:
         "mode": "FIT" if args.fit else "NO_FIT",
         "fit_called": fitted,
         "dataset_manifest_sha256": file_sha256(dataset / "sample_manifest.csv"),
+        "proposal_manifest_sha256": file_sha256(dataset / "proposal_manifest.csv"),
         "dataset_arrays_sha256": file_sha256(dataset / "dataset_arrays.npz"),
         "frozen_gates": {
             "minimum_precision": MINIMUM_PRECISION,

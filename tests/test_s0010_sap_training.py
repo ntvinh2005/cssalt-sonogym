@@ -42,6 +42,58 @@ class SapTrainingTests(unittest.TestCase):
         )
         self.assertNotIn("BOUNDARY_OR_IDENTITY_AMBIGUOUS", training.LABEL_ID)
 
+    def test_full_image_score_uses_all_actor_visible_proposals(self) -> None:
+        class Estimator:
+            classes_ = np.asarray([0, 1])
+
+            def predict_proba(self, values: np.ndarray) -> np.ndarray:
+                scores = values[:, 0]
+                return np.column_stack((1.0 - scores, scores))
+
+        sample_rows = [
+            {
+                "frame_sha256": "positive",
+                "conditioned_level": "L4",
+                "split": "calibration",
+                "provisional_label": training.POSITIVE,
+            },
+            {
+                "frame_sha256": "negative",
+                "conditioned_level": "L4",
+                "split": "calibration",
+                "provisional_label": training.NEGATIVE,
+            },
+        ]
+        proposal_rows = [
+            {
+                "frame_sha256": "positive",
+                "conditioned_level": "L4",
+                "split": "calibration",
+                "proposal_feature_index": str(index),
+            }
+            for index in (0, 1)
+        ] + [
+            {
+                "frame_sha256": "negative",
+                "conditioned_level": "L4",
+                "split": "calibration",
+                "proposal_feature_index": "2",
+            }
+        ]
+        features = np.zeros((3, 774))
+        features[:, 0] = [0.2, 0.9, 0.1]
+        labels, scores, hashes = training.full_image_scores(
+            estimator=Estimator(),
+            level="L4",
+            split="calibration",
+            sample_rows=sample_rows,
+            proposal_rows=proposal_rows,
+            proposal_features=features,
+        )
+        self.assertEqual(hashes, ["negative", "positive"])
+        np.testing.assert_array_equal(labels, [0, 1])
+        np.testing.assert_allclose(scores, [0.1, 0.9])
+
 
 if __name__ == "__main__":
     unittest.main()

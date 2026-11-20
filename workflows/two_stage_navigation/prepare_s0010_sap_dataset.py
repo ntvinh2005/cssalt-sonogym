@@ -199,6 +199,7 @@ def main() -> int:
 
     proposal_rows: list[dict[str, Any]] = []
     feature_rows: list[np.ndarray] = []
+    proposal_features: list[np.ndarray] = []
     raw_patches: list[np.ndarray] = []
     session_surfaces: dict[tuple[str, int, str], np.ndarray] = {}
     frame_images: dict[tuple[str, int], np.ndarray] = {}
@@ -318,6 +319,7 @@ def main() -> int:
                         "intended_capture_level": intended[frame_key],
                         "conditioned_level": level,
                         "proposal_index": proposal_index,
+                        "proposal_feature_index": len(proposal_features),
                         "track_id": proposal.track_id,
                         "patch_row": float(proposal.row),
                         "patch_column": float(proposal.column),
@@ -339,6 +341,7 @@ def main() -> int:
                         "feature_index": -1,
                         "raw_patch_sha256": array_sha256(raw_patch.astype("<f4")),
                     }
+                    proposal_features.append(feature)
                     level_rows.append(row)
                 selected = choose_candidate(
                     level_rows,
@@ -363,6 +366,7 @@ def main() -> int:
     np.savez_compressed(
         output / "dataset_arrays.npz",
         features=np.asarray(feature_rows, dtype=np.float64),
+        proposal_features=np.asarray(proposal_features, dtype=np.float64),
         raw_patches=np.asarray(raw_patches, dtype=np.float32),
     )
 
