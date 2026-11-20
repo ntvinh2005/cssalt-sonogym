@@ -1,0 +1,105 @@
+{
+  "schema": "sonogym-s0010-sap-observability-result-v2",
+  "experiment_id": "s0010_sap_observability_v2r1",
+  "anatomy_id": "s0010",
+  "scope": "simulator_only_right_l4_l5_pseudo_sap_surface_observability",
+  "planning": {
+    "job_id": "52118753",
+    "source_archived_frames": 336,
+    "eligible_corrected_candidates": {
+      "RIGHT_L4_SAP": 12,
+      "RIGHT_L5_SAP": 62
+    },
+    "selected_waypoints_per_level": 6,
+    "selection_commit": "7173ebe19e6aa5ac43770b0451c00d455ec5a834"
+  },
+  "capture": {
+    "job_id": "52120622",
+    "execution_commit": "acbc28de9339f08402e5b2919599d79220eaa3d9",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:01:30",
+    "sessions": 2,
+    "frames": 12,
+    "distinct_frame_hashes": 12,
+    "exact_pose_replay_passed_frames": 12,
+    "maximum_coordinate_error_index": 0.00003694327233461081,
+    "resources": {
+      "cpus": 4,
+      "requested_memory": "30G",
+      "gpus": 1,
+      "gpu_model": "NVIDIA L4"
+    }
+  },
+  "technical_retry": {
+    "failed_job_id": "52119650",
+    "failure_stage": "PRE_ACQUISITION_PROTOCOL_BUDGET_VALIDATION",
+    "frames_acquired": 0,
+    "reason": "three-frame segment declared 650 actions against a 600-step episode horizon",
+    "amendment": "same waypoints and gates split into shorter reset segments"
+  },
+  "evaluation": {
+    "job_id": "52121821",
+    "execution_commit": "56505856aab2ff6e0f2f862d4cd621c43ebf2336",
+    "state": "COMPLETED",
+    "exit_code": "0:0",
+    "elapsed": "00:00:33",
+    "resources": {
+      "cpus": 1,
+      "requested_memory": "8G",
+      "gpus": 0
+    },
+    "raw_label_replay_passed_frames": 12,
+    "surface_alignment_tolerance_pixels": 4.0,
+    "review_scope": "single_agent_opened_development_image_only_gradient_ridge_notes_not_independent_semantic_ground_truth",
+    "RIGHT_L4_SAP": {
+      "target_frames": 6,
+      "corrected_projection_gate_passed_frames": 4,
+      "surface_candidate_visible_frames": 4,
+      "qualifying_visible_frames": 3,
+      "qualifying_visible_sessions": 2,
+      "unresolved_frames": 2,
+      "verdict": "SAP_SURFACE_VISIBLE_PROVISIONAL"
+    },
+    "RIGHT_L5_SAP": {
+      "target_frames": 6,
+      "corrected_projection_gate_passed_frames": 4,
+      "surface_candidate_visible_frames": 5,
+      "qualifying_visible_frames": 4,
+      "qualifying_visible_sessions": 2,
+      "unresolved_frames": 1,
+      "verdict": "SAP_SURFACE_VISIBLE_PROVISIONAL"
+    }
+  },
+  "superseded_preliminary_evaluation": {
+    "job_id": "52121202",
+    "reason": "hand-entered clean-image polylines were displaced 10 to 30 rows below the visible cortical gradient ridge",
+    "thresholds_changed": false,
+    "capture_changed": false,
+    "scientific_claim_released": false
+  },
+  "validation": {
+    "focused_tests_passed": 41,
+    "focused_tests_failed": 0,
+    "package_checksums_passed": 59,
+    "package_checksums_failed": 0,
+    "zip_integrity": "PASS"
+  },
+  "artifact": {
+    "zip_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v2_evaluation/52121821/review_packages/s0010_right_l4l5_sap_observability_v2r1.zip",
+    "zip_size_bytes": 7794643,
+    "zip_sha256": "de255945803dd14e94327fb9469810b71ff0a9798cb044d15a69458776b4ab96"
+  },
+  "engineering_outcome": "PASS",
+  "scientific_outcome": "SAP_ULTRASOUND_OBSERVABILITY_PROVISIONAL",
+  "independent_confirmation": false,
+  "sap_training_label_release": false,
+  "mbb_target_release": false,
+  "stage3_release": false,
+  "limitations": [
+    "The CT pseudo-SAP masks remain pretrained-model proposals rather than verified semantic anatomy.",
+    "The V2R1 image-only ridge annotations were defined after the preliminary opened-development review and are not independent confirmation.",
+    "A privileged first-bone match does not prove that an image-only detector can distinguish SAP from adjacent bone.",
+    "No classifier was trained and no MBB target or intervention contract was released."
+  ]
+}

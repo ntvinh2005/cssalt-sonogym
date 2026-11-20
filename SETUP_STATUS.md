@@ -1,5 +1,18 @@
 # Setup status
 
+## 2026-11-20: corrected fresh capture supports provisional L4/L5 pseudo-SAP surface visibility
+
+GPU job `52120622` completed `0:0` in 90 seconds at revision `acbc28d` with one NVIDIA L4, four CPUs and 30 GB requested memory. It acquired 12 fresh, distinct observations in two reset sessions; all 12 passed exact native-map/full-pose replay, with maximum coordinate error `3.6943e-05` volume index.
+
+CPU evaluation job `52121821` completed `0:0` in 33 seconds at revision `5650585`. RIGHT L4 has three projection-gated aligned frames across two sessions; RIGHT L5 has four across two sessions. Both levels therefore receive **`SAP_SURFACE_VISIBLE_PROVISIONAL`** under the frozen four-pixel surface gate.
+
+The image-only ridge annotations are opened-development evidence and were corrected after a preliminary coordinate-entry error; they are not independent confirmation or verified SAP semantics. No SAP training label, MBB target or Stage 3 capability is released.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_observability_v2_result.json`.
+- Report: `docs/research/sonogym_s0010_sap_observability_v2.md`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_observability_v2_evaluation/52121821/review_packages/s0010_right_l4l5_sap_observability_v2r1.zip`.
+- ZIP SHA-256: `de255945803dd14e94327fb9469810b71ff0a9798cb044d15a69458776b4ab96`.
+
 ## 2026-11-20: SAP V1 projection corrected; both levels remain inconclusive
 
 Independent review correctly identified that V1/V1R1 reshaped the native
