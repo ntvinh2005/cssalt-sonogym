@@ -75,6 +75,23 @@ class SapStaticReviewV2Tests(unittest.TestCase):
         self.assertFalse(np.any(regions["neighbor"]))
         self.assertTrue(regions["uncertain"][3])
 
+    def test_projection_margin_requires_full_interior_support(self) -> None:
+        self.assertEqual(
+            REVIEW.projection_margin_pixels(
+                np.asarray([10, 20]), np.asarray([15, 30])
+            ),
+            10,
+        )
+        self.assertEqual(
+            REVIEW.projection_margin_pixels(
+                np.asarray([0, 20]), np.asarray([15, 30])
+            ),
+            0,
+        )
+        self.assertEqual(
+            REVIEW.projection_margin_pixels(np.asarray([]), np.asarray([])), -1
+        )
+
     def test_package_validation_fails_on_missing_reference(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             package = Path(directory)

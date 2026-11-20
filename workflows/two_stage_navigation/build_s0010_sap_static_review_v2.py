@@ -236,7 +236,7 @@ def render_articulation_view(
     axis = figure.add_subplot(111, projection="3d")
     for geometry, color in ((lower, COLORS["lower"]), (upper, COLORS["upper"])):
         valid = face_areas(geometry["vertices"], geometry["faces"]) > 0.0
-        faces = geometry["faces"][valid][::2]
+        faces = geometry["faces"][valid]
         axis.add_collection3d(
             Poly3DCollection(
                 geometry["vertices"][faces], facecolor=color, edgecolor="none", alpha=1.0
@@ -336,7 +336,7 @@ def render_surface_comparison(
         axis = figure.add_subplot(1, 2, column, projection="3d")
         valid = face_areas(vertices, faces) > 0.0
         axis.add_collection3d(
-            Poly3DCollection(vertices[faces[valid]][::2], facecolor=color, edgecolor="none", alpha=0.88)
+            Poly3DCollection(vertices[faces[valid]], facecolor=color, edgecolor="none", alpha=0.88)
         )
         _equal_axes(axis, vertices)
         axis.view_init(elev=20, azim=-50)
@@ -360,9 +360,18 @@ def brightness_score(image: np.ndarray, rows: np.ndarray, columns: np.ndarray) -
     return float(np.mean(values) / scale) if scale > 0 else 0.0
 
 
+def projection_margin_pixels(rows: np.ndarray, columns: np.ndarray) -> int:
+    if len(rows) == 0:
+        return -1
+    return int(min(np.min(rows), 199 - np.max(rows), np.min(columns), 149 - np.max(columns)))
+
+
 def select_ultrasound_examples(records: list[dict[str, Any]], images: dict[str, np.ndarray]) -> list[dict[str, Any]]:
     for row in records:
         row["brightness_score"] = brightness_score(images[row["image_key"]], row["sap_rows"], row["sap_columns"])
+        row["core_projection_margin_pixels"] = projection_margin_pixels(
+            row["sap_rows"], row["sap_columns"]
+        )
     present = [row for row in records if row["unique_projected_pixels"] > 0]
     uncertain_only = [
         row for row in records
@@ -379,7 +388,7 @@ def select_ultrasound_examples(records: list[dict[str, Any]], images: dict[str, 
                 used.add(row["frame_sha256"])
                 return
 
-    interior = [row for row in present if not row["boundary_touching"]]
+    interior = [row for row in present if row["core_projection_margin_pixels"] >= 10]
     ranked = sorted(
         interior or present,
         key=lambda row: (-row["brightness_score"], -row["unique_projected_pixels"], row["session_id"], row["frame_sequence"]),
@@ -459,6 +468,7 @@ def render_ultrasound_example(
         "unique_core_projected_pixels": row["unique_projected_pixels"],
         "uncertain_projected_vertex_entries": int(len(row["uncertain_rows"])),
         "local_brightness_score": row["brightness_score"],
+        "core_projection_margin_pixels": row["core_projection_margin_pixels"],
         "projection_status": "VERIFIED",
         "acoustic_visibility": "NOT_CONFIRMED",
         "semantic_identity": "NOT_CONFIRMED",
@@ -589,8 +599,8 @@ def write_documents(
 This package tests the original RIGHT L4/L5 SAP candidates against source-mesh quality, original label volumes, adjacent-level paired surfaces, CT and exact-pose ultrasound correspondence.
 
 - Source commit: `{source_revision}`
-- RIGHT L4 SAP: **`SOURCE_SEMANTICS_INSUFFICIENT`**. The paired L3/L4 surface supports a 55-location `PROPOSED_SAP_SURFACE_CORE`, but no source label identifies L3 IAP, L4 SAP, lamina or pars separately.
-- RIGHT L5 SAP: **`SOURCE_SEMANTICS_INSUFFICIENT`**. The paired L4/L5 surface supports a 77-location `PROPOSED_SAP_SURFACE_CORE`, with the same semantic limitation.
+- RIGHT L4 SAP: **`SOURCE_SEMANTICS_INSUFFICIENT`**. The paired L3/L4 surface supports a 55-location `PROPOSED_SAP_SURFACE_CORE`, but no source label identifies L3 IAP, L4 SAP, lamina or pars separately; none of the 117 intersecting archived planes keeps the full projected core at least 10 pixels inside the image.
+- RIGHT L5 SAP: **`SOURCE_SEMANTICS_INSUFFICIENT`**. The paired L4/L5 surface supports a 77-location `PROPOSED_SAP_SURFACE_CORE`, with the same semantic limitation; 65 / 123 intersecting archived planes meet the 10-pixel field-of-view margin, but visibility and identity remain unconfirmed.
 - `LIKELY_NON_SAP_NEIGHBOR` is empty for both structures because no source semantics justify a negative anatomical assignment.
 
 The proposed cores are geometric articulation surrogates for review, not accepted SAP ground truth, nerve coordinates, MBB targets or actor-visible inputs.
@@ -642,6 +652,7 @@ Anatomical context: [lumbar facet biomechanics](https://pmc.ncbi.nlm.nih.gov/art
 - V2 proposed core: {record['v2_raw_core_vertex_records']} raw records / {record['v2_unique_core_locations']} unique locations.
 - V2 uncertain: {record['v2_raw_uncertain_vertex_records']} raw records / {record['v2_unique_uncertain_locations']} unique locations.
 - V2 likely non-SAP: 0.
+- Archived core-intersecting frames: {record['core_intersecting_frame_count']}; frames with the full projected core at least 10 pixels inside the image: {record['core_projection_margin_10px_frame_count']}.
 
 ## Evidence in favor
 
@@ -841,6 +852,16 @@ def main() -> None:
             "v2_unique_uncertain_locations": regions[level]["unique_uncertain_locations"],
             "v2_raw_likely_non_sap_vertex_records": 0,
             "v2_unique_likely_non_sap_locations": 0,
+            "core_intersecting_frame_count": int(
+                sum(row["unique_projected_pixels"] > 0 for row in records[level])
+            ),
+            "core_projection_margin_10px_frame_count": int(
+                sum(
+                    row["unique_projected_pixels"] > 0
+                    and projection_margin_pixels(row["sap_rows"], row["sap_columns"]) >= 10
+                    for row in records[level]
+                )
+            ),
             "region_method": "valid lower-candidate locations coincident with valid upper-level source-face locations",
             "geometry_approval": "PENDING_INDEPENDENT_ANATOMICAL_REVIEW",
             "figure_files": figure_files,
