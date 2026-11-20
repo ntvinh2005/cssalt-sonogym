@@ -193,7 +193,6 @@ def main() -> int:
         prediction_image.affine,
     )
     bone_ids = correction.bone_source_ids(args.label_conversion)
-    sessions_by_id = {item["session_id"]: item for item in protocol["sessions"]}
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
 
@@ -205,16 +204,34 @@ def main() -> int:
     frame_images: dict[tuple[str, int], np.ndarray] = {}
     frame_tracks: dict[tuple[str, int], list[Any]] = {}
     intended: dict[tuple[str, int], str] = {}
+    incomplete_sessions: list[dict[str, str]] = []
 
-    for session_dir in sorted((args.run_root / "sessions").iterdir()):
-        if not session_dir.is_dir():
+    phase_splits = (
+        {"train", "calibration"} if args.phase == "development" else {"evaluation"}
+    )
+    for session in protocol["sessions"]:
+        if session["split"] not in phase_splits:
             continue
-        session = sessions_by_id.get(session_dir.name)
-        if session is None:
-            raise ValueError(f"unexpected capture session: {session_dir.name}")
-        if args.phase == "development" and session["split"] == "evaluation":
-            continue
-        if args.phase == "evaluation" and session["split"] != "evaluation":
+        session_dir = args.run_root / "sessions" / session["session_id"]
+        required_paths = (
+            session_dir / "verification_report.json",
+            session_dir / "public/ultrasound.npz",
+            session_dir / "public/frames.jsonl",
+            session_dir / "privileged/pixel_to_volume_coordinates.npz",
+            session_dir / "privileged/raw_labels.npz",
+        )
+        if not session_dir.is_dir() or any(not path.exists() for path in required_paths):
+            summary_path = session_dir / "summary.json"
+            summary = (
+                json.loads(summary_path.read_text()) if summary_path.exists() else {}
+            )
+            incomplete_sessions.append(
+                {
+                    "session_id": session["session_id"],
+                    "split": session["split"],
+                    "reason": str(summary.get("error", "capture artifacts missing")),
+                }
+            )
             continue
         verification = json.loads((session_dir / "verification_report.json").read_text())
         if verification.get("verdict") != "PROJECTION_PARITY_PASS":
@@ -521,6 +538,7 @@ def main() -> int:
         "counts": counts,
         "correspondence": correspondence_summary,
         "readiness": readiness,
+        "incomplete_sessions": incomplete_sessions,
         "actor_feature_privileged_fields": [],
     }
     (output / "readiness_report.json").write_text(
