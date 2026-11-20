@@ -1,5 +1,32 @@
 # Setup status
 
+## 2026-11-20: pretrained CT model produces inspectable RIGHT L4/L5 SAP proposals
+
+GPU job `52078067` completed `0:0` in 5 minutes 29 seconds at source revision
+`0bb79e0c` with one NVIDIA L4, four CPUs and 30 GB requested memory. It ran the
+official MICN-Lab Spine_Subregions `V1` fold-0 checkpoint once on the original
+s0010 CT; no training, fine-tuning, new ultrasound capture or actor change was
+performed.
+
+The raw prediction contains labels 0–7, preserves the input affine exactly and
+places all `110,736 / 110,736` foreground voxels inside the existing whole-bone
+segmentation. RIGHT L4 SAP has 259 model voxels and supports `51 / 55` V2 core
+locations within 1.5 mm. RIGHT L5 SAP has 338 model voxels and supports
+`70 / 77`; its 22.198 mm maximum V2/model distance remains an explicit review
+outlier despite a 1.5 mm median.
+
+Both structures are **`MODEL_SAP_PROPOSAL_READY_FOR_REVIEW`**, not accepted
+semantic ground truth. The four archived ultrasound examples contain only 2–5
+projected SAP pixels each, so they do not establish acoustic visibility or SAP
+identity. The package passes 49/49 references, 60/60 checksums, ZIP integrity,
+7/7 V3 focused tests and 10/10 V1/V2 regressions; third-party weights are not
+included.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_semantic_review_v3_result.json`.
+- Report: `docs/research/sonogym_s0010_sap_semantic_review_v3.md`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/review_packages/s0010_right_l4l5_sap_semantic_review_v3.zip`.
+- ZIP SHA-256: `ce55b17345507a5baa2ee6552daeb63c924e162be285507f3bfb9c8750f3a442`.
+
 ## 2026-11-20: SAP review V2 narrows paired-surface evidence but source semantics remain insufficient
 
 The CPU-only `s0010_right_l4l5_sap_review_v2` build completed at commit

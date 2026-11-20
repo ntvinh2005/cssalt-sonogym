@@ -1,0 +1,93 @@
+{
+  "anatomy_id": "s0010",
+  "execution": {
+    "account": "anest-dept",
+    "cpus": 4,
+    "elapsed": "00:05:29",
+    "end_time": "2026-11-20T09:49:24-05:00",
+    "exit_code": "0:0",
+    "gpu": "NVIDIA L4",
+    "gpus": 1,
+    "inference_elapsed_seconds": 160.43,
+    "inference_maximum_resident_kb": 8082652,
+    "job_id": "52078067",
+    "memory_requested_gb": 30,
+    "node": "c1105a-s7",
+    "partition": "hpg-turin",
+    "qos": "anest-dept",
+    "slurm_batch_maximum_resident_kb": 5123032,
+    "start_time": "2026-11-20T09:43:55-05:00"
+  },
+  "model": {
+    "archive_sha256": "384b6ead3dd4df2b34d3fc6dc1d72c845dab76807b237a488c91d56758c06938",
+    "checkpoint": "model_final_checkpoint",
+    "configuration": "3d_fullres",
+    "fold": 0,
+    "framework": "nnunet_legacy_1.7.1",
+    "release": "V1",
+    "repository": "https://github.com/MICN-Lab/Spine_Subregions",
+    "task": "Task005",
+    "trainer": "nnUNetTrainerV2"
+  },
+  "package": {
+    "checksum_entries": 60,
+    "directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/review_packages/s0010_right_l4l5_sap_semantic_review_v3",
+    "prohibited_weight_files": 0,
+    "referenced_files": 49,
+    "ultrasound_examples": 4,
+    "validation_pass": true,
+    "zip_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/review_packages/s0010_right_l4l5_sap_semantic_review_v3.zip",
+    "zip_sha256": "ce55b17345507a5baa2ee6552daeb63c924e162be285507f3bfb9c8750f3a442",
+    "zip_size_bytes": 9714988
+  },
+  "prediction": {
+    "affine_maximum_absolute_difference": 0.0,
+    "foreground_inside_whole_bone": 110736,
+    "foreground_total": 110736,
+    "labels_present": [0, 1, 2, 3, 4, 5, 6, 7],
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz",
+    "sha256": "a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f"
+  },
+  "schema": "sonogym-s0010-right-l4l5-sap-semantic-review-v3-result",
+  "source_revision": "0bb79e0c82c3096c6e57332f8c3d0e92d245e264",
+  "structures": {
+    "RIGHT_L4_SAP": {
+      "adjacent_structure": "RIGHT_L3_IAP",
+      "model_component_count": 1,
+      "model_sap_volume_mm3": 874.125,
+      "model_sap_voxel_count": 259,
+      "paired_iap_minimum_distance_mm": 1.5,
+      "ultrasound_projected_pixels_per_example": [2, 3],
+      "v2_core_supported_fraction": 0.9272727272727272,
+      "v2_core_supported_locations": 51,
+      "v2_core_total_locations": 55,
+      "v2_to_model_maximum_mm": 2.1213203435596424,
+      "v2_to_model_median_mm": 1.5,
+      "v2_to_model_p95_mm": 2.1213203435596424,
+      "verdict": "MODEL_SAP_PROPOSAL_READY_FOR_REVIEW"
+    },
+    "RIGHT_L5_SAP": {
+      "adjacent_structure": "RIGHT_L4_IAP",
+      "model_component_count": 1,
+      "model_sap_volume_mm3": 1140.75,
+      "model_sap_voxel_count": 338,
+      "paired_iap_minimum_distance_mm": 1.5,
+      "ultrasound_projected_pixels_per_example": [3, 5],
+      "v2_core_supported_fraction": 0.9090909090909091,
+      "v2_core_supported_locations": 70,
+      "v2_core_total_locations": 77,
+      "v2_to_model_maximum_mm": 22.197972880423112,
+      "v2_to_model_median_mm": 1.5,
+      "v2_to_model_p95_mm": 4.789720629308676,
+      "verdict": "MODEL_SAP_PROPOSAL_READY_FOR_REVIEW"
+    }
+  },
+  "tests": {
+    "geometry_audit_regression": "3/3 pass",
+    "package_checksums": "60/60 pass",
+    "sap_v2_static_review_regression": "7/7 pass",
+    "sap_v3_focused": "7/7 pass",
+    "zip_integrity": "pass"
+  },
+  "verdict": "MODEL_SAP_PROPOSAL_READY_FOR_REVIEW"
+}
