@@ -83,6 +83,10 @@ def protocol(
         },
         "sampling": {
             "expected_frames_per_session": FRAMES_PER_SESSION,
+            "waypoint_level_order": [
+                {"level": "L4", "start_index": 0, "stop_index_exclusive": 20},
+                {"level": "L5", "start_index": 20, "stop_index_exclusive": 40},
+            ],
             "physical_tracking_position_tolerance_mm": 1.5,
             "physical_tracking_orientation_tolerance_deg": 1.2,
             "waypoint_separation_multiplier": 2.0,
@@ -137,6 +141,9 @@ def protocol(
             "minimum_local_contrast": 0.02,
             "minimum_posterior_shadow": 0.02,
             "ambiguous_excluded_from_binary_targets": True,
+            "minimum_matched_acceptance_rate": 0.50,
+            "maximum_mismatched_false_alignment_rate": 0.10,
+            "minimum_correct_projection_ranking_rate": 0.70,
         },
         "change_policy": [
             "Do not change waypoint banks or label criteria after capture.",

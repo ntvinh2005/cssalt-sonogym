@@ -30,6 +30,33 @@ class SapValidationProtocolTests(unittest.TestCase):
                 angle_deg = abs(left[2] - right[2]) * 180.0 / np.pi
                 self.assertTrue(translation_mm > 3.0 or angle_deg > 2.4)
 
+    def test_level_order_and_label_readiness_are_frozen(self) -> None:
+        banks = MODULE.allocate_banks()
+        document = MODULE.protocol(
+            protocol_id="test",
+            implementation_commit="abc123",
+            sessions=[],
+            banks={"bank_0": banks["bank_0"]},
+        )
+        self.assertEqual(
+            document["sampling"]["waypoint_level_order"],
+            [
+                {"level": "L4", "start_index": 0, "stop_index_exclusive": 20},
+                {"level": "L5", "start_index": 20, "stop_index_exclusive": 40},
+            ],
+        )
+        self.assertEqual(
+            document["label_gate"]["minimum_matched_acceptance_rate"], 0.50
+        )
+        self.assertEqual(
+            document["label_gate"]["maximum_mismatched_false_alignment_rate"],
+            0.10,
+        )
+        self.assertEqual(
+            document["label_gate"]["minimum_correct_projection_ranking_rate"],
+            0.70,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
