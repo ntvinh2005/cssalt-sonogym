@@ -2,6 +2,24 @@
 
 This is the single registry for project-specific methods, metrics, states, and named objects used in research documentation.
 
+### s0010_right_l4l5_sap_review_v1
+- **Kind:** object
+- **Definition:** The static, simulator-only external-review package for the versioned RIGHT L4/L5 SAP candidates on anatomy s0010, containing privileged geometry, curated exact-pose ultrasound correspondence, explicit uncertainty, and no promoted semantic label or MBB target.
+- **Intuition:** It lets a reviewer judge the current candidates without running repository code or receiving an interactive tool.
+- **Source:** approved by user, 2026-11-19.
+
+### ACCEPT_PROVISIONAL
+- **Kind:** object
+- **Definition:** A review decision that the exact versioned candidate is sufficiently plausible for the declared simulator-only provisional use while remaining non-clinical and subject to its recorded uncertainty.
+- **Intuition:** It accepts only the reviewed candidate version, not an actual nerve location or injection target.
+- **Source:** approved by user, 2026-11-19.
+
+### REVISE
+- **Kind:** object
+- **Definition:** A review decision that the exact versioned candidate has useful anatomical support but requires a specified boundary correction before provisional acceptance.
+- **Intuition:** It preserves the evidence while preventing the uncorrected geometry from being promoted.
+- **Source:** approved by user, 2026-11-19.
+
 ### s0010_sap_geometry_audit_v1
 - **Kind:** object
 - **Definition:** The privileged, CPU-only inventory of the fixed-`s0010` RIGHT L4/L5 SAP source geometry, semantic labels, exact-pose ultrasound-plane correspondence, and unresolved-boundary evidence; it creates no actor input or semantic training label.
