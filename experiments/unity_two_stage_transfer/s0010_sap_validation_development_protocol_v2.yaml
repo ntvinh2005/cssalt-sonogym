@@ -1,0 +1,619 @@
+protocol_id: sonogym-s0010-sap-validation-development-v2
+status: PRE_GPU_FROZEN
+purpose: Acquire session-disjoint RIGHT L4/L5 SAP development or holdout views after
+  freezing image-only interface and simulator-proxy label criteria.
+source:
+  implementation_commit: 0c657c947cc4650ca5a3682b5ec4689746181c94
+  prediction_job: 52078067
+  prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  planning_rule: fixed_disjoint_pose_grid_before_capture
+  prior_protocol_id: sonogym-s0010-sap-validation-development-v1
+  prior_protocol_path: s0010_sap_validation_development_protocol_v1.yaml
+  prior_protocol_sha256: 1602264218b174d2cea6315c7011b24e8ba3cf1b4c56c94313343ab394bda044
+  negative_image_gate_implementation_revision: fa694b3
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  privileged_dataset_collection: true
+  runtime_classifier_geometry_access: false
+  stage3_authorized: false
+sampling:
+  expected_frames_per_session: 40
+  waypoint_level_order:
+  - level: L4
+    start_index: 0
+    stop_index_exclusive: 20
+  - level: L5
+    start_index: 20
+    stop_index_exclusive: 40
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.2
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 8000
+  trajectory_start_frames:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  - 12
+  - 14
+  - 16
+  - 18
+  - 20
+  - 22
+  - 24
+  - 26
+  - 28
+  - 30
+  - 32
+  - 34
+  - 36
+  - 38
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio:
+    - 0.02
+    - 0.02
+    - 0.6
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    bank_0:
+    - - 157.0
+      - 140.5
+      - 2.89
+    - - 157.0
+      - 143.5
+      - 2.95
+    - - 154.0
+      - 140.5
+      - 2.95
+    - - 157.0
+      - 137.5
+      - 2.95
+    - - 154.0
+      - 143.5
+      - 2.95
+    - - 154.0
+      - 137.5
+      - 2.83
+    - - 157.0
+      - 146.5
+      - 2.89
+    - - 151.0
+      - 140.5
+      - 2.83
+    - - 154.0
+      - 146.5
+      - 2.89
+    - - 154.0
+      - 146.5
+      - 2.77
+    - - 151.0
+      - 143.5
+      - 2.95
+    - - 151.0
+      - 137.5
+      - 2.83
+    - - 151.0
+      - 146.5
+      - 2.89
+    - - 151.0
+      - 146.5
+      - 2.77
+    - - 148.0
+      - 140.5
+      - 2.89
+    - - 148.0
+      - 140.5
+      - 2.95
+    - - 148.0
+      - 143.5
+      - 2.89
+    - - 148.0
+      - 137.5
+      - 2.95
+    - - 151.0
+      - 149.5
+      - 2.95
+    - - 148.0
+      - 146.5
+      - 2.95
+    - - 157.0
+      - 126.5
+      - 2.89
+    - - 157.0
+      - 129.5
+      - 2.95
+    - - 154.0
+      - 126.5
+      - 2.95
+    - - 157.0
+      - 123.5
+      - 2.95
+    - - 154.0
+      - 129.5
+      - 2.95
+    - - 154.0
+      - 123.5
+      - 2.83
+    - - 157.0
+      - 132.5
+      - 2.89
+    - - 151.0
+      - 126.5
+      - 2.83
+    - - 154.0
+      - 132.5
+      - 2.89
+    - - 154.0
+      - 132.5
+      - 2.77
+    - - 157.0
+      - 120.5
+      - 2.83
+    - - 157.0
+      - 120.5
+      - 2.77
+    - - 151.0
+      - 123.5
+      - 2.95
+    - - 154.0
+      - 120.5
+      - 2.83
+    - - 151.0
+      - 132.5
+      - 2.89
+    - - 151.0
+      - 132.5
+      - 2.77
+    - - 151.0
+      - 120.5
+      - 2.95
+    - - 148.0
+      - 126.5
+      - 2.95
+    - - 148.0
+      - 123.5
+      - 2.89
+    - - 148.0
+      - 132.5
+      - 2.95
+    bank_1:
+    - - 157.0
+      - 140.5
+      - 2.83
+    - - 157.0
+      - 143.5
+      - 2.77
+    - - 160.0
+      - 140.5
+      - 2.95
+    - - 157.0
+      - 137.5
+      - 2.77
+    - - 160.0
+      - 143.5
+      - 2.95
+    - - 160.0
+      - 137.5
+      - 2.83
+    - - 157.0
+      - 146.5
+      - 2.83
+    - - 163.0
+      - 140.5
+      - 2.83
+    - - 160.0
+      - 146.5
+      - 2.89
+    - - 160.0
+      - 146.5
+      - 2.77
+    - - 163.0
+      - 143.5
+      - 2.95
+    - - 163.0
+      - 137.5
+      - 2.83
+    - - 163.0
+      - 146.5
+      - 2.89
+    - - 163.0
+      - 146.5
+      - 2.77
+    - - 154.0
+      - 149.5
+      - 2.89
+    - - 154.0
+      - 149.5
+      - 2.95
+    - - 148.0
+      - 143.5
+      - 2.83
+    - - 148.0
+      - 137.5
+      - 2.77
+    - - 163.0
+      - 149.5
+      - 2.95
+    - - 148.0
+      - 146.5
+      - 2.77
+    - - 157.0
+      - 126.5
+      - 2.83
+    - - 157.0
+      - 129.5
+      - 2.77
+    - - 160.0
+      - 126.5
+      - 2.95
+    - - 157.0
+      - 123.5
+      - 2.77
+    - - 160.0
+      - 129.5
+      - 2.95
+    - - 160.0
+      - 123.5
+      - 2.83
+    - - 157.0
+      - 132.5
+      - 2.83
+    - - 163.0
+      - 126.5
+      - 2.83
+    - - 160.0
+      - 132.5
+      - 2.89
+    - - 160.0
+      - 132.5
+      - 2.77
+    - - 163.0
+      - 129.5
+      - 2.83
+    - - 163.0
+      - 129.5
+      - 2.77
+    - - 163.0
+      - 123.5
+      - 2.95
+    - - 160.0
+      - 120.5
+      - 2.83
+    - - 163.0
+      - 132.5
+      - 2.89
+    - - 163.0
+      - 132.5
+      - 2.77
+    - - 163.0
+      - 120.5
+      - 2.95
+    - - 148.0
+      - 126.5
+      - 2.77
+    - - 148.0
+      - 123.5
+      - 2.83
+    - - 148.0
+      - 132.5
+      - 2.77
+    bank_2:
+    - - 157.0
+      - 140.5
+      - 2.95
+    - - 154.0
+      - 140.5
+      - 2.89
+    - - 154.0
+      - 140.5
+      - 2.77
+    - - 154.0
+      - 143.5
+      - 2.89
+    - - 154.0
+      - 143.5
+      - 2.77
+    - - 154.0
+      - 137.5
+      - 2.95
+    - - 157.0
+      - 146.5
+      - 2.95
+    - - 151.0
+      - 140.5
+      - 2.95
+    - - 154.0
+      - 146.5
+      - 2.83
+    - - 151.0
+      - 143.5
+      - 2.89
+    - - 151.0
+      - 143.5
+      - 2.77
+    - - 151.0
+      - 137.5
+      - 2.95
+    - - 151.0
+      - 146.5
+      - 2.83
+    - - 157.0
+      - 149.5
+      - 2.89
+    - - 160.0
+      - 149.5
+      - 2.89
+    - - 160.0
+      - 149.5
+      - 2.95
+    - - 148.0
+      - 143.5
+      - 2.95
+    - - 151.0
+      - 149.5
+      - 2.89
+    - - 151.0
+      - 149.5
+      - 2.77
+    - - 145.0
+      - 140.5
+      - 2.89
+    - - 157.0
+      - 126.5
+      - 2.95
+    - - 154.0
+      - 126.5
+      - 2.89
+    - - 154.0
+      - 126.5
+      - 2.77
+    - - 154.0
+      - 129.5
+      - 2.89
+    - - 154.0
+      - 129.5
+      - 2.77
+    - - 154.0
+      - 123.5
+      - 2.95
+    - - 157.0
+      - 132.5
+      - 2.95
+    - - 151.0
+      - 126.5
+      - 2.95
+    - - 154.0
+      - 132.5
+      - 2.83
+    - - 151.0
+      - 129.5
+      - 2.89
+    - - 151.0
+      - 129.5
+      - 2.95
+    - - 151.0
+      - 123.5
+      - 2.89
+    - - 151.0
+      - 123.5
+      - 2.77
+    - - 154.0
+      - 120.5
+      - 2.95
+    - - 151.0
+      - 132.5
+      - 2.83
+    - - 151.0
+      - 120.5
+      - 2.89
+    - - 151.0
+      - 120.5
+      - 2.77
+    - - 148.0
+      - 129.5
+      - 2.89
+    - - 148.0
+      - 123.5
+      - 2.95
+    - - 148.0
+      - 120.5
+      - 2.89
+    bank_3:
+    - - 157.0
+      - 140.5
+      - 2.77
+    - - 160.0
+      - 140.5
+      - 2.89
+    - - 160.0
+      - 140.5
+      - 2.77
+    - - 160.0
+      - 143.5
+      - 2.89
+    - - 160.0
+      - 143.5
+      - 2.77
+    - - 160.0
+      - 137.5
+      - 2.95
+    - - 157.0
+      - 146.5
+      - 2.77
+    - - 163.0
+      - 140.5
+      - 2.95
+    - - 160.0
+      - 146.5
+      - 2.83
+    - - 163.0
+      - 143.5
+      - 2.89
+    - - 163.0
+      - 143.5
+      - 2.77
+    - - 163.0
+      - 137.5
+      - 2.95
+    - - 163.0
+      - 146.5
+      - 2.83
+    - - 157.0
+      - 149.5
+      - 2.83
+    - - 148.0
+      - 140.5
+      - 2.83
+    - - 148.0
+      - 140.5
+      - 2.77
+    - - 148.0
+      - 143.5
+      - 2.77
+    - - 163.0
+      - 149.5
+      - 2.89
+    - - 163.0
+      - 149.5
+      - 2.77
+    - - 145.0
+      - 140.5
+      - 2.83
+    - - 157.0
+      - 126.5
+      - 2.77
+    - - 160.0
+      - 126.5
+      - 2.89
+    - - 160.0
+      - 126.5
+      - 2.77
+    - - 160.0
+      - 129.5
+      - 2.89
+    - - 160.0
+      - 129.5
+      - 2.77
+    - - 160.0
+      - 123.5
+      - 2.95
+    - - 157.0
+      - 132.5
+      - 2.77
+    - - 163.0
+      - 126.5
+      - 2.95
+    - - 160.0
+      - 132.5
+      - 2.83
+    - - 157.0
+      - 120.5
+      - 2.89
+    - - 157.0
+      - 120.5
+      - 2.95
+    - - 163.0
+      - 123.5
+      - 2.89
+    - - 163.0
+      - 123.5
+      - 2.77
+    - - 160.0
+      - 120.5
+      - 2.95
+    - - 163.0
+      - 132.5
+      - 2.83
+    - - 163.0
+      - 120.5
+      - 2.89
+    - - 163.0
+      - 120.5
+      - 2.77
+    - - 148.0
+      - 129.5
+      - 2.83
+    - - 148.0
+      - 123.5
+      - 2.77
+    - - 148.0
+      - 120.5
+      - 2.83
+sessions:
+- session_id: s0010sapval_train_00
+  split: train
+  seed: 2026112101
+  reset_id: s0010sapval_train_00
+  absolute_waypoint_bank_id: bank_0
+  expected_frame_count: 40
+- session_id: s0010sapval_train_01
+  split: train
+  seed: 2026112102
+  reset_id: s0010sapval_train_01
+  absolute_waypoint_bank_id: bank_1
+  expected_frame_count: 40
+- session_id: s0010sapval_train_02
+  split: train
+  seed: 2026112103
+  reset_id: s0010sapval_train_02
+  absolute_waypoint_bank_id: bank_2
+  expected_frame_count: 40
+- session_id: s0010sapval_calibration_00
+  split: calibration
+  seed: 2026112104
+  reset_id: s0010sapval_calibration_00
+  absolute_waypoint_bank_id: bank_3
+  expected_frame_count: 40
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 10.0
+    maximum_orientation_error_deg: 10.0
+    minimum_l4_visible_fraction: 0.05
+  quality:
+    visibility_normalization_fraction: 0.2
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 40
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.9
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+label_gate:
+  alignment_tolerance_pixels: 4.0
+  minimum_surface_columns: 5
+  minimum_aligned_fraction: 0.4
+  minimum_aligned_run_columns: 5
+  maximum_median_distance_pixels: 4.0
+  minimum_local_gradient: 0.1
+  minimum_local_contrast: 0.02
+  minimum_posterior_shadow: 0.02
+  ambiguous_excluded_from_binary_targets: true
+  minimum_matched_acceptance_rate: 0.5
+  maximum_mismatched_false_alignment_rate: 0.1
+  minimum_correct_projection_ranking_rate: 0.7
+  require_all_proposals_clear_for_negative_image: true
+change_policy:
+- Do not change waypoint banks or label criteria after capture.
+- Do not inspect holdout images before model and threshold are frozen.
+- Do not expose privileged geometry to classifier features.
