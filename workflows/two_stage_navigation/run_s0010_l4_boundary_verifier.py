@@ -570,10 +570,26 @@ def proposal_available(frame: dict[str, Any]) -> bool:
     )
 
 
+def combined_verifier_pass(
+    *,
+    primary_probability: float,
+    primary_threshold: float,
+    verifier_prediction: int,
+    verifier_probability: float,
+    verifier_threshold: float,
+) -> bool:
+    return bool(
+        primary_probability >= primary_threshold
+        and verifier_prediction == STATE_ID[POSITIVE]
+        and verifier_probability >= verifier_threshold
+    )
+
+
 def reconstruct_v3(
     protocol: dict[str, Any], verifier: Any, threshold: float, output: Path
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     root = Path(protocol["inputs"]["v3_run_root"])
+    primary_threshold = float(protocol["inputs"]["active_l4_checkpoint"]["threshold"])
     v3_protocol = yaml.safe_load((ROOT / protocol["inputs"]["v3_protocol"]["path"]).read_text())
     tolerance = float(v3_protocol["evaluator"]["surface_slab_tolerance_mm"])
     geometry_root = Path(protocol["inputs"]["geometry_root"])
@@ -672,9 +688,12 @@ def reconstruct_v3(
                 "selected": int(frame["frame_sequence"]) == selected_sequence,
                 "fresh_confirmation": int(frame["frame_sequence"]) in confirmation_sequences,
                 "verifier_positive_probability": verifier_probability,
-                "verifier_pass": bool(
-                    verifier_prediction == STATE_ID[POSITIVE]
-                    and verifier_probability >= threshold
+                "verifier_pass": combined_verifier_pass(
+                    primary_probability=float(frame["target_probability"]),
+                    primary_threshold=primary_threshold,
+                    verifier_prediction=verifier_prediction,
+                    verifier_probability=verifier_probability,
+                    verifier_threshold=threshold,
                 ),
                 "candidate_metric_eligible": True,
                 "exclusion_reason": "",
@@ -691,7 +710,7 @@ def reconstruct_v3(
         actor_eligible = [
             row
             for row in candidate_search
-            if row["primary_probability"] >= 0.5
+            if row["primary_probability"] >= primary_threshold
         ]
         actor_eligible_positive = [
             row for row in actor_eligible if row["proxy_state"] == POSITIVE

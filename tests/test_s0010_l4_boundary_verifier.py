@@ -171,6 +171,26 @@ class BoundaryVerifierTests(unittest.TestCase):
         self.assertEqual(by_session["a"]["tp"], 1)
         self.assertEqual(by_session["b"]["fp"], 1)
 
+    def test_verifier_cannot_revive_primary_rejected_proposal(self) -> None:
+        self.assertFalse(
+            VERIFIER.combined_verifier_pass(
+                primary_probability=0.49,
+                primary_threshold=0.50,
+                verifier_prediction=VERIFIER.STATE_ID[VERIFIER.POSITIVE],
+                verifier_probability=0.99,
+                verifier_threshold=0.65,
+            )
+        )
+        self.assertTrue(
+            VERIFIER.combined_verifier_pass(
+                primary_probability=0.50,
+                primary_threshold=0.50,
+                verifier_prediction=VERIFIER.STATE_ID[VERIFIER.POSITIVE],
+                verifier_probability=0.65,
+                verifier_threshold=0.65,
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
