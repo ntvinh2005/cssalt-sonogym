@@ -392,7 +392,6 @@ def make_contact_sheet(paths: list[Path], output: Path, title: str) -> None:
     figure, axes = plt.subplots(2, 4, figsize=(16, 8), dpi=150)
     for axis, path in zip(axes.flat, paths):
         axis.imshow(mpimg.imread(path))
-        axis.set_title(path.stem.replace("_", " "), fontsize=8)
         axis.set_axis_off()
     figure.suptitle(title)
     figure.tight_layout()
@@ -868,7 +867,7 @@ def main() -> None:
         make_contact_sheet(view_paths, overview, f"{structure} static 3D review overview")
         ct_context = package / f"figures/geometry_context/{structure}_CT_context.png"
         render_ct_context(asset_root=asset_root, level=level, sap=sap, output=ct_context)
-        relation_context = package / f"figures/geometry_context/{structure}_SAP_TP_context.png"
+        relation_context = package / f"figures/geometry_context/{structure}_TP_context.png"
         shutil.copy2(package / f"figures/3d/{structure}_relative_to_tp.png", relation_context)
         geometry_files = export_geometry(
             level=level, sap=sap, asset_root=asset_root, directory=package / "geometry"
