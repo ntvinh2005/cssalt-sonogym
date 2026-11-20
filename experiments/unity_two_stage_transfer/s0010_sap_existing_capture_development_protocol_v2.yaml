@@ -1,0 +1,254 @@
+protocol_id: sonogym-s0010-sap-validation-development-v2-existing-captures
+status: PRE_ANALYSIS_FROZEN
+source:
+  implementation_commit: 057580677668c39dcc43b1461774ca17173ede92
+  capture_status: previously_opened_development
+  selection_rule: projection-parity-passed sessions with frozen source-level coverage
+  prior_cpu_job: 52135074
+  additional_session_rule: previously opened development-evaluation sessions reassigned
+    to calibration
+scope:
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  independent_holdout: false
+  runtime_classifier_geometry_access: false
+sampling:
+  waypoint_level_order_by_session:
+    s0010tpscv6_train_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 25
+    - level: L5
+      start_index: 25
+      stop_index_exclusive: 50
+    s0010tpscv6_train_01:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 25
+    - level: L5
+      start_index: 25
+      stop_index_exclusive: 50
+    s0010tpscv6_train_02:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 25
+    - level: L5
+      start_index: 25
+      stop_index_exclusive: 50
+    s0010tpscv6_train_03:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 25
+    - level: L5
+      start_index: 25
+      stop_index_exclusive: 50
+    s0010tpscv10_train_l4_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 42
+    s0010tpscv10_train_l5_00:
+    - level: L5
+      start_index: 0
+      stop_index_exclusive: 72
+    s0010tpscv12_train_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+    s0010tpscv13_train_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+    s0010tpscv15_train_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+    s0010tpscv16_train_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+    s0010tpscv16_train_targeted_01:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+    s0010tpscv6_cal_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 25
+    - level: L5
+      start_index: 25
+      stop_index_exclusive: 50
+    s0010tpscv8_cal_l4_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 24
+    s0010tpscv10_cal_l5_00:
+    - level: L5
+      start_index: 0
+      stop_index_exclusive: 36
+    s0010tpscv12_cal_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 24
+    s0010tpscv16_cal_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+    s0010tpscv6_dev_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 25
+    - level: L5
+      start_index: 25
+      stop_index_exclusive: 50
+    s0010tpscv9_dev_l4_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 24
+    s0010tpscv12_eval_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 24
+    s0010tpscv16_eval_targeted_00:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 48
+sessions:
+- session_id: s0010tpscv6_train_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/sessions/s0010tpscv6_train_00
+  source_role: previously_opened_development
+  frame_count: 50
+  verification_sha256: c5dbe272f33d4e0a94f632df25afcb5188e00e84233e337b3a20f9aa4ff3016d
+- session_id: s0010tpscv6_train_01
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/sessions/s0010tpscv6_train_01
+  source_role: previously_opened_development
+  frame_count: 50
+  verification_sha256: 8b236f60eeae06408e1fe194851ce5894225182ae8498293e56eab280e65624c
+- session_id: s0010tpscv6_train_02
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/sessions/s0010tpscv6_train_02
+  source_role: previously_opened_development
+  frame_count: 50
+  verification_sha256: 595f109a37f449bbbe7167427e70c3d1b4e283d4f36327c8ac20984eefd7e1e3
+- session_id: s0010tpscv6_train_03
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/sessions/s0010tpscv6_train_03
+  source_role: previously_opened_development
+  frame_count: 50
+  verification_sha256: 59606738ab7fc2b5266d11f7f27f79a6f9dc09f063f669e92508b76cc7603ef7
+- session_id: s0010tpscv10_train_l4_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10/51831979/sessions/s0010tpscv10_train_l4_00
+  source_role: previously_opened_development
+  frame_count: 42
+  verification_sha256: c96ae33b31deffaa06c20fa48a05eb23bb86a982061363a49424f19b2afac9b5
+- session_id: s0010tpscv10_train_l5_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10/51831979/sessions/s0010tpscv10_train_l5_00
+  source_role: previously_opened_development
+  frame_count: 72
+  verification_sha256: 0259d9e7b3bf9016f078adba3bed68585ee5ca2f9fa0e84d47a5290184c381de
+- session_id: s0010tpscv12_train_targeted_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_targeted_supplement_v1/51992814/sessions/s0010tpscv12_train_targeted_00
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: 74f43cba360dfb15890a7eb75a78b22770ab697debc4f89ca036a92f7f11b035
+- session_id: s0010tpscv13_train_targeted_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v1/52007784/sessions/s0010tpscv13_train_targeted_00
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: 2a02d639ae5eef05a1a13e4523e12888f4b5d0f79b1a241b73dd6c9244cdafd1
+- session_id: s0010tpscv15_train_targeted_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v3/52008931/sessions/s0010tpscv15_train_targeted_00
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: 20a130a03733cb35d35c975c0f7f2bf1bb25d56e91ab1e91d9930af64a2a7563
+- session_id: s0010tpscv16_train_targeted_00
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/sessions/s0010tpscv16_train_targeted_00
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: 09cebd5fb9bffec9415c2845ebc24485f465da68c39a68bc85a6cca0e33c0b0f
+- session_id: s0010tpscv16_train_targeted_01
+  split: train
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/sessions/s0010tpscv16_train_targeted_01
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: 8a1fddf18534247df4199984011c27cc7d0865258e29da310e4106bb11dd935f
+- session_id: s0010tpscv6_cal_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/sessions/s0010tpscv6_cal_00
+  source_role: previously_opened_development
+  frame_count: 50
+  verification_sha256: dea512e0b5a626762f9491a00a8b41e443158014af415740dca561a04454dfc7
+- session_id: s0010tpscv8_cal_l4_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v8/51817719/sessions/s0010tpscv8_cal_l4_00
+  source_role: previously_opened_development
+  frame_count: 24
+  verification_sha256: a9afac1a04799cf162c48b42d4509c2971437ff8f0b1d368ae90e119828afecd
+- session_id: s0010tpscv10_cal_l5_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v10/51831979/sessions/s0010tpscv10_cal_l5_00
+  source_role: previously_opened_development
+  frame_count: 36
+  verification_sha256: ed863f65272b6679daf3130a12ccec94956b37e13d959b1660858956579fa863
+- session_id: s0010tpscv12_cal_targeted_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_targeted_supplement_v1/51992814/sessions/s0010tpscv12_cal_targeted_00
+  source_role: previously_opened_development
+  frame_count: 24
+  verification_sha256: ded0265838814a53a992ed224eeb19c7a7bd557b63936f2f17ee5c56a5197c41
+- session_id: s0010tpscv16_cal_targeted_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/sessions/s0010tpscv16_cal_targeted_00
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: 1910315cd0e0d5b9a2ed67851ab349682ab22f8411f28d7b9a501227a3c6b81a
+- session_id: s0010tpscv6_dev_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v6/51811811/sessions/s0010tpscv6_dev_00
+  source_role: previously_opened_development
+  frame_count: 50
+  verification_sha256: 2ddd77c229ea6d17e43624b29cc6fbe3ee14866a2a01f6424cc5d2726a26a73a
+- session_id: s0010tpscv9_dev_l4_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_dataset_v9/51818619/sessions/s0010tpscv9_dev_l4_00
+  source_role: previously_opened_development
+  frame_count: 24
+  verification_sha256: f088a4720f0ef251cdef102a3e3d60ece9f44eca2f930e9024f8b5f7ef890dcd
+- session_id: s0010tpscv12_eval_targeted_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_targeted_supplement_v1/51992814/sessions/s0010tpscv12_eval_targeted_00
+  source_role: previously_opened_development
+  frame_count: 24
+  verification_sha256: b393023a5203d7a4539ad8a1fef1ff63fcc03897935e0caf32f2f4f9102c1ac4
+- session_id: s0010tpscv16_eval_targeted_00
+  split: calibration
+  source_session_path: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_tp_surface_core_proxy_l4_coverage_repair_v4/52009585/sessions/s0010tpscv16_eval_targeted_00
+  source_role: previously_opened_development
+  frame_count: 48
+  verification_sha256: a54c2cee50f1ddad7267a8ba724d368f984eafaf9f0e65770d2a3ff199a9b0d3
+label_gate:
+  alignment_tolerance_pixels: 4.0
+  minimum_surface_columns: 5
+  minimum_aligned_fraction: 0.4
+  minimum_aligned_run_columns: 5
+  maximum_median_distance_pixels: 4.0
+  minimum_local_gradient: 0.1
+  minimum_local_contrast: 0.02
+  minimum_posterior_shadow: 0.02
+  ambiguous_excluded_from_binary_targets: true
+  minimum_matched_acceptance_rate: 0.5
+  maximum_mismatched_false_alignment_rate: 0.1
+  minimum_correct_projection_ranking_rate: 0.7
+  require_projected_surface_for_matched_control: true
+change_policy:
+- Do not treat these previously opened sessions as independent holdout evidence.
+- Do not expose privileged geometry to classifier features.
+- Do not change label criteria after reading the generated results.
