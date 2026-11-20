@@ -107,11 +107,30 @@ def mask_count(proposal: PatchProposal, mask: np.ndarray) -> int:
 
 
 def alignment_for_track(
-    image: np.ndarray, proposal: PatchProposal, surface: np.ndarray
+    image: np.ndarray,
+    proposal: PatchProposal,
+    surface: np.ndarray,
+    tracks_by_id: dict[str, Any],
 ) -> correspondence.Alignment:
-    tracks = correspondence.track_bright_interfaces(image)
-    track = next(item for item in tracks if item.track_id == proposal.track_id)
+    track = tracks_by_id[proposal.track_id]
     return correspondence.track_alignment(image, track, surface)
+
+
+def best_alignment_from_tracks(
+    image: np.ndarray, tracks: list[Any], surface: np.ndarray
+) -> correspondence.Alignment:
+    if not tracks:
+        return correspondence.best_alignment(image, surface)
+    rows = [correspondence.track_alignment(image, track, surface) for track in tracks]
+    return max(
+        rows,
+        key=lambda row: (
+            row.passes,
+            row.longest_aligned_run_columns,
+            row.aligned_fraction,
+            -row.median_distance_pixels,
+        ),
+    )
 
 
 def choose_candidate(rows: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
@@ -172,6 +191,7 @@ def main() -> int:
     raw_patches: list[np.ndarray] = []
     session_surfaces: dict[tuple[str, int, str], np.ndarray] = {}
     frame_images: dict[tuple[str, int], np.ndarray] = {}
+    frame_tracks: dict[tuple[str, int], list[Any]] = {}
     intended: dict[tuple[str, int], str] = {}
 
     for session_dir in sorted((args.run_root / "sessions").iterdir()):
@@ -194,6 +214,9 @@ def main() -> int:
         for frame_sequence, image in enumerate(images):
             frame_key = (session_dir.name, frame_sequence)
             frame_images[frame_key] = image
+            tracks = correspondence.track_bright_interfaces(image)
+            frame_tracks[frame_key] = tracks
+            tracks_by_id = {track.track_id: track for track in tracks}
             intended[frame_key] = intended_level(protocol, frame_sequence)
             projections: dict[str, dict[str, np.ndarray]] = {}
             for level in LEVELS:
@@ -230,7 +253,10 @@ def main() -> int:
                     if not np.array_equal(feature, proposal.feature):
                         raise AssertionError("production feature path mismatch")
                     alignment = alignment_for_track(
-                        image, proposal, projections[level]["surface"]
+                        image,
+                        proposal,
+                        projections[level]["surface"],
+                        tracks_by_id,
                     )
                     surface_count = mask_count(proposal, projections[level]["surface"])
                     pseudo_count = mask_count(proposal, projections[level]["pseudo"])
@@ -328,8 +354,8 @@ def main() -> int:
     for level in LEVELS:
         target_keys = [key for key, value in intended.items() if value == level]
         matched = [
-            correspondence.best_alignment(
-                frame_images[key], session_surfaces[(*key, level)]
+            best_alignment_from_tracks(
+                frame_images[key], frame_tracks[key], session_surfaces[(*key, level)]
             )
             for key in target_keys
         ]
@@ -337,8 +363,9 @@ def main() -> int:
         ranking_wins = 0
         for key, matched_alignment in zip(target_keys, matched):
             controls = [
-                correspondence.best_alignment(
+                best_alignment_from_tracks(
                     frame_images[key],
+                    frame_tracks[key],
                     session_surfaces[(*key, "L5" if level == "L4" else "L4")],
                 )
             ]
@@ -348,8 +375,8 @@ def main() -> int:
                 if other[0] != key[0]
             ][:5]
             controls.extend(
-                correspondence.best_alignment(
-                    frame_images[key], session_surfaces[(*other, level)]
+                best_alignment_from_tracks(
+                    frame_images[key], frame_tracks[key], session_surfaces[(*other, level)]
                 )
                 for other in distinct
             )
