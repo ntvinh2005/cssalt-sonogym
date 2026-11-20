@@ -97,6 +97,16 @@ def intended_level(
     raise ValueError(f"frame {frame_sequence} has no frozen target level")
 
 
+def session_directory(session: dict[str, Any], run_root: Path) -> Path:
+    source = session.get("source_session_path")
+    if source is None:
+        return run_root / "sessions" / session["session_id"]
+    path = Path(str(source))
+    if not path.is_absolute():
+        raise ValueError("source_session_path must be absolute")
+    return path
+
+
 def patch_bounds(proposal: PatchProposal) -> tuple[int, int, int, int]:
     spec = UNITY_REFERENCE_PATCH_SPEC
     column_start = int(round(proposal.column - spec.width_pixels / 2.0))
@@ -212,7 +222,7 @@ def main() -> int:
     for session in protocol["sessions"]:
         if session["split"] not in phase_splits:
             continue
-        session_dir = args.run_root / "sessions" / session["session_id"]
+        session_dir = session_directory(session, args.run_root)
         required_paths = (
             session_dir / "verification_report.json",
             session_dir / "public/ultrasound.npz",

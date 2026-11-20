@@ -6,6 +6,7 @@ import importlib.util
 import sys
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
 WORKFLOW_DIR = Path(__file__).resolve().parents[1] / "workflows/two_stage_navigation"
@@ -32,6 +33,33 @@ class SapDatasetTests(unittest.TestCase):
         self.assertEqual(MODULE.intended_level(protocol, 20), "L5")
         with self.assertRaises(ValueError):
             MODULE.intended_level(protocol, 40)
+
+    def test_session_directory_accepts_only_explicit_absolute_archives(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(
+                MODULE.session_directory({"session_id": "session"}, root),
+                root / "sessions/session",
+            )
+            archived = root / "archived/session"
+            self.assertEqual(
+                MODULE.session_directory(
+                    {
+                        "session_id": "session",
+                        "source_session_path": str(archived),
+                    },
+                    root,
+                ),
+                archived,
+            )
+            with self.assertRaisesRegex(ValueError, "must be absolute"):
+                MODULE.session_directory(
+                    {
+                        "session_id": "session",
+                        "source_session_path": "relative/session",
+                    },
+                    root,
+                )
 
     def test_ambiguous_row_cannot_be_selected_as_binary_target(self) -> None:
         rows = [
