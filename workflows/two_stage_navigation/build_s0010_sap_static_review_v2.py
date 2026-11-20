@@ -237,14 +237,20 @@ def render_articulation_view(
     for geometry, color in ((lower, COLORS["lower"]), (upper, COLORS["upper"])):
         valid = face_areas(geometry["vertices"], geometry["faces"]) > 0.0
         faces = geometry["faces"][valid]
-        axis.add_collection3d(
-            Poly3DCollection(
-                geometry["vertices"][faces], facecolor=color, edgecolor="none", alpha=1.0
-            )
+        surface = Poly3DCollection(
+            geometry["vertices"][faces], facecolor=color, edgecolor="none", alpha=1.0
         )
+        surface.set_sort_zpos(-100000.0)
+        axis.add_collection3d(surface)
     vertices = lower["vertices"]
-    axis.scatter(*vertices[regions["core"]].T, s=13, c=COLORS["core"], alpha=0.95)
-    axis.scatter(*vertices[regions["uncertain"]].T, s=5, c=COLORS["uncertain"], alpha=0.70)
+    axis.scatter(
+        *vertices[regions["core"]].T, s=30, c=COLORS["core"], edgecolors="black",
+        linewidths=0.35, alpha=1.0, depthshade=False, zorder=20,
+    )
+    axis.scatter(
+        *vertices[regions["uncertain"]].T, s=12, c=COLORS["uncertain"], edgecolors="black",
+        linewidths=0.25, alpha=0.95, depthshade=False, zorder=19,
+    )
     if np.any(regions["neighbor"]):
         axis.scatter(*vertices[regions["neighbor"]].T, s=7, c=COLORS["neighbor"], alpha=0.9)
     candidate = vertices[lower["original"]]
