@@ -7,7 +7,7 @@ purpose: >-
   Evaluate provisional simulator proxy geometry offline and fail closed before MBB
   intervention when SAP, branch-specific target geometry or needle execution is unavailable.
 source:
-  implementation_commit: cb6e4140a8a41d8bc6986bb8ef065a4173322a8e
+  implementation_commit: 1a956f4718b28f94de36169ee30231b5edf0c900
   superseded_development_job: 52036845
   superseded_issue: one_of_sixteen_v2_fresh_returns_intersected_proxy_uncertainty
   upstream_sonogym: e67be58334d1a5274f0913af36f56e4b0b7ffe5a
