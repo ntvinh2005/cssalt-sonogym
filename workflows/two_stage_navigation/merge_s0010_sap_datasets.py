@@ -197,6 +197,11 @@ def main() -> int:
         "counts": counts,
         "correspondence": correspondence,
         "readiness": readiness,
+        "incomplete_sessions": [
+            item
+            for source_report in reports
+            for item in source_report.get("incomplete_sessions", [])
+        ],
         "actor_feature_privileged_fields": [],
         "cross_split_exact_duplicate_count": 0,
     }

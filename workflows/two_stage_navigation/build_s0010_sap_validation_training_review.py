@@ -196,6 +196,8 @@ def main() -> int:
             )
     write_json(package / "01_EXAMPLE_INDEX.json", example_index)
     shutil.copy2(args.merged_dataset / "readiness_report.json", package / "02_DATASET_READINESS.json")
+    shutil.copy2(args.first_dataset / "readiness_report.json", package / "02A_INITIAL_DATASET_READINESS.json")
+    shutil.copy2(args.followup_dataset / "readiness_report.json", package / "02B_FOLLOWUP_DATASET_READINESS.json")
     shutil.copy2(args.merged_dataset / "sample_manifest.csv", package / "03_SAMPLE_MANIFEST.csv")
     if (args.training_dir / "training_result.json").exists():
         shutil.copy2(args.training_dir / "training_result.json", package / "04_TRAINING_RESULT.json")
@@ -227,6 +229,12 @@ def main() -> int:
                 f"- {level}: `{value['annotation_status']}`; dataset `{value['dataset_status']}`; blockers: {value['deficits'] or 'none'}.",
             ]
         )
+    if readiness.get("incomplete_sessions"):
+        lines.extend(["", "## Incomplete capture sessions", ""])
+        for item in readiness["incomplete_sessions"]:
+            lines.append(
+                f"- `{item['session_id']}` ({item['split']}): {item['reason']}"
+            )
     lines.extend(
         [
             "",
