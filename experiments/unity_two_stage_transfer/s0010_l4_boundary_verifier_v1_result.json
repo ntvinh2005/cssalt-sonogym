@@ -1,0 +1,93 @@
+{
+  "schema": "sonogym-s0010-l4-boundary-verifier-v1-result",
+  "job_id": "52054026",
+  "source_revision": "5a51de34e8efe4b24fe1b959d05287fd1c30c6db",
+  "status": "VERIFIER_INCONCLUSIVE",
+  "selected_threshold": 0.65,
+  "fit_rows": 129,
+  "fit_unique_images": 106,
+  "fit_state_counts": {
+    "PROXY_POSITIVE": 86,
+    "PROXY_AMBIGUOUS": 36,
+    "PROXY_NEGATIVE": 7
+  },
+  "fit_splits": ["train"],
+  "baseline_calibration": {
+    "images": 158,
+    "tp": 19,
+    "fp": 4,
+    "fn": 9,
+    "tn": 109,
+    "precision": 0.8260869565217391,
+    "recall": 0.6785714285714286,
+    "selected_ambiguous_images": 10,
+    "top1_selection_accuracy_when_positive_available": 0.5357142857142857
+  },
+  "candidate_calibration": {
+    "images": 158,
+    "tp": 18,
+    "fp": 1,
+    "fn": 10,
+    "tn": 112,
+    "precision": 0.9473684210526315,
+    "recall": 0.6428571428571429,
+    "selected_ambiguous_images": 1,
+    "top1_selection_accuracy_when_positive_available": 0.6428571428571429
+  },
+  "baseline_opened_development": {
+    "images": 151,
+    "tp": 25,
+    "fp": 4,
+    "fn": 6,
+    "tn": 97,
+    "precision": 0.8620689655172413,
+    "recall": 0.8064516129032258,
+    "selected_ambiguous_images": 12,
+    "top1_selection_accuracy_when_positive_available": 0.6774193548387096
+  },
+  "candidate_opened_development": {
+    "images": 151,
+    "tp": 18,
+    "fp": 0,
+    "fn": 13,
+    "tn": 101,
+    "precision": 1.0,
+    "recall": 0.5806451612903226,
+    "selected_ambiguous_images": 0,
+    "top1_selection_accuracy_when_positive_available": 0.5806451612903226
+  },
+  "v3_l4_sessions": 4,
+  "v3_actual_selected_proxy_states": {
+    "PROXY_POSITIVE": 3,
+    "PROXY_AMBIGUOUS": 1
+  },
+  "v3_actual_selected_verifier_pass_count": 0,
+  "v3_failed_session_positive_search_frames": {
+    "mbbpoc_v3_02": {
+      "all_geometry_positive": 12,
+      "actor_eligible_geometry_positive": 11,
+      "verifier_hindsight_state": "PROXY_POSITIVE"
+    },
+    "mbbpoc_v3_03": {
+      "all_geometry_positive": 11,
+      "actor_eligible_geometry_positive": 9,
+      "verifier_hindsight_state": "PROXY_AMBIGUOUS"
+    }
+  },
+  "independent_holdout_available": false,
+  "opened_development_is_independent": false,
+  "full_active_acquisition_success": "NOT_RUN",
+  "l5_modified": false,
+  "checkpoint_reload_verified": true,
+  "checkpoint_sha256": "5255574078695b8f3f2bdff03e44ec8889f8652cb28b4eec79feb72b3e31b02a",
+  "tests_passed": 12,
+  "tests_failed": 0,
+  "slurm_state": "COMPLETED",
+  "slurm_exit_code": "0:0",
+  "elapsed_seconds": 46,
+  "allocated_cpus": 4,
+  "requested_memory_gb": 16,
+  "gpu_count": 0,
+  "peak_rss_kb": 330260,
+  "artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4_boundary_verifier_v1/52054026/verifier"
+}

@@ -1,5 +1,34 @@
 # Setup status
 
+## 2026-11-19: SAP audit needs review; L4 verifier remains inconclusive
+
+CPU job `52053307` completed `0:0` at source revision `097fda3`. The fixed
+`s0010` assets contain whole L4/L5 vertebral meshes and labels, and exact-pose
+projection passed on 336 V3 frames with maximum coordinate disagreement
+`4.0528e-05` volume index. They do not contain separate SAP/facet semantics:
+all 2,198 L4 and 2,422 L5 SAP candidate vertices remain uncertain, no semantic
+training label or MBB surrogate coordinate was emitted, and the anatomy verdict
+is **`SAP_CANDIDATES_NEED_REVIEW`**.
+
+CPU job `52054026` completed `0:0` at source revision `5a51de3`. The image-only
+L4 verifier improved calibration precision from `0.8261` to `0.9474` and reduced
+false positives from four to one, but opened-development recall fell from
+`0.8065` to `0.5806`. V3 reconstruction confirms sufficient L4 search coverage
+in both failed sessions, but the verifier still cannot separate one session and
+would reject all four historically selected L4 views. With no unopened
+session-separated holdout or physical alternative return/confirmation, its
+verdict is **`VERIFIER_INCONCLUSIVE`** and active integration remains on hold.
+
+The project is not ready to construct branch-specific MBB surrogate targets or
+start a needle/injection simulator. No GPU, new capture, complete MBB rerun or
+intervention was executed.
+
+- Results: `experiments/unity_two_stage_transfer/s0010_sap_geometry_audit_v1_result.json`
+  and `experiments/unity_two_stage_transfer/s0010_l4_boundary_verifier_v1_result.json`.
+- Report: `docs/research/sonogym_s0010_mbb_anatomy_verifier_investigation.md`.
+- Runtime: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_geometry_audit_v1/52053307/`
+  and `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4_boundary_verifier_v1/52054026/`.
+
 ## 2026-11-19: integrated fixed-s0010 MBB POC remains BLOCKED
 
 GPU job `52039283` completed `0:0` in 11 minutes 36 seconds with one NVIDIA L4,
