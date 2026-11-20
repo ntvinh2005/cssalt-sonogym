@@ -1,5 +1,32 @@
 # Setup status
 
+## 2026-11-20: SAP review V2 narrows paired-surface evidence but source semantics remain insufficient
+
+The CPU-only `s0010_right_l4l5_sap_review_v2` build completed at commit
+`7a91337e` with one CPU thread, zero GPUs, 51.27 seconds elapsed and 696,480
+KB peak RSS. Slurm was unavailable (`slurm3,slurm4 is DOWN`), so this bounded
+build ran on `login12` and records that execution mode explicitly; it is not
+reported as a scheduler job.
+
+All source STL zero-area faces were explained by repeated physical corners
+after integer-coordinate quantization. Separately reconstructed label surfaces
+have zero degenerate faces and remain aligned at the expected half-voxel-corner
+offset. The V2 paired-level review proposes 55 unique L4 and 77 unique L5
+surface locations while retaining 172 and 177 unique locations as uncertain;
+no location was assigned to likely non-SAP anatomy without source semantics.
+
+Both structures remain **`SOURCE_SEMANTICS_INSUFFICIENT`**. No archived L4
+intersection keeps the full proposed core at least 10 pixels inside the image;
+L5 has 65 such frames, but neither structure has independently confirmed SAP
+cortical visibility or semantic identity. The package passes 57/57 references,
+69/69 checksums, ZIP integrity, 7/7 focused tests and 15/15 final regression
+tests.
+
+- Result: `experiments/unity_two_stage_transfer/s0010_sap_static_review_v2_result.json`.
+- Report: `docs/research/sonogym_s0010_sap_semantic_boundary_correction_v2.md`.
+- ZIP: `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_static_review_v2/manual_20261120T0120/review_packages/s0010_right_l4l5_sap_review_v2.zip`.
+- ZIP SHA-256: `3a05422fbd3197274f56bc6b2539681eba22d4e9c8ba2fc880851fadc542ab80`.
+
 ## 2026-11-19: static RIGHT L4/L5 SAP review package is ready
 
 CPU job `52061219` completed `0:0` in 50 seconds with four CPUs, 16 GB

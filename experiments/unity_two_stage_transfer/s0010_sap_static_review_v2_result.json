@@ -1,0 +1,86 @@
+{
+  "anatomy_id": "s0010",
+  "execution": {
+    "cpus": 1,
+    "elapsed_seconds": 51.27,
+    "end_time": "2026-11-20T00:16:17-05:00",
+    "gpus": 0,
+    "host": "login12.ufhpc",
+    "maximum_resident_kb": 696480,
+    "mode": "bounded_login_cpu",
+    "reason_not_slurm": "Slurmctld(primary) at slurm3,slurm4 was DOWN",
+    "start_time": "2026-11-20T00:15:23-05:00"
+  },
+  "geometry_quality": {
+    "L3": {
+      "derived_faces": 17008,
+      "derived_zero_area_faces": 0,
+      "source_faces": 17008,
+      "source_unique_locations": 5511,
+      "source_vertex_records": 51024,
+      "source_zero_area_faces": 5986
+    },
+    "L4": {
+      "derived_faces": 16692,
+      "derived_zero_area_faces": 0,
+      "source_faces": 16696,
+      "source_unique_locations": 5310,
+      "source_vertex_records": 50088,
+      "source_zero_area_faces": 6076
+    },
+    "L5": {
+      "derived_faces": 16756,
+      "derived_zero_area_faces": 0,
+      "source_faces": 16756,
+      "source_unique_locations": 4990,
+      "source_vertex_records": 50268,
+      "source_zero_area_faces": 6776
+    },
+    "source_to_derived_maximum_index": 0.8660254037844386,
+    "spacing_mm": 1.5,
+    "zero_area_explanation": "Every measured zero-area source face has fewer than three unique physical corners after integer-coordinate quantization."
+  },
+  "package": {
+    "checksum_entries": 69,
+    "directory": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_static_review_v2/manual_20261120T0120/review_packages/s0010_right_l4l5_sap_review_v2",
+    "referenced_files": 57,
+    "ultrasound_examples": 10,
+    "validation_pass": true,
+    "zip_path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_static_review_v2/manual_20261120T0120/review_packages/s0010_right_l4l5_sap_review_v2.zip",
+    "zip_sha256": "3a05422fbd3197274f56bc6b2539681eba22d4e9c8ba2fc880851fadc542ab80",
+    "zip_size_bytes": 7348338
+  },
+  "schema": "sonogym-s0010-right-l4l5-sap-static-review-v2-result",
+  "source_revision": "7a91337e640757d5ded7a75d42e71b84d3974f8c",
+  "structures": {
+    "RIGHT_L4_SAP": {
+      "archived_intersecting_frames": 117,
+      "boundary_uncertain_raw_records": 1653,
+      "boundary_uncertain_unique_locations": 172,
+      "frames_with_core_at_least_10_pixels_inside_image": 0,
+      "likely_non_sap_neighbor_unique_locations": 0,
+      "proposed_core_raw_records": 545,
+      "proposed_core_unique_locations": 55,
+      "v1_candidate_raw_records": 2198,
+      "v1_candidate_unique_locations": 227,
+      "verdict": "SOURCE_SEMANTICS_INSUFFICIENT"
+    },
+    "RIGHT_L5_SAP": {
+      "archived_intersecting_frames": 123,
+      "boundary_uncertain_raw_records": 1668,
+      "boundary_uncertain_unique_locations": 177,
+      "frames_with_core_at_least_10_pixels_inside_image": 65,
+      "likely_non_sap_neighbor_unique_locations": 0,
+      "proposed_core_raw_records": 754,
+      "proposed_core_unique_locations": 77,
+      "v1_candidate_raw_records": 2422,
+      "v1_candidate_unique_locations": 254,
+      "verdict": "SOURCE_SEMANTICS_INSUFFICIENT"
+    }
+  },
+  "tests": {
+    "focused_package_tests": "7/7 pass",
+    "final_regression_tests": "15/15 pass",
+    "zip_integrity": "pass"
+  }
+}
