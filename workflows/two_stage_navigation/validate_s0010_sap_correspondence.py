@@ -30,6 +30,17 @@ FEATURES = (
     "posterior_shadow_median",
     "maximum_track_jump_pixels",
 )
+SHAPE_FEATURES = (
+    *FEATURES,
+    "projected_surface_columns",
+    "overlapping_surface_fraction",
+    "distance_p90_pixels",
+    "signed_distance_median_pixels",
+    "signed_distance_iqr_pixels",
+    "contour_slope_difference",
+    "track_row_span_pixels",
+    "surface_row_span_pixels",
+)
 RANDOM_SEED = 20261120
 MINIMUM_MATCHED_ACCEPTANCE = 0.50
 MAXIMUM_MISMATCHED_ACCEPTANCE = 0.10
@@ -49,8 +60,10 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def feature_matrix(rows: list[dict[str, str]]) -> np.ndarray:
-    matrix = np.asarray([[float(row[name]) for name in FEATURES] for row in rows])
+def feature_matrix(
+    rows: list[dict[str, str]], features: tuple[str, ...] = FEATURES
+) -> np.ndarray:
+    matrix = np.asarray([[float(row[name]) for name in features] for row in rows])
     return np.nan_to_num(matrix, nan=0.0, posinf=200.0, neginf=-200.0)
 
 
@@ -146,6 +159,7 @@ def main() -> int:
     parser.add_argument(
         "--estimator", choices=("logistic", "extra_trees"), default="logistic"
     )
+    parser.add_argument("--feature-set", choices=("basic", "shape"), default="basic")
     args = parser.parse_args()
     dataset = args.dataset_dir.resolve()
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
@@ -154,6 +168,7 @@ def main() -> int:
     all_rows = read_csv(input_path)
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    features = FEATURES if args.feature_set == "basic" else SHAPE_FEATURES
     results: dict[str, Any] = {}
     for level in LEVELS:
         rows = [row for row in all_rows if row["level"] == level]
@@ -172,9 +187,11 @@ def main() -> int:
             [row["comparison"] == "MATCHED" for row in calibration_rows], dtype=np.int64
         )
         estimator = make_estimator(args.estimator)
-        estimator.fit(feature_matrix(train_rows), train_labels)
-        train_scores = estimator.predict_proba(feature_matrix(train_rows))[:, 1]
-        calibration_scores = estimator.predict_proba(feature_matrix(calibration_rows))[:, 1]
+        estimator.fit(feature_matrix(train_rows, features), train_labels)
+        train_scores = estimator.predict_proba(feature_matrix(train_rows, features))[:, 1]
+        calibration_scores = estimator.predict_proba(
+            feature_matrix(calibration_rows, features)
+        )[:, 1]
         threshold, threshold_rows = select_threshold(train_labels, train_scores)
         train_result = rates(train_labels, train_scores, threshold or 1.0)
         calibration_result = rates(
@@ -201,13 +218,14 @@ def main() -> int:
             {
                 "schema": "s0010-sap-correspondence-development-v1",
                 "level": level,
-                "features": FEATURES,
+                "features": features,
                 "estimator": estimator,
                 "threshold": threshold,
                 "input_sha256": sha256(input_path),
                 "protocol_sha256": sha256(args.protocol),
                 "random_seed": RANDOM_SEED,
                 "estimator_name": args.estimator,
+                "feature_set": args.feature_set,
                 "evaluator_only": True,
             },
             checkpoint,
@@ -215,7 +233,9 @@ def main() -> int:
         reloaded = joblib.load(checkpoint)
         if not np.array_equal(
             calibration_scores,
-            reloaded["estimator"].predict_proba(feature_matrix(calibration_rows))[:, 1],
+            reloaded["estimator"].predict_proba(
+                feature_matrix(calibration_rows, features)
+            )[:, 1],
         ):
             raise AssertionError("checkpoint reload changed correspondence scores")
         results[level] = {
@@ -240,6 +260,7 @@ def main() -> int:
         "evaluator_only": True,
         "actor_feature_privileged_fields": [],
         "estimator_name": args.estimator,
+        "feature_set": args.feature_set,
         "criteria": {
             "minimum_matched_acceptance_rate": MINIMUM_MATCHED_ACCEPTANCE,
             "maximum_mismatched_acceptance_rate": MAXIMUM_MISMATCHED_ACCEPTANCE,

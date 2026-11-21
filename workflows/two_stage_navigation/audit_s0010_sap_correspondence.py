@@ -57,6 +57,14 @@ class Alignment:
     posterior_shadow_median: float
     maximum_track_jump_pixels: float
     passes: bool
+    projected_surface_columns: int = 0
+    overlapping_surface_fraction: float = 0.0
+    distance_p90_pixels: float = float("inf")
+    signed_distance_median_pixels: float = 0.0
+    signed_distance_iqr_pixels: float = 0.0
+    contour_slope_difference: float = 0.0
+    track_row_span_pixels: float = 0.0
+    surface_row_span_pixels: float = 0.0
 
 
 def normalized_image(image: np.ndarray) -> np.ndarray:
@@ -85,6 +93,8 @@ def track_alignment(
     surface_rows, surface_columns = np.where(surface_mask)
     unique_columns = np.unique(surface_columns)
     distances: list[float] = []
+    signed_distances: list[float] = []
+    nearest_surface_rows: list[int] = []
     track_rows: list[int] = []
     used_columns: list[int] = []
     for column in unique_columns:
@@ -94,7 +104,10 @@ def track_alignment(
         candidates = surface_rows[surface_columns == column]
         if not len(candidates):
             continue
-        distances.append(float(np.min(np.abs(candidates - row))))
+        nearest = int(candidates[int(np.argmin(np.abs(candidates - row)))])
+        distances.append(float(abs(nearest - row)))
+        signed_distances.append(float(row - nearest))
+        nearest_surface_rows.append(nearest)
         track_rows.append(row)
         used_columns.append(int(column))
     if not distances:
@@ -112,6 +125,8 @@ def track_alignment(
             False,
         )
     distance_array = np.asarray(distances)
+    signed_distance_array = np.asarray(signed_distances)
+    nearest_surface_rows_array = np.asarray(nearest_surface_rows, dtype=np.float64)
     used_columns_array = np.asarray(used_columns, dtype=np.int64)
     rows = np.asarray(track_rows, dtype=np.int64)
     aligned = distance_array <= ALIGNMENT_TOLERANCE_PIXELS
@@ -132,6 +147,20 @@ def track_alignment(
     contrast_median = float(np.median(local_contrast)) if local_contrast else 0.0
     shadow_median = float(np.median(posterior_shadow)) if posterior_shadow else 0.0
     median_distance = float(np.median(distance_array))
+    distance_p90 = float(np.quantile(distance_array, 0.90))
+    signed_distance_median = float(np.median(signed_distance_array))
+    signed_distance_iqr = float(
+        np.quantile(signed_distance_array, 0.75)
+        - np.quantile(signed_distance_array, 0.25)
+    )
+    if len(used_columns_array) >= 2:
+        track_slope = float(np.polyfit(used_columns_array, rows, 1)[0])
+        surface_slope = float(
+            np.polyfit(used_columns_array, nearest_surface_rows_array, 1)[0]
+        )
+    else:
+        track_slope = 0.0
+        surface_slope = 0.0
     passes = bool(
         len(used_columns_array) >= MINIMUM_SURFACE_COLUMNS
         and aligned_fraction >= MINIMUM_ALIGNED_FRACTION
@@ -154,6 +183,14 @@ def track_alignment(
         shadow_median,
         float(track.maximum_jump_pixels),
         passes,
+        len(unique_columns),
+        len(used_columns_array) / len(unique_columns) if len(unique_columns) else 0.0,
+        distance_p90,
+        signed_distance_median,
+        signed_distance_iqr,
+        abs(track_slope - surface_slope),
+        float(np.ptp(rows)) if len(rows) else 0.0,
+        float(np.ptp(nearest_surface_rows_array)) if len(nearest_surface_rows_array) else 0.0,
     )
 
 

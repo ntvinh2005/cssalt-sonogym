@@ -20,8 +20,6 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
 RUN="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_correspondence_cpu/$SLURM_JOB_ID"
 ARCHIVE="$RUN/dataset_archive"
-LOGISTIC="$RUN/logistic"
-EXTRA_TREES="$RUN/extra_trees"
 SELECTED="$RUN/selected"
 EXTERNAL="$RUN/opened_calibration_evaluation"
 PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_existing_capture_development_protocol_v3.yaml"
@@ -33,7 +31,7 @@ RESUME_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
-mkdir -p "$ARCHIVE" "$LOGISTIC" "$EXTRA_TREES" "$EXTERNAL" "$MPLCONFIGDIR"
+mkdir -p "$ARCHIVE" "$EXTERNAL" "$MPLCONFIGDIR"
 capture_cpu_run_context "$RUN"
 cp "$PROTOCOL" "${PROTOCOL%.yaml}.sha256" "$RESUME_PROTOCOL" "${RESUME_PROTOCOL%.yaml}.sha256" "$RUN/context/"
 
@@ -51,18 +49,25 @@ if [[ "$BUILDER_RC" -eq 1 ]]; then
     exit "$BUILDER_RC"
 fi
 
-for estimator in logistic extra_trees; do
-    output="$RUN/$estimator"
-    "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/validate_s0010_sap_correspondence.py" \
-        --dataset-dir "$ARCHIVE" --protocol "$PROTOCOL" --estimator "$estimator" \
-        --output-dir "$output" > "$output/stdout.json" 2> "$output/stderr.log"
-    echo "$?" > "$output/exit-code.txt"
+for feature_set in basic shape; do
+    for estimator in logistic extra_trees; do
+        name="${feature_set}_${estimator}"
+        output="$RUN/$name"
+        mkdir -p "$output"
+        "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/validate_s0010_sap_correspondence.py" \
+            --dataset-dir "$ARCHIVE" --protocol "$PROTOCOL" \
+            --feature-set "$feature_set" --estimator "$estimator" \
+            --output-dir "$output" > "$output/stdout.json" 2> "$output/stderr.log"
+        echo "$?" > "$output/exit-code.txt"
+    done
 done
 set -e
 
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/select_s0010_sap_correspondence_checkpoint.py" \
-    --candidate "$LOGISTIC/correspondence_validation.json" \
-    --candidate "$EXTRA_TREES/correspondence_validation.json" \
+    --candidate "$RUN/basic_logistic/correspondence_validation.json" \
+    --candidate "$RUN/basic_extra_trees/correspondence_validation.json" \
+    --candidate "$RUN/shape_logistic/correspondence_validation.json" \
+    --candidate "$RUN/shape_extra_trees/correspondence_validation.json" \
     --output-dir "$SELECTED" > "$RUN/selection-stdout.json"
 
 set +e

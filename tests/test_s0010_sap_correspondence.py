@@ -46,6 +46,9 @@ class SapCorrespondenceTests(unittest.TestCase):
         mismatch = MODULE.track_alignment(image, FakeTrack(), shifted)
         self.assertTrue(matched.passes)
         self.assertFalse(mismatch.passes)
+        self.assertEqual(matched.signed_distance_median_pixels, 0.0)
+        self.assertEqual(matched.distance_p90_pixels, 0.0)
+        self.assertGreater(mismatch.distance_p90_pixels, 4.0)
 
 
 if __name__ == "__main__":

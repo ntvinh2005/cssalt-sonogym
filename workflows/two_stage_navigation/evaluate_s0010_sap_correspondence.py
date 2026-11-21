@@ -22,12 +22,12 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def evaluate_level(
-    rows: list[dict[str, str]], estimator: Any, threshold: float
+    rows: list[dict[str, str]], estimator: Any, threshold: float, features: tuple[str, ...]
 ) -> tuple[dict[str, Any], np.ndarray]:
     labels = np.asarray(
         [row["comparison"] == "MATCHED" for row in rows], dtype=np.int64
     )
-    scores = estimator.predict_proba(validation.feature_matrix(rows))[:, 1]
+    scores = estimator.predict_proba(validation.feature_matrix(rows, features))[:, 1]
     summary = validation.rates(labels, scores, threshold)
     wins, total, ranking = validation.top_one_rate(rows, scores)
     by_comparison = validation.acceptance_by_comparison(rows, scores, threshold)
@@ -88,14 +88,18 @@ def main() -> int:
         bundle = joblib.load(checkpoint)
         if bundle.get("schema") != "s0010-sap-correspondence-development-v1":
             raise ValueError("unsupported correspondence checkpoint")
-        if not bundle.get("evaluator_only") or tuple(bundle.get("features", ())) != tuple(
-            validation.FEATURES
-        ):
+        features = tuple(bundle.get("features", ()))
+        if not bundle.get("evaluator_only") or features not in {
+            tuple(validation.FEATURES),
+            tuple(validation.SHAPE_FEATURES),
+        }:
             raise ValueError("correspondence checkpoint contract mismatch")
         threshold = bundle.get("threshold")
         if threshold is None:
             raise ValueError(f"frozen correspondence threshold is absent for {level}")
-        summary, scores = evaluate_level(rows, bundle["estimator"], float(threshold))
+        summary, scores = evaluate_level(
+            rows, bundle["estimator"], float(threshold), features
+        )
         summary.update(
             checkpoint=str(checkpoint.resolve()),
             checkpoint_sha256=validation.sha256(checkpoint),

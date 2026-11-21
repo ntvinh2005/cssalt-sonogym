@@ -38,7 +38,9 @@ class SapCorrespondenceEvaluationTests(unittest.TestCase):
             rows.append(row("session", frame, "MATCHED", 0.9))
             rows.append(row("session", frame, "OTHER_LEVEL", 0.1))
             rows.append(row("session", frame, "DISTINCT_POSE", 0.1))
-        summary, scores = evaluation.evaluate_level(rows, Estimator(), 0.5)
+        summary, scores = evaluation.evaluate_level(
+            rows, Estimator(), 0.5, evaluation.validation.FEATURES
+        )
         self.assertTrue(summary["calibration_gate_pass"])
         self.assertEqual(summary["calibration_top_one_wins"], 10)
         self.assertEqual(len(scores), 30)
@@ -49,7 +51,9 @@ class SapCorrespondenceEvaluationTests(unittest.TestCase):
             rows.append(row("session", frame, "MATCHED", 0.9))
             rows.append(row("session", frame, "OTHER_LEVEL", 0.1))
             rows.append(row("session", frame, "DISTINCT_POSE", 0.8))
-        summary, _ = evaluation.evaluate_level(rows, Estimator(), 0.5)
+        summary, _ = evaluation.evaluate_level(
+            rows, Estimator(), 0.5, evaluation.validation.FEATURES
+        )
         self.assertFalse(summary["calibration_gate_pass"])
 
 

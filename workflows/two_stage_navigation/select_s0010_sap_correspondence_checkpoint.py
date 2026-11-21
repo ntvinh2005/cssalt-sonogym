@@ -49,6 +49,7 @@ def main() -> int:
         shutil.copy2(source, destination)
         selected[level] = {
             "estimator_name": report["estimator_name"],
+            "feature_set": report["feature_set"],
             "development_calibration": report["levels"][level],
             "checkpoint": str(destination),
         }
