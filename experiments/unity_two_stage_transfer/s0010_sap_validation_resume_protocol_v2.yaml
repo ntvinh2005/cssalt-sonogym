@@ -1,0 +1,3377 @@
+protocol_id: sonogym-s0010-sap-validation-resume-v2
+status: PRE_GPU_FROZEN
+purpose: Collect session-separated SAP views around supported archived poses and clear
+  other-bone or background controls after the first resume capture remained sparse.
+source:
+  implementation_commit: 5d6bd2e3ee67e2ac3fe142b8eb5664986a79fb88
+  development_capture_job: 52129000
+  development_manifest_sha256: 08d8243d134b4ec05716ef9b321ea2a9220952b0dbceb5ee5fd30e89d8f54f29
+  target_selection: ranked_supported_frames_and_clear_controls_with_disjoint_pose_allocation
+  prediction_job: 52078067
+  prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  source_protocol: experiments/unity_two_stage_transfer/s0010_sap_validation_followup_protocol_v1.yaml
+  source_protocol_sha256: a54cefa1c54d9e2255a8f62179f7a0b48e5505186b108877a45ef085eafd6375
+  failed_capture_job: 52131349
+  failed_realized_translation_mm: 1.9915416010134313
+  failed_realized_orientation_deg: 0.33978825082979436
+  source_existing_capture_protocol: experiments/unity_two_stage_transfer/s0010_sap_existing_capture_development_protocol_v3.yaml
+  source_existing_capture_protocol_sha256: 018df8584a181f255b8d301e088d0b5a44d38e94746332d5173f334b754eeb22
+  source_dataset_manifest: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_correspondence_cpu/52189713/dataset_archive/sample_manifest.csv
+  source_dataset_manifest_sha256: 277e6768ca6612b006a741c7b5a14dd8c72f83eddd1ff7c21c44cb10c0e6b965
+  source_resume_protocol: experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v1.yaml
+  source_resume_protocol_sha256: 3460dd70dda759e3e68692ba1e253d8dd9113e27b971d291a54f941215f35425
+  prior_capture_job: 52182100
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  privileged_dataset_collection: true
+  runtime_classifier_geometry_access: false
+  stage3_authorized: false
+sampling:
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.2
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 150
+  maximum_total_action_steps_per_session: 12000
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  waypoint_level_order_by_session:
+    s0010sapval_train_06:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 20
+    - level: L5
+      start_index: 20
+      stop_index_exclusive: 40
+    s0010sapval_train_07:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 20
+    - level: L5
+      start_index: 20
+      stop_index_exclusive: 40
+    s0010sapval_calibration_03:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 30
+    - level: L5
+      start_index: 30
+      stop_index_exclusive: 60
+    s0010sapval_evaluation_04:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 20
+    - level: L5
+      start_index: 20
+      stop_index_exclusive: 40
+    s0010sapval_evaluation_05:
+    - level: L4
+      start_index: 0
+      stop_index_exclusive: 20
+    - level: L5
+      start_index: 20
+      stop_index_exclusive: 40
+  trajectory_start_frames_by_session:
+    s0010sapval_train_06:
+    - 0
+    - 2
+    - 4
+    - 6
+    - 8
+    - 10
+    - 12
+    - 14
+    - 16
+    - 18
+    - 20
+    - 22
+    - 24
+    - 26
+    - 28
+    - 30
+    - 32
+    - 34
+    - 36
+    - 38
+    s0010sapval_train_07:
+    - 0
+    - 2
+    - 4
+    - 6
+    - 8
+    - 10
+    - 12
+    - 14
+    - 16
+    - 18
+    - 20
+    - 22
+    - 24
+    - 26
+    - 28
+    - 30
+    - 32
+    - 34
+    - 36
+    - 38
+    s0010sapval_calibration_03:
+    - 0
+    - 2
+    - 4
+    - 6
+    - 8
+    - 10
+    - 12
+    - 14
+    - 16
+    - 18
+    - 20
+    - 22
+    - 24
+    - 26
+    - 28
+    - 30
+    - 32
+    - 34
+    - 36
+    - 38
+    - 40
+    - 42
+    - 44
+    - 46
+    - 48
+    - 50
+    - 52
+    - 54
+    - 56
+    - 58
+    s0010sapval_evaluation_04:
+    - 0
+    - 2
+    - 4
+    - 6
+    - 8
+    - 10
+    - 12
+    - 14
+    - 16
+    - 18
+    - 20
+    - 22
+    - 24
+    - 26
+    - 28
+    - 30
+    - 32
+    - 34
+    - 36
+    - 38
+    s0010sapval_evaluation_05:
+    - 0
+    - 2
+    - 4
+    - 6
+    - 8
+    - 10
+    - 12
+    - 14
+    - 16
+    - 18
+    - 20
+    - 22
+    - 24
+    - 26
+    - 28
+    - 30
+    - 32
+    - 34
+    - 36
+    - 38
+  physical_controller:
+    name: coupled_proportional_target
+    ratio:
+    - 0.02
+    - 0.02
+    - 0.6
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    s0010sapval_train_06:
+    - - 152.02676391601562
+      - 143.34327697753906
+      - 2.841294288635254
+    - - 163.224609375
+      - 135.0
+      - 2.8773398399353027
+    - - 151.40281677246094
+      - 142.04583740234375
+      - 2.837329387664795
+    - - 159.99549865722656
+      - 135.0
+      - 2.9189043045043945
+    - - 151.87356567382812
+      - 140.5644989013672
+      - 2.8095765113830566
+    - - 164.55908203125
+      - 135.0
+      - 2.9159746170043945
+    - - 154.76756286621094
+      - 142.64137268066406
+      - 2.8410441875457764
+    - - 148.3246307373047
+      - 139.140625
+      - 2.914586067199707
+    - - 153.28170776367188
+      - 141.36703491210938
+      - 2.8041036128997803
+    - - 149.2353973388672
+      - 145.02032470703125
+      - 2.799574851989746
+    - - 153.13052368164062
+      - 141.497802734375
+      - 2.8015568256378174
+    - - 143.0
+      - 135.0
+      - 2.8432352542877197
+    - - 162.08181762695312
+      - 135.0
+      - 2.889927387237549
+    - - 153.24481201171875
+      - 141.5946502685547
+      - 2.836888074874878
+    - - 149.5723419189453
+      - 143.72947692871094
+      - 2.813260316848755
+    - - 157.3478546142578
+      - 140.6582794189453
+      - 2.9000940322875977
+    - - 151.35411071777344
+      - 136.99588012695312
+      - 2.9270360469818115
+    - - 156.65771484375
+      - 135.0
+      - 2.9147348403930664
+    - - 143.0
+      - 135.0
+      - 2.8971822261810303
+    - - 163.6666717529297
+      - 135.0
+      - 2.9092154502868652
+    - - 151.1671600341797
+      - 131.88575744628906
+      - 2.9644458293914795
+    - - 159.0208740234375
+      - 135.5
+      - 2.8504230976104736
+    - - 144.6300048828125
+      - 130.4237823486328
+      - 2.8899176120758057
+    - - 160.9502716064453
+      - 126.17347717285156
+      - 2.8110125064849854
+    - - 145.43563842773438
+      - 131.24961853027344
+      - 2.9066100120544434
+    - - 150.42042541503906
+      - 135.5
+      - 2.917140483856201
+    - - 152.95425415039062
+      - 129.60755920410156
+      - 2.9139480590820312
+    - - 152.2315216064453
+      - 130.91896057128906
+      - 2.7873635292053223
+    - - 157.80068969726562
+      - 128.38870239257812
+      - 2.875596046447754
+    - - 156.0423583984375
+      - 135.5
+      - 2.824594020843506
+    - - 152.17135620117188
+      - 129.15065002441406
+      - 2.9740958213806152
+    - - 153.97813415527344
+      - 129.44248962402344
+      - 2.7974021434783936
+    - - 147.40768432617188
+      - 130.43589782714844
+      - 2.913435220718384
+    - - 143.0
+      - 132.6350860595703
+      - 2.8391153812408447
+    - - 158.72857666015625
+      - 129.14688110351562
+      - 2.865234613418579
+    - - 160.9024200439453
+      - 135.5
+      - 2.84542179107666
+    - - 162.6581573486328
+      - 135.5
+      - 2.915919780731201
+    - - 151.95535278320312
+      - 135.5
+      - 2.936706304550171
+    - - 147.7100372314453
+      - 135.5
+      - 2.8751418590545654
+    - - 155.02525329589844
+      - 135.5
+      - 2.7854981422424316
+    s0010sapval_train_07:
+    - - 153.55657958984375
+      - 141.51083374023438
+      - 2.8395369052886963
+    - - 162.19500732421875
+      - 135.0
+      - 2.8706958293914795
+    - - 153.03729248046875
+      - 141.36322021484375
+      - 2.8589658737182617
+    - - 159.14898681640625
+      - 140.1970672607422
+      - 2.9396884441375732
+    - - 152.98873901367188
+      - 140.0211944580078
+      - 2.833193778991699
+    - - 155.10997009277344
+      - 135.0
+      - 2.901545286178589
+    - - 155.5904083251953
+      - 139.6062774658203
+      - 2.8911540508270264
+    - - 146.8386688232422
+      - 142.58946228027344
+      - 2.9512338638305664
+    - - 154.07334899902344
+      - 141.62149047851562
+      - 2.80210542678833
+    - - 163.95204162597656
+      - 135.0
+      - 2.9115800857543945
+    - - 150.43685913085938
+      - 145.20436096191406
+      - 2.8397490978240967
+    - - 146.5328369140625
+      - 142.0267333984375
+      - 2.9359982013702393
+    - - 159.49024963378906
+      - 140.7613525390625
+      - 2.930119037628174
+    - - 152.3246307373047
+      - 139.140625
+      - 2.914586067199707
+    - - 157.28170776367188
+      - 141.36703491210938
+      - 2.8041036128997803
+    - - 152.40504455566406
+      - 135.0
+      - 2.916210412979126
+    - - 158.81674194335938
+      - 135.0
+      - 2.9109466075897217
+    - - 164.1538848876953
+      - 135.0
+      - 2.889037847518921
+    - - 148.85714721679688
+      - 135.0
+      - 2.799323320388794
+    - - 154.13453674316406
+      - 135.0
+      - 2.793062686920166
+    - - 143.0
+      - 132.99447631835938
+      - 2.8740460872650146
+    - - 159.05502319335938
+      - 135.5
+      - 2.8652682304382324
+    - - 143.0
+      - 134.74020385742188
+      - 2.8748579025268555
+    - - 146.95758056640625
+      - 130.58155822753906
+      - 2.917759656906128
+    - - 159.0522003173828
+      - 126.58656311035156
+      - 2.780088186264038
+    - - 148.2847137451172
+      - 132.41542053222656
+      - 2.9292263984680176
+    - - 160.88360595703125
+      - 135.5
+      - 2.8060221672058105
+    - - 143.0
+      - 132.10391235351562
+      - 2.8328425884246826
+    - - 161.32044982910156
+      - 135.5
+      - 2.8258063793182373
+    - - 149.18081665039062
+      - 130.83578491210938
+      - 2.9432942867279053
+    - - 164.22764587402344
+      - 128.58470153808594
+      - 2.8882126808166504
+    - - 162.70004272460938
+      - 126.74231719970703
+      - 2.8200416564941406
+    - - 155.01885986328125
+      - 129.75718688964844
+      - 2.90795636177063
+    - - 148.19691467285156
+      - 131.4539337158203
+      - 2.87125301361084
+    - - 156.2928924560547
+      - 128.09576416015625
+      - 2.835775852203369
+    - - 156.342529296875
+      - 135.5
+      - 2.818387746810913
+    - - 158.3739776611328
+      - 135.5
+      - 2.935915470123291
+    - - 143.0
+      - 135.5
+      - 2.836381435394287
+    - - 161.4199676513672
+      - 135.5
+      - 2.8311426639556885
+    - - 145.08543395996094
+      - 135.5
+      - 2.9203622341156006
+    s0010sapval_calibration_03:
+    - - 156.02676391601562
+      - 143.34327697753906
+      - 2.841294288635254
+    - - 159.5904083251953
+      - 139.6062774658203
+      - 2.8911540508270264
+    - - 155.40281677246094
+      - 142.04583740234375
+      - 2.837329387664795
+    - - 161.3478546142578
+      - 140.6582794189453
+      - 2.9000940322875977
+    - - 155.87356567382812
+      - 140.5644989013672
+      - 2.8095765113830566
+    - - 146.0102081298828
+      - 135.0
+      - 2.946265697479248
+    - - 157.13052368164062
+      - 141.497802734375
+      - 2.8015568256378174
+    - - 151.5230255126953
+      - 135.0
+      - 2.888479232788086
+    - - 157.24481201171875
+      - 141.5946502685547
+      - 2.836888074874878
+    - - 153.2353973388672
+      - 145.02032470703125
+      - 2.799574851989746
+    - - 158.76756286621094
+      - 142.64137268066406
+      - 2.8410441875457764
+    - - 155.35411071777344
+      - 136.99588012695312
+      - 2.9270360469818115
+    - - 156.98873901367188
+      - 140.0211944580078
+      - 2.833193778991699
+    - - 159.197265625
+      - 135.0
+      - 2.837233781814575
+    - - 153.5723419189453
+      - 143.72947692871094
+      - 2.813260316848755
+    - - 157.55657958984375
+      - 141.51083374023438
+      - 2.8395369052886963
+    - - 150.8386688232422
+      - 142.58946228027344
+      - 2.9512338638305664
+    - - 154.74574279785156
+      - 135.0
+      - 2.854276657104492
+    - - 158.75514221191406
+      - 135.0
+      - 2.9729228019714355
+    - - 160.8824005126953
+      - 135.0
+      - 2.886878490447998
+    - - 143.0
+      - 135.0
+      - 2.925518274307251
+    - - 157.03729248046875
+      - 141.36322021484375
+      - 2.8589658737182617
+    - - 154.43685913085938
+      - 145.20436096191406
+      - 2.8397490978240967
+    - - 150.5328369140625
+      - 142.0267333984375
+      - 2.9359982013702393
+    - - 163.14898681640625
+      - 140.1970672607422
+      - 2.9396884441375732
+    - - 159.81944274902344
+      - 135.0
+      - 2.9778785705566406
+    - - 161.1831817626953
+      - 135.0
+      - 2.855855941772461
+    - - 148.85232543945312
+      - 135.0
+      - 2.9283435344696045
+    - - 144.2826385498047
+      - 135.0
+      - 2.9205949306488037
+    - - 153.78404235839844
+      - 135.0
+      - 2.920719623565674
+    - - 162.43185424804688
+      - 126.16949462890625
+      - 2.809083938598633
+    - - 149.2870635986328
+      - 129.57028198242188
+      - 2.9274091720581055
+    - - 162.4848175048828
+      - 127.40803527832031
+      - 2.800687551498413
+    - - 163.2493133544922
+      - 135.5
+      - 2.9404985904693604
+    - - 150.28562927246094
+      - 128.54283142089844
+      - 2.8875067234039307
+    - - 163.9978485107422
+      - 124.42416381835938
+      - 2.8442585468292236
+    - - 164.9933319091797
+      - 135.5
+      - 2.890071392059326
+    - - 149.729248046875
+      - 131.39012145996094
+      - 2.884638547897339
+    - - 160.5140380859375
+      - 125.33104705810547
+      - 2.8105719089508057
+    - - 164.34109497070312
+      - 135.5
+      - 2.9082162380218506
+    - - 158.98968505859375
+      - 135.5
+      - 2.8503577709198
+    - - 149.88096618652344
+      - 135.5
+      - 2.8811118602752686
+    - - 158.0999298095703
+      - 129.52371215820312
+      - 2.9252371788024902
+    - - 155.6006317138672
+      - 130.24197387695312
+      - 2.7924513816833496
+    - - 143.88818359375
+      - 132.62213134765625
+      - 2.868192672729492
+    - - 147.88143920898438
+      - 129.3726806640625
+      - 2.897897958755493
+    - - 163.78053283691406
+      - 135.5
+      - 2.90645694732666
+    - - 160.13832092285156
+      - 135.5
+      - 2.8134875297546387
+    - - 159.32791137695312
+      - 128.40818786621094
+      - 2.8128747940063477
+    - - 161.8890380859375
+      - 124.35200500488281
+      - 2.7923121452331543
+    - - 153.8133544921875
+      - 127.65436553955078
+      - 2.8114888668060303
+    - - 143.0
+      - 131.45755004882812
+      - 2.8557615280151367
+    - - 165.5
+      - 126.55908966064453
+      - 2.823383331298828
+    - - 148.39309692382812
+      - 129.3560333251953
+      - 2.879255533218384
+    - - 156.95425415039062
+      - 129.60755920410156
+      - 2.9139480590820312
+    - - 143.8056640625
+      - 135.5
+      - 2.950528383255005
+    - - 146.81463623046875
+      - 135.5
+      - 2.8216490745544434
+    - - 152.46055603027344
+      - 135.5
+      - 2.84614634513855
+    - - 164.66702270507812
+      - 135.5
+      - 2.933743715286255
+    - - 159.43202209472656
+      - 135.5
+      - 2.8242850303649902
+    s0010sapval_evaluation_04:
+    - - 148.02676391601562
+      - 143.34327697753906
+      - 2.841294288635254
+    - - 154.2127227783203
+      - 135.0
+      - 2.8883535861968994
+    - - 147.40281677246094
+      - 142.04583740234375
+      - 2.837329387664795
+    - - 143.0
+      - 135.0
+      - 2.930332899093628
+    - - 147.87356567382812
+      - 140.5644989013672
+      - 2.8095765113830566
+    - - 145.2353973388672
+      - 145.02032470703125
+      - 2.799574851989746
+    - - 149.28170776367188
+      - 141.36703491210938
+      - 2.8041036128997803
+    - - 143.0
+      - 135.0
+      - 2.9479901790618896
+    - - 149.13052368164062
+      - 141.497802734375
+      - 2.8015568256378174
+    - - 163.49024963378906
+      - 140.7613525390625
+      - 2.930119037628174
+    - - 158.07334899902344
+      - 141.62149047851562
+      - 2.80210542678833
+    - - 144.3246307373047
+      - 139.140625
+      - 2.914586067199707
+    - - 149.24481201171875
+      - 141.5946502685547
+      - 2.836888074874878
+    - - 145.5723419189453
+      - 143.72947692871094
+      - 2.813260316848755
+    - - 153.3478546142578
+      - 140.6582794189453
+      - 2.9000940322875977
+    - - 151.04356384277344
+      - 135.0
+      - 2.9473817348480225
+    - - 146.69915771484375
+      - 135.0
+      - 2.945819139480591
+    - - 162.82046508789062
+      - 135.0
+      - 2.932816505432129
+    - - 157.14254760742188
+      - 135.0
+      - 2.82893967628479
+    - - 158.20030212402344
+      - 135.0
+      - 2.9325673580169678
+    - - 148.6300048828125
+      - 130.4237823486328
+      - 2.8899176120758057
+    - - 164.9502716064453
+      - 126.17347717285156
+      - 2.8110125064849854
+    - - 144.1212615966797
+      - 132.6350860595703
+      - 2.8391153812408447
+    - - 149.43563842773438
+      - 131.24961853027344
+      - 2.9066100120544434
+    - - 149.78485107421875
+      - 135.5
+      - 2.9043235778808594
+    - - 156.2315216064453
+      - 130.91896057128906
+      - 2.7873635292053223
+    - - 155.1671600341797
+      - 131.88575744628906
+      - 2.9644458293914795
+    - - 161.80068969726562
+      - 128.38870239257812
+      - 2.875596046447754
+    - - 158.3419952392578
+      - 134.71902465820312
+      - 2.939129590988159
+    - - 143.0
+      - 135.5
+      - 2.925100326538086
+    - - 156.17135620117188
+      - 129.15065002441406
+      - 2.9740958213806152
+    - - 157.97813415527344
+      - 129.44248962402344
+      - 2.7974021434783936
+    - - 151.40768432617188
+      - 130.43589782714844
+      - 2.913435220718384
+    - - 162.72857666015625
+      - 129.14688110351562
+      - 2.865234613418579
+    - - 146.51681518554688
+      - 132.99447631835938
+      - 2.8740460872650146
+    - - 151.0880584716797
+      - 135.5
+      - 2.9308600425720215
+    - - 160.28404235839844
+      - 135.5
+      - 2.912010669708252
+    - - 157.68603515625
+      - 135.5
+      - 2.8150599002838135
+    - - 143.0
+      - 135.5
+      - 2.876636266708374
+    - - 153.32176208496094
+      - 135.5
+      - 2.852591037750244
+    s0010sapval_evaluation_05:
+    - - 150.76756286621094
+      - 142.64137268066406
+      - 2.8410441875457764
+    - - 147.35411071777344
+      - 136.99588012695312
+      - 2.9270360469818115
+    - - 148.98873901367188
+      - 140.0211944580078
+      - 2.833193778991699
+    - - 155.14898681640625
+      - 140.1970672607422
+      - 2.9396884441375732
+    - - 149.55657958984375
+      - 141.51083374023438
+      - 2.8395369052886963
+    - - 143.0
+      - 142.58946228027344
+      - 2.9512338638305664
+    - - 149.03729248046875
+      - 141.36322021484375
+      - 2.8589658737182617
+    - - 143.0
+      - 135.0
+      - 2.854341983795166
+    - - 144.3643035888672
+      - 135.0
+      - 2.9562203884124756
+    - - 149.1551971435547
+      - 135.0
+      - 2.941584825515747
+    - - 151.5904083251953
+      - 139.6062774658203
+      - 2.8911540508270264
+    - - 146.43685913085938
+      - 145.20436096191406
+      - 2.8397490978240967
+    - - 143.0
+      - 142.0267333984375
+      - 2.9359982013702393
+    - - 155.49024963378906
+      - 140.7613525390625
+      - 2.930119037628174
+    - - 150.07334899902344
+      - 141.62149047851562
+      - 2.80210542678833
+    - - 160.1776580810547
+      - 135.0
+      - 2.848130941390991
+    - - 157.83590698242188
+      - 135.0
+      - 2.9525065422058105
+    - - 143.0
+      - 135.0
+      - 2.854708671569824
+    - - 143.0
+      - 135.0
+      - 2.9690065383911133
+    - - 147.09591674804688
+      - 135.0
+      - 2.8775017261505127
+    - - 152.2847137451172
+      - 132.41542053222656
+      - 2.9292263984680176
+    - - 163.0522003173828
+      - 126.58656311035156
+      - 2.780088186264038
+    - - 150.95758056640625
+      - 130.58155822753906
+      - 2.917759656906128
+    - - 162.8189239501953
+      - 135.5
+      - 2.9353902339935303
+    - - 163.32791137695312
+      - 128.40818786621094
+      - 2.8128747940063477
+    - - 153.2870635986328
+      - 129.57028198242188
+      - 2.9274091720581055
+    - - 158.33139038085938
+      - 134.443603515625
+      - 2.950204610824585
+    - - 164.27720642089844
+      - 135.5
+      - 2.883533239364624
+    - - 143.5363006591797
+      - 134.74020385742188
+      - 2.8748579025268555
+    - - 160.73196411132812
+      - 135.5
+      - 2.823762893676758
+    - - 153.18081665039062
+      - 130.83578491210938
+      - 2.9432942867279053
+    - - 165.5
+      - 128.58470153808594
+      - 2.8882126808166504
+    - - 165.5
+      - 126.74231719970703
+      - 2.8200416564941406
+    - - 159.01885986328125
+      - 129.75718688964844
+      - 2.90795636177063
+    - - 152.19691467285156
+      - 131.4539337158203
+      - 2.87125301361084
+    - - 160.2928924560547
+      - 128.09576416015625
+      - 2.835775852203369
+    - - 143.58946228027344
+      - 135.5
+      - 2.850114583969116
+    - - 154.76438903808594
+      - 135.5
+      - 2.914339303970337
+    - - 165.5
+      - 135.5
+      - 2.8781838417053223
+    - - 159.2923126220703
+      - 135.5
+      - 2.886232852935791
+  waypoint_tracking_margin:
+    label_resolution_mm: 1.5
+    required_translation_mm: 6.0
+    required_orientation_deg: 3.9
+  planned_waypoint_evidence_by_session:
+    s0010sapval_train_06:
+    - waypoint_index: 0
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_cal_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: 891029b2a221168200b2f940c3f5d8e3fe4b3f18e4848d7b56ed686da23d5033
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 1
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 29
+      source_frame_sha256: d8c9227ae4e13dd800b9f5d4b694fa890caaab4d44625f10ff52233ee49dd98d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 2
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 32
+      source_frame_sha256: 0a0852b83764f3514ff9aeb93c7fdc67d38919abcfc37d941b8a52e2bdc11722
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 3
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 39
+      source_frame_sha256: 67bd73a2d617c7eadc6ee9f96b63d6fa59ee2a44646f26b0ab84ff12d79f9ce9
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 4
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 46
+      source_frame_sha256: 4f8f31ddf42a0386d08c01aecaa90487e116465d0b0966ff82b524fa2da82b4c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 5
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 30
+      source_frame_sha256: e6ebc79e1f160b161590f71cbed0165d07adc1bb1b4d2386d0a1cb5b1743b659
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 6
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 46
+      source_frame_sha256: 759def35d09efb3ac0853ea6470bdfaa902f0cdd44bfbbf0d7c70cc86b3c6982
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 7
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 40
+      source_frame_sha256: 03c47b1a9ae9974f5eab6dfd28b9c4bae6203fe0956881a4d12956f02418ed8e
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 8
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: 45d03c6eecfea8d0a7fafcab6bb2b1572931d08f5ba5a6b99a14b1b308e3c48f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 9
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 12
+      source_frame_sha256: 4bc57b0f4bdde1d3e57fe677581b9bb67972623f71486ad9d5b430eb19ef3945
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 10
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: bc8ebf2ce3c74e0cab081e0226fe8b751ef7add41ca00b9d3df7cbd4aaf7d8c8
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 11
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 3
+      source_frame_sha256: ed987fb111aca1e5a0db5d343bb0d88994c568304b098127befb77cb0cc41d78
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 12
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 30
+      source_frame_sha256: a11ef83e13cabb2325152d1169929b3673b873031ff27884a04d053228650a0a
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 13
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 13
+      source_frame_sha256: 1e5bbadc50fcd6b88ed707f88c7f7a18f846a4a4eb9ab7e5f78672847006322f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 14
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 12
+      source_frame_sha256: 69b9e44d82c8b9960c0b6fc82a4f427a13879773a808fbf9d49c886b7429f3df
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 15
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 6
+      source_frame_sha256: 859cbbe7b1ea7298194adacfd8932d03aafe33d2ff386c1893b1940a99f0cea7
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 16
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 41
+      source_frame_sha256: 6180d336de1cf66d38b0a259d0e5a800fdb47809b0f23ea2e518bc3e205923d6
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 17
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 34
+      source_frame_sha256: 5e6caa9b420aba861fc5a3ff2f94d8dc2e0615be986e394a7db0f5e7b75be37d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 18
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 34
+      source_frame_sha256: 2978eb7e0b6d970005adb534e74e86876a16930a634565399d39245627e6fe43
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 19
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 30
+      source_frame_sha256: d51fcd033b80b62344cf52b74419ee589d9200cd4b1248126354e11dddee93f3
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 20
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 47
+      source_frame_sha256: 8c2cf39cde59d8a52b8b9feb16daaa84478f17871ac2b5be48e234eae53467c5
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 21
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 31
+      source_frame_sha256: 4444f18f5408dd014e58cbf4e218e8f608c8e60e2eb2042a4811657ab5aea1ac
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 22
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 46
+      source_frame_sha256: d71dd8563d3c7d8ac49ca5c4d4c4f29dce5d5a682320d0086cd4970f982c278b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 23
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 40
+      source_frame_sha256: 0812072ecb765aea48bf6443edc6abc88792bfce291785f5132214cfc63ec0f8
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 24
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 46
+      source_frame_sha256: 5f7b1b3274ad95384e77366c8382aeae5c5dbcb0139133cf0adb6e9a6657b9ee
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 25
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_cal_targeted_00
+      source_frame_sequence: 13
+      source_frame_sha256: e3463e9f662297348223090bdb1daeb55feb30202c9e32909f100689f84e41ef
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 26
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 14
+      source_frame_sha256: 828e0d4ad84758153cb684dfacdcefe8ebb78da74d2727f1292cd07abef3ca44
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 27
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 47
+      source_frame_sha256: 00c68bd0399fb89cbe6e685042b3c499cb010521ba30e22fc1221dd24892495d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 28
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 41
+      source_frame_sha256: 43687703a626bb1e8e374249a29e2011ad534e1e73171f19d04817b03e7a8762
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 29
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv15_train_targeted_00
+      source_frame_sequence: 41
+      source_frame_sha256: 1df3afdb6ebcb21d6c082456342699c17061f9df7906f2e1db0729a1a3668853
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 30
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 47
+      source_frame_sha256: 751b865513a133aeb1ec5c9cd36e38a1ef763fdb3ac838727fcbad7fe55af075
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 31
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 48
+      source_frame_sha256: 6cabf7e02842dc61696c1a52525a4f8b9b7835a5527862cbb924590e5b93be1c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 32
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 35
+      source_frame_sha256: d1d0695d20f86fdc083cadc936d95d3c6b311b1581f1f50b8a27f2ce4d515c2b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 33
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 51
+      source_frame_sha256: afe87830b82c1917bc1ee85253791d1b4e70b6650e000389a72df4d7d31aa74c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 34
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 48
+      source_frame_sha256: 73ee9d4bc5652ee864e710009b14ff7fb80bce1037c0825a940570ec368a2013
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 35
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 29
+      source_frame_sha256: 202d618294fd8922ef52f8ea9b52adb77def12024aa69a27a7b680dda4350f77
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 36
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_eval_targeted_00
+      source_frame_sequence: 15
+      source_frame_sha256: 1393bc561ed5187518f2379a00ef00c382a18adee6a312588a09d56d67bffa84
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 37
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_train_targeted_00
+      source_frame_sequence: 29
+      source_frame_sha256: 53eaf76eb71ed48634ec0a79f368a06d0f9501bc801348f3401eb4b6419b01c8
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 38
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_cal_targeted_00
+      source_frame_sequence: 47
+      source_frame_sha256: fd71ead98e1c5b877923878abd39fd70f71ac385850d8ac6b93f828d4df266e4
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 39
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 30
+      source_frame_sha256: bd483e0ec9e065c036f85737fb83b66e37ffc98f877e258164d70e2b3e5b1efd
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    s0010sapval_train_07:
+    - waypoint_index: 0
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 16
+      source_frame_sha256: 151293b2ded0e520d2401ccaf5a7bba409ea8a42bd784c31a110322a88de7fe4
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 1
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 29
+      source_frame_sha256: 4fc94a3d0542fad440e284ae412e4a7121ab7613a71da9361ef837a4a89b40c7
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 2
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 0
+      source_frame_sha256: 6fd3ad42ebf01b3fbdc6949ddf89cbd6f290000ea0535490744fc6e43cc6b73c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 3
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 12
+      source_frame_sha256: 6f7e693d7607b5db8594937236c60e2795c18b3d045a5e1bb49dc7a445799fac
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 4
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: e765888e8c2edbace77eb5c8efeae29ae8c1167ae0f5815dee4e08b201dea4c4
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 5
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 38
+      source_frame_sha256: 36beaa8fe3562425d91df5e90580a3c5ef35ca2f034007623079e6270e7db322
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 6
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 6
+      source_frame_sha256: 17fd2bf7ca8347ae760a164118aac9c898b3d38769e4b579e400185e28c39f58
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 7
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 18
+      source_frame_sha256: 9f6280abe8286b6c2aca800cc50da79b1d0f7923cfb561bac48e8ec6d102736b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 8
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 30
+      source_frame_sha256: b378613fe4fd31362dd23e2d0f84e8eea0b85f8bf23cd7007b85466aad6e7573
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 9
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 30
+      source_frame_sha256: c995956e33e297bad9c33c40a98e707820afd59613265a6fdd7bb7c6aaf43953
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 10
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 22
+      source_frame_sha256: fe1b62234e9fbc89a4ecc1e0229c36473e038439c719effc59d05b457244e77c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 11
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 18
+      source_frame_sha256: 08edb64ea27155fdda070cda547fe16e7b3402df2cf9c402e0242ab8d70ac92b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 12
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 44
+      source_frame_sha256: 49dedb461fd0008199d37c9dffcd5988a74b14346f88a20d0883d65fbc065954
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 13
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 40
+      source_frame_sha256: 03c47b1a9ae9974f5eab6dfd28b9c4bae6203fe0956881a4d12956f02418ed8e
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 14
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: 45d03c6eecfea8d0a7fafcab6bb2b1572931d08f5ba5a6b99a14b1b308e3c48f
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 15
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 7
+      source_frame_sha256: 4496fcf5d2daae36aacecefa950948448f222fee97d669d66e4a58b8ccbae1d2
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 16
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 62
+      source_frame_sha256: a81fee169a3be4875e925dfb4a33df134dfaddd3926cfda9147692ab6982e77b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 17
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 29
+      source_frame_sha256: 258aad496f522cabe78b4c159132c155353f5a9c82be998c5437766cdc40dbac
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 18
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 32
+      source_frame_sha256: 74c085083cea2c62012986f09f2ae65d55545ff57df47edfc513880f146193a7
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 19
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 28
+      source_frame_sha256: 0dccd4dd14352bf21ab269845f59c7f4f73fafa51268c76abaa68d719fd0ec84
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 20
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 46
+      source_frame_sha256: 3fd3b00deee2d9c367d199f31d60b05e48944b2428015197ed86d0af7fd59a2a
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 21
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 31
+      source_frame_sha256: 676c50f5c62c8822ed42ce1365bc020db4ee1b6b2a789e37f0dbd2dd1cb9521f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 22
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 45
+      source_frame_sha256: 4dc01d5e1070f750973b8e4c8b2cb524f73fdd6a86befa39bb757e6835ec7d64
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 23
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 21
+      source_frame_sha256: 34d9156d3d642c5c6a223c116153122948cae43ec3f248b53460b22e476c5c8f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 24
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 46
+      source_frame_sha256: ca90c27d568490bfa726bd8a5c79be2ef68a3b39e28e33a0082030eae1f68e5f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 25
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 47
+      source_frame_sha256: f2af36657d0ec52edbee584517ac41d955e778bd1b32855801acdadf667871c5
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 26
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 24
+      source_frame_sha256: 66994cecf8274726eadccac8ce9dd00b79248bbfcd66d341d8384e0d62a8f011
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 27
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 45
+      source_frame_sha256: b6dec0733cefd8023f0e938b84e1319c5d6752fc9e6f77a6d1239405e16a2863
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 28
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 24
+      source_frame_sha256: 78e6acc6d25009c7c23a0b1f006fd5599a2e469e6bb3c8c003de7125dbeae8bc
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 29
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 47
+      source_frame_sha256: ef5f35bb245471c150ed052c875899269d91889a247399513be8df9acefd8cbb
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 30
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 49
+      source_frame_sha256: 121d51d5d7f056f1b7597ae830cc897386fffd0faa6a40edd7574ac7f2131b71
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 31
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 12
+      source_frame_sha256: bdadd8fa1acaa084e81ac6a83c91b66709603cb2e0fb5c4b764c2ecb38c8ea57
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 32
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 9
+      source_frame_sha256: 88b38e32eeb9ea0254e7356d88b6b813c871ccd65ef2b6dc8a60929d07014c14
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 33
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 15
+      source_frame_sha256: 1d1f2a925e7a2757cea7a723ef619ff9be64720fda266473bb3c81b60a5bec2c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 34
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 54
+      source_frame_sha256: 08afc6640ed403d8881d35965442d54ca0025f8645823f9b279143803e835ea6
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 35
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 41
+      source_frame_sha256: 01c7b4d0b86f213c9e6ec849daf0a72ea80e59b321e3fa175ce8fa07dc12a641
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 36
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 6
+      source_frame_sha256: 23b0f9ffccb808713cc6fbcf79d2967ff2834e7782b4abb213d5df09ae7524b5
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 37
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 20
+      source_frame_sha256: df13cb466c8e59f50c975485d8ed4ce456f4e354f987b467fda154b6b2d7e73e
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 38
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 24
+      source_frame_sha256: eab8a50ef70947901f3fa27370ac089de5ac3e02306922ce65cc342f64897a77
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 39
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 18
+      source_frame_sha256: ebc0e2ea9b5a12f562eebf018b524a76bc5bb3983f42419fcf3c6ea614bece15
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    s0010sapval_calibration_03:
+    - waypoint_index: 0
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_cal_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: 891029b2a221168200b2f940c3f5d8e3fe4b3f18e4848d7b56ed686da23d5033
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 1
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 6
+      source_frame_sha256: 17fd2bf7ca8347ae760a164118aac9c898b3d38769e4b579e400185e28c39f58
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 2
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 32
+      source_frame_sha256: 0a0852b83764f3514ff9aeb93c7fdc67d38919abcfc37d941b8a52e2bdc11722
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 3
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 6
+      source_frame_sha256: 859cbbe7b1ea7298194adacfd8932d03aafe33d2ff386c1893b1940a99f0cea7
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 4
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 46
+      source_frame_sha256: 4f8f31ddf42a0386d08c01aecaa90487e116465d0b0966ff82b524fa2da82b4c
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 5
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 29
+      source_frame_sha256: 047b1c900f297919e3a21f153f47a2e27622efc9cd33498bfee5d7bebe5dc140
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 6
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: bc8ebf2ce3c74e0cab081e0226fe8b751ef7add41ca00b9d3df7cbd4aaf7d8c8
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 7
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 37
+      source_frame_sha256: cd790745baeb6baa49f684700428088fb71eea451f3b857c091fe38335ba45fc
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 8
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 13
+      source_frame_sha256: 1e5bbadc50fcd6b88ed707f88c7f7a18f846a4a4eb9ab7e5f78672847006322f
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 9
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 12
+      source_frame_sha256: 4bc57b0f4bdde1d3e57fe677581b9bb67972623f71486ad9d5b430eb19ef3945
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 10
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 46
+      source_frame_sha256: 759def35d09efb3ac0853ea6470bdfaa902f0cdd44bfbbf0d7c70cc86b3c6982
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 11
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 41
+      source_frame_sha256: 6180d336de1cf66d38b0a259d0e5a800fdb47809b0f23ea2e518bc3e205923d6
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 12
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: e765888e8c2edbace77eb5c8efeae29ae8c1167ae0f5815dee4e08b201dea4c4
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 13
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 29
+      source_frame_sha256: e03d970b5d1330634151f0d67c6bb4ad3858354e21817874c66d7f1815cb9826
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 14
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 12
+      source_frame_sha256: 69b9e44d82c8b9960c0b6fc82a4f427a13879773a808fbf9d49c886b7429f3df
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 15
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 16
+      source_frame_sha256: 151293b2ded0e520d2401ccaf5a7bba409ea8a42bd784c31a110322a88de7fe4
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 16
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 18
+      source_frame_sha256: 9f6280abe8286b6c2aca800cc50da79b1d0f7923cfb561bac48e8ec6d102736b
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 17
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 41
+      source_frame_sha256: dd10d6d4a1aa1e9874095d9373af72269fa516f9359bf8af6adae6c0ac235a0f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 18
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 31
+      source_frame_sha256: 9fab9971baafbaade21e49e7ed1a9b0537237a71add10a68ffe7267d60d0a3d1
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 19
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 30
+      source_frame_sha256: 091f38a6e3d2636f141dab14819d807a9adf344045a9918765a868d9dde5e6dc
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 20
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 34
+      source_frame_sha256: a162001f187a5908223814b07db92ffb030c784bbc42adec01fe4b6413d1c5cb
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 21
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 0
+      source_frame_sha256: 6fd3ad42ebf01b3fbdc6949ddf89cbd6f290000ea0535490744fc6e43cc6b73c
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 22
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 22
+      source_frame_sha256: fe1b62234e9fbc89a4ecc1e0229c36473e038439c719effc59d05b457244e77c
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 23
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 18
+      source_frame_sha256: 08edb64ea27155fdda070cda547fe16e7b3402df2cf9c402e0242ab8d70ac92b
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 24
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 12
+      source_frame_sha256: 6f7e693d7607b5db8594937236c60e2795c18b3d045a5e1bb49dc7a445799fac
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 25
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 31
+      source_frame_sha256: 4755f39776dd2d1d66583af282fade4f80ede79cf5cb5f17f7649b4c86c73140
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 26
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 29
+      source_frame_sha256: 88d3822b0fb2daadb8c69d249b593e4d1481c5bf142bcea5361f2411cadb5c00
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 27
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 3
+      source_frame_sha256: 7083635a777777ba7f2365e4eb78e6c15b580609214771e87c4d90907eff028c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 28
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 69
+      source_frame_sha256: 034a0fbd533b27a55f20f80187d9d5d4f9e1128073f67d97a8d0a28fbd5ae872
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 29
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 42
+      source_frame_sha256: 66d720c57d746bd9f7f8edceddd463cc2881f36dae40e4ef4b77e09d2735e8dd
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 30
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 28
+      source_frame_sha256: 4841c51906315be557f11ead276280ce5b88282d7bec39e204fac4bc174d0a1b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 31
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 6
+      source_frame_sha256: 4f70a0ede5d5a3d9b1f62c253e4e9756ae3903f3b55e39e7b79005e0ec390cb3
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 32
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 4
+      source_frame_sha256: 21efc0f6e24a199cc426bfe39c5a84b5a4b138299dcda47fd13f25fda5abf4fc
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 33
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv8_cal_l4_00
+      source_frame_sequence: 15
+      source_frame_sha256: 4b54faf089a5cfc7b3fea14492b05d7b6484d5e71234a6be49183b1eaa75cacf
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 34
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 19
+      source_frame_sha256: 6be24da74e78bb6c955eda09dd093491e2ef5718dfa7aed12bbb5be4ae93d528
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 35
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 50
+      source_frame_sha256: 5d2331a96cd432ac21a7a1823e47f688c050d5c604d62fff6a664ec11d4ff88c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 36
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv9_dev_l4_00
+      source_frame_sequence: 14
+      source_frame_sha256: 7d054a6bb89e3252f41fc484419bdc2338545fed18128cfdff00fb8438a85b79
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 37
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 71
+      source_frame_sha256: 590c305f819704807af38d0f2cb0c9fbd9951fa8b9ec94c1843c13cc474aa127
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 38
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 38
+      source_frame_sha256: b9d061bd2aa25fca13fd141386de4258600dab1ad29b38c7ec7c9ec9af1a72f5
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 39
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_train_targeted_00
+      source_frame_sequence: 27
+      source_frame_sha256: 471af16b016aa77fe3a8b85b74453b530d6cab0f374c2eded0c6d96869daab63
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 40
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv15_train_targeted_00
+      source_frame_sequence: 31
+      source_frame_sha256: c420f3255e2be81771635ce322285e72734979cff01736df56c5ef86634e2ee7
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 41
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 23
+      source_frame_sha256: 2078e40a7e95e9cbb8dd50513ff5ef7c0cb3cae386a9df59ce10deace1f660df
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 42
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 32
+      source_frame_sha256: cc2ce62bbaaf60f5849d6b9abbfe0697d10198e803ea0af15877efb76d7aeb53
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 43
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 8
+      source_frame_sha256: 652441f646176d3abcfc0ba21b8c60cb05cc716185f3995d1bc6d45c958a880e
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 44
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 2
+      source_frame_sha256: dcb98803f33ffc2e7e33c6750794edbc51d321f2f72652a7160d84600439125d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 45
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 67
+      source_frame_sha256: f375bb67cec27367fe8ef123d346642e7505cb2d64f46a8f80e67a31da984f1c
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 46
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 29
+      source_frame_sha256: 7c1b903a1ee7b8c32a47679840887c85af91670c267e654a1cbfb3faea4db650
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 47
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_cal_targeted_00
+      source_frame_sequence: 7
+      source_frame_sha256: 39f1a5ea8c9de4459720ff835443636c75467be873b390043d5df757fca3b55d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 48
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 33
+      source_frame_sha256: 628c5c0fe5440977161c169634c687f8dbf8e93ef567f7f8abd4cf3137b6200a
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 49
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 34
+      source_frame_sha256: 85d0d850321aa29877f3943442fd81ca03666a3a5c741cec258bd66ac003ba02
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 50
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 19
+      source_frame_sha256: 85ac4147d1b6eaf2ba409fb62f18914d806f6ce7cef331c627018f39f0b16a67
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 51
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 20
+      source_frame_sha256: f1f8e9862b4ba79688f74d17007dbd384af7d443b5c0aa2d8f58b2adc60876d6
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 52
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 11
+      source_frame_sha256: 8a666677d23da5b66d4fd7ae2f0babc92c6283069ff3123de2021ffe8dbf5e18
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 53
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 30
+      source_frame_sha256: 8fa66a3662247b0d751b5accc30fa7ef3eb56e2590a6e11e9d264d28066ade77
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 54
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 14
+      source_frame_sha256: 828e0d4ad84758153cb684dfacdcefe8ebb78da74d2727f1292cd07abef3ca44
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 55
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 23
+      source_frame_sha256: aa4075c9b77dcde676f70cfaaecba8b7e3aa734636d85a798cf7b2a4bdf12c74
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 56
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_cal_targeted_00
+      source_frame_sequence: 5
+      source_frame_sha256: 47f486b9fba9b9cef8fae92afd3538b01e8f9d4eb3f5541a38398c174a2b0435
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 57
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_eval_targeted_00
+      source_frame_sequence: 10
+      source_frame_sha256: de2f5b42aaad35b924144630cebb43caad528e182442e6675af52d301df1ccc6
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 58
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 29
+      source_frame_sha256: 029f9903378acc82bdd7e9bcd4d319e7c198d6395388e78e92c1c470df09c7df
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 59
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 7
+      source_frame_sha256: 23bcb1d9717b96994cbf81b3ea717ff95f40d5d0b8ec860de5f638740492ad9d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    s0010sapval_evaluation_04:
+    - waypoint_index: 0
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_cal_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: 891029b2a221168200b2f940c3f5d8e3fe4b3f18e4848d7b56ed686da23d5033
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 1
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 38
+      source_frame_sha256: 7b48e98e9f836fe3af172191f34c59761cb4b983d1458acdd2921fdd7811ce1d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 2
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 32
+      source_frame_sha256: 0a0852b83764f3514ff9aeb93c7fdc67d38919abcfc37d941b8a52e2bdc11722
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 3
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 35
+      source_frame_sha256: 9b65c29e21b1ada2512ce64251ef7d61422daba11c6b6922a6610bcc443f32c2
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 4
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 46
+      source_frame_sha256: 4f8f31ddf42a0386d08c01aecaa90487e116465d0b0966ff82b524fa2da82b4c
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 5
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 12
+      source_frame_sha256: 4bc57b0f4bdde1d3e57fe677581b9bb67972623f71486ad9d5b430eb19ef3945
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 6
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: 45d03c6eecfea8d0a7fafcab6bb2b1572931d08f5ba5a6b99a14b1b308e3c48f
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 7
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 35
+      source_frame_sha256: b4e7c1cf77139a85991dc5e24e2e169a21673a3691a50985ed7f4bfba740f0d6
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 8
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: bc8ebf2ce3c74e0cab081e0226fe8b751ef7add41ca00b9d3df7cbd4aaf7d8c8
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 9
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 44
+      source_frame_sha256: 49dedb461fd0008199d37c9dffcd5988a74b14346f88a20d0883d65fbc065954
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 10
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 30
+      source_frame_sha256: b378613fe4fd31362dd23e2d0f84e8eea0b85f8bf23cd7007b85466aad6e7573
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 11
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 40
+      source_frame_sha256: 03c47b1a9ae9974f5eab6dfd28b9c4bae6203fe0956881a4d12956f02418ed8e
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 12
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 13
+      source_frame_sha256: 1e5bbadc50fcd6b88ed707f88c7f7a18f846a4a4eb9ab7e5f78672847006322f
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 13
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 12
+      source_frame_sha256: 69b9e44d82c8b9960c0b6fc82a4f427a13879773a808fbf9d49c886b7429f3df
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 14
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 6
+      source_frame_sha256: 859cbbe7b1ea7298194adacfd8932d03aafe33d2ff386c1893b1940a99f0cea7
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 15
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 27
+      source_frame_sha256: 511006715ab663f92247f715bd649ea36581757f32c1c7b9529fb17bf0e9420d
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 16
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 1
+      source_frame_sha256: 7220266e57ef0397ca567c7326165ffa4e8f9b2ecb033480c469115e086b03a5
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 17
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 45
+      source_frame_sha256: 940fdf49111ab749e39b9fbffb27b2fd43cd8fab2a164bc2ee6dd203ddcc0b4b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 18
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 28
+      source_frame_sha256: a9b6a2936ab9090f45752fed5b1e6c88257ab768dc37e31e3f4839c2c81493b5
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 19
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 38
+      source_frame_sha256: 705b9c5c4e844aa59e928d670475d93cf75b4dadbb12a03e2af15d73365f8957
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 20
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 46
+      source_frame_sha256: d71dd8563d3c7d8ac49ca5c4d4c4f29dce5d5a682320d0086cd4970f982c278b
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 21
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 40
+      source_frame_sha256: 0812072ecb765aea48bf6443edc6abc88792bfce291785f5132214cfc63ec0f8
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 22
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 51
+      source_frame_sha256: afe87830b82c1917bc1ee85253791d1b4e70b6650e000389a72df4d7d31aa74c
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 23
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 46
+      source_frame_sha256: 5f7b1b3274ad95384e77366c8382aeae5c5dbcb0139133cf0adb6e9a6657b9ee
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 24
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 22
+      source_frame_sha256: 403bca27fa7cbcbe8a7e14e3ded0f2f686b3ce34e1e435dc4cf25d0e43d92fbb
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 25
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 47
+      source_frame_sha256: 00c68bd0399fb89cbe6e685042b3c499cb010521ba30e22fc1221dd24892495d
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 26
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 47
+      source_frame_sha256: 8c2cf39cde59d8a52b8b9feb16daaa84478f17871ac2b5be48e234eae53467c5
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 27
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 41
+      source_frame_sha256: 43687703a626bb1e8e374249a29e2011ad534e1e73171f19d04817b03e7a8762
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 28
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 6
+      source_frame_sha256: 40b15205d04eeb6fdf5c10fe806af9c8be83ee059f813346703cfebf27f919b6
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 29
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 19
+      source_frame_sha256: 76a230f06395ffac6333b5b764425caa9913b904bca482f9b4872bd7d4a6c673
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 30
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 47
+      source_frame_sha256: 751b865513a133aeb1ec5c9cd36e38a1ef763fdb3ac838727fcbad7fe55af075
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 31
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 48
+      source_frame_sha256: 6cabf7e02842dc61696c1a52525a4f8b9b7835a5527862cbb924590e5b93be1c
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 32
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 35
+      source_frame_sha256: d1d0695d20f86fdc083cadc936d95d3c6b311b1581f1f50b8a27f2ce4d515c2b
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 33
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 48
+      source_frame_sha256: 73ee9d4bc5652ee864e710009b14ff7fb80bce1037c0825a940570ec368a2013
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 34
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 46
+      source_frame_sha256: 3fd3b00deee2d9c367d199f31d60b05e48944b2428015197ed86d0af7fd59a2a
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 35
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 22
+      source_frame_sha256: 6c79163a35baaed3739dc2acabf22d56c15746d061ef78585440f001586947c2
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 36
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 15
+      source_frame_sha256: d256aa3f0185ff3fd2d189344170f54f0dffde976b7a60db63091718a4d1b3d0
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 37
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 16
+      source_frame_sha256: 8b76c04fbf8edf3ae68923c479f1a7521b63b3d51fc4a82c9a4352969fa11049
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 38
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv8_cal_l4_00
+      source_frame_sequence: 9
+      source_frame_sha256: 4e3d3ca16bd8b4b12d2bd4f6b746166ed084b9075efdb955ad4ab3fd88a26a17
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 39
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv9_dev_l4_00
+      source_frame_sequence: 17
+      source_frame_sha256: ab1b157b9feb54429999b6a73e9b9ba42ced7a7583a7b8e68f50aceaff25441b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    s0010sapval_evaluation_05:
+    - waypoint_index: 0
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 46
+      source_frame_sha256: 759def35d09efb3ac0853ea6470bdfaa902f0cdd44bfbbf0d7c70cc86b3c6982
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 1
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 41
+      source_frame_sha256: 6180d336de1cf66d38b0a259d0e5a800fdb47809b0f23ea2e518bc3e205923d6
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 2
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 14
+      source_frame_sha256: e765888e8c2edbace77eb5c8efeae29ae8c1167ae0f5815dee4e08b201dea4c4
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 3
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 12
+      source_frame_sha256: 6f7e693d7607b5db8594937236c60e2795c18b3d045a5e1bb49dc7a445799fac
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 4
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 16
+      source_frame_sha256: 151293b2ded0e520d2401ccaf5a7bba409ea8a42bd784c31a110322a88de7fe4
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 5
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 18
+      source_frame_sha256: 9f6280abe8286b6c2aca800cc50da79b1d0f7923cfb561bac48e8ec6d102736b
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 6
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 0
+      source_frame_sha256: 6fd3ad42ebf01b3fbdc6949ddf89cbd6f290000ea0535490744fc6e43cc6b73c
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 7
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_00
+      source_frame_sequence: 45
+      source_frame_sha256: 26b85523b718874d619a005a474def3dce3584c288f38a3d9cb8b01ca9a5ab64
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 8
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 43
+      source_frame_sha256: 6934d46fedac97962ad7e53baa12dcaabd15a9d48f8900a55b94ebb1320135dc
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 9
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 5
+      source_frame_sha256: c6dae2ea35f4baa8894db5fb287b8725b36f046f16f6b7ec6830c0926df5ac7b
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 10
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 6
+      source_frame_sha256: 17fd2bf7ca8347ae760a164118aac9c898b3d38769e4b579e400185e28c39f58
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 11
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 22
+      source_frame_sha256: fe1b62234e9fbc89a4ecc1e0229c36473e038439c719effc59d05b457244e77c
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 12
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 18
+      source_frame_sha256: 08edb64ea27155fdda070cda547fe16e7b3402df2cf9c402e0242ab8d70ac92b
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 13
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_00
+      source_frame_sequence: 44
+      source_frame_sha256: 49dedb461fd0008199d37c9dffcd5988a74b14346f88a20d0883d65fbc065954
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 14
+      level: L4
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_train_targeted_01
+      source_frame_sequence: 30
+      source_frame_sha256: b378613fe4fd31362dd23e2d0f84e8eea0b85f8bf23cd7007b85466aad6e7573
+      offset_index:
+      - -4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 15
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 29
+      source_frame_sha256: 4b9894491f36cc232d5034b184f2aa9497ea73c7254a0e817cf627af126e8a99
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 16
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 31
+      source_frame_sha256: ad1d8deb38da8c1498dca516ddad6b947e20c553008bb3c05556d2dcf8f8481e
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 17
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 55
+      source_frame_sha256: b25b0ebe2554b958836b6e7756b2b2ae1df68871e6b3b63ba651853fb7aa96e4
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 18
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_cal_00
+      source_frame_sequence: 35
+      source_frame_sha256: f4042c5ca925e71894075336b060692475cfe65bb1e57bb2d0e82f25fbb9fd74
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 19
+      level: L4
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 33
+      source_frame_sha256: ee97fbc7168cd334abb5d312376dc65356630c121fc17f0f1c3d2adeec5981c0
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 20
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_01
+      source_frame_sequence: 47
+      source_frame_sha256: f2af36657d0ec52edbee584517ac41d955e778bd1b32855801acdadf667871c5
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 21
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 46
+      source_frame_sha256: ca90c27d568490bfa726bd8a5c79be2ef68a3b39e28e33a0082030eae1f68e5f
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 22
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 21
+      source_frame_sha256: 34d9156d3d642c5c6a223c116153122948cae43ec3f248b53460b22e476c5c8f
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 23
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_cal_targeted_00
+      source_frame_sequence: 11
+      source_frame_sha256: ca737a5a3469ebeea7524100b9ef91ba8185abaa41bae808aea6f3fd4dafc6dd
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 24
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 33
+      source_frame_sha256: 628c5c0fe5440977161c169634c687f8dbf8e93ef567f7f8abd4cf3137b6200a
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 25
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 6
+      source_frame_sha256: 4f70a0ede5d5a3d9b1f62c253e4e9756ae3903f3b55e39e7b79005e0ec390cb3
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 26
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l4_00
+      source_frame_sequence: 16
+      source_frame_sha256: 89339d7e14731c5798abb6c6afc3abdf69510dda8fa969da353ac030d313f988
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 27
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv13_train_targeted_00
+      source_frame_sequence: 5
+      source_frame_sha256: 88c8c7da2db03a8dc63ea56da312657b6c82493551b1c03b9fc55d232549dd87
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 28
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_03
+      source_frame_sequence: 45
+      source_frame_sha256: 4dc01d5e1070f750973b8e4c8b2cb524f73fdd6a86befa39bb757e6835ec7d64
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 29
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv15_train_targeted_00
+      source_frame_sequence: 7
+      source_frame_sha256: 601dc1971b2e37e9ee3141006b61da802d3a6d04822ee6ec747b757e427d0ff9
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 30
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_train_02
+      source_frame_sequence: 47
+      source_frame_sha256: ef5f35bb245471c150ed052c875899269d91889a247399513be8df9acefd8cbb
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 31
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv6_dev_00
+      source_frame_sequence: 49
+      source_frame_sha256: 121d51d5d7f056f1b7597ae830cc897386fffd0faa6a40edd7574ac7f2131b71
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 32
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 12
+      source_frame_sha256: bdadd8fa1acaa084e81ac6a83c91b66709603cb2e0fb5c4b764c2ecb38c8ea57
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 33
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 9
+      source_frame_sha256: 88b38e32eeb9ea0254e7356d88b6b813c871ccd65ef2b6dc8a60929d07014c14
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 34
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_cal_l5_00
+      source_frame_sequence: 15
+      source_frame_sha256: 1d1f2a925e7a2757cea7a723ef619ff9be64720fda266473bb3c81b60a5bec2c
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 35
+      level: L5
+      planned_label: SAP_RELATED_CORTICAL_INTERFACE
+      not_a_training_label: true
+      source_session_id: s0010tpscv10_train_l5_00
+      source_frame_sequence: 54
+      source_frame_sha256: 08afc6640ed403d8881d35965442d54ca0025f8645823f9b279143803e835ea6
+      offset_index:
+      - 4.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 36
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_eval_targeted_00
+      source_frame_sequence: 9
+      source_frame_sha256: 5d2878049531dcc5018df06edb372bbf78c0d95de927bc36ecd54da8c5461d67
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 37
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv12_train_targeted_00
+      source_frame_sequence: 10
+      source_frame_sha256: 3f8a8ee28d0733f5059fbfda3fc89b05080daa529f423c6ba3a65e7e69d7d7b7
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 38
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_cal_targeted_00
+      source_frame_sequence: 5
+      source_frame_sha256: c74602a15539517178a44639a09d1ddae02c93a907d3beb26c3984c92bfa8528
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+    - waypoint_index: 39
+      level: L5
+      planned_label: OTHER_OR_BACKGROUND
+      not_a_training_label: true
+      source_session_id: s0010tpscv16_eval_targeted_00
+      source_frame_sequence: 31
+      source_frame_sha256: e0e4335cc72844ff8b2b87dcceb7a5598bd6768d4d4eb22ae3a5a368e7c8b26f
+      offset_index:
+      - 0.0
+      - 0.0
+      - 0.0
+sessions:
+- session_id: s0010sapval_train_06
+  split: train
+  seed: 2026112401
+  reset_id: s0010sapval_train_06
+  absolute_waypoint_bank_id: s0010sapval_train_06
+  expected_frame_count: 40
+- session_id: s0010sapval_train_07
+  split: train
+  seed: 2026112402
+  reset_id: s0010sapval_train_07
+  absolute_waypoint_bank_id: s0010sapval_train_07
+  expected_frame_count: 40
+- session_id: s0010sapval_calibration_03
+  split: calibration
+  seed: 2026112403
+  reset_id: s0010sapval_calibration_03
+  absolute_waypoint_bank_id: s0010sapval_calibration_03
+  expected_frame_count: 60
+- session_id: s0010sapval_evaluation_04
+  split: evaluation
+  seed: 2026112404
+  reset_id: s0010sapval_evaluation_04
+  absolute_waypoint_bank_id: s0010sapval_evaluation_04
+  expected_frame_count: 40
+- session_id: s0010sapval_evaluation_05
+  split: evaluation
+  seed: 2026112405
+  reset_id: s0010sapval_evaluation_05
+  absolute_waypoint_bank_id: s0010sapval_evaluation_05
+  expected_frame_count: 40
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 10.0
+    maximum_orientation_error_deg: 10.0
+    minimum_l4_visible_fraction: 0.05
+  quality:
+    visibility_normalization_fraction: 0.2
+dataset_gate:
+  require_all_expected_frames: true
+  minimum_distinct_frame_hashes_per_session: 40
+  minimum_distinct_frame_hashes_by_session:
+    s0010sapval_train_06: 40
+    s0010sapval_train_07: 40
+    s0010sapval_calibration_03: 60
+    s0010sapval_evaluation_04: 40
+    s0010sapval_evaluation_05: 40
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.9
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+label_gate:
+  alignment_tolerance_pixels: 4.0
+  minimum_surface_columns: 5
+  minimum_aligned_fraction: 0.4
+  minimum_aligned_run_columns: 5
+  maximum_median_distance_pixels: 4.0
+  minimum_local_gradient: 0.1
+  minimum_local_contrast: 0.02
+  minimum_posterior_shadow: 0.02
+  ambiguous_excluded_from_binary_targets: true
+  minimum_matched_acceptance_rate: 0.5
+  maximum_mismatched_false_alignment_rate: 0.1
+  minimum_correct_projection_ranking_rate: 0.7
+change_policy:
+- The planned label records coverage intent only and is not a training label.
+- Rebuild simulator-proxy labels from synchronized native coordinates after capture.
+- Do not inspect evaluation images before checkpoints and thresholds are frozen.
+- Do not expose privileged geometry to classifier features.
+- Preserve all earlier protocols and results as historical evidence.

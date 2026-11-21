@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import importlib.util
 import json
 import sys
@@ -188,6 +189,39 @@ class SapResumeProtocolV2Tests(unittest.TestCase):
         self.assertFalse(
             self.document()["scope"]["runtime_classifier_geometry_access"]
         )
+
+    def test_checked_in_protocol_is_sealed_and_preserves_split_counts(self) -> None:
+        path = (
+            ROOT
+            / "experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v2.yaml"
+        )
+        seal = path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), seal)
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(document["protocol_id"], "sonogym-s0010-sap-validation-resume-v2")
+        self.assertEqual(
+            sum(row["expected_frame_count"] for row in document["sessions"]), 220
+        )
+        splits = {row["session_id"]: row["split"] for row in document["sessions"]}
+        counts: dict[tuple[str, str, str], int] = {}
+        for session_id, rows in document["sampling"][
+            "planned_waypoint_evidence_by_session"
+        ].items():
+            for row in rows:
+                key = (splits[session_id], row["level"], row["planned_label"])
+                counts[key] = counts.get(key, 0) + 1
+        for level in MODULE.LEVELS:
+            self.assertEqual(
+                counts[("train", level, "SAP_RELATED_CORTICAL_INTERFACE")], 24
+            )
+            self.assertEqual(
+                counts[("calibration", level, "SAP_RELATED_CORTICAL_INTERFACE")],
+                18,
+            )
+            self.assertEqual(
+                counts[("evaluation", level, "SAP_RELATED_CORTICAL_INTERFACE")],
+                24,
+            )
 
 
 if __name__ == "__main__":

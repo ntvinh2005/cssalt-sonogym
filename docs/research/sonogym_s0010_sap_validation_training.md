@@ -4,16 +4,19 @@ This experiment validates simulator-proxy SAP-related cortical-interface labels 
 
 ## Result
 
-**RIGHT L5 passed the development annotation, dataset and calibration gates; RIGHT L4 remains blocked, and neither level has an independently acquired held-out result.**
+**Both levels remain scientifically inconclusive: the frozen RIGHT L5 classifier made no error on five clear held-out positives but the positive count and correspondence gates failed, while RIGHT L4 remains untrained.**
 
 | step | what was measured | criterion | measured | verdict |
 |---|---|---|---|---|
 | 1 | session-separated correspondence | matched at least 0.50; mismatch at most 0.10; top-1 at least 0.70 | L4: 0.40 / 0.1148 / 0.3778; L5: 0.6552 / 0.0747 / 0.7241 | L4 fail; L5 pass |
 | 2 | binary image eligibility | no retained negative image contains a non-negative actor proposal | 138 previously selected negative images excluded; 0 added | pass |
 | 3 | RIGHT L5 calibration | precision and recall at least 0.80; false-positive rate at most 0.20 | precision 13 / 14 (92.86%); recall 13 / 16 (81.25%); false positives 1 / 206 (0.49%) | pass |
-| 4 | session-disjoint held-out evaluation | at least two new reset sessions and at least 10 positive and 10 negative images per evaluated level | job `52181462` failed before acquisition; 0 images | not run |
+| 4 | session-disjoint held-out evaluation | at least two new reset sessions and at least 10 positive and 10 negative images per evaluated level | L5: 5 positive, 37 negative; L4: 2 positive, 35 negative | inconclusive |
+| 5 | review package | ZIP integrity and complete evidence accounting | 59 / 59 checksums; 1,889,607 bytes | pass |
+| 6 | correspondence alternatives on newer calibration | matched at least 0.50; mismatch at most 0.10; top-1 at least 0.70 | L4: 0.40 / 0.15 / 0.4667; L5: 0.5333 / 0.1667 / 0.2333 | fail |
+| 7 | focused data-completion preflight | split-disjoint poses, executable transitions, fail-closed integrity and actor/evaluator separation | 220 / 220 distinct planned poses; 58 / 58 tests | pass, capture not run |
 
-The L5 result supports a calibrated simulator-only candidate checkpoint. Active acquisition integration remains on hold until the frozen evaluation sessions are acquired and evaluated once.
+The existing checkpoint remains useful only as a simulator-development baseline. The next capture is frozen around supported poses and clear controls, but it requires a new GPU authorization because the previously approved one-job allowance was consumed by job `52182100`.
 
 ## 1. Correspondence validation — do image interfaces identify the matched pseudo-SAP projection?
 
@@ -323,3 +326,137 @@ Nothing was dropped from the declared compact package.
 |---|---|
 | `52182100/final_review/s0010_right_l4l5_sap_validation_training_review.zip` | compact final review artifact |
 | `52182100/final_review/s0010_right_l4l5_sap_validation_training_review/checksums.sha256` | internal integrity manifest |
+
+## 6. Correspondence alternatives — do small model or contour changes transfer to newer calibration?
+
+`workflows/two_stage_navigation/validate_s0010_sap_correspondence.py`, run by CPU jobs `52189713` and `52191101`. It compared the existing logistic and ExtraTrees estimators with the original and contour-extended alignment measurements, selected on previously opened archive calibration, then evaluated the frozen per-level choices once on `s0010sapval_calibration_02`.
+
+**Criterion.** Matched acceptance at least 0.50, mismatched acceptance at most 0.10, distinct-pose acceptance at most 0.10 and top-1 ranking at least 0.70; the criterion is unchanged from §1.
+
+### 6.1 Method
+
+- Training rows fit each candidate; archive calibration rows select one candidate per level.
+- `s0010sapval_calibration_02` is opened development evidence and is not a holdout.
+- No evaluation session, classifier checkpoint or actor feature was changed.
+- Failure on the newer calibration stops further post-hoc model and threshold changes.
+
+### 6.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| candidate run | job `52189713`, code `c98815f` | §6 |
+| frozen newer-calibration evaluation | job `52191101`, code `a668174` | §6 |
+| archive input | `s0010_sap_correspondence_cpu/52189713/dataset_archive` | §6 |
+| newer calibration input | `s0010_sap_validation_resume_v1/52182100/analysis_v2/dataset_calibration` | §6 |
+| resources | 4 CPUs, 16 GB requested, no GPU for each job | §6 |
+
+```bash
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env" \
+  hpg/jobs/s0010_sap_correspondence_improvement.sbatch
+
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_CORRESPONDENCE_SOURCE_JOB=52189713 \
+  hpg/jobs/s0010_sap_correspondence_opened_calibration.sbatch
+```
+
+| | value |
+|---|---:|
+| archive L4 calibration matched / mismatched | 45 / 270 |
+| archive L5 calibration matched / mismatched | 29 / 174 |
+| newer L4 calibration matched / mismatched | 30 / 180 |
+| newer L5 calibration matched / mismatched | 30 / 180 |
+| **final newer-calibration comparisons** | **420** |
+
+### 6.3 Results
+
+| level | archive-selected estimator and inputs | threshold | newer matched | newer mismatch | newer distinct pose | newer top-1 | verdict |
+|---|---|---:|---:|---:|---:|---:|---|
+| RIGHT L4 | ExtraTrees, contour-extended | 0.57 | 12 / 30 (40.00%) | 27 / 180 (15.00%) | 21 / 150 (14.00%) | 14 / 30 (46.67%) | fail |
+| RIGHT L5 | logistic, original | 0.705 | 16 / 30 (53.33%) | 30 / 180 (16.67%) | 30 / 150 (20.00%) | 7 / 30 (23.33%) | fail |
+
+**Verdict: fail for both levels; the archive gains did not transfer to the newer calibration.**
+
+### 6.4 Reading it
+
+- Local contour measurements improved archive L4 but did not control physically distinct projections in the newer session.
+- L5 retained matched acceptance but failed mismatch and ranking.
+- The failure supports changing pose and control coverage rather than another threshold or estimator adjustment on opened data.
+
+### 6.5 Files
+
+| file | contents |
+|---|---|
+| `52189713/selected/selection.json` | archive-only per-level candidate selection |
+| `52189713/opened_calibration_shape/evaluation/correspondence_validation.json` | frozen newer-calibration results |
+| `52189713/opened_calibration_shape/evaluation/correspondence_predictions.csv` | per-comparison scores and decisions |
+
+## 7. Data-completion preflight — is the next bounded capture executable and properly separated?
+
+`workflows/two_stage_navigation/generate_s0010_sap_validation_resume_protocol_v2.py`, run locally from Blue storage at commit `5d6bd2e`. It ranks supported archived frames and clear controls, expands only the positive neighborhoods, assigns disjoint planned poses to train, calibration and evaluation sessions, and writes a checksum-sealed protocol.
+
+**Criterion.** Every planned pose must be unique across splits; each adjacent transition must exceed the position or angle tracking margin; planned coverage must exceed the declared per-level image minimums before actual post-capture labeling; array and coordinate hashes must fail closed.
+
+### 7.1 Method
+
+- Supported archived frames are ranked by their frozen projection and clean-image alignment measurements.
+- Clear controls require zero candidate, uncertainty and other-level surface pixels in the selected patch.
+- Positive neighborhoods use fixed position or angle offsets; the planned label remains coverage intent, not a training label.
+- Exact labels are rebuilt only from synchronized native coordinates after capture.
+- Evaluation sessions remain unopened until training and calibration are frozen.
+
+### 7.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| implementation | commit `5d6bd2e3ee67e2ac3fe142b8eb5664986a79fb88` | §7 |
+| source manifest | `52189713/dataset_archive/sample_manifest.csv`, SHA-256 `277e6768ca6612b006a741c7b5a14dd8c72f83eddd1ff7c21c44cb10c0e6b965` | §7 |
+| protocol | `s0010_sap_validation_resume_protocol_v2.yaml`, SHA-256 `7d3a6c46f50f7123351a14daca69745bc44dfd13364d333eec7db391e1410a7a` | §7 |
+| resources used | bounded local manifest processing, no GPU | §7 |
+
+```bash
+PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$PWD/workflows/two_stage_navigation" \
+  "$SONOGYM_ENV_PREFIX/bin/python" \
+  workflows/two_stage_navigation/generate_s0010_sap_validation_resume_protocol_v2.py \
+  --source-existing-protocol experiments/unity_two_stage_transfer/s0010_sap_existing_capture_development_protocol_v3.yaml \
+  --source-dataset-dir "$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_correspondence_cpu/52189713/dataset_archive" \
+  --source-resume-protocol experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v1.yaml \
+  --implementation-commit 5d6bd2e3ee67e2ac3fe142b8eb5664986a79fb88 \
+  --output experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v2.yaml
+```
+
+| | value |
+|---|---:|
+| planned train images | 80 |
+| planned calibration images | 60 |
+| planned evaluation images | 80 |
+| duplicate planned poses across splits | 0 |
+| **final planned images** | **220** |
+
+### 7.3 Results
+
+| split / level | planned supported-pose neighborhoods | planned clear controls |
+|---|---:|---:|
+| train / L4 | 24 | 16 |
+| train / L5 | 24 | 16 |
+| calibration / L4 | 18 | 12 |
+| calibration / L5 | 18 | 12 |
+| evaluation / L4 | 24 | 16 |
+| evaluation / L5 | 24 | 16 |
+
+All 58 focused regression tests passed. The protocol seal, Python compilation, shell syntax and Git whitespace checks passed. Slurm `--test-only` accepted the 1-GPU, 4-CPU, 30-GB, 30-minute request and no job remained queued. The capture itself was not run.
+
+**Verdict: engineering preflight pass; scientific readiness remains pending actual capture and post-capture gates.**
+
+### 7.4 Reading it
+
+- Planned coverage is deliberately larger than the minimum because nearby poses can become ambiguous after actual acquisition.
+- The verifier now checks saved ultrasound, raw-label and coordinate-array hashes for SAP validation protocols rather than defaulting their coordinate hash status to true.
+- No GPU job was submitted because job `52182100` consumed the exact one-job authorization.
+
+### 7.5 Files
+
+| file | contents |
+|---|---|
+| `experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v2.yaml` | sealed five-session, 220-frame plan |
+| `workflows/two_stage_navigation/generate_s0010_sap_validation_resume_protocol_v2.py` | deterministic plan generator |
+| `tests/test_s0010_sap_validation_resume_protocol_v2.py` | split, pose, tracking-margin and actor/evaluator boundary checks |
+| `hpg/jobs/s0010_sap_validation_capture.sbatch` | opt-in capture entry point; not executed |
