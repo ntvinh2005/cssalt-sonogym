@@ -141,6 +141,75 @@ def plot_correspondence(paths: list[Path], output: Path) -> None:
     plt.close(fig)
 
 
+def split_integrity_summary(
+    development_rows: list[dict[str, str]], evaluation_rows: list[dict[str, str]]
+) -> dict[str, Any]:
+    """Audit exact image and session separation across all declared splits."""
+
+    rows = [*development_rows, *evaluation_rows]
+    hashes = {
+        split: {row["frame_sha256"] for row in rows if row["split"] == split}
+        for split in ("train", "calibration", "evaluation")
+    }
+    sessions = {
+        split: {row["session_id"] for row in rows if row["split"] == split}
+        for split in ("train", "calibration", "evaluation")
+    }
+    pairs = (("train", "calibration"), ("train", "evaluation"), ("calibration", "evaluation"))
+    return {
+        "exact_hash_overlap": {
+            f"{first}__{second}": sorted(hashes[first] & hashes[second])
+            for first, second in pairs
+        },
+        "session_overlap": {
+            f"{first}__{second}": sorted(sessions[first] & sessions[second])
+            for first, second in pairs
+        },
+        "unique_hash_counts": {key: len(value) for key, value in hashes.items()},
+        "session_counts": {key: len(value) for key, value in sessions.items()},
+    }
+
+
+def all_frame_coverage_summary(
+    *,
+    level: str,
+    proposal_rows: list[dict[str, str]],
+    sample_rows: list[dict[str, str]],
+    session_frame_counts: dict[str, int],
+    evaluation_level: dict[str, Any],
+) -> dict[str, Any]:
+    """Count no-proposal frames as abstentions rather than dropping them."""
+
+    level_proposals = [
+        row
+        for row in proposal_rows
+        if row["conditioned_level"] == level and row["split"] == "evaluation"
+    ]
+    proposal_hashes = {row["frame_sha256"] for row in level_proposals}
+    clear_hashes = {
+        row["frame_sha256"]
+        for row in sample_rows
+        if row["conditioned_level"] == level and row["split"] == "evaluation"
+    }
+    acquired = sum(session_frame_counts.values())
+    proposal_bearing = len(proposal_hashes)
+    clear = len(clear_hashes)
+    abstained = acquired - clear
+    model_coverage = evaluation_level.get("all_frame_coverage", {})
+    return {
+        "acquired_frames": acquired,
+        "proposal_bearing_frames": proposal_bearing,
+        "no_actor_proposal_frames": acquired - proposal_bearing,
+        "clear_labeled_images": clear,
+        "ambiguous_proposal_bearing_images": proposal_bearing - clear,
+        "abstained_images": abstained,
+        "abstention_rate": abstained / acquired if acquired else 0.0,
+        "clear_label_coverage": clear / acquired if acquired else 0.0,
+        "ambiguous_activations": model_coverage.get("ambiguous_activations"),
+        "note": "No-proposal frames are abstentions and receive no classifier score.",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--first-dataset", type=Path, required=True)
@@ -192,6 +261,7 @@ def main() -> int:
     evaluation_proposal_rows = read_csv(
         args.evaluation_dataset / "proposal_manifest.csv"
     )
+    evaluation_sample_rows = read_csv(args.evaluation_dataset / "sample_manifest.csv")
     example_index = []
     for source, source_rows in (
         ("development", proposal_rows),
@@ -245,6 +315,29 @@ def main() -> int:
                 source = session / name
                 if source.exists():
                     shutil.copy2(source, capture_output / f"{session.name}_{name}")
+    split_integrity = split_integrity_summary(proposal_rows, evaluation_proposal_rows)
+    write_json(package / "07_SPLIT_INTEGRITY.json", split_integrity)
+    session_frame_counts: dict[str, int] = {}
+    if args.capture_root is not None:
+        evaluation_sessions = {
+            row["session_id"] for row in evaluation_proposal_rows
+        }
+        for session_id in sorted(evaluation_sessions):
+            summary = json.loads(
+                (args.capture_root / "sessions" / session_id / "summary.json").read_text()
+            )
+            session_frame_counts[session_id] = int(summary["frame_count"])
+    coverage = {
+        level: all_frame_coverage_summary(
+            level=level,
+            proposal_rows=evaluation_proposal_rows,
+            sample_rows=evaluation_sample_rows,
+            session_frame_counts=session_frame_counts,
+            evaluation_level=evaluation.get("levels", {}).get(level, {}),
+        )
+        for level in LEVELS
+    }
+    write_json(package / "08_ALL_FRAME_COVERAGE.json", coverage)
     checkpoints = sorted(args.training_dir.glob("s0010_*_sap_classifier_v1.joblib"))
     for checkpoint in checkpoints:
         shutil.copy2(checkpoint, package / checkpoint.name)
@@ -286,6 +379,18 @@ def main() -> int:
         lines.append(
             f"  Held-out: `{evaluated.get('status', 'NOT_RUN')}`; "
             f"deficits: {evaluated.get('deficits') or 'none'}."
+        )
+        metrics = evaluated.get("full_image_metrics")
+        if metrics is not None:
+            lines.append(
+                "  Descriptive clear-label confusion: "
+                f"TP={metrics['tp']}, FP={metrics['fp']}, FN={metrics['fn']}, "
+                f"TN={metrics['tn']}; not a PASS when the readiness gate fails."
+            )
+        lines.append(
+            f"  All-frame coverage: {coverage[level]['clear_labeled_images']}/"
+            f"{coverage[level]['acquired_frames']} clear; "
+            f"{coverage[level]['abstained_images']} abstained."
         )
     if readiness.get("incomplete_sessions"):
         lines.extend(["", "## Incomplete capture sessions", ""])
@@ -335,6 +440,8 @@ def main() -> int:
             checkpoint.name: file_sha256(checkpoint) for checkpoint in checkpoints
         },
         "evaluation_dataset_present": args.evaluation_dataset.exists(),
+        "split_integrity": split_integrity,
+        "all_frame_coverage": coverage,
     }
     write_json(package / "06_PROVENANCE.json", provenance)
     checksum_lines = []

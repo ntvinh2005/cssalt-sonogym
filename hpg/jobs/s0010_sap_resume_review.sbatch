@@ -32,16 +32,18 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_TH
 export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
 mkdir -p "$REVIEW" "$MPLCONFIGDIR"
 
-set +e
-"$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py" \
-    --dataset-dir "$ANALYSIS/dataset_evaluation" \
-    --training-dir "$ANALYSIS/frozen_checkpoints" \
-    --correspondence-validation "$ANALYSIS/evaluation_correspondence/correspondence_validation.json" \
-    --output "$HELDOUT" > "$ANALYSIS/heldout-final-stdout.json" \
-    2> "$ANALYSIS/heldout-final-stderr.log"
-EVALUATION_RC=$?
-set -e
-echo "$EVALUATION_RC" > "$ANALYSIS/heldout-final-exit-code.txt"
+if [[ ! -e "$HELDOUT" ]]; then
+    set +e
+    "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py" \
+        --dataset-dir "$ANALYSIS/dataset_evaluation" \
+        --training-dir "$ANALYSIS/frozen_checkpoints" \
+        --correspondence-validation "$ANALYSIS/evaluation_correspondence/correspondence_validation.json" \
+        --output "$HELDOUT" > "$ANALYSIS/heldout-final-stdout.json" \
+        2> "$ANALYSIS/heldout-final-stderr.log"
+    EVALUATION_RC=$?
+    set -e
+    echo "$EVALUATION_RC" > "$ANALYSIS/heldout-final-exit-code.txt"
+fi
 
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/build_s0010_sap_validation_training_review.py" \
     --first-dataset "$BASELINE/dataset_initial_v2" \
