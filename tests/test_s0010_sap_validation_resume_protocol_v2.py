@@ -241,6 +241,15 @@ class SapResumeProtocolV2Tests(unittest.TestCase):
         self.assertLess(training, evaluation)
         self.assertLess(evaluation, heldout)
 
+    def test_review_job_supports_v2_without_changing_v1_defaults(self) -> None:
+        script = (ROOT / "hpg/jobs/s0010_sap_resume_review.sbatch").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('${SAP_VALIDATION_PHASE:=resume_v1}', script)
+        self.assertIn("resume_v2)", script)
+        self.assertIn("s0010_sap_validation_resume_v2", script)
+        self.assertIn('HELDOUT="$ANALYSIS/heldout_evaluation.json"', script)
+
 
 if __name__ == "__main__":
     unittest.main()

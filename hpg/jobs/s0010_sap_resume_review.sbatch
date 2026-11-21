@@ -14,16 +14,30 @@ set -euo pipefail
 
 : "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported}"
 : "${SAP_RESUME_JOB:?SAP_RESUME_JOB must identify the completed frozen capture}"
+: "${SAP_VALIDATION_PHASE:=resume_v1}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common_cpu.sh
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
-CAPTURE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_resume_v1/$SAP_RESUME_JOB"
-ANALYSIS="$CAPTURE/analysis_v2"
+case "$SAP_VALIDATION_PHASE" in
+    resume_v1)
+        CAPTURE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_resume_v1/$SAP_RESUME_JOB"
+        ANALYSIS="$CAPTURE/analysis_v2"
+        HELDOUT="$ANALYSIS/heldout_evaluation_final.json"
+        ;;
+    resume_v2)
+        CAPTURE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_resume_v2/$SAP_RESUME_JOB"
+        ANALYSIS="$CAPTURE/analysis_v1"
+        HELDOUT="$ANALYSIS/heldout_evaluation.json"
+        ;;
+    *)
+        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE" >&2
+        exit 2
+        ;;
+esac
 BASELINE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_negative_image_gate_development_v1/52138127"
 REVIEW="$CAPTURE/final_review"
-HELDOUT="$ANALYSIS/heldout_evaluation_final.json"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
 LABELS="$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml"
