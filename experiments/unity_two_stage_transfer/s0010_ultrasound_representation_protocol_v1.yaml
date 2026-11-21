@@ -1,0 +1,67 @@
+protocol_id: sonogym-s0010-ultrasound-representation-v1
+scope:
+  patient_id: s0010
+  simulator_only: true
+  evaluation_sessions_previously_opened: true
+  independent_confirmation_claim_allowed: false
+  runtime_geometry_access: false
+  active_acquisition_integration: false
+inputs:
+  development_dataset: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_development_merged
+  evaluation_dataset: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_evaluation
+  frozen_l5_checkpoint: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_negative_image_gate_development_v1/52138127/training_v2/s0010_l5_sap_classifier_v1.joblib
+  frozen_l5_checkpoint_sha256: c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5
+representations:
+  - single
+  - causal
+actor_inputs:
+  - clean_ultrasound
+  - preceding_clean_ultrasound_in_same_trajectory
+  - executed_relative_translation
+  - executed_relative_rotation
+  - action_steps_since_previous_frame
+privileged_inputs_excluded_from_features:
+  - ct
+  - segmentation
+  - pseudo_sap_mask
+  - raw_label_slice
+  - pixel_to_volume_coordinates
+  - evaluator_target_coordinates
+feature_spec:
+  tracked_interfaces: 3
+  samples_per_interface: 12
+  thumbnail_rows: 12
+  thumbnail_columns: 12
+  intensity_normalization_quantiles: [0.05, 0.95]
+  preceding_observation_policy: immediately_preceding_observation_in_same_trajectory_only
+model:
+  family: ExtraTreesClassifier
+  trees: 240
+  class_weight: balanced
+  random_seed: 20261121
+  maximum_cpu_threads: 4
+selection:
+  fit_split: train
+  threshold_and_representation_split: calibration
+  evaluation_split: evaluation
+  threshold_grid: [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
+  minimum_precision: 0.80
+  minimum_recall: 0.80
+  maximum_false_positive_rate: 0.20
+  tie_break_order:
+    - gate_pass
+    - f1
+    - recall
+    - precision
+comparison:
+  frozen_l5_threshold: 0.55
+  primary_level: L5
+  l4_status: exploratory_due_to_seven_calibration_positives
+  better_representation_requires:
+    evaluation_false_positives_at_most_frozen_baseline: true
+    evaluation_recall_strictly_above_frozen_baseline: true
+    evaluation_f1_strictly_above_frozen_baseline: true
+  promising_requires:
+    calibration_gate_pass: true
+    evaluation_false_positives_at_most_frozen_baseline: true
+    evaluation_recall_or_f1_strictly_above_frozen_baseline: true
