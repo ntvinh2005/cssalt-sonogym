@@ -13,6 +13,7 @@ from typing import Any
 import joblib
 import numpy as np
 import yaml
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -117,11 +118,34 @@ def acceptance_by_comparison(
     return result
 
 
+def make_estimator(name: str) -> Any:
+    if name == "logistic":
+        return make_pipeline(
+            StandardScaler(),
+            LogisticRegression(
+                max_iter=2000,
+                class_weight="balanced",
+                random_state=RANDOM_SEED,
+            ),
+        )
+    if name == "extra_trees":
+        return ExtraTreesClassifier(
+            n_estimators=240,
+            class_weight="balanced",
+            random_state=RANDOM_SEED,
+            n_jobs=4,
+        )
+    raise ValueError(f"unsupported estimator: {name}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset-dir", type=Path, required=True)
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--estimator", choices=("logistic", "extra_trees"), default="logistic"
+    )
     args = parser.parse_args()
     dataset = args.dataset_dir.resolve()
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
@@ -147,14 +171,7 @@ def main() -> int:
         calibration_labels = np.asarray(
             [row["comparison"] == "MATCHED" for row in calibration_rows], dtype=np.int64
         )
-        estimator = make_pipeline(
-            StandardScaler(),
-            LogisticRegression(
-                max_iter=2000,
-                class_weight="balanced",
-                random_state=RANDOM_SEED,
-            ),
-        )
+        estimator = make_estimator(args.estimator)
         estimator.fit(feature_matrix(train_rows), train_labels)
         train_scores = estimator.predict_proba(feature_matrix(train_rows))[:, 1]
         calibration_scores = estimator.predict_proba(feature_matrix(calibration_rows))[:, 1]
@@ -190,6 +207,7 @@ def main() -> int:
                 "input_sha256": sha256(input_path),
                 "protocol_sha256": sha256(args.protocol),
                 "random_seed": RANDOM_SEED,
+                "estimator_name": args.estimator,
                 "evaluator_only": True,
             },
             checkpoint,
@@ -221,6 +239,7 @@ def main() -> int:
         "protocol_sha256": sha256(args.protocol),
         "evaluator_only": True,
         "actor_feature_privileged_fields": [],
+        "estimator_name": args.estimator,
         "criteria": {
             "minimum_matched_acceptance_rate": MINIMUM_MATCHED_ACCEPTANCE,
             "maximum_mismatched_acceptance_rate": MAXIMUM_MISMATCHED_ACCEPTANCE,

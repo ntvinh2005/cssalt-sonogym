@@ -22,6 +22,23 @@ SPEC.loader.exec_module(MODULE)
 
 
 class SapCorrespondenceValidationTests(unittest.TestCase):
+    def test_bounded_estimators_share_the_binary_probability_contract(self) -> None:
+        values = np.asarray(
+            [
+                [0.9] * len(MODULE.FEATURES),
+                [0.8] * len(MODULE.FEATURES),
+                [0.2] * len(MODULE.FEATURES),
+                [0.1] * len(MODULE.FEATURES),
+            ]
+        )
+        labels = np.asarray([1, 1, 0, 0], dtype=np.int64)
+        for name in ("logistic", "extra_trees"):
+            estimator = MODULE.make_estimator(name)
+            estimator.fit(values, labels)
+            scores = estimator.predict_proba(values)
+            self.assertEqual(scores.shape, (4, 2))
+            self.assertTrue(np.all(np.isfinite(scores)))
+
     def test_training_threshold_requires_both_error_gates(self) -> None:
         labels = np.asarray([1, 1, 0, 0], dtype=np.int64)
         scores = np.asarray([0.9, 0.8, 0.2, 0.1])
