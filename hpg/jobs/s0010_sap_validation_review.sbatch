@@ -20,7 +20,7 @@ source "$SONOGYM_CONFIG_FILE"
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
 RESULT_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_negative_image_gate_development_v1/$SAP_RESULT_JOB"
-REVIEW="$RESULT_ROOT/review_v2"
+REVIEW="$RESULT_ROOT/review_v3"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
 LABELS="$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml"
