@@ -14,7 +14,7 @@
 set -euo pipefail
 
 : "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported by the submit command}"
-: "${SAP_VALIDATION_PHASE:?SAP_VALIDATION_PHASE must be development, holdout, followup, or resume}"
+: "${SAP_VALIDATION_PHASE:?SAP_VALIDATION_PHASE must be development, holdout, followup, resume, or resume_v2}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common.sh
@@ -57,8 +57,19 @@ case "$SAP_VALIDATION_PHASE" in
             s0010sapval_evaluation_03
         )
         ;;
+    resume_v2)
+        PROTOCOL_BASENAME="s0010_sap_validation_resume_protocol_v2"
+        EXPERIMENT_BASENAME="s0010_sap_validation_resume_v2"
+        SESSIONS=(
+            s0010sapval_train_06
+            s0010sapval_train_07
+            s0010sapval_calibration_03
+            s0010sapval_evaluation_04
+            s0010sapval_evaluation_05
+        )
+        ;;
     *)
-        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE (expected development, holdout, followup, or resume)" >&2
+        echo "unsupported SAP_VALIDATION_PHASE=$SAP_VALIDATION_PHASE (expected development, holdout, followup, resume, or resume_v2)" >&2
         exit 2
         ;;
 esac

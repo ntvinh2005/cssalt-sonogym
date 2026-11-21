@@ -122,6 +122,7 @@ def main() -> int:
         "sonogym-s0010-sap-validation-holdout-v1",
         "sonogym-s0010-sap-validation-followup-v1",
         "sonogym-s0010-sap-validation-resume-v1",
+        "sonogym-s0010-sap-validation-resume-v2",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
@@ -184,6 +185,11 @@ def main() -> int:
                 "sonogym-s0010-sap-observability-v1r1",
                 "sonogym-s0010-sap-observability-v2",
                 "sonogym-s0010-sap-observability-v2r1",
+                "sonogym-s0010-sap-validation-development-v1",
+                "sonogym-s0010-sap-validation-holdout-v1",
+                "sonogym-s0010-sap-validation-followup-v1",
+                "sonogym-s0010-sap-validation-resume-v1",
+                "sonogym-s0010-sap-validation-resume-v2",
             }
         )
         if synchronized_capture_protocol and public.get("acquisition_id") != pose.get(
@@ -270,7 +276,12 @@ def main() -> int:
     passed = sum(int(row["frame_passes"]) for row in frame_results)
     distinct_ultrasound_hashes = len({row["frame_sha256"] for row in frame_results})
     minimum_distinct_hashes = int(
-        protocol["dataset_gate"]["minimum_distinct_frame_hashes_per_session"]
+        protocol["dataset_gate"].get(
+            "minimum_distinct_frame_hashes_by_session", {}
+        ).get(
+            session_id,
+            protocol["dataset_gate"]["minimum_distinct_frame_hashes_per_session"],
+        )
     )
     native_map_replay = all(
         row["direct_coordinate_metrics"]["exact_raw_label_agreement"] == 1.0
@@ -291,6 +302,7 @@ def main() -> int:
             "sonogym-s0010-sap-validation-holdout-v1",
             "sonogym-s0010-sap-validation-followup-v1",
             "sonogym-s0010-sap-validation-resume-v1",
+            "sonogym-s0010-sap-validation-resume-v2",
         }
     )
     coordinate_hash_integrity = all(
