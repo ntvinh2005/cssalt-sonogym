@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
+import joblib
 import yaml
 
 import run_s0010_ultrasound_representation_experiment as experiment
@@ -39,6 +40,7 @@ def main() -> int:
     ]
     images = experiment.RecordedImages()
     results: dict[str, object] = {}
+    checkpoint_records: dict[str, dict[str, str]] = {}
     for level in experiment.LEVELS:
         level_results = []
         for variant in DIAGNOSTIC_VARIANTS:
@@ -65,6 +67,15 @@ def main() -> int:
                 bundle=bundle,
                 images=images,
             )
+            if level == "L5" and variant == "topology":
+                checkpoint = args.output.parent / "s0010_l5_topology_post_selection.joblib"
+                bundle["post_selection_diagnostic"] = True
+                bundle["independent_confirmation"] = False
+                joblib.dump(bundle, checkpoint)
+                checkpoint_records["L5_topology"] = {
+                    "path": str(checkpoint.resolve()),
+                    "sha256": experiment.sha256(checkpoint),
+                }
             level_results.append(
                 {
                     "variant": variant,
@@ -80,6 +91,7 @@ def main() -> int:
         "used_for_candidate_selection": False,
         "changes_frozen_selection": False,
         "frozen_selected_variants": frozen["selected_variants"],
+        "checkpoints": checkpoint_records,
         "results": results,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
