@@ -116,9 +116,9 @@ def render_example(
         "kind": kind,
         "sample_id": row["sample_id"],
         "frame_sha256": row["frame_sha256"],
-        "clean": str(clean.relative_to(output.parent)),
-        "overlay": str(overlay.relative_to(output.parent)),
-        "raw_patch": str(crop.relative_to(output.parent)),
+        "clean": str(clean.relative_to(output.parents[1])),
+        "overlay": str(overlay.relative_to(output.parents[1])),
+        "raw_patch": str(crop.relative_to(output.parents[1])),
     }
 
 
@@ -155,6 +155,8 @@ def main() -> int:
     parser.add_argument("--segmentation", type=Path, required=True)
     parser.add_argument("--label-conversion", type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--execution-job")
+    parser.add_argument("--execution-commit")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     package = args.output_dir.resolve() / "s0010_right_l4l5_sap_validation_training_review"
@@ -235,9 +237,12 @@ def main() -> int:
         "",
         "This package reports simulator-proxy ultrasound recognition on fixed anatomy s0010. It is not clinical ground truth.",
         "",
-        f"Source commit: `{args.source_commit}`",
+        f"Execution job: `{args.execution_job or 'NOT_RECORDED'}`",
+        f"Execution commit: `{args.execution_commit or args.source_commit}`",
+        f"Package commit: `{args.source_commit}`",
         f"Training status: `{training_result.get('status', 'NOT_RUN')}`",
         f"Held-out status: `{evaluation.get('overall_status', 'NOT_RUN')}`",
+        "Calibration excludes every image containing an ambiguous actor-visible proposal; it does not measure performance on those excluded images.",
         "",
         "## Per-level annotation",
         "",
@@ -264,6 +269,9 @@ def main() -> int:
     (package / "00_EXECUTIVE_SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     provenance = {
         "source_commit": args.source_commit,
+        "package_commit": args.source_commit,
+        "execution_job": args.execution_job,
+        "execution_commit": args.execution_commit,
         "prediction_sha256": file_sha256(args.prediction),
         "segmentation_sha256": file_sha256(args.segmentation),
         "first_dataset_readiness_sha256": file_sha256(args.first_dataset / "readiness_report.json"),

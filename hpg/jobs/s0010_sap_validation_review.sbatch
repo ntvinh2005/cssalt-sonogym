@@ -40,6 +40,8 @@ mkdir -p "$REVIEW" "$MPLCONFIGDIR"
     --evaluation-report "$RESULT_ROOT/heldout_evaluation_unacquired.json" \
     --prediction "$PREDICTION" --segmentation "$SEGMENTATION" \
     --label-conversion "$LABELS" \
+    --execution-job "$SAP_RESULT_JOB" \
+    --execution-commit "$(cat "$RESULT_ROOT/context/git-commit.txt")" \
     --source-commit "$(git -C "$SONOGYM_PROJECT_DIR" rev-parse HEAD)" \
     --output-dir "$REVIEW" > "$REVIEW/builder.log" 2>&1
 
