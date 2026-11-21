@@ -11,7 +11,7 @@ This experiment validates simulator-proxy SAP-related cortical-interface labels 
 | 1 | session-separated correspondence | matched at least 0.50; mismatch at most 0.10; top-1 at least 0.70 | L4: 0.40 / 0.1148 / 0.3778; L5: 0.6552 / 0.0747 / 0.7241 | L4 fail; L5 pass |
 | 2 | binary image eligibility | no retained negative image contains a non-negative actor proposal | 138 previously selected negative images excluded; 0 added | pass |
 | 3 | RIGHT L5 calibration | precision and recall at least 0.80; false-positive rate at most 0.20 | precision 13 / 14 (92.86%); recall 13 / 16 (81.25%); false positives 1 / 206 (0.49%) | pass |
-| 4 | session-disjoint held-out evaluation | at least two new reset sessions and at least 10 positive and 10 negative images per evaluated level | evaluation sessions not acquired | not run |
+| 4 | session-disjoint held-out evaluation | at least two new reset sessions and at least 10 positive and 10 negative images per evaluated level | job `52181462` failed before acquisition; 0 images | not run |
 
 The L5 result supports a calibrated simulator-only candidate checkpoint. Active acquisition integration remains on hold until the frozen evaluation sessions are acquired and evaluated once.
 
@@ -211,30 +211,35 @@ python workflows/two_stage_navigation/train_s0010_sap_classifier.py \
 |---|---|---|
 | protocol | `s0010_sap_validation_resume_protocol_v1.yaml`, SHA-256 `3460dd70dda759e3e68692ba1e253d8dd9113e27b971d291a54f941215f35425` | §4 |
 | checkpoint | L5 SHA-256 `c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5` | §4 |
+| authorized capture | job `52181462`, commit `e42e9960d498d6490228ac246c4d014af993acfc` | §4 |
+| resources | 1 NVIDIA L4, 4 CPUs, 30 GB, 30-minute limit | §4 |
 | evaluation sessions | 0 / 2 acquired | §4 |
 
 ```bash
-# Not executed: the approved two-job GPU acquisition allowance was already exhausted.
-SAP_VALIDATION_PHASE=resume sbatch hpg/jobs/s0010_sap_validation_capture.sbatch
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_VALIDATION_PHASE=resume \
+  hpg/jobs/s0010_sap_validation_capture.sbatch
 ```
 
 | | value |
 |---|---:|
-| attempted evaluation images | 0 |
-| dropped | 0 |
+| planned calibration/evaluation images | 60 / 80 |
+| acquired, collector rejected resume protocol before simulation | 0 |
 | **final evaluation images** | **0** |
 
 ### 4.3 Results
 
-No held-out metric exists.
+| job | state | elapsed | exit | acquired frames |
+|---|---|---:|---:|---:|
+| `52181462` | failed before acquisition | 27 seconds | 1 | 0 |
 
-**Verdict: not run; `SAP_TRAINED_HELDOUT_PASS` is not supported.**
+**Verdict: not run, because the collector rejected the frozen resume protocol identity before acquiring a frame; `SAP_TRAINED_HELDOUT_PASS` is not supported.**
 
 ### 4.4 Reading it
 
 - RIGHT L5 is ready for one frozen holdout capture/evaluation campaign, not Stage 2 integration.
 - RIGHT L4 remains blocked before held-out evaluation: 4 calibration positives and failed correspondence.
-- A third GPU acquisition job would exceed the approved two-job limit and requires a compute-budget extension.
+- The defect added the resume protocol to the existing capture, controller and verifier allowlists in commit `86c84fd`; 38 relevant CPU tests pass.
+- The authorized one-submission allowance was consumed by job `52181462`; a retry requires new authorization even though no frame was acquired.
 
 ### 4.5 Files
 
@@ -242,6 +247,7 @@ No held-out metric exists.
 |---|---|
 | `experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v1.yaml` | frozen calibration/evaluation waypoint bank |
 | `hpg/jobs/s0010_sap_validation_capture.sbatch` | opt-in resume capture path |
+| `s0010_sap_validation_resume_v1/52181462/sessions/s0010sapval_calibration_02/launcher.log` | pre-acquisition protocol rejection |
 | `workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py` | single-use held-out evaluator |
 
 ## 5. Review package — is the current evidence independently inspectable?
