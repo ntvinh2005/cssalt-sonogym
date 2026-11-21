@@ -460,3 +460,106 @@ All 58 focused regression tests passed. The protocol seal, Python compilation, s
 | `workflows/two_stage_navigation/generate_s0010_sap_validation_resume_protocol_v2.py` | deterministic plan generator |
 | `tests/test_s0010_sap_validation_resume_protocol_v2.py` | split, pose, tracking-margin and actor/evaluator boundary checks |
 | `hpg/jobs/s0010_sap_validation_capture.sbatch` | opt-in capture entry point; not executed |
+
+## 8. Final bounded capture — do fresh sessions make SAP ultrasound training ready?
+
+The sealed V2 protocol was executed by GPU job `52199322`; CPU jobs
+`52199736`, `52200074`, and `52200170` performed the first failed merge,
+the corrected analysis, and review packaging. Historical checkpoints and
+thresholds were unchanged.
+
+**Criterion.** Every saved acquisition must pass freshness, native-map,
+full-pose replay, array-integrity and viewpoint-diversity checks. Training
+requires the existing unique-image minima and the frozen correspondence
+gate. Evaluation data may be opened only after the eligible checkpoint and
+threshold are frozen.
+
+### 8.1 Method
+
+- Capture 80 train, 60 calibration and 80 evaluation observations over five
+  separately reset sessions.
+- Rebuild labels from synchronized native coordinates; planned waypoint roles
+  are not labels.
+- Merge only train/calibration evidence with the prior development dataset.
+- Keep the frozen L5 checkpoint and threshold `0.55`; fit L4 only if its
+  development gate passes.
+- Open the two evaluation sessions once and report clear-label and ambiguous
+  coverage separately.
+
+### 8.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| capture | job `52199322`, commit `a88a379` | §8 |
+| corrected CPU analysis | job `52200074`, commit `79d09d7` | §8 |
+| review package | job `52200170`, commit `509e0ef` | §8 |
+| protocol | SHA-256 `7d3a6c46f50f7123351a14daca69745bc44dfd13364d333eec7db391e1410a7a` | §8 |
+| capture resources | 1 NVIDIA L4, 4 CPUs, 30 GB requested, 5m19s | §8 |
+| analysis resources | 4 CPUs, 16 GB requested, 1m10s, no GPU | §8 |
+
+```bash
+SAP_VALIDATION_PHASE=resume_v2 \
+  sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_VALIDATION_PHASE \
+  hpg/jobs/s0010_sap_validation_capture.sbatch
+
+SAP_RESUME_JOB=52199322 \
+  sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_RESUME_JOB \
+  hpg/jobs/s0010_sap_resume_v2_analysis.sbatch
+```
+
+### 8.3 Results
+
+| capture check | result |
+|---|---:|
+| frames acquired / replayed | 220 / 220 |
+| distinct ultrasound hashes | 220 |
+| coordinate-hash mismatches | 0 |
+| sessions passing all five engineering gates | 5 / 5 |
+
+| level / split | positive | negative | status |
+|---|---:|---:|---|
+| L4 train, merged | 45 | 343 | count pass |
+| L4 calibration, merged | 7 | 124 | positive deficit |
+| L4 evaluation, fresh | 1 | 30 | positive deficit |
+| L5 train, merged | 93 | 490 | count pass |
+| L5 calibration, merged | 24 | 232 | count pass |
+| L5 evaluation, fresh | 13 | 31 | count pass |
+
+The frozen correspondence check failed for both levels. On fresh calibration,
+L4 accepted 7/30 matched controls, 48/180 mismatched controls and ranked the
+correct projection first in 0/30 cases. L5 accepted 10/30 matched controls,
+17/180 mismatched controls and ranked the correct projection first in 6/30
+cases. The required rates remain at least 0.50 matched, at most 0.10 mismatch
+and at least 0.70 top-1.
+
+L4 was therefore not fitted. The frozen L5 checkpoint was evaluated once on
+the fresh evaluation sessions. On 44 clear-label images it produced TP=9,
+FP=0, FN=4, TN=31: precision 1.00, recall 0.6923, F1 0.8182 and FPR 0.00.
+It ranked the correct proposal top-1 on 12/13 positive images and top-3 on
+13/13. Recall and correspondence failed the frozen gates; 36/80 acquired
+images remained ambiguous and were excluded from hard binary metrics.
+
+**Verdict: L4 `SAP_TRAINING_BLOCKED_DATA`; L5
+`SAP_TRAINING_INCONCLUSIVE`. Neither level is ready for Stage 2 integration.**
+
+### 8.4 Reading it
+
+- The CT-derived pseudo-SAP geometry remains available; this result tests its
+  recognizability and correspondence in clean simulated ultrasound.
+- L5 has high precision on the clear subset but misses four of thirteen
+  positives and does not distinguish the correct geometry from controls well
+  enough. It is promising descriptive evidence, not a held-out PASS.
+- L4 is blocked more strongly: only seven independent calibration positives
+  and one evaluation positive survived the clean-image and ambiguity gates.
+- More capture from the same frozen waypoint hypothesis is not justified by
+  this result. The next material change must improve the image-visible surface
+  definition or representation, then freeze a new experiment before capture.
+
+### 8.5 Files
+
+| file | contents |
+|---|---|
+| `s0010_sap_validation_resume_v2/52199322/sessions/` | synchronized 220-frame capture and replay reports |
+| `52199322/analysis_v1/dataset_development_merged/` | merged development dataset and readiness report |
+| `52199322/analysis_v1/heldout_evaluation.json` | one-time frozen L5 evaluation and L4 blocker |
+| `52199322/final_review/s0010_right_l4l5_sap_validation_training_review.zip` | compact independently inspectable package |
