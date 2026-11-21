@@ -176,3 +176,49 @@ sbatch --dependency=afterok:52246037 \
 | runtime job `52246624/s0010_spatial_navigation_replay.json` | video provenance and scenario identities |
 | runtime job `52039283/results/end_to_end_report.json` | historical integrated measurements |
 | `experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3_result.json` | concise preserved historical result |
+
+## 3. RIGHT L5 spatial target-view localizer follow-up
+
+This follow-up isolates the RIGHT L5 TP surface-core task that had passed the earlier association gate. It audits a calibrated actor-side image transform, evaluates cortical candidates against physical bone surfaces, and makes the previously missing target-view decision from the accumulated map.
+
+**Result.** `SPATIAL_GEOMETRY_PARTIAL`; `L5_SPATIAL_LOCALIZER_FAILED`; `STAGE2_INTEGRATION_BLOCKED`. The support hypothesis accepted one correct view and safely abstained once, but did not improve over the single-frame or historical Stage 2 baselines and did not distinguish the shuffled-motion control. The fail-closed runner did not open `mbbpoc_v3_02` or `mbbpoc_v3_03`.
+
+### 3.1 Calibrated geometry audit
+
+**Criterion.** The full-pose public-calibration transform must reproduce the saved native coordinate map with median and p90 error at most 0.001 mm and maximum error at most 0.01 mm. A full spatial-geometry verdict additionally requires synchronized 6DoF pose in the actor-visible historical record and at least 50% of image-derived cortical samples within 3 mm of a vertebral surface in every evaluated session.
+
+**Method.** The actor transform maps ultrasound pixels through probe-local calibration and synchronized forward-kinematics pose. Native pixel-to-volume coordinates and vertebral masks are opened only by the evaluator. The recorded V3 actor input lacks synchronized 6DoF, so the localizer itself retains the historical reduced `(x,z,angle)` representation.
+
+**Setup.** Protocol SHA-256 `cce72e9945799aa0968f4dcbf66989c918246f3de7f4f2b8a7b38139d48ff186`; implementation commit `792dfffb9383e0f86821e69aa631336b81c64068`; CPU job `52253724`; two opened-development selection sessions; 4 CPU, 16 GB requested, 0 GPU, 21 s elapsed.
+
+**Results.**
+
+| session | full-pose median / p90 / max error, mm | reduced 2.5D median / p90 horizontal error, mm | cortical samples within 3 mm of bone | target/non-target association crossing |
+|---|---:|---:|---:|---:|
+| `mbbpoc_v3_00` | 0.0000217 / 0.0000346 / 0.0000742 | 5.169 / 11.428 | 59.24% | 3.44% |
+| `mbbpoc_v3_01` | 0.0000221 / 0.0000353 / 0.0000760 | 5.053 / 8.033 | 47.37% | 2.16% |
+
+**Reading it.** The calibrated transform is numerically correct when full 6DoF is supplied, across depth and orientation bins. This does not validate the historical actor map: those public records contain only reduced pose, which produces about 5 mm median horizontal error, and one session misses the bone-surface inlier gate. The correct verdict is therefore `SPATIAL_GEOMETRY_PARTIAL`, not calibrated 3D reconstruction.
+
+**Files.** Runtime `52253724/analysis/geometry_validation.json`; `ultrasound_spatial_map.py`; `tests/test_ultrasound_spatial_map.py`.
+
+### 3.2 L5 target localization
+
+**Criterion.** A hypothesis must correctly accept both selection sessions, make no wrong acceptance, place a positive in the top three in both sessions, keep mean proposal-center-to-core error at most 5 mm, and use at least three distinct supporting frames. Only then may the two final-comparison sessions be opened.
+
+**Method.** Two frozen hypotheses rank candidate views from the existing target probability and distinct-view cortical support: direct support, and support multiplied by a Stage 1 landmark-relative prior. The decision can abstain on low score or insufficient margin. Controls are maximum single-frame probability, historical Stage 2 selection, and deliberately shuffled executed motion.
+
+**Setup.** `mbbpoc_v3_00` and `mbbpoc_v3_01` are method-selection evidence. `mbbpoc_v3_02` and `mbbpoc_v3_03` are reserved for one final comparison and remain unopened because neither hypothesis passed selection.
+
+**Results.**
+
+| hypothesis | correct accepted | wrong accepted | abstained | top-3 contains positive | gate |
+|---|---:|---:|---:|---:|---|
+| support | 1/2 | 0/2 | 1/2 | 2/2 | fail |
+| landmark-relative | 0/2 | 0/2 | 2/2 | 2/2 | fail |
+
+For direct support, session `00` selected frame 73, a proxy-positive proposal 1.223 mm from the target core supported by 12 distinct frames. Session `01` abstained because the two leading eligible views were not separated by the frozen score margin, although its top three were all proxy-positive. Maximum single-frame probability and historical Stage 2 selection were proxy-positive in 2/2 sessions. Shuffled motion reproduced the direct-support outcome pattern: one proxy-positive acceptance and one abstention.
+
+**Reading it.** Spatial support can rank valid candidates, but these data do not show that it adds target identity or robustness: it underperforms the baselines and does not separate correct from shuffled motion. This is a scientific localizer failure under the frozen gate, not an engineering failure. No Stage 2 integration interface is promoted and no new closed-loop success is claimed.
+
+**Files.** Runtime `52253724/analysis/result.json` (SHA-256 `7e83bf5be4852c74478d93f3d4ef765e4a6daebb459c2e04de635d92229cfccd`); `session_results.csv`; `frame_rankings.csv` (SHA-256 `280e6381d734f7e930a3ea68d28da16ebe1ce38ff3ab4ad463109d26c29d5539`); `localizer_summary.png`; job `tests.log` (19/19 pass).
