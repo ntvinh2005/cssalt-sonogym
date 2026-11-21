@@ -40,6 +40,7 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_TH
     --label-conversion "$LABEL_CONVERSION" \
     --protocol "$PROTOCOL" \
     --report "$REPORT" \
+    --source-commit "$(git -C "$SONOGYM_PROJECT_DIR" rev-parse HEAD)" \
     --output-dir "$OUTPUT_DIR" \
     > "$RUN_DIR/review-stdout.json" 2> "$RUN_DIR/review-stderr.log"
 

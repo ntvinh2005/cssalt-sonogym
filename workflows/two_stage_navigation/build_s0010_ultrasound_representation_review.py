@@ -162,6 +162,7 @@ def main() -> int:
     parser.add_argument("--label-conversion", type=Path, required=True)
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--source-commit", required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     output = args.output_dir.resolve()
@@ -321,6 +322,7 @@ def main() -> int:
         shutil.copy2(source, destination)
     provenance = {
         "packaging_job_id": os.environ.get("SLURM_JOB_ID", "not_running_under_slurm"),
+        "source_commit": args.source_commit,
         "result_sha256": sha256(package / "result.json"),
         "diagnostic_sha256": sha256(package / "post_selection_diagnostic.json"),
         "protocol_sha256": sha256(package / args.protocol.name),
