@@ -195,7 +195,7 @@ python workflows/two_stage_navigation/train_s0010_sap_classifier.py \
 
 ## 4. Held-out evaluation — does the calibrated checkpoint generalize to new resets?
 
-`workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py`, to be run after the frozen resume capture. It evaluates the unchanged checkpoint and threshold once on session-disjoint evaluation observations.
+`workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py`, run after the frozen resume capture. It evaluated the unchanged L5 checkpoint and threshold once on session-disjoint evaluation observations.
 
 **Criterion.** At least two independently reset evaluation sessions, at least 10 positive and 10 negative unique images per evaluated level, and the same precision, recall and false-positive gates as §3.
 
@@ -203,7 +203,9 @@ python workflows/two_stage_navigation/train_s0010_sap_classifier.py \
 
 - `s0010sapval_evaluation_02` and `s0010sapval_evaluation_03` are preassigned holdout sessions.
 - No existing session qualifies as unopened SAP evaluation data.
-- The checkpoint, preprocessing and threshold are frozen before acquisition.
+- The checkpoint, preprocessing and threshold were frozen before acquisition.
+- Insufficient holdout positives force an inconclusive verdict even when descriptive confusion metrics pass.
+- Images without an actor-visible proposal are counted as abstentions, not silently dropped.
 
 ### 4.2 Setup
 
@@ -211,35 +213,53 @@ python workflows/two_stage_navigation/train_s0010_sap_classifier.py \
 |---|---|---|
 | protocol | `s0010_sap_validation_resume_protocol_v1.yaml`, SHA-256 `3460dd70dda759e3e68692ba1e253d8dd9113e27b971d291a54f941215f35425` | §4 |
 | checkpoint | L5 SHA-256 `c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5` | §4 |
-| authorized capture | job `52181462`, commit `e42e9960d498d6490228ac246c4d014af993acfc` | §4 |
+| first authorized capture | job `52181462`; failed before acquisition | §4 |
+| replacement capture | job `52182100`, execution commit `9446859b1002db29c23498aae6ab2c34ea8af028` | §4 |
 | resources | 1 NVIDIA L4, 4 CPUs, 30 GB, 30-minute limit | §4 |
-| evaluation sessions | 0 / 2 acquired | §4 |
+| CPU analysis | jobs `52182756` failed on merge input, `52183365` completed after commit `1a2c5e3` | §4 |
+| frozen evaluation | job `52184029`, code `6a30797`; no retraining or threshold selection | §4 |
+| evaluation sessions | 2 / 2 acquired | §4 |
 
 ```bash
 sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_VALIDATION_PHASE=resume \
   hpg/jobs/s0010_sap_validation_capture.sbatch
+
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_RESUME_JOB=52182100 \
+  hpg/jobs/s0010_sap_resume_analysis.sbatch
 ```
 
 | | value |
 |---|---:|
 | planned calibration/evaluation images | 60 / 80 |
-| acquired, collector rejected resume protocol before simulation | 0 |
-| **final evaluation images** | **0** |
+| acquired fresh images | 60 / 80 |
+| exact-pose replay and coordinate-hash checks | 140 / 140 |
+| exact train/calibration/evaluation hash overlap | 0 |
+| exact session overlap between splits | 0 |
 
 ### 4.3 Results
 
-| job | state | elapsed | exit | acquired frames |
-|---|---|---:|---:|---:|
-| `52181462` | failed before acquisition | 27 seconds | 1 | 0 |
+| level / split | positive | negative | result |
+|---|---:|---:|---|
+| L4 merged train | 40 | 315 | existing fit pool only |
+| L4 merged calibration | 6 | 133 | insufficient; no L4 fit |
+| L5 merged train | 80 | 453 | frozen L5 checkpoint preserved |
+| L5 merged calibration | 30 | 235 | frozen correspondence gate failed |
+| L4 evaluation | 2 | 35 | insufficient |
+| L5 evaluation | 5 | 37 | insufficient |
 
-**Verdict: not run, because the collector rejected the frozen resume protocol identity before acquiring a frame; `SAP_TRAINED_HELDOUT_PASS` is not supported.**
+The frozen L5 classifier produced TP=5, FP=0, FN=0 and TN=37 on the 42 clearly labelled evaluation images: precision 1.0, recall 1.0, false-positive rate 0.0 and F1 1.0. Per session, evaluation_02 had TP=2/TN=19 and evaluation_03 had TP=3/TN=18. These are descriptive metrics, not a held-out pass, because the frozen requirement was at least ten positive images and the correspondence gate also failed.
+
+Across all 80 evaluation frames, 42 received clear L5 labels, 37 had ambiguous proposal evidence and one produced no actor-visible proposal. The resulting abstention count is 38/80 (47.5%); two ambiguous images exceeded the frozen classifier threshold but remain excluded from the confusion matrix.
+
+**Verdict: RIGHT L4 `SAP_TRAINING_INCONCLUSIVE`; RIGHT L5 `SAP_TRAINING_INCONCLUSIVE`. `SAP_TRAINED_HELDOUT_PASS` is not supported.**
 
 ### 4.4 Reading it
 
-- RIGHT L5 is ready for one frozen holdout capture/evaluation campaign, not Stage 2 integration.
-- RIGHT L4 remains blocked before held-out evaluation: 4 calibration positives and failed correspondence.
-- The defect added the resume protocol to the existing capture, controller and verifier allowlists in commit `86c84fd`; 38 relevant CPU tests pass.
-- The authorized one-submission allowance was consumed by job `52181462`; a retry requires new authorization even though no frame was acquired.
+- All three replacement sessions passed acquisition freshness, array-hash integrity, native-map replay, synchronized full-pose replay and viewpoint diversity.
+- RIGHT L4 was not trained: calibration had six positives after merging, below ten, and frozen correspondence failed.
+- RIGHT L5 was neither retrained nor recalibrated. Its checkpoint hash remained `c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5` and threshold remained 0.55.
+- L5 calibration correspondence had matched acceptance 0.5333, mismatched acceptance 0.1556 and top-one ranking 0.2333; the last two violate the frozen gate. Evaluation correspondence also failed with 0.225 matched acceptance and 0.375 top-one ranking.
+- The perfect 5-positive descriptive confusion is too small to establish recognition performance and does not justify Stage 2 integration.
 
 ### 4.5 Files
 
@@ -247,33 +267,35 @@ sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_VALIDATION_PHASE
 |---|---|
 | `experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v1.yaml` | frozen calibration/evaluation waypoint bank |
 | `hpg/jobs/s0010_sap_validation_capture.sbatch` | opt-in resume capture path |
-| `s0010_sap_validation_resume_v1/52181462/sessions/s0010sapval_calibration_02/launcher.log` | pre-acquisition protocol rejection |
-| `workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py` | single-use held-out evaluator |
+| `s0010_sap_validation_resume_v1/52182100/sessions/` | synchronized capture artifacts and replay reports |
+| `s0010_sap_validation_resume_v1/52182100/analysis_v2/heldout_evaluation_final.json` | frozen L5 descriptive held-out metrics and inconclusive verdicts |
+| `workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py` | single-use held-out evaluator with fail-closed sample sufficiency |
 
 ## 5. Review package — is the current evidence independently inspectable?
 
-`workflows/two_stage_navigation/build_s0010_sap_validation_training_review.py`, run by Slurm job `52140391`. It packages clean images, privileged overlays, manifests, validation output and the L5 checkpoint without inventing a held-out result.
+`workflows/two_stage_navigation/build_s0010_sap_validation_training_review.py`, finalized by CPU job `52184578`. It packages clean images, privileged overlays, manifests, capture verification, the frozen L5 checkpoint and the inconclusive held-out result.
 
-**Criterion.** ZIP integrity, all internal checksums valid, and held-out status explicitly `NOT_RUN`.
+**Criterion.** ZIP integrity, all internal checksums valid, complete split/coverage accounting and no promotion of insufficient metrics to PASS.
 
 ### 5.1 Method
 
 - Clean ultrasound and privileged overlays are separate files.
-- The package includes the three source readiness reports and external correspondence report.
+- The package includes the development and evaluation readiness reports and both frozen correspondence reports.
 - The checkpoint is included for reload and hash verification.
+- Exact split/session overlap and all-80-frame abstention accounting are machine-readable.
 
 ### 5.2 Setup
 
 | what | value | spec |
 |---|---|---|
-| run | job `52140391` | §5 |
-| code | `c9c881527d1f6f819b22765bc23144e0bdb8becd` | §5 |
-| input | job `52138127` | §5 |
+| run | job `52184578` | §5 |
+| code | `cb08a302476933b60e971c4f1dbe877d86c68f43` | §5 |
+| inputs | development job `52138127`; capture job `52182100`; analysis job `52183365` | §5 |
 | resources | 4 CPUs, 8 GB requested, no GPU | §5 |
 
 ```bash
-sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_RESULT_JOB=52138127 \
-  hpg/jobs/s0010_sap_validation_review.sbatch
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_RESUME_JOB=52182100 \
+  hpg/jobs/s0010_sap_resume_review.sbatch
 ```
 
 Nothing was dropped from the declared compact package.
@@ -284,19 +306,20 @@ Nothing was dropped from the declared compact package.
 |---|---|
 | ZIP test | pass |
 | internal SHA-256 manifest | pass |
-| ZIP size | 1.3 MB |
-| ZIP SHA-256 | `8fcdca53cd65fa2d867f2f081de14256d0fedb790c5f1c961e9a3b2a97a7e644` |
+| ZIP size | 1,889,607 bytes |
+| internal SHA-256 entries | 59 / 59 |
+| ZIP SHA-256 | `3495754a369348c740f417f6990eff97872dc5490bf7bed3bb0a9e973c1b9b68` |
 
-**Verdict: pass, with held-out evaluation correctly absent.**
+**Verdict: package pass; scientific result remains inconclusive for both levels.**
 
 ### 5.4 Reading it
 
-- The package supports review of development labels and calibrated L5 behavior.
-- It cannot establish held-out recognition performance.
+- The package supports review of fresh holdout evidence and the frozen L5 model response.
+- It does not support a held-out recognition PASS, SAP ground truth or Stage 2 integration.
 
 ### 5.5 Files
 
 | file | contents |
 |---|---|
-| `52138127/review_v3/s0010_right_l4l5_sap_validation_training_review.zip` | compact review artifact |
-| `52138127/review_v3/s0010_right_l4l5_sap_validation_training_review/checksums.sha256` | internal integrity manifest |
+| `52182100/final_review/s0010_right_l4l5_sap_validation_training_review.zip` | compact final review artifact |
+| `52182100/final_review/s0010_right_l4l5_sap_validation_training_review/checksums.sha256` | internal integrity manifest |

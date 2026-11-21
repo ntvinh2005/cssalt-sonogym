@@ -1,0 +1,68 @@
+{
+  "schema": "sonogym-s0010-sap-validation-training-result-v1",
+  "anatomy_id": "s0010",
+  "scope": "simulator-only RIGHT L4/L5 SAP ultrasound recognition",
+  "capture": {
+    "job_id": "52182100",
+    "execution_commit": "9446859b1002db29c23498aae6ab2c34ea8af028",
+    "calibration_frames": 60,
+    "evaluation_frames": 80,
+    "all_replay_gates_passed": true
+  },
+  "analysis": {
+    "job_id": "52183365",
+    "implementation_commit": "1a2c5e3",
+    "exact_hash_overlap_across_splits": 0,
+    "session_overlap_across_splits": 0
+  },
+  "L4": {
+    "annotation_status": "SIMULATOR_PROXY_SAP_LABEL_NOT_READY",
+    "training_status": "NOT_TRAINED",
+    "evaluation_status": "SAP_TRAINING_INCONCLUSIVE",
+    "calibration_positive_images": 6,
+    "evaluation_positive_images": 2,
+    "blockers": [
+      "calibration positive count below 10",
+      "evaluation positive count below 10",
+      "frozen correspondence gate failed"
+    ]
+  },
+  "L5": {
+    "annotation_status": "SIMULATOR_PROXY_SAP_LABEL_NOT_READY",
+    "training_status": "FROZEN_CHECKPOINT_NOT_RETRAINED",
+    "evaluation_status": "SAP_TRAINING_INCONCLUSIVE",
+    "checkpoint_sha256": "c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5",
+    "threshold": 0.55,
+    "evaluation_clear_labels": {
+      "positive": 5,
+      "negative": 37,
+      "tp": 5,
+      "fp": 0,
+      "fn": 0,
+      "tn": 37,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": 0.0,
+      "f1": 1.0
+    },
+    "all_frame_coverage": {
+      "acquired": 80,
+      "clear": 42,
+      "abstained": 38,
+      "abstention_rate": 0.475,
+      "ambiguous_activations": 2,
+      "no_actor_proposal": 1
+    },
+    "blockers": [
+      "evaluation positive count 5 below 10",
+      "frozen correspondence gate failed"
+    ]
+  },
+  "scientific_verdict": "SAP_TRAINING_INCONCLUSIVE",
+  "stage2_integration_ready": false,
+  "review_zip": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v1/52182100/final_review/s0010_right_l4l5_sap_validation_training_review.zip",
+    "sha256": "3495754a369348c740f417f6990eff97872dc5490bf7bed3bb0a9e973c1b9b68",
+    "size_bytes": 1889607
+  }
+}
