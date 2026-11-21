@@ -234,6 +234,17 @@ def choose_image_candidate(
     return choose_candidate(rows, label)
 
 
+def require_clear_negative_image(
+    protocol: dict[str, Any], command_line_required: bool
+) -> bool:
+    return bool(
+        command_line_required
+        or protocol["label_gate"].get(
+            "require_all_proposals_clear_for_negative_image", False
+        )
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
@@ -244,6 +255,9 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument(
         "--phase", choices=("development", "evaluation"), default="development"
+    )
+    parser.add_argument(
+        "--require-all-proposals-clear-for-negative-image", action="store_true"
     )
     args = parser.parse_args()
 
@@ -272,10 +286,8 @@ def main() -> int:
     frame_tracks: dict[tuple[str, int], list[Any]] = {}
     intended: dict[tuple[str, int], str] = {}
     incomplete_sessions: list[dict[str, str]] = []
-    require_clear_negative = bool(
-        protocol["label_gate"].get(
-            "require_all_proposals_clear_for_negative_image", False
-        )
+    require_clear_negative = require_clear_negative_image(
+        protocol, args.require_all_proposals_clear_for_negative_image
     )
 
     phase_splits = (

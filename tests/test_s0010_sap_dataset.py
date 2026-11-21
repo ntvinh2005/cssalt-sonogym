@@ -162,6 +162,15 @@ class SapDatasetTests(unittest.TestCase):
             negative,
         )
 
+    def test_command_line_can_enforce_existing_clear_negative_contract(self) -> None:
+        protocol = {"label_gate": {"ambiguous_excluded_from_binary_targets": True}}
+        self.assertFalse(MODULE.require_clear_negative_image(protocol, False))
+        self.assertTrue(MODULE.require_clear_negative_image(protocol, True))
+        protocol["label_gate"][
+            "require_all_proposals_clear_for_negative_image"
+        ] = True
+        self.assertTrue(MODULE.require_clear_negative_image(protocol, False))
+
 
 if __name__ == "__main__":
     unittest.main()
