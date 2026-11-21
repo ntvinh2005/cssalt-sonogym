@@ -42,8 +42,15 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        raise ValueError(f"cannot write empty CSV: {path}")
+    # Independently generated dataset revisions may add evaluator-only
+    # diagnostics while preserving the training contract. Retain the union of
+    # columns in stable first-seen order instead of dropping fields or assuming
+    # the oldest manifest defines every later row.
+    fieldnames = list(dict.fromkeys(key for row in rows for key in row))
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
