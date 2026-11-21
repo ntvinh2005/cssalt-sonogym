@@ -223,6 +223,24 @@ class SapResumeProtocolV2Tests(unittest.TestCase):
                 24,
             )
 
+    def test_analysis_freezes_models_before_opening_evaluation(self) -> None:
+        script = (
+            ROOT / "hpg/jobs/s0010_sap_resume_v2_analysis.sbatch"
+        ).read_text(encoding="utf-8")
+        self.assertIn("s0010_sap_validation_resume_protocol_v2.yaml", script)
+        self.assertIn(
+            "c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5",
+            script,
+        )
+        self.assertNotIn("--fit --level L5", script)
+        development = script.index("--phase development")
+        training = script.index("--fit --level L4")
+        evaluation = script.index("--phase evaluation")
+        heldout = script.index("evaluate_s0010_sap_classifier.py")
+        self.assertLess(development, training)
+        self.assertLess(training, evaluation)
+        self.assertLess(evaluation, heldout)
+
 
 if __name__ == "__main__":
     unittest.main()
