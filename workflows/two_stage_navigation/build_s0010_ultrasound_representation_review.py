@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import shutil
 import zipfile
 from pathlib import Path
@@ -82,8 +83,10 @@ def render_frame(
     for track, color in zip(tracks, colors):
         axes[1].plot(track.columns, track.rows, color=color, linewidth=1.5)
     axes[1].set_title(
-        f"Actor-visible interfaces\nscore={score:.3f}; threshold={threshold:.2f}; "
-        f"decision={'positive' if score >= threshold else 'negative'}"
+        "Actor-visible interfaces\n"
+        f"p={score:.3f}; cut={threshold:.2f}; "
+        f"{'positive' if score >= threshold else 'negative'}",
+        fontsize=9,
     )
     axes[1].set_axis_off()
 
@@ -92,7 +95,12 @@ def render_frame(
     axes[2].scatter(columns, rows, s=5, c="#00bcd4", alpha=0.45, label="pseudo-SAP")
     rows, columns = np.where(first_hit_surface)
     axes[2].scatter(columns, rows, s=12, c="#ffd54f", label="first-hit surface")
-    axes[2].set_title(f"Privileged evaluation only\nlabel state={status}")
+    readable_status = status.lower().replace("_", " ")
+    if readable_status == "sap related cortical interface":
+        readable_status = "SAP-related cortical interface"
+    axes[2].set_title(
+        f"Privileged evaluation only\n{readable_status}", fontsize=9
+    )
     axes[2].legend(loc="upper left", fontsize=6)
     axes[2].set_axis_off()
 
@@ -312,6 +320,7 @@ def main() -> int:
     for source, destination in copies.items():
         shutil.copy2(source, destination)
     provenance = {
+        "packaging_job_id": os.environ.get("SLURM_JOB_ID", "not_running_under_slurm"),
         "result_sha256": sha256(package / "result.json"),
         "diagnostic_sha256": sha256(package / "post_selection_diagnostic.json"),
         "protocol_sha256": sha256(package / args.protocol.name),
