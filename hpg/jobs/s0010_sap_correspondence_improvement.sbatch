@@ -42,8 +42,14 @@ set +e
     --protocol "$PROTOCOL" --run-root "$RUN" --prediction "$PREDICTION" \
     --segmentation "$SEGMENTATION" --label-conversion "$LABELS" \
     --phase development --require-all-proposals-clear-for-negative-image \
+    --minimum-distinct-translation-mm 2.0 \
+    --minimum-distinct-orientation-deg 1.0 \
     --output-dir "$ARCHIVE" > "$ARCHIVE/stdout.json" 2> "$ARCHIVE/stderr.log"
-echo "$?" > "$ARCHIVE/exit-code.txt"
+BUILDER_RC=$?
+echo "$BUILDER_RC" > "$ARCHIVE/exit-code.txt"
+if [[ "$BUILDER_RC" -eq 1 ]]; then
+    exit "$BUILDER_RC"
+fi
 
 for estimator in logistic extra_trees; do
     output="$RUN/$estimator"

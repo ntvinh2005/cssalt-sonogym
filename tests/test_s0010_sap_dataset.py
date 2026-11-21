@@ -175,6 +175,15 @@ class SapDatasetTests(unittest.TestCase):
             )
         )
 
+    def test_legacy_protocol_requires_explicit_viewpoint_thresholds(self) -> None:
+        protocol = {"sampling": {}}
+        with self.assertRaisesRegex(ValueError, "require explicit"):
+            MODULE.correspondence_viewpoint_thresholds(protocol, None, None)
+        self.assertEqual(
+            MODULE.correspondence_viewpoint_thresholds(protocol, 2.0, 1.0),
+            (2.0, 1.0),
+        )
+
     def test_ambiguous_proposal_blocks_clear_negative_image(self) -> None:
         negative = {
             "provisional_label": MODULE.NEGATIVE,

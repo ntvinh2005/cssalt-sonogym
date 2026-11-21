@@ -240,6 +240,31 @@ def distinct_pose_keys(
     ][:limit]
 
 
+def correspondence_viewpoint_thresholds(
+    protocol: dict[str, Any],
+    translation_override_mm: float | None,
+    orientation_override_deg: float | None,
+) -> tuple[float, float]:
+    sampling = protocol["sampling"]
+    translation = (
+        translation_override_mm
+        if translation_override_mm is not None
+        else sampling.get("minimum_realized_viewpoint_translation_mm")
+    )
+    orientation = (
+        orientation_override_deg
+        if orientation_override_deg is not None
+        else sampling.get("minimum_realized_viewpoint_orientation_deg")
+    )
+    if translation is None or orientation is None:
+        raise ValueError(
+            "correspondence controls require explicit realized-viewpoint thresholds"
+        )
+    if float(translation) <= 0.0 or float(orientation) <= 0.0:
+        raise ValueError("realized-viewpoint thresholds must be positive")
+    return float(translation), float(orientation)
+
+
 def choose_candidate(rows: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
     eligible = [row for row in rows if row["provisional_label"] == label]
     if not eligible:
@@ -305,6 +330,8 @@ def main() -> int:
     parser.add_argument(
         "--require-all-proposals-clear-for-negative-image", action="store_true"
     )
+    parser.add_argument("--minimum-distinct-translation-mm", type=float)
+    parser.add_argument("--minimum-distinct-orientation-deg", type=float)
     args = parser.parse_args()
 
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
@@ -335,6 +362,13 @@ def main() -> int:
     incomplete_sessions: list[dict[str, str]] = []
     require_clear_negative = require_clear_negative_image(
         protocol, args.require_all_proposals_clear_for_negative_image
+    )
+    distinct_translation_mm, distinct_orientation_deg = (
+        correspondence_viewpoint_thresholds(
+            protocol,
+            args.minimum_distinct_translation_mm,
+            args.minimum_distinct_orientation_deg,
+        )
     )
 
     phase_splits = (
@@ -582,12 +616,8 @@ def main() -> int:
                 target_keys,
                 realized_poses,
                 label_resolution_mm=1.5,
-                minimum_translation_mm=float(
-                    protocol["sampling"]["minimum_realized_viewpoint_translation_mm"]
-                ),
-                minimum_orientation_deg=float(
-                    protocol["sampling"]["minimum_realized_viewpoint_orientation_deg"]
-                ),
+                minimum_translation_mm=distinct_translation_mm,
+                minimum_orientation_deg=distinct_orientation_deg,
             )
             distinct_alignments = [
                 best_alignment_from_tracks(
