@@ -11,11 +11,22 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 PATH = ROOT / "workflows/two_stage_navigation/generate_s0010_sap_validation_resume_protocol.py"
+COORDINATES_PATH = (
+    ROOT
+    / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/coordinates.py"
+)
 SPEC = importlib.util.spec_from_file_location("sap_resume_protocol", PATH)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+COORDINATES_SPEC = importlib.util.spec_from_file_location(
+    "sap_resume_coordinates", COORDINATES_PATH
+)
+assert COORDINATES_SPEC is not None and COORDINATES_SPEC.loader is not None
+COORDINATES = importlib.util.module_from_spec(COORDINATES_SPEC)
+sys.modules[COORDINATES_SPEC.name] = COORDINATES
+COORDINATES_SPEC.loader.exec_module(COORDINATES)
 
 
 class SapResumeProtocolTests(unittest.TestCase):
@@ -104,6 +115,16 @@ class SapResumeProtocolTests(unittest.TestCase):
             "s0010sapval_evaluation_03",
         ):
             self.assertIn(session_id, job)
+
+    def test_resume_protocol_is_supported_by_capture_and_verifier(self) -> None:
+        protocol_id = "sonogym-s0010-sap-validation-resume-v1"
+        self.assertTrue(COORDINATES.is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(COORDINATES.uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(COORDINATES.uses_segmented_stage2_dataset_capture(protocol_id))
+        verifier = (
+            ROOT / "workflows/two_stage_navigation/verify_exact_pose_capture.py"
+        ).read_text(encoding="utf-8")
+        self.assertGreaterEqual(verifier.count(protocol_id), 2)
 
 
 if __name__ == "__main__":
