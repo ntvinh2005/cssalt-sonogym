@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -194,6 +195,51 @@ def correspondence_target_keys(
     return retained, len(intended_keys) - len(retained)
 
 
+def physically_distinct_pose(
+    first: np.ndarray,
+    second: np.ndarray,
+    *,
+    label_resolution_mm: float,
+    minimum_translation_mm: float,
+    minimum_orientation_deg: float,
+) -> bool:
+    """Return whether two realized probe poses satisfy the frozen view gate."""
+
+    translation_mm = float(np.linalg.norm(first[:2] - second[:2])) * label_resolution_mm
+    angular_delta = float((first[2] - second[2] + math.pi) % (2.0 * math.pi) - math.pi)
+    orientation_deg = abs(angular_delta) * 180.0 / math.pi
+    return bool(
+        translation_mm >= minimum_translation_mm
+        or orientation_deg >= minimum_orientation_deg
+    )
+
+
+def distinct_pose_keys(
+    key: tuple[str, int],
+    candidates: list[tuple[str, int]],
+    realized_poses: dict[tuple[str, int], np.ndarray],
+    *,
+    label_resolution_mm: float,
+    minimum_translation_mm: float,
+    minimum_orientation_deg: float,
+    limit: int = 5,
+) -> list[tuple[str, int]]:
+    """Select frozen mismatched controls by realized pose, not session name."""
+
+    return [
+        candidate
+        for candidate in candidates
+        if candidate != key
+        and physically_distinct_pose(
+            realized_poses[key],
+            realized_poses[candidate],
+            label_resolution_mm=label_resolution_mm,
+            minimum_translation_mm=minimum_translation_mm,
+            minimum_orientation_deg=minimum_orientation_deg,
+        )
+    ][:limit]
+
+
 def choose_candidate(rows: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
     eligible = [row for row in rows if row["provisional_label"] == label]
     if not eligible:
@@ -285,6 +331,7 @@ def main() -> int:
     frame_images: dict[tuple[str, int], np.ndarray] = {}
     frame_tracks: dict[tuple[str, int], list[Any]] = {}
     intended: dict[tuple[str, int], str] = {}
+    realized_poses: dict[tuple[str, int], np.ndarray] = {}
     incomplete_sessions: list[dict[str, str]] = []
     require_clear_negative = require_clear_negative_image(
         protocol, args.require_all_proposals_clear_for_negative_image
@@ -326,11 +373,21 @@ def main() -> int:
         )["human_img_coords"]
         raw_labels = np.load(session_dir / "privileged/raw_labels.npz")["raw_labels"]
         public = read_jsonl(session_dir / "public/frames.jsonl")
+        privileged = read_jsonl(session_dir / "privileged/annotations.jsonl")
         if not (len(images) == len(coordinates) == len(raw_labels) == len(public)):
             raise ValueError(f"misaligned capture arrays in {session_dir.name}")
+        if len(privileged) != len(public):
+            raise ValueError(f"privileged manifest length changed: {session_dir.name}")
         validate_session_records(session, session_dir, public, len(images))
         for frame_sequence, image in enumerate(images):
             frame_key = (session_dir.name, frame_sequence)
+            if privileged[frame_sequence].get("frame_sha256") != public[frame_sequence].get(
+                "frame_sha256"
+            ):
+                raise ValueError(f"public/privileged frame identity mismatch: {frame_key}")
+            realized_poses[frame_key] = np.asarray(
+                privileged[frame_sequence]["realized_pose_index"], dtype=np.float64
+            )
             frame_images[frame_key] = image
             tracks = correspondence.track_bright_interfaces(image)
             frame_tracks[frame_key] = tracks
@@ -520,11 +577,18 @@ def main() -> int:
                     **asdict(other_alignment),
                 }
             )
-            distinct = [
-                other
-                for other in target_keys
-                if other[0] != key[0]
-            ][:5]
+            distinct = distinct_pose_keys(
+                key,
+                target_keys,
+                realized_poses,
+                label_resolution_mm=1.5,
+                minimum_translation_mm=float(
+                    protocol["sampling"]["minimum_realized_viewpoint_translation_mm"]
+                ),
+                minimum_orientation_deg=float(
+                    protocol["sampling"]["minimum_realized_viewpoint_orientation_deg"]
+                ),
+            )
             distinct_alignments = [
                 best_alignment_from_tracks(
                     frame_images[key], frame_tracks[key], session_surfaces[(*other, level)]

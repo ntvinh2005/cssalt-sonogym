@@ -30,6 +30,12 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def optional_file_sha256(path: Path) -> str | None:
+    """Hash a source control file when the source dataset retained it."""
+
+    return file_sha256(path) if path.exists() else None
+
+
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
@@ -120,13 +126,21 @@ def main() -> int:
                 "proposal_manifest_sha256": file_sha256(proposal_manifest_path),
                 "arrays_sha256": file_sha256(arrays_path),
                 "readiness_sha256": file_sha256(report_path),
-                "correspondence_sha256": file_sha256(correspondence_path),
+                # A previously merged development dataset preserves the
+                # correspondence decision in its readiness report but need
+                # not duplicate every source control row. New source datasets
+                # still carry the exact CSV consumed by external validation.
+                "correspondence_sha256": optional_file_sha256(correspondence_path),
             }
         )
 
     if external_validation is not None and external_validation.get(
         "input_sha256"
-    ) not in {source["correspondence_sha256"] for source in sources}:
+    ) not in {
+        source["correspondence_sha256"]
+        for source in sources
+        if source["correspondence_sha256"] is not None
+    }:
         raise ValueError("correspondence validation input is not a merged source")
 
     if len({row["sample_id"] for row in merged_rows}) != len(merged_rows):

@@ -6,6 +6,7 @@ import importlib.util
 import sys
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
 PATH = (
@@ -20,6 +21,13 @@ SPEC.loader.exec_module(MODULE)
 
 
 class SapDatasetMergeTests(unittest.TestCase):
+    def test_missing_derived_correspondence_csv_is_represented_explicitly(self) -> None:
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "correspondence_controls.csv"
+            self.assertIsNone(MODULE.optional_file_sha256(path))
+            path.write_text("comparison\nMATCHED\n", encoding="utf-8")
+            self.assertEqual(MODULE.optional_file_sha256(path), MODULE.file_sha256(path))
+
     def test_external_calibration_applies_only_to_declared_level(self) -> None:
         report = {
             "levels": {

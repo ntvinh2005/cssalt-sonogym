@@ -135,6 +135,46 @@ class SapDatasetTests(unittest.TestCase):
         self.assertEqual(historical, [("session", 0), ("session", 1)])
         self.assertEqual(excluded, 0)
 
+    def test_distinct_correspondence_control_uses_realized_pose_not_session(self) -> None:
+        keys = [("session", 0), ("session", 1), ("session", 2)]
+        poses = {
+            ("session", 0): np.asarray([10.0, 10.0, 3.0]),
+            ("session", 1): np.asarray([10.1, 10.0, 3.0]),
+            ("session", 2): np.asarray([12.0, 10.0, 3.0]),
+        }
+        selected = MODULE.distinct_pose_keys(
+            ("session", 0),
+            keys,
+            poses,
+            label_resolution_mm=1.5,
+            minimum_translation_mm=2.0,
+            minimum_orientation_deg=1.0,
+        )
+        self.assertEqual(selected, [("session", 2)])
+
+    def test_wrapped_orientation_can_define_a_distinct_control(self) -> None:
+        first = np.asarray([10.0, 10.0, np.pi - 0.01])
+        near_wrap = np.asarray([10.0, 10.0, -np.pi + 0.01])
+        rotated = np.asarray([10.0, 10.0, np.pi - 0.08])
+        self.assertFalse(
+            MODULE.physically_distinct_pose(
+                first,
+                near_wrap,
+                label_resolution_mm=1.5,
+                minimum_translation_mm=2.0,
+                minimum_orientation_deg=2.0,
+            )
+        )
+        self.assertTrue(
+            MODULE.physically_distinct_pose(
+                first,
+                rotated,
+                label_resolution_mm=1.5,
+                minimum_translation_mm=2.0,
+                minimum_orientation_deg=2.0,
+            )
+        )
+
     def test_ambiguous_proposal_blocks_clear_negative_image(self) -> None:
         negative = {
             "provisional_label": MODULE.NEGATIVE,

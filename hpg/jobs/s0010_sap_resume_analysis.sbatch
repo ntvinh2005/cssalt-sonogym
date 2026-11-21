@@ -21,7 +21,7 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
 CAPTURE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_resume_v1/$SAP_RESUME_JOB"
 BASELINE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_negative_image_gate_development_v1/52138127"
-RUN_DIR="$CAPTURE/analysis_v1"
+RUN_DIR="$CAPTURE/analysis_v2"
 CALIBRATION="$RUN_DIR/dataset_calibration"
 CALIBRATION_CORRESPONDENCE="$RUN_DIR/calibration_correspondence"
 MERGED="$RUN_DIR/dataset_development_merged"
