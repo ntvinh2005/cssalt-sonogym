@@ -284,6 +284,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It requires physically different observed viewpoints while making no claim that their model errors are statistically independent.
 - **Source:** approved by user, 2026-11-15.
 
+### Multi-view cortical correspondence
+- **Kind:** method
+- **Definition:** Actor-side association of image-derived cortical-interface hypotheses across Stage 2 multi-view evidence using clean ultrasound, acquisition order, executed relative translation, executed relative rotation, and frame identity; evaluator geometry and semantic labels are excluded until scoring is frozen.
+- **Intuition:** It tests whether repeated surface arrangements across physical viewpoints carry more localization evidence than isolated image patches.
+- **Source:** approved by user, 2026-11-21.
+
+### Top-k candidate selection
+- **Kind:** metric
+- **Definition:** For each session, rank actor-visible candidate views by the frozen decision score and report whether at least one clear supported positive occurs among the first k candidates; ambiguous evidence remains separate and is never counted as negative.
+- **Intuition:** It measures whether a bounded return-and-confirm policy can recover a supported view even when top-1 ranking remains imperfect.
+- **Source:** approved by user, 2026-11-21.
+
 ### Stage 2 fresh confirmation
 - **Kind:** method
 - **Definition:** Ultrasound observations acquired after verified physical return to a remembered candidate, with increasing acquisition identity, distinct frame hashes, valid motion and technical feedback, and predictions consistent with the remembered view.
