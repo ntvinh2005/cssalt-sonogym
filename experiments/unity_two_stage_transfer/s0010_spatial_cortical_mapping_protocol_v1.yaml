@@ -1,0 +1,69 @@
+protocol_id: s0010_spatial_cortical_mapping_v1
+status: PRE_EVALUATION_FROZEN_DEVELOPMENT
+source_run:
+  experiment: s0010_mbb_single_anatomy_poc_v3
+  job_id: 52039283
+  patient_id: s0010
+  opened_development_only: true
+splits:
+  method_selection_sessions: [mbbpoc_v3_00, mbbpoc_v3_01]
+  final_comparison_sessions: [mbbpoc_v3_02, mbbpoc_v3_03]
+  independent_confirmation_claim: forbidden
+actor_inputs:
+  - clean_ultrasound
+  - executed_relative_pose_index
+  - public_image_resolution
+  - public_label_resolution
+  - frame_and_acquisition_identity
+evaluator_only:
+  - native_pixel_to_volume_coordinates
+  - raw_labels
+  - full_pose_replay
+  - TP_surface_core_geometry
+hypotheses:
+  - name: motion_compensated_2p5d
+    include_depth: true
+    association_radius_mm: 4.0
+  - name: motion_compensated_surface_only
+    include_depth: false
+    association_radius_mm: 4.0
+shared_map:
+  pixel_resolution_mm: 0.5
+  label_resolution_mm: 1.5
+  sample_stride_pixels: 6
+  minimum_view_translation_mm: 0.75
+  minimum_view_angle_deg: 0.75
+controls:
+  shuffled_motion_seed: 20261121
+  appearance_only: interface_shape_and_depth_without_motion
+  single_view: no_cross_view_support
+phase_a_gates:
+  minimum_association_count_per_target_session: 50
+  maximum_median_native_separation_mm: 5.0
+  maximum_p90_native_separation_mm: 10.0
+  maximum_false_association_fraction_over_10mm: 0.20
+  maximum_correct_to_shuffled_median_ratio: 0.75
+  selection_rule: >-
+    Select the hypothesis with the lowest mean method-selection median native
+    separation among hypotheses passing every method-selection target/session
+    gate. Open final-comparison sessions only after selection.
+  final_rule: selected_hypothesis_passes_every_target_session_gate
+phase_b_localizer:
+  minimum_spatial_supporting_frames: 2
+  minimum_target_probability: 0.5
+  ranking_order: [spatial_supporting_frames, target_probability, earliest_frame]
+  top_k: 3
+  readiness_rule: >-
+    Per target, both final-comparison sessions must select a PROXY_POSITIVE at
+    top-1, contain a PROXY_POSITIVE in top-3, and make no proxy-negative or
+    ambiguous accepted selection.
+scientific_scope:
+  target: RIGHT_L4_L5_TP_SURFACE_CORE
+  clinical_claim: forbidden
+  SAP_identity_claim: forbidden
+  full_MBB_intervention: NOT_VALIDATED
+resource_bound:
+  cpu_cores: 4
+  memory_gb: 16
+  gpu_count_phase_a_b: 0
+  walltime: 00:30:00

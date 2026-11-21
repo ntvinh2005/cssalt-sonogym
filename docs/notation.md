@@ -1,5 +1,11 @@
 # Project notation
 
+### Motion-compensated spatial cortical mapping
+- **Kind:** method
+- **Definition:** An actor-side 2.5D representation that transforms clean-ultrasound cortical candidates into a Home-relative spatial frame using public image calibration and executed reduced probe-pose feedback, then counts support only across distinct acquisitions and viewpoints; privileged native coordinates are evaluator-only.
+- **Intuition:** It tests whether physical consistency can reject visually similar but spatially incompatible bone interfaces without claiming a complete 3D reconstruction or SAP identity.
+- **Source:** approved by user, 2026-11-21.
+
 ### INVALIDATED_AXIS_ORDERING
 - **Kind:** object
 - **Definition:** The correction status assigned when native ultrasound coordinates were flattened width-major but reconstructed by a direct depth-by-width reshape, invalidating every derived pixel position while preserving per-pixel membership counts and source acquisitions.
