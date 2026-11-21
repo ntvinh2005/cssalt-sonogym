@@ -11,6 +11,7 @@ from two_stage_navigation.ultrasound_multiview import (
     correspondence_matrix,
     interface_correspondence,
     interface_descriptors,
+    multiview_feature_matrix,
     pose_distance_matrices,
 )
 
@@ -78,6 +79,19 @@ class UltrasoundMultiviewTests(unittest.TestCase):
         signature = " ".join(inspect.signature(accumulate_evidence).parameters)
         for forbidden in ("ct", "segmentation", "target", "pseudo", "raw_label"):
             self.assertNotIn(forbidden, signature)
+
+    def test_multiview_features_require_distinct_support(self) -> None:
+        images = [synthetic_interface(120), synthetic_interface(121)]
+        correspondence = correspondence_matrix(images)
+        translation, angle = pose_distance_matrices(
+            np.asarray([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0]])
+        )
+        matrix, counts, support = multiview_feature_matrix(
+            np.asarray([0.2, 0.8]), correspondence, translation, angle, self.config
+        )
+        self.assertEqual(matrix.shape, (2, 13))
+        np.testing.assert_array_equal(counts, [1, 1])
+        self.assertEqual(support, [[1], [0]])
 
 
 if __name__ == "__main__":

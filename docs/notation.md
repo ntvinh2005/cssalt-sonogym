@@ -296,6 +296,12 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It measures whether a bounded return-and-confirm policy can recover a supported view even when top-1 ranking remains imperfect.
 - **Source:** approved by user, 2026-11-21.
 
+### Learned multi-view ranking
+- **Kind:** method
+- **Definition:** Supervised ranking of Stage 2 candidate views using only actor-visible single-frame scores, Multi-view cortical correspondence, executed relative motion, support counts, and acquisition identity; base scores used to fit the ranker are generated out-of-fold by session, and ambiguous evidence is excluded from hard labels.
+- **Intuition:** It tests whether a small learned combination of repeated-view evidence can generalize better than a fixed correspondence average without introducing privileged geometry at inference.
+- **Source:** approved by user, 2026-11-21.
+
 ### Stage 2 fresh confirmation
 - **Kind:** method
 - **Definition:** Ultrasound observations acquired after verified physical return to a remembered candidate, with increasing acquisition identity, distinct frame hashes, valid motion and technical feedback, and predictions consistent with the remembered view.

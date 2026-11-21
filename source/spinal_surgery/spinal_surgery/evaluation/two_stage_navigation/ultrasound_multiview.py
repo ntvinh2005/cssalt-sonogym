@@ -232,3 +232,73 @@ def accumulate_evidence(
             )
             accumulated[index] = 1.0 / (1.0 + math.exp(-combined))
     return accumulated, support_counts, support_indices
+
+
+MULTIVIEW_FEATURE_NAMES = (
+    "base_score",
+    "support_fraction",
+    "maximum_correspondence",
+    "mean_correspondence",
+    "neighbor_score_mean",
+    "neighbor_score_maximum",
+    "neighbor_score_minimum",
+    "neighbor_score_std",
+    "mean_translation_fraction",
+    "maximum_translation_fraction",
+    "mean_angle_fraction",
+    "maximum_angle_fraction",
+    "base_neighbor_difference",
+)
+
+
+def multiview_feature_matrix(
+    base_scores: np.ndarray,
+    correspondences: np.ndarray,
+    translation_mm: np.ndarray,
+    angle_deg: np.ndarray,
+    config: EvidenceConfig,
+) -> tuple[np.ndarray, np.ndarray, list[list[int]]]:
+    """Summarize image correspondence and executed motion for each candidate view."""
+
+    _, support_counts, support_indices = accumulate_evidence(
+        base_scores, correspondences, translation_mm, angle_deg, config
+    )
+    scores = np.asarray(base_scores, dtype=np.float64)
+    rows: list[np.ndarray] = []
+    for index, support in enumerate(support_indices):
+        if support:
+            corr = correspondences[index, support]
+            neighbors = scores[support]
+            translations = translation_mm[index, support]
+            angles = angle_deg[index, support]
+            neighbor_mean = float(np.mean(neighbors))
+            values = np.asarray(
+                [
+                    scores[index],
+                    len(support) / config.maximum_neighbors,
+                    float(np.max(corr)),
+                    float(np.mean(corr)),
+                    neighbor_mean,
+                    float(np.max(neighbors)),
+                    float(np.min(neighbors)),
+                    float(np.std(neighbors)),
+                    float(np.mean(translations))
+                    / max(config.maximum_neighbor_translation_mm, 1e-6),
+                    float(np.max(translations))
+                    / max(config.maximum_neighbor_translation_mm, 1e-6),
+                    float(np.mean(angles)) / max(config.maximum_neighbor_angle_deg, 1e-6),
+                    float(np.max(angles)) / max(config.maximum_neighbor_angle_deg, 1e-6),
+                    abs(float(scores[index]) - neighbor_mean),
+                ],
+                dtype=np.float64,
+            )
+        else:
+            values = np.zeros(len(MULTIVIEW_FEATURE_NAMES), dtype=np.float64)
+            values[0] = scores[index]
+        rows.append(values)
+    matrix = np.asarray(rows, dtype=np.float64)
+    if matrix.shape != (len(scores), len(MULTIVIEW_FEATURE_NAMES)):
+        raise AssertionError("invalid multi-view feature shape")
+    if not np.all(np.isfinite(matrix)):
+        raise AssertionError("multi-view features must be finite")
+    return matrix, support_counts, support_indices

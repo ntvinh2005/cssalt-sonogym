@@ -404,6 +404,24 @@ def selected_config(protocol: dict[str, Any], selected: dict[str, Any]) -> Evide
     return config_from_protocol(row, protocol["viewpoint_contract"])
 
 
+def passes_development_gate(
+    evaluation_summary: dict[str, Any],
+    selected_calibration: dict[str, Any],
+    gate: dict[str, Any],
+) -> bool:
+    return bool(
+        selected_calibration["calibration_gate_pass"]
+        and evaluation_summary["top1_positive_sessions"]
+        >= int(gate["required_top1_positive_sessions"])
+        and evaluation_summary["accepted_positive_sessions"]
+        >= int(gate["required_accepted_positive_sessions"])
+        and evaluation_summary["wrong_accepted_positive_sessions"]
+        <= int(gate["maximum_wrong_accepted_sessions"])
+        and evaluation_summary["accepted_no_positive_sessions"]
+        <= int(gate["maximum_accepted_ambiguous_or_negative_sessions"])
+    )
+
+
 def verify_split_hashes(
     development_rows: list[dict[str, str]], evaluation_rows: list[dict[str, str]]
 ) -> dict[str, Any]:
@@ -529,14 +547,10 @@ def main() -> int:
 
     l5 = evaluation_results["L5"]["summary"]
     gate = protocol["evaluation"]["development_gate"]
-    development_gate_pass = bool(
-        l5["top1_positive_sessions"] >= int(gate["required_top1_positive_sessions"])
-        and l5["accepted_positive_sessions"]
-        >= int(gate["required_accepted_positive_sessions"])
-        and l5["wrong_accepted_positive_sessions"]
-        <= int(gate["maximum_wrong_accepted_sessions"])
-        and l5["accepted_no_positive_sessions"]
-        <= int(gate["maximum_accepted_ambiguous_or_negative_sessions"])
+    development_gate_pass = passes_development_gate(
+        l5,
+        selections["L5"],
+        gate,
     )
     write_csv(output / "evaluation_sessions.csv", session_rows)
     write_csv(output / "evaluation_frames.csv", frame_rows)

@@ -1,0 +1,89 @@
+protocol_id: s0010-stage2-multiview-ranker-v1
+scope:
+  patient_id: s0010
+  simulator_only: true
+  cpu_only: true
+  evaluation_sessions_previously_opened: true
+  independent_confirmation_claim_allowed: false
+  active_acquisition_integration: false
+  runtime_geometry_access: false
+inputs:
+  development_dataset: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_development_merged
+  evaluation_dataset: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_evaluation
+actor_inputs:
+  - clean_ultrasound
+  - acquisition_order
+  - executed_relative_translation
+  - executed_relative_rotation
+  - frame_identity
+privileged_inputs_excluded_from_runtime:
+  - ct
+  - segmentation
+  - pseudo_sap_mask
+  - raw_label_slice
+  - pixel_to_volume_coordinates
+  - evaluator_target_coordinates
+base_model:
+  feature: complete_tracked_interface_arrangement
+  family: ExtraTreesClassifier
+  trees: 240
+  class_weight: balanced
+  random_seed: 20261122
+  out_of_fold_session_folds: 5
+ranker:
+  family: LogisticRegression
+  class_weight: balanced
+  regularization_c: 1.0
+  maximum_iterations: 1000
+  random_seed: 20261122
+  fit_split: train
+  ambiguous_training_labels: excluded
+movement_handling:
+  inadmissible_actor_frames: exclude_from_candidate_evidence
+  executed_motion_from_excluded_frames: retain_for_pose_reconstruction
+  angle_clamp_exception: false
+viewpoint_contract:
+  minimum_translation_mm: 2.0
+  minimum_orientation_deg: 1.0
+correspondence:
+  aggregation: mean
+  maximum_neighbor_translation_mm: 40.0
+  maximum_neighbor_angle_deg: 30.0
+  minimum_correspondence: 0.25
+  maximum_neighbors: 5
+  neighbor_weight: 0.5
+  minimum_support: 2
+selection:
+  split: calibration
+  score_thresholds: [0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+  top1_margin_thresholds: [0.0, 0.05, 0.10]
+  primary_level: L5
+  calibration_minimum_positive_session_fraction: 0.80
+  require_zero_wrong_accepted_positive_sessions: true
+  require_zero_accepted_no_positive_sessions: true
+  tie_break_order:
+    - calibration_gate_pass
+    - accepted_positive_sessions
+    - top1_positive_sessions
+    - top3_positive_sessions
+    - fewer_ambiguous_activations
+evaluation:
+  open_only_if_calibration_gate_passes: true
+  split: evaluation
+  primary_level: L5
+  l4_is_diagnostic_only: true
+  development_gate:
+    required_top1_positive_sessions: 2
+    required_accepted_positive_sessions: 2
+    maximum_wrong_accepted_sessions: 0
+    maximum_accepted_ambiguous_or_negative_sessions: 0
+information_boundary:
+  label_fields_used_only_after_actor_scores_are_frozen: true
+  cross_session_evidence_forbidden: true
+  duplicate_hash_votes_per_session: 1
+  evaluator_geometry_used_for_features: false
+execution:
+  maximum_cpu_threads: 4
+  gpu_count: 0
+  create_zip: false
+  render_demo: true

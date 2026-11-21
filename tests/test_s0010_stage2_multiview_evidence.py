@@ -91,6 +91,22 @@ class MultiviewEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cross split"):
             evidence.verify_split_hashes(train, evaluation)
 
+    def test_evaluation_cannot_pass_after_calibration_gate_failure(self) -> None:
+        evaluation = {
+            "top1_positive_sessions": 2,
+            "accepted_positive_sessions": 2,
+            "wrong_accepted_positive_sessions": 0,
+            "accepted_no_positive_sessions": 0,
+        }
+        calibration = {"calibration_gate_pass": False}
+        gate = {
+            "required_top1_positive_sessions": 2,
+            "required_accepted_positive_sessions": 2,
+            "maximum_wrong_accepted_sessions": 0,
+            "maximum_accepted_ambiguous_or_negative_sessions": 0,
+        }
+        self.assertFalse(evidence.passes_development_gate(evaluation, calibration, gate))
+
 
 if __name__ == "__main__":
     unittest.main()
