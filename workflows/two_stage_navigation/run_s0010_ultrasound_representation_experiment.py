@@ -21,6 +21,7 @@ from two_stage_navigation.ultrasound_surface_features import (
     DEFAULT_SURFACE_FEATURE_SPEC,
     causal_feature,
     single_view_feature,
+    topology_feature,
 )
 
 import train_s0010_sap_classifier as baseline
@@ -126,6 +127,12 @@ class RecordedImages:
                 float(public.get("executed_delta_angle_rad", 0.0)),
                 int(public.get("action_steps_since_previous_frame", 0)),
             )
+        elif variant == "topology":
+            value = topology_feature(image)
+        elif variant == "context":
+            value = single_view_feature(image)[
+                DEFAULT_SURFACE_FEATURE_SPEC.topology_width :
+            ]
         else:
             raise ValueError(f"unsupported representation: {variant}")
         self.features[key] = value
