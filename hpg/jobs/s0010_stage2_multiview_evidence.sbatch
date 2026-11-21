@@ -18,7 +18,7 @@ source "$SONOGYM_CONFIG_FILE"
 # shellcheck source=common_cpu.sh
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_stage2_multiview_evidence_protocol_v1r1.yaml"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_stage2_multiview_evidence_protocol_v2.yaml"
 DEVELOPMENT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_development_merged"
 EVALUATION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_evaluation"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_stage2_multiview_evidence/$SLURM_JOB_ID"
