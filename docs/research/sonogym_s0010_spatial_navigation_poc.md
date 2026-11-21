@@ -189,7 +189,7 @@ This follow-up isolates the RIGHT L5 TP surface-core task that had passed the ea
 
 **Method.** The actor transform maps ultrasound pixels through probe-local calibration and synchronized forward-kinematics pose. Native pixel-to-volume coordinates and vertebral masks are opened only by the evaluator. The recorded V3 actor input lacks synchronized 6DoF, so the localizer itself retains the historical reduced `(x,z,angle)` representation.
 
-**Setup.** Protocol SHA-256 `cce72e9945799aa0968f4dcbf66989c918246f3de7f4f2b8a7b38139d48ff186`; implementation commit `792dfffb9383e0f86821e69aa631336b81c64068`; CPU job `52253724`; two opened-development selection sessions; 4 CPU, 16 GB requested, 0 GPU, 21 s elapsed.
+**Setup.** Protocol SHA-256 `cce72e9945799aa0968f4dcbf66989c918246f3de7f4f2b8a7b38139d48ff186`; implementation commit `792dfffb9383e0f86821e69aa631336b81c64068`; CPU job `52253724`; two opened-development selection sessions; 4 CPU, 16 GB requested, 0 GPU, 21 s job elapsed and 10.33 s measured analysis runtime. Slurm reported only 3 MB for the batch shell rather than a credible Python-process peak, so observed peak memory is unavailable rather than inferred from that incomplete counter.
 
 **Results.**
 
