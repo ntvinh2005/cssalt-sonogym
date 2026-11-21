@@ -1,0 +1,106 @@
+protocol_id: s0010_l5_spatial_localizer_v1
+status: PRE_FINAL_COMPARISON_FROZEN_DEVELOPMENT
+source_run:
+  experiment: s0010_mbb_single_anatomy_poc_v3
+  job_id: 52039283
+  patient_id: s0010
+  evidence_status: historically_opened_development
+target: L5_RIGHT_TP_SURFACE_CORE
+splits:
+  method_selection_sessions: [mbbpoc_v3_00, mbbpoc_v3_01]
+  final_comparison_sessions: [mbbpoc_v3_02, mbbpoc_v3_03]
+  independent_confirmation_claim: forbidden
+observation_budget:
+  include_phases: [coarse, fine, micro]
+  exclude_phases: [fresh_confirmation_1, fresh_confirmation_2, fresh_confirmation_3]
+actor_geometry:
+  width_pixels: 150
+  depth_pixels: 200
+  pixel_resolution_mm: 0.5
+  label_resolution_mm: 1.5
+  image_origin_height_mm: 133.0
+  sample_stride_pixels: 6
+  association_radius_mm: 4.0
+  minimum_view_translation_mm: 0.75
+  minimum_view_angle_deg: 0.75
+  runtime_pose_audit:
+    robot_forward_kinematics_available: true
+    synchronized_6dof_in_historical_public_records: false
+    calibrated_transform_runtime_status: interface_ready_not_replayable_from_public_v3
+calibration_evaluator:
+  maximum_median_coordinate_error_mm: 0.001
+  maximum_p90_coordinate_error_mm: 0.001
+  maximum_coordinate_error_mm: 0.01
+  depth_bins_rows: [0, 50, 100, 150, 200]
+  orientation_bins_rad: [2.70, 2.825, 2.925, 3.05]
+surface_evaluator:
+  combined_label_map: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/assets/data/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz
+  vertebral_bone_labels: [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
+  bone_surface_tolerance_mm: 3.0
+  target_surface_tolerance_mm: 5.0
+  minimum_bone_surface_inlier_fraction: 0.50
+  maximum_target_nontarget_association_fraction: 0.20
+  target_geometry: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234/s0010_right_sap_tp_correction_v1/boundary_revisions/editable_geometry/L5_RIGHT_transverse_process_revision.npz
+  target_geometry_sha256: 01c910898f1463d89ac2e694c0466ff84967a0bc7dd2a464c700a8d62d5bb565
+localizer_shared:
+  support_radius_mm: 4.0
+  minimum_supporting_frames: 3
+  maximum_support_distance_mm: 4.0
+  minimum_target_probability: 0.5
+  target_probability_weight: 0.45
+  support_weight: 0.55
+  support_saturation_count: 8
+  minimum_score: 0.45
+  minimum_margin: 0.02
+  top_k: 3
+hypotheses:
+  - name: support
+    landmark_prior_scale_mm: 18.0
+  - name: landmark_relative
+    landmark_prior_scale_mm: 18.0
+method_selection_gate:
+  minimum_correct_accepted_sessions: 2
+  maximum_wrong_accepted_sessions: 0
+  minimum_top3_positive_sessions: 2
+  maximum_mean_localization_error_mm: 5.0
+  minimum_selected_supporting_frames: 3
+  selection_rule: >-
+    Select among hypotheses passing every gate by lowest mean evaluator
+    localization error, then highest mean distinct support, then declared order.
+  final_comparison_opening: only_after_method_selection_pass
+final_readiness_gate:
+  minimum_correct_accepted_sessions: 2
+  maximum_wrong_accepted_sessions: 0
+  minimum_top3_positive_sessions: 2
+  maximum_mean_localization_error_mm: 5.0
+  minimum_selected_supporting_frames: 3
+baselines:
+  - single_view_maximum_target_probability
+  - historical_stage2_selected_view
+controls:
+  - shuffled_motion
+  - appearance_only_correspondence
+  - single_view_maximum_target_probability
+  - historical_stage2_selected_view
+control_settings:
+  shuffled_motion_seed: 20261121
+information_boundary:
+  actor_allowed:
+    - clean_ultrasound
+    - executed_relative_pose_index
+    - stage1_handoff_pose_index
+    - public_image_calibration
+    - acquisition_identity
+    - frozen_image_target_probability
+  evaluator_only:
+    - native_pixel_to_volume_coordinates
+    - full_pose_replay
+    - raw_labels
+    - vertebral_segmentation
+    - TP_surface_core_geometry
+resource_bound:
+  account: anest-dept
+  cpu_cores: 4
+  memory_gb: 16
+  gpu_count: 0
+  walltime: 00:30:00

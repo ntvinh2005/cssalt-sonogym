@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Sequence
+from typing import Literal, Sequence
 
 import numpy as np
 
@@ -56,6 +56,73 @@ class SpatialAssociation:
     left_index: int
     right_index: int
     actor_distance_mm: float
+
+
+@dataclass(frozen=True)
+class SpatialViewCandidate:
+    frame_sequence: int
+    frame_sha256: str
+    target_probability: float
+    proposal_row: float
+    proposal_column: float
+
+
+@dataclass(frozen=True)
+class SpatialLocalizerConfig:
+    hypothesis: Literal["support", "landmark_relative"]
+    support_radius_mm: float = 4.0
+    minimum_supporting_frames: int = 3
+    maximum_support_distance_mm: float = 4.0
+    minimum_target_probability: float = 0.5
+    target_probability_weight: float = 0.45
+    support_weight: float = 0.55
+    support_saturation_count: int = 8
+    landmark_prior_scale_mm: float = 18.0
+    minimum_score: float = 0.45
+    minimum_margin: float = 0.02
+    top_k: int = 3
+
+    def __post_init__(self) -> None:
+        if self.hypothesis not in {"support", "landmark_relative"}:
+            raise ValueError("unsupported localizer hypothesis")
+        positive = (
+            self.support_radius_mm,
+            self.minimum_supporting_frames,
+            self.maximum_support_distance_mm,
+            self.support_saturation_count,
+            self.landmark_prior_scale_mm,
+            self.top_k,
+        )
+        if not all(math.isfinite(float(value)) and float(value) > 0 for value in positive):
+            raise ValueError("localizer settings must be finite and positive")
+        if not 0.0 <= self.minimum_target_probability <= 1.0:
+            raise ValueError("minimum probability must lie in [0, 1]")
+        if not 0.0 <= self.minimum_score <= 1.0 or self.minimum_margin < 0.0:
+            raise ValueError("invalid score gates")
+        if not math.isclose(
+            self.target_probability_weight + self.support_weight, 1.0, abs_tol=1e-9
+        ):
+            raise ValueError("localizer score weights must sum to one")
+
+
+@dataclass(frozen=True)
+class SpatialRankedView:
+    frame_sequence: int
+    frame_sha256: str
+    score: float
+    target_probability: float
+    supporting_frames: tuple[int, ...]
+    median_support_distance_mm: float
+    landmark_prior_distance_mm: float
+    eligible: bool
+
+
+@dataclass(frozen=True)
+class SpatialTargetDecision:
+    status: Literal["ACCEPT", "ABSTAIN"]
+    selected: SpatialRankedView | None
+    ranking: tuple[SpatialRankedView, ...]
+    reason: str
 
 
 def _wrap_degrees(value: float) -> float:
@@ -121,6 +188,76 @@ def cortical_map_points(
     return tuple(result)
 
 
+def map_image_pixel(
+    *,
+    row: float,
+    column: float,
+    image_shape: tuple[int, int],
+    executed_pose_index: Sequence[float],
+    config: SpatialMapConfig = SpatialMapConfig(),
+) -> np.ndarray:
+    """Map one image pixel with the same actor-side approximation as the map."""
+
+    pose = np.asarray(executed_pose_index, dtype=np.float64)
+    if pose.shape != (3,) or not np.all(np.isfinite(pose)):
+        raise ValueError("executed pose must be a finite x/z/angle triple")
+    height, width = image_shape
+    if not (0.0 <= row < height and 0.0 <= column < width):
+        raise ValueError("pixel lies outside the image")
+    origin = pose[:2] * config.label_resolution_mm
+    lateral = np.asarray([math.cos(pose[2]), math.sin(pose[2])], dtype=np.float64)
+    lateral_mm = (column - width // 2) * config.pixel_resolution_mm
+    surface = origin + lateral * lateral_mm
+    depth = row * config.pixel_resolution_mm if config.include_depth else 0.0
+    return np.asarray([surface[0], surface[1], depth], dtype=np.float64)
+
+
+def calibrated_image_coordinates_mm(
+    *,
+    end_effector_position_m: Sequence[float],
+    rotation_columns: np.ndarray,
+    width: int,
+    depth: int,
+    pixel_resolution_mm: float,
+    image_origin_height_mm: float,
+    home_up_axis: Sequence[float] = (0.0, 1.0, 0.0),
+) -> np.ndarray:
+    """Transform native image pixels with a public probe-pose calibration.
+
+    This function is suitable for robot forward-kinematics pose feedback.  It
+    does not read patient anatomy, labels, or native simulator coordinates.
+    """
+
+    position_mm = np.asarray(end_effector_position_m, dtype=np.float64) * 1000.0
+    rotation = np.asarray(rotation_columns, dtype=np.float64)
+    up = np.asarray(home_up_axis, dtype=np.float64)
+    if position_mm.shape != (3,) or rotation.shape != (3, 3) or up.shape != (3,):
+        raise ValueError("calibrated transform inputs have invalid shape")
+    if not (
+        np.all(np.isfinite(position_mm))
+        and np.all(np.isfinite(rotation))
+        and np.all(np.isfinite(up))
+    ):
+        raise ValueError("calibrated transform inputs must be finite")
+    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-6):
+        raise ValueError("rotation columns must be orthonormal")
+    if not np.isclose(np.linalg.det(rotation), 1.0, atol=1e-6):
+        raise ValueError("rotation columns must be right-handed")
+    if width <= 0 or depth <= 0 or pixel_resolution_mm <= 0.0:
+        raise ValueError("image dimensions and spacing must be positive")
+    normal = rotation[:, 2]
+    origin_direction = normal if float(np.dot(normal, up)) >= 0.0 else -normal
+    origin = position_mm + image_origin_height_mm * origin_direction
+    columns = (np.arange(width, dtype=np.float64) - width // 2) * pixel_resolution_mm
+    rows = np.arange(depth, dtype=np.float64) * pixel_resolution_mm
+    lateral_grid, depth_grid = np.meshgrid(columns, rows, indexing="xy")
+    return (
+        origin[None, None, :]
+        + lateral_grid[:, :, None] * rotation[:, 0]
+        + depth_grid[:, :, None] * rotation[:, 2]
+    )
+
+
 def associate_spatial_points(
     points: Sequence[CorticalMapPoint],
     *,
@@ -181,3 +318,107 @@ def frame_support_counts(
         support.setdefault(left, set()).add(right)
         support.setdefault(right, set()).add(left)
     return {frame: len(neighbors) for frame, neighbors in support.items()}
+
+
+def rank_spatial_target_views(
+    points: Sequence[CorticalMapPoint],
+    candidates: Sequence[SpatialViewCandidate],
+    *,
+    poses_by_frame: dict[int, Sequence[float]],
+    stage1_prior_pose_index: Sequence[float],
+    map_config: SpatialMapConfig = SpatialMapConfig(),
+    localizer_config: SpatialLocalizerConfig,
+    image_shape: tuple[int, int] = (200, 150),
+) -> SpatialTargetDecision:
+    """Rank target views from map support and the Stage 1 actor prior."""
+
+    prior = np.asarray(stage1_prior_pose_index, dtype=np.float64)
+    if prior.shape != (3,) or not np.all(np.isfinite(prior)):
+        raise ValueError("Stage 1 prior must be a finite x/z/angle triple")
+    grouped: dict[int, list[CorticalMapPoint]] = {}
+    for point in points:
+        grouped.setdefault(point.frame_sequence, []).append(point)
+    ranking: list[SpatialRankedView] = []
+    for candidate in candidates:
+        coordinate = map_image_pixel(
+            row=candidate.proposal_row,
+            column=candidate.proposal_column,
+            image_shape=image_shape,
+            executed_pose_index=poses_by_frame[candidate.frame_sequence],
+            config=map_config,
+        )
+        nearest_by_frame: list[tuple[float, int]] = []
+        for frame_sequence, frame_points in grouped.items():
+            if frame_sequence == candidate.frame_sequence:
+                continue
+            distances = [
+                float(np.linalg.norm(coordinate - np.asarray(point.coordinate_mm)))
+                for point in frame_points
+            ]
+            if distances:
+                nearest = min(distances)
+                if nearest <= localizer_config.support_radius_mm:
+                    nearest_by_frame.append((nearest, frame_sequence))
+        nearest_by_frame.sort()
+        support_distances = np.asarray(
+            [value for value, _ in nearest_by_frame], dtype=np.float64
+        )
+        supporting_frames = tuple(frame for _, frame in nearest_by_frame)
+        median_distance = (
+            float(np.median(support_distances)) if support_distances.size else math.inf
+        )
+        support_fraction = min(
+            len(supporting_frames) / localizer_config.support_saturation_count, 1.0
+        )
+        spatial_quality = (
+            math.exp(-median_distance / localizer_config.maximum_support_distance_mm)
+            if math.isfinite(median_distance)
+            else 0.0
+        )
+        support_score = support_fraction * spatial_quality
+        score = (
+            localizer_config.target_probability_weight * candidate.target_probability
+            + localizer_config.support_weight * support_score
+        )
+        prior_coordinate = prior[:2] * map_config.label_resolution_mm
+        prior_distance = float(np.linalg.norm(coordinate[:2] - prior_coordinate))
+        if localizer_config.hypothesis == "landmark_relative":
+            score *= math.exp(-prior_distance / localizer_config.landmark_prior_scale_mm)
+        eligible = bool(
+            candidate.target_probability >= localizer_config.minimum_target_probability
+            and len(supporting_frames) >= localizer_config.minimum_supporting_frames
+            and median_distance <= localizer_config.maximum_support_distance_mm
+        )
+        ranking.append(
+            SpatialRankedView(
+                frame_sequence=candidate.frame_sequence,
+                frame_sha256=candidate.frame_sha256,
+                score=float(score),
+                target_probability=candidate.target_probability,
+                supporting_frames=supporting_frames,
+                median_support_distance_mm=median_distance,
+                landmark_prior_distance_mm=prior_distance,
+                eligible=eligible,
+            )
+        )
+    ordered = tuple(
+        sorted(
+            ranking,
+            key=lambda row: (
+                not row.eligible,
+                -row.score,
+                -len(row.supporting_frames),
+                row.frame_sequence,
+            ),
+        )
+    )
+    eligible = [row for row in ordered if row.eligible]
+    if not eligible:
+        return SpatialTargetDecision("ABSTAIN", None, ordered, "NO_ELIGIBLE_SPATIAL_VIEW")
+    selected = eligible[0]
+    second_score = eligible[1].score if len(eligible) > 1 else 0.0
+    if selected.score < localizer_config.minimum_score:
+        return SpatialTargetDecision("ABSTAIN", None, ordered, "SCORE_BELOW_GATE")
+    if selected.score - second_score < localizer_config.minimum_margin:
+        return SpatialTargetDecision("ABSTAIN", None, ordered, "INSUFFICIENT_SCORE_MARGIN")
+    return SpatialTargetDecision("ACCEPT", selected, ordered, "SUPPORTED_SPATIAL_VIEW")

@@ -1,5 +1,53 @@
 # Project notation
 
+### SPATIAL_GEOMETRY_VALIDATED
+- **Kind:** object
+- **Definition:** The spatial-reconstruction verdict used when an actor-accessible calibrated probe transform reproduces saved native physical coordinates within the frozen coordinate-error gate and mapped cortical candidates pass the declared bone-surface consistency controls.
+- **Intuition:** It validates the spatial transform and observed-surface geometry, not anatomical target identity.
+- **Source:** approved by user, 2026-11-21.
+
+### SPATIAL_GEOMETRY_PARTIAL
+- **Kind:** object
+- **Definition:** The spatial-reconstruction verdict used when calibrated geometry is technically accurate or a reduced representation is physically informative, but actor-record availability, surface consistency, or target-specific coverage prevents the complete validation gate from passing.
+- **Intuition:** Some spatial information is reliable, but the complete runtime reconstruction claim is not supported.
+- **Source:** approved by user, 2026-11-21.
+
+### SPATIAL_GEOMETRY_UNSUPPORTED
+- **Kind:** object
+- **Definition:** The spatial-reconstruction verdict used when neither calibrated nor reduced actor-side geometry clears the frozen physical-consistency controls.
+- **Intuition:** Executed motion and public calibration do not support a useful spatial reconstruction under the tested formulation.
+- **Source:** approved by user, 2026-11-21.
+
+### L5_SPATIAL_LOCALIZER_READY
+- **Kind:** object
+- **Definition:** The RIGHT L5 TP surface-core verdict requiring the frozen map-driven localizer to satisfy target selection, wrong-acceptance, top-k, localization-error, and distinct-support gates on the declared final comparison sessions.
+- **Intuition:** The localizer is ready for a separately authorized Stage 2 closed-loop validation, not already proven in a new live execution.
+- **Source:** approved by user, 2026-11-21.
+
+### L5_SPATIAL_LOCALIZER_PROMISING
+- **Kind:** object
+- **Definition:** The RIGHT L5 TP surface-core verdict used when map-driven target selection improves or adds reproducible spatial evidence on opened development sessions but does not satisfy every frozen readiness gate.
+- **Intuition:** The method warrants a decisive follow-up without being ready for deployment.
+- **Source:** approved by user, 2026-11-21.
+
+### L5_SPATIAL_LOCALIZER_FAILED
+- **Kind:** object
+- **Definition:** The RIGHT L5 TP surface-core verdict used when the frozen map-driven localizer cannot control wrong selections or meet its minimum correct-selection and localization gates on the declared comparison.
+- **Intuition:** Spatial support did not produce a defensible target-view decision.
+- **Source:** approved by user, 2026-11-21.
+
+### STAGE2_INTEGRATION_INTERFACE_READY
+- **Kind:** object
+- **Definition:** The integration verdict used when a leakage-tested CPU interface accepts clean ultrasound, actor-available executed pose feedback, a Stage 1 prior and localizer state, then returns ranked target views and an acceptance or abstention decision in recorded replay.
+- **Intuition:** The software boundary is ready for a later physical-controller experiment; no new closed-loop success is implied.
+- **Source:** approved by user, 2026-11-21.
+
+### STAGE2_INTEGRATION_BLOCKED
+- **Kind:** object
+- **Definition:** The integration verdict used when the localizer evidence or software contract is insufficient to support a fail-closed Stage 2 replay interface.
+- **Intuition:** Another scientific or engineering correction is required before physical integration.
+- **Source:** approved by user, 2026-11-21.
+
 ### Motion-compensated spatial cortical mapping
 - **Kind:** method
 - **Definition:** An actor-side 2.5D representation that transforms clean-ultrasound cortical candidates into a Home-relative spatial frame using public image calibration and executed reduced probe-pose feedback, then counts support only across distinct acquisitions and viewpoints; privileged native coordinates are evaluator-only.

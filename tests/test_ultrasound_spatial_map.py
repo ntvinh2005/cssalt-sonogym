@@ -7,10 +7,14 @@ import numpy as np
 
 from two_stage_navigation.ultrasound_spatial_map import (
     CorticalMapPoint,
+    SpatialLocalizerConfig,
     SpatialMapConfig,
+    SpatialViewCandidate,
     associate_spatial_points,
+    calibrated_image_coordinates_mm,
     cortical_map_points,
     frame_support_counts,
+    rank_spatial_target_views,
 )
 
 
@@ -79,6 +83,80 @@ class UltrasoundSpatialMapTests(unittest.TestCase):
             "native_coordinate",
             "target_coordinate",
             "full_pose",
+        ):
+            self.assertNotIn(forbidden, signature)
+            self.assertNotIn(forbidden, source)
+
+    def test_calibrated_coordinates_preserve_native_axes_and_units(self) -> None:
+        coordinates = calibrated_image_coordinates_mm(
+            end_effector_position_m=(0.1, 0.2, 0.3),
+            rotation_columns=np.eye(3),
+            width=5,
+            depth=4,
+            pixel_resolution_mm=0.5,
+            image_origin_height_mm=100.0,
+        )
+        np.testing.assert_allclose(coordinates[0, 2], [100.0, 200.0, 400.0])
+        np.testing.assert_allclose(coordinates[3, 4], [101.0, 200.0, 401.5])
+
+    def test_calibrated_coordinates_reject_left_handed_rotation(self) -> None:
+        rotation = np.diag([-1.0, 1.0, 1.0])
+        with self.assertRaisesRegex(ValueError, "right-handed"):
+            calibrated_image_coordinates_mm(
+                end_effector_position_m=(0, 0, 0),
+                rotation_columns=rotation,
+                width=5,
+                depth=4,
+                pixel_resolution_mm=0.5,
+                image_origin_height_mm=100.0,
+            )
+
+    def test_spatial_support_changes_target_ranking(self) -> None:
+        points = []
+        for frame in (1, 2, 3, 4):
+            points.append(
+                CorticalMapPoint(frame, str(frame), "t", 120, 75, (0.0, 0.0, 60.0), 1.0)
+            )
+        candidates = (
+            SpatialViewCandidate(0, "a", 0.9, 120, 75),
+            SpatialViewCandidate(1, "1", 0.7, 120, 75),
+        )
+        poses = {frame: (0.0, 0.0, 0.0) for frame in range(5)}
+        decision = rank_spatial_target_views(
+            points,
+            candidates,
+            poses_by_frame=poses,
+            stage1_prior_pose_index=(0.0, 0.0, 0.0),
+            localizer_config=SpatialLocalizerConfig(
+                hypothesis="support", minimum_margin=0.0
+            ),
+        )
+        self.assertEqual(decision.status, "ACCEPT")
+        self.assertEqual(decision.selected.frame_sequence, 0)
+        self.assertEqual(len(decision.selected.supporting_frames), 4)
+
+    def test_localizer_abstains_without_distinct_multiview_support(self) -> None:
+        decision = rank_spatial_target_views(
+            (),
+            (SpatialViewCandidate(0, "a", 0.99, 120, 75),),
+            poses_by_frame={0: (0.0, 0.0, 0.0)},
+            stage1_prior_pose_index=(0.0, 0.0, 0.0),
+            localizer_config=SpatialLocalizerConfig(hypothesis="support"),
+        )
+        self.assertEqual(decision.status, "ABSTAIN")
+        self.assertIsNone(decision.selected)
+        self.assertEqual(decision.reason, "NO_ELIGIBLE_SPATIAL_VIEW")
+
+    def test_localizer_api_has_no_evaluator_inputs(self) -> None:
+        signature = " ".join(inspect.signature(rank_spatial_target_views).parameters)
+        source = inspect.getsource(rank_spatial_target_views)
+        for forbidden in (
+            "raw_label",
+            "segmentation",
+            "native_coordinate",
+            "target_coordinate",
+            "full_pose",
+            "geometry",
         ):
             self.assertNotIn(forbidden, signature)
             self.assertNotIn(forbidden, source)
