@@ -1,76 +1,296 @@
 # s0010 RIGHT L4/L5 SAP ultrasound validation and conditional training
 
-## Goal
+This experiment validates simulator-proxy SAP-related cortical-interface labels and fits the established image-only ExtraTrees baseline on fixed anatomy `s0010`. It does not establish clinician-verified SAP anatomy, patient generalization, an MBB target, or intervention readiness.
 
-Determine whether clean simulated ultrasound supports level-conditioned RIGHT L4/L5 SAP-related cortical-interface labels, and fit the frozen ExtraTrees patch baseline only when the annotation and dataset gates pass.
+## Result
 
-## Reproducible setup
+**RIGHT L5 passed the development annotation, dataset and calibration gates; RIGHT L4 remains blocked, and neither level has an independently acquired held-out result.**
 
-- Anatomy: `s0010` only.
-- CT pseudo-SAP prediction: frozen job `52078067`, SHA-256 `a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f`.
-- Development capture: job `52129000`, one NVIDIA L4, four CPUs, 30 GB requested memory, 4 minutes 11 seconds.
-- Targeted follow-up capture: job `52131349`, one NVIDIA L4, four CPUs, 30 GB requested memory, 4 minutes 23 seconds.
-- Final CPU analysis: job `52131929`, four CPUs, 16 GB requested memory, 1 minute 15 seconds.
-- Development and follow-up protocols were checksum-sealed before capture. The two evaluation sessions in the follow-up protocol were not acquired because capture stopped fail-closed during calibration.
+| step | what was measured | criterion | measured | verdict |
+|---|---|---|---|---|
+| 1 | session-separated correspondence | matched at least 0.50; mismatch at most 0.10; top-1 at least 0.70 | L4: 0.40 / 0.1148 / 0.3778; L5: 0.6552 / 0.0747 / 0.7241 | L4 fail; L5 pass |
+| 2 | binary image eligibility | no retained negative image contains a non-negative actor proposal | 138 previously selected negative images excluded; 0 added | pass |
+| 3 | RIGHT L5 calibration | precision and recall at least 0.80; false-positive rate at most 0.20 | precision 13 / 14 (92.86%); recall 13 / 16 (81.25%); false positives 1 / 206 (0.49%) | pass |
+| 4 | session-disjoint held-out evaluation | at least two new reset sessions and at least 10 positive and 10 negative images per evaluated level | evaluation sessions not acquired | not run |
 
-## Method
+The L5 result supports a calibrated simulator-only candidate checkpoint. Active acquisition integration remains on hold until the frozen evaluation sessions are acquired and evaluated once.
 
-Image-only interface tracks are generated before privileged comparison. A positive proxy requires a smooth clean-image interface satisfying the frozen gradient, contrast, posterior-shadow, continuity and alignment criteria against the first-hit pseudo-SAP surface. Clear other-level or other-bone patches may be negative. Boundary or identity ambiguity is excluded.
+## 1. Correspondence validation — do image interfaces identify the matched pseudo-SAP projection?
 
-Development annotation readiness requires, per level:
+`workflows/two_stage_navigation/validate_s0010_sap_correspondence.py`, run by Slurm job `52138127`. It fits the evaluator-only correspondence model on training sessions and applies the frozen threshold to opened calibration sessions.
 
-- matched acceptance rate at least 0.50;
-- mismatched false-alignment rate at most 0.10;
-- correct-projection ranking rate at least 0.70;
-- at least 30 positive and 30 negative unique training images;
-- at least 10 positive and 10 negative unique calibration images.
+**Criterion.** Matched acceptance at least 0.50, mismatched acceptance at most 0.10, distinct-pose acceptance at most 0.10, and top-1 ranking at least 0.70; thresholds were frozen before job `52138127`.
 
-The model path is a level-conditioned 48-by-80 patch ExtraTrees classifier with 240 trees. Geometry is used only to construct and evaluate proxy labels, never as an inference feature.
+### 1.1 Method
 
-## Results
+- The model receives stored interface-alignment measurements only; it is not an actor input.
+- Training sessions fit the model and select its threshold.
+- Calibration sessions evaluate the frozen rule.
+- Raw projection statistics remain reported separately and are not replaced retroactively.
 
-The initial capture produced 160 verified images across three training sessions and one calibration session. The follow-up produced 180 verified images across three additional training sessions. The next calibration session stopped when realized motion was 1.9915 mm, below the frozen 2.0 mm distinct-viewpoint gate. No tolerance was changed and the evaluation sessions remained unacquired.
+### 1.2 Setup
 
-| Level | Train positive | Train negative | Calibration positive | Calibration negative | Matched acceptance | Mismatched alignment | Ranking |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| RIGHT L4 SAP | 21 | 149 | 1 | 20 | 22/170 (12.9%) | 37/1020 (3.6%) | 39/170 (22.9%) |
-| RIGHT L5 SAP | 52 | 149 | 3 | 19 | 55/170 (32.4%) | 67/1020 (6.6%) | 39/170 (22.9%) |
+| what | value | spec |
+|---|---|---|
+| run | job `52138127` | §1 |
+| code | `59c765be4347238e9950f67e28e854504fb002c9` | §1 |
+| inputs | `s0010_sap_negative_image_gate_development_v1/52138127/dataset_archive_v3` | §1 |
+| protocol | `s0010_sap_existing_capture_development_protocol_v3.yaml`, SHA-256 `018df8584a181f255b8d301e088d0b5a44d38e94746332d5173f334b754eeb22` | §1 |
+| resources | 4 CPUs, 16 GB requested, no GPU | §1 |
 
-L5 obtained enough training positives, but not enough calibration positives and did not pass correspondence specificity/ranking. L4 missed both the training-positive quota and the calibration/correspondence gates.
+```bash
+export SONOGYM_CONFIG_FILE="$PWD/.sonogym.env"
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$SONOGYM_CONFIG_FILE" \
+  hpg/jobs/s0010_sap_negative_image_gate_and_train.sbatch
+```
 
-## Engineering outcome
+| | value |
+|---|---:|
+| L4 calibration matched comparisons | 45 |
+| L4 calibration mismatched comparisons | 270 |
+| L5 calibration matched comparisons | 29 |
+| L5 calibration mismatched comparisons | 174 |
+| **final comparisons** | **518** |
 
-- Ambiguous clean-image decisions no longer become positive labels because of nearby privileged geometry.
-- Matched, other-level and distinct-pose correspondence controls are recorded explicitly.
-- Development, calibration and evaluation sessions are assigned before capture.
-- The dataset builder excludes incomplete sessions and records their exact failure.
-- Train-only fitting, calibration-only threshold selection, full-image proposal evaluation and checkpoint save/reload are implemented.
-- Conditional execution correctly did not call `fit()` because neither level passed readiness.
+### 1.3 Results
 
-## Scientific verdict
+| level | threshold | matched | mismatch | distinct pose | top-1 | verdict |
+|---|---:|---:|---:|---:|---:|---|
+| RIGHT L4 | 0.66 | 18 / 45 (40.00%) | 31 / 270 (11.48%) | 31 / 225 (13.78%) | 17 / 45 (37.78%) | fail |
+| RIGHT L5 | 0.72 | 19 / 29 (65.52%) | 13 / 174 (7.47%) | 13 / 145 (8.97%) | 21 / 29 (72.41%) | pass |
 
-- RIGHT L4 SAP: `SIMULATOR_PROXY_SAP_LABEL_NOT_READY`; classifier `SAP_TRAINING_BLOCKED_DATA`.
-- RIGHT L5 SAP: `SIMULATOR_PROXY_SAP_LABEL_NOT_READY`; classifier `SAP_TRAINING_BLOCKED_DATA`.
-- Overall: `SAP_RECOGNITION_STAGE2_NOT_READY`.
+**Verdict: RIGHT L4 failed and RIGHT L5 passed the frozen development correspondence criterion.**
 
-The experiment establishes that synchronized captures and fail-closed proxy construction work, and that targeted L5 views increase the number of geometrically supported image candidates. It does not establish reliable image-only SAP identity or held-out performance.
+### 1.4 Reading it
 
-## Limitations and minimum remedy
+- L4 remains insufficiently specific and poorly ranked.
+- L5 passed on previously opened calibration data, not an independent holdout.
+- The L5 external validation does not alter the failed historical raw correspondence statistics.
 
-No clinician or real-patient claim is made. The model SAP masks remain simulator-only pseudo labels. The frozen two-job GPU allowance was exhausted. A future approved capture must first repair the calibration waypoint that produced only 1.9915 mm realized motion, then acquire at least seven additional clear L5 calibration positives and nine L4 calibration positives. L4 also needs at least nine additional training positives. More importantly, new views must improve matched-projection ranking, not merely increase frame count. Evaluation sessions should be acquired only after these development gates pass.
+### 1.5 Files
 
-## Reproducibility
+| file | contents |
+|---|---|
+| `52138127/correspondence_validation/correspondence_validation.json` | thresholds, calibration metrics and comparison-specific acceptance |
+| `52138127/correspondence_validation/s0010_l5_sap_correspondence.joblib` | evaluator-only L5 correspondence checkpoint |
+| `52138127/dataset_archive_v3/correspondence_controls.csv` | session-separated matched and mismatched rows |
 
-Protocols:
+## 2. Negative-image eligibility — does the dataset exclude unresolved whole-image evidence?
 
-- `experiments/unity_two_stage_transfer/s0010_sap_validation_development_protocol_v1.yaml`
-- `experiments/unity_two_stage_transfer/s0010_sap_validation_followup_protocol_v1.yaml`
+`workflows/two_stage_navigation/prepare_s0010_sap_dataset.py`, run by job `52138127`. It retains an image as negative only when every actor-visible proposal for that conditioned level is negative.
 
-Primary workflows:
+**Criterion.** A retained negative image must have no `BOUNDARY_OR_IDENTITY_AMBIGUOUS` or positive actor-visible proposal; this is the user-approved binary label contract.
 
-- `workflows/two_stage_navigation/prepare_s0010_sap_dataset.py`
-- `workflows/two_stage_navigation/merge_s0010_sap_datasets.py`
-- `workflows/two_stage_navigation/train_s0010_sap_classifier.py`
-- `workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py`
+### 2.1 Method
 
-The final review ZIP and large capture arrays remain in the runtime output tree rather than Git.
+- Candidate proposals are generated from clean ultrasound only.
+- Privileged geometry assigns offline positive, negative or ambiguous states.
+- The gate is opt-in and recorded in three checksum-sealed protocols, preserving historical datasets.
+- Positive selection and correspondence calculations are unchanged.
+
+### 2.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| run | job `52138127` | §2 |
+| initial protocol | `s0010_sap_validation_development_protocol_v2.yaml`, SHA-256 `7b1e93cc8f8c3e69fcc21673bdc534c9ade1b870009a89b9ebbb25521ebfbd3e` | §2 |
+| follow-up protocol | `s0010_sap_validation_followup_protocol_v2.yaml`, SHA-256 `8e062375c7e145f07760eda1c49a26155e1b856d5baebecada6b6a11a1b1313d` | §2 |
+| archive protocol | `s0010_sap_existing_capture_development_protocol_v3.yaml`, SHA-256 `018df8584a181f255b8d301e088d0b5a44d38e94746332d5173f334b754eeb22` | §2 |
+
+```bash
+export SONOGYM_CONFIG_FILE="$PWD/.sonogym.env"
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$SONOGYM_CONFIG_FILE" \
+  hpg/jobs/s0010_sap_negative_image_gate_and_train.sbatch
+```
+
+| | value |
+|---|---:|
+| previous selected rows | 1,356 |
+| dropped, negative image contained a non-negative proposal | 138 |
+| **final selected rows** | **1,218** |
+
+### 2.3 Results
+
+| level / split | prior negatives | final negatives | dropped |
+|---|---:|---:|---:|
+| L4 train | 321 | 315 | 6 |
+| L4 calibration | 106 | 104 | 2 |
+| L5 train | 529 | 453 | 76 |
+| L5 calibration | 260 | 206 | 54 |
+
+**Verdict: pass, because every retained negative satisfies the complete-image label contract and no positive was removed.**
+
+### 2.4 Reading it
+
+- The change fixes label admission; it is not a paired model improvement on an unchanged negative set.
+- Removed images remain ambiguous evidence and must be handled by abstention during future evaluation.
+- Exact train/calibration frame-hash overlap is 0.
+
+### 2.5 Files
+
+| file | contents |
+|---|---|
+| `52138127/dataset_merged_v2/sample_manifest.csv` | 1,218 admitted image labels |
+| `52138127/dataset_merged_v2/proposal_manifest.csv` | all 23,232 actor-visible proposals, including excluded ambiguity |
+| `52138127/dataset_merged_v2/readiness_report.json` | counts, sources, gates and deficits |
+
+## 3. Conditional classifier fit — does RIGHT L5 meet the frozen calibration gate?
+
+`workflows/two_stage_navigation/train_s0010_sap_classifier.py`, run by job `52138127`. It fits 240 ExtraTrees on training rows only and selects one whole-image threshold on calibration rows only.
+
+**Criterion.** Full-image precision at least 0.80, recall at least 0.80 and false-positive rate at most 0.20; thresholds were frozen before fitting.
+
+### 3.1 Method
+
+- The classifier uses the established 774-value clean-ultrasound patch feature vector.
+- Whole-image score is the maximum positive probability across actor-visible proposals.
+- L4 is not fit because its annotation and calibration gates fail.
+- The fitted checkpoint is saved and reload-verified regardless of calibration outcome.
+
+### 3.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| run | job `52138127` | §3 |
+| input | `52138127/dataset_merged_v2` | §3 |
+| model | 240-tree ExtraTrees, seed `20261121`, balanced class weights | §3 |
+| threshold grid | 0.05 through 0.95 in increments of 0.05 | §3 |
+| resources | 4 CPUs, 16 GB requested, no GPU; elapsed 4 minutes 14 seconds for the complete pipeline | §3 |
+
+```bash
+python workflows/two_stage_navigation/train_s0010_sap_classifier.py \
+  --dataset-dir "$RUN/dataset_merged_v2" \
+  --output-dir "$RUN/training_v2" --fit --level L5
+```
+
+| | train | calibration |
+|---|---:|---:|
+| positive unique images | 80 | 16 |
+| negative unique images | 453 | 206 |
+| **final unique images** | **533** | **222** |
+
+### 3.3 Results
+
+| setting | TP | FP | FN | TN | precision | recall | false-positive rate | F1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| full image, threshold 0.55 | 13 | 1 | 3 | 205 | 92.86% | 81.25% | 0.49% | 86.67% |
+| selected patch, threshold 0.55 | 13 | 0 | 3 | 206 | 100.00% | 81.25% | 0.00% | 89.66% |
+
+**Verdict: pass on opened development calibration; the checkpoint status is `TRAINED_CALIBRATED_HOLDOUT_UNOPENED`.**
+
+### 3.4 Reading it
+
+- The checkpoint was reloaded and reproduced every calibration probability exactly.
+- Only training IDs entered `fit()`; only calibration IDs selected the threshold.
+- The result applies to clear positive and clear negative simulator-proxy images, not excluded ambiguous images.
+- Geometry is absent from model features.
+
+### 3.5 Files
+
+| file | contents |
+|---|---|
+| `52138127/training_v2/s0010_l5_sap_classifier_v1.joblib` | reload-verified candidate checkpoint, SHA-256 `c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5` |
+| `52138127/training_v2/training_result.json` | threshold grid, confusion metrics and split IDs |
+| `52138127/training_v2/preflight_result.json` | no-fit schema and readiness validation |
+
+## 4. Held-out evaluation — does the calibrated checkpoint generalize to new resets?
+
+`workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py`, to be run after the frozen resume capture. It evaluates the unchanged checkpoint and threshold once on session-disjoint evaluation observations.
+
+**Criterion.** At least two independently reset evaluation sessions, at least 10 positive and 10 negative unique images per evaluated level, and the same precision, recall and false-positive gates as §3.
+
+### 4.1 Method
+
+- `s0010sapval_evaluation_02` and `s0010sapval_evaluation_03` are preassigned holdout sessions.
+- No existing session qualifies as unopened SAP evaluation data.
+- The checkpoint, preprocessing and threshold are frozen before acquisition.
+
+### 4.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| protocol | `s0010_sap_validation_resume_protocol_v1.yaml`, SHA-256 `3460dd70dda759e3e68692ba1e253d8dd9113e27b971d291a54f941215f35425` | §4 |
+| checkpoint | L5 SHA-256 `c173aa9812a2df25114f99604b7330ed06b435c3a77edc7e2901f2b5dd3896e5` | §4 |
+| evaluation sessions | 0 / 2 acquired | §4 |
+
+```bash
+# Not executed: the approved two-job GPU acquisition allowance was already exhausted.
+SAP_VALIDATION_PHASE=resume sbatch hpg/jobs/s0010_sap_validation_capture.sbatch
+```
+
+| | value |
+|---|---:|
+| attempted evaluation images | 0 |
+| dropped | 0 |
+| **final evaluation images** | **0** |
+
+### 4.3 Results
+
+No held-out metric exists.
+
+**Verdict: not run; `SAP_TRAINED_HELDOUT_PASS` is not supported.**
+
+### 4.4 Reading it
+
+- RIGHT L5 is ready for one frozen holdout capture/evaluation campaign, not Stage 2 integration.
+- RIGHT L4 remains blocked before held-out evaluation: 4 calibration positives and failed correspondence.
+- A third GPU acquisition job would exceed the approved two-job limit and requires a compute-budget extension.
+
+### 4.5 Files
+
+| file | contents |
+|---|---|
+| `experiments/unity_two_stage_transfer/s0010_sap_validation_resume_protocol_v1.yaml` | frozen calibration/evaluation waypoint bank |
+| `hpg/jobs/s0010_sap_validation_capture.sbatch` | opt-in resume capture path |
+| `workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py` | single-use held-out evaluator |
+
+## 5. Review package — is the current evidence independently inspectable?
+
+`workflows/two_stage_navigation/build_s0010_sap_validation_training_review.py`, run by Slurm job `52140391`. It packages clean images, privileged overlays, manifests, validation output and the L5 checkpoint without inventing a held-out result.
+
+**Criterion.** ZIP integrity, all internal checksums valid, and held-out status explicitly `NOT_RUN`.
+
+### 5.1 Method
+
+- Clean ultrasound and privileged overlays are separate files.
+- The package includes the three source readiness reports and external correspondence report.
+- The checkpoint is included for reload and hash verification.
+
+### 5.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| run | job `52140391` | §5 |
+| code | `c9c881527d1f6f819b22765bc23144e0bdb8becd` | §5 |
+| input | job `52138127` | §5 |
+| resources | 4 CPUs, 8 GB requested, no GPU | §5 |
+
+```bash
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_RESULT_JOB=52138127 \
+  hpg/jobs/s0010_sap_validation_review.sbatch
+```
+
+Nothing was dropped from the declared compact package.
+
+### 5.3 Results
+
+| check | result |
+|---|---|
+| ZIP test | pass |
+| internal SHA-256 manifest | pass |
+| ZIP size | 1.3 MB |
+| ZIP SHA-256 | `8fcdca53cd65fa2d867f2f081de14256d0fedb790c5f1c961e9a3b2a97a7e644` |
+
+**Verdict: pass, with held-out evaluation correctly absent.**
+
+### 5.4 Reading it
+
+- The package supports review of development labels and calibrated L5 behavior.
+- It cannot establish held-out recognition performance.
+
+### 5.5 Files
+
+| file | contents |
+|---|---|
+| `52138127/review_v3/s0010_right_l4l5_sap_validation_training_review.zip` | compact review artifact |
+| `52138127/review_v3/s0010_right_l4l5_sap_validation_training_review/checksums.sha256` | internal integrity manifest |

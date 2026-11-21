@@ -590,6 +590,24 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** Technical failures are excluded before semantic evidence is considered.
 - **Source:** approved by user, 2026-11-20.
 
+### SIMULATOR_PROXY_SAP_LABEL_READY
+- **Kind:** object
+- **Definition:** A per-level simulator-only annotation verdict requiring the frozen correspondence gate, unique-image train and calibration quotas, ambiguity exclusions, and information-boundary checks to pass.
+- **Intuition:** It permits bounded classifier fitting without promoting the labels to clinical or independently verified anatomy.
+- **Source:** approved by user, 2026-11-20; `workflows/two_stage_navigation/merge_s0010_sap_datasets.py`.
+
+### TRAINED_CALIBRATED_HOLDOUT_UNOPENED
+- **Kind:** object
+- **Definition:** A per-level classifier status indicating train-only fitting, calibration-only threshold selection, a passing frozen calibration gate, reload-verified checkpoint persistence, and no opened held-out evaluation.
+- **Intuition:** It separates a calibrated development candidate from an independently evaluated detector.
+- **Source:** approved by user, 2026-11-20; `workflows/two_stage_navigation/train_s0010_sap_classifier.py`.
+
+### SAP_TRAINED_HELDOUT_PASS
+- **Kind:** object
+- **Definition:** A per-level classifier verdict requiring the frozen checkpoint and threshold to pass the declared full-image precision, recall and false-positive gates on the preassigned session-disjoint evaluation captures opened exactly once.
+- **Intuition:** It is the minimum simulator-only evidence for later Stage 2 integration review, not clinical validation.
+- **Source:** approved by user, 2026-11-20; `workflows/two_stage_navigation/evaluate_s0010_sap_classifier.py`.
+
 ### BLOCKED_ALIGNMENT
 - **Kind:** object
 - **Definition:** V3 verdict indicating that a model prediction cannot be mapped reliably into the existing simulator anatomy.
