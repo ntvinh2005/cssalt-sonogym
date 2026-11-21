@@ -214,6 +214,7 @@ def evaluator_panel(
     target_xz: np.ndarray,
     proposal_xyz: np.ndarray | None,
     evaluator: dict[str, str] | None,
+    evaluated_frame: int | None,
 ) -> np.ndarray:
     panel = np.full((PANEL_HEIGHT, PANEL_WIDTH, 3), 245, dtype=np.uint8)
     xmin, zmin = np.min(target_xz, axis=0) - 12.0
@@ -234,7 +235,12 @@ def evaluator_panel(
     else:
         state = evaluator["proxy_state"]
         distance = f"{float(evaluator['target_distance_mm']):.2f} mm"
-    put_text(panel, f"proxy_state={state} center-to-core={distance}", 348, color=(20, 20, 20))
+    put_text(
+        panel,
+        f"ranked_frame={evaluated_frame} proxy_state={state} center-to-core={distance}",
+        348,
+        color=(20, 20, 20),
+    )
     return panel
 
 
@@ -301,6 +307,9 @@ def main() -> int:
                 dtype=np.float64,
             )
             indices = [index for index, frame in enumerate(frames) if search_frame(frame, protocol)]
+            index_by_sequence = {
+                int(frames[index]["frame_sequence"]): index for index in indices
+            }
             by_frame = {}
             poses = {}
             candidates = {}
@@ -347,12 +356,29 @@ def main() -> int:
                     map_config=config,
                     localizer_config=decision_config,
                 )
-                evaluator = evaluator_by_session.get((session_id, sequence))
+                evaluated_sequence = (
+                    decision.selected.frame_sequence
+                    if decision.selected is not None
+                    else decision.ranking[0].frame_sequence
+                    if decision.ranking
+                    else None
+                )
+                evaluator = (
+                    None
+                    if evaluated_sequence is None
+                    else evaluator_by_session.get((session_id, evaluated_sequence))
+                )
                 proposal_xyz = None
-                if frame["proposal_row"] is not None:
-                    row = int(np.clip(round(float(frame["proposal_row"])), 0, 199))
-                    column = int(np.clip(round(float(frame["proposal_column"])), 0, 149))
-                    proposal_xyz = native[index, column * 200 + row].astype(np.float64) * 1.5
+                if evaluated_sequence is not None:
+                    evaluated_index = index_by_sequence[evaluated_sequence]
+                    evaluated_frame = frames[evaluated_index]
+                    row = int(np.clip(round(float(evaluated_frame["proposal_row"])), 0, 199))
+                    column = int(
+                        np.clip(round(float(evaluated_frame["proposal_column"])), 0, 149)
+                    )
+                    proposal_xyz = (
+                        native[evaluated_index, column * 200 + row].astype(np.float64) * 1.5
+                    )
                 top = np.hstack(
                     (
                         image_panel(images[index], frame),
@@ -370,7 +396,9 @@ def main() -> int:
                 bottom = np.hstack(
                     (
                         ranking_panel(decision, observed_count),
-                        evaluator_panel(target_xz, proposal_xyz, evaluator),
+                        evaluator_panel(
+                            target_xz, proposal_xyz, evaluator, evaluated_sequence
+                        ),
                     )
                 )
                 canvas = np.vstack((top, bottom))
