@@ -46,6 +46,7 @@ class SessionData:
     correspondences: np.ndarray
     translation_mm: np.ndarray
     angle_deg: np.ndarray
+    excluded_frame_sequences: list[int]
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -58,10 +59,24 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
-def cumulative_pose_by_frame(public_rows: list[dict[str, Any]]) -> dict[int, np.ndarray]:
+def actor_frame_admissible(row: dict[str, Any]) -> bool:
+    return bool(
+        row["action_accepted"]
+        and row["action_completed"]
+        and not row["action_clamped"]
+        and row["contact_ok"]
+        and row["workspace_ok"]
+        and row["image_valid"]
+    )
+
+
+def cumulative_pose_by_frame(
+    public_rows: list[dict[str, Any]],
+) -> tuple[dict[int, np.ndarray], dict[int, bool]]:
     ordered = sorted(public_rows, key=lambda row: int(row["frame_sequence"]))
     pose = np.zeros(3, dtype=np.float64)
     result: dict[int, np.ndarray] = {}
+    admissible: dict[int, bool] = {}
     previous_sequence = -1
     previous_producer = -1
     hashes: set[str] = set()
@@ -78,22 +93,14 @@ def cumulative_pose_by_frame(public_rows: list[dict[str, Any]]) -> dict[int, np.
         angle = float(row["executed_delta_angle_rad"])
         if delta.shape != (2,) or not np.all(np.isfinite(delta)) or not math.isfinite(angle):
             raise ValueError("executed motion is missing or nonfinite")
-        if not bool(
-            row["action_accepted"]
-            and row["action_completed"]
-            and not row["action_clamped"]
-            and row["contact_ok"]
-            and row["workspace_ok"]
-            and row["image_valid"]
-        ):
-            raise ValueError("multi-view replay contains an inadmissible actor frame")
         pose[:2] += delta
         pose[2] = (pose[2] + angle + np.pi) % (2.0 * np.pi) - np.pi
         result[sequence] = pose.copy()
+        admissible[sequence] = actor_frame_admissible(row)
         hashes.add(frame_hash)
         previous_sequence = sequence
         previous_producer = producer
-    return result
+    return result, admissible
 
 
 def build_sessions(
@@ -123,13 +130,14 @@ def build_sessions(
         if len(archives) != 1:
             raise ValueError(f"session {session_id} spans multiple image archives")
         public_rows = recorded.public_rows(next(iter(archives)))
-        pose_lookup = cumulative_pose_by_frame(public_rows)
+        pose_lookup, admissible_lookup = cumulative_pose_by_frame(public_rows)
         images: list[np.ndarray] = []
         poses: list[np.ndarray] = []
         statuses: list[str] = []
         hashes: list[str] = []
         sequences: list[int] = []
         features: list[np.ndarray] = []
+        excluded_sequences: list[int] = []
         for row in ordered:
             public = recorded.public_row(row)
             image = recorded.image(row)
@@ -138,6 +146,9 @@ def build_sessions(
             if ultrasound_sha256(np.asarray(image, dtype=np.float32)) != row["frame_sha256"]:
                 raise ValueError("saved image does not match its frame hash")
             sequence = int(row["frame_sequence"])
+            if not admissible_lookup[sequence]:
+                excluded_sequences.append(sequence)
+                continue
             images.append(image)
             poses.append(pose_lookup[sequence])
             statuses.append(clear.get(row["frame_sha256"], AMBIGUOUS))
@@ -159,6 +170,7 @@ def build_sessions(
                 correspondences=correspondence_matrix(images),
                 translation_mm=translation,
                 angle_deg=angle,
+                excluded_frame_sequences=excluded_sequences,
             )
         )
     return sessions
@@ -255,6 +267,7 @@ def assess_session(
         "ambiguous_frame_activations": sum(
             row["status"] == AMBIGUOUS and row["activated"] for row in frame_rows
         ),
+        "excluded_inadmissible_frames": len(session.excluded_frame_sequences),
     }
     return record, frame_rows
 
@@ -286,6 +299,9 @@ def summarize_sessions(
         "negative_top1_sessions": sum(row["top1_status"] == NEGATIVE for row in records),
         "ambiguous_frame_activations": sum(
             row["status"] == AMBIGUOUS and row["activated"] for row in frame_rows
+        ),
+        "excluded_inadmissible_frames": sum(
+            row["excluded_inadmissible_frames"] for row in records
         ),
         "clear_frame_confusion": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
     }

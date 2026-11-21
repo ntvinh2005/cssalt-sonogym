@@ -1,0 +1,119 @@
+protocol_id: s0010-stage2-multiview-evidence-v1r1
+supersedes_for_execution: s0010-stage2-multiview-evidence-v1
+scope:
+  patient_id: s0010
+  simulator_only: true
+  cpu_only: true
+  evaluation_sessions_previously_opened: true
+  independent_confirmation_claim_allowed: false
+  active_acquisition_integration: false
+  runtime_geometry_access: false
+inputs:
+  development_dataset: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_development_merged
+  evaluation_dataset: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_validation_resume_v2/52199322/analysis_v1/dataset_evaluation
+  evaluation_sessions:
+    - s0010sapval_evaluation_04
+    - s0010sapval_evaluation_05
+actor_inputs:
+  - clean_ultrasound
+  - acquisition_order
+  - executed_relative_translation
+  - executed_relative_rotation
+  - frame_identity
+privileged_inputs_excluded_from_runtime:
+  - ct
+  - segmentation
+  - pseudo_sap_mask
+  - raw_label_slice
+  - pixel_to_volume_coordinates
+  - evaluator_target_coordinates
+base_model:
+  feature: complete_tracked_interface_arrangement
+  family: ExtraTreesClassifier
+  trees: 240
+  class_weight: balanced
+  random_seed: 20261122
+  fit_split: train
+  clear_labels_only: true
+movement_handling:
+  inadmissible_actor_frames: exclude_from_candidate_evidence
+  executed_motion_from_excluded_frames: retain_for_pose_reconstruction
+  angle_clamp_exception: false
+viewpoint_contract:
+  minimum_translation_mm: 2.0
+  minimum_orientation_deg: 1.0
+candidates:
+  - candidate_id: mean_local
+    aggregation: mean
+    maximum_neighbor_translation_mm: 25.0
+    maximum_neighbor_angle_deg: 20.0
+    minimum_correspondence: 0.45
+    maximum_neighbors: 3
+    neighbor_weight: 0.5
+    minimum_support: 2
+  - candidate_id: mean_broad
+    aggregation: mean
+    maximum_neighbor_translation_mm: 40.0
+    maximum_neighbor_angle_deg: 30.0
+    minimum_correspondence: 0.35
+    maximum_neighbors: 5
+    neighbor_weight: 0.5
+    minimum_support: 2
+  - candidate_id: log_odds_local
+    aggregation: log_odds
+    maximum_neighbor_translation_mm: 25.0
+    maximum_neighbor_angle_deg: 20.0
+    minimum_correspondence: 0.45
+    maximum_neighbors: 3
+    neighbor_weight: 0.5
+    minimum_support: 2
+  - candidate_id: log_odds_broad
+    aggregation: log_odds
+    maximum_neighbor_translation_mm: 40.0
+    maximum_neighbor_angle_deg: 30.0
+    minimum_correspondence: 0.35
+    maximum_neighbors: 5
+    neighbor_weight: 0.5
+    minimum_support: 2
+selection:
+  split: calibration
+  score_thresholds: [0.35, 0.45, 0.55, 0.65, 0.75]
+  top1_margin_thresholds: [0.0, 0.05, 0.10]
+  primary_level: L5
+  calibration_minimum_positive_session_fraction: 0.80
+  require_zero_wrong_accepted_positive_sessions: true
+  require_zero_accepted_no_positive_sessions: true
+  tie_break_order:
+    - calibration_gate_pass
+    - accepted_positive_sessions
+    - top1_positive_sessions
+    - top3_positive_sessions
+    - fewer_ambiguous_activations
+    - higher_accepted_session_count
+evaluation:
+  split: evaluation
+  primary_level: L5
+  l4_is_diagnostic_only: true
+  development_gate:
+    required_top1_positive_sessions: 2
+    required_accepted_positive_sessions: 2
+    maximum_wrong_accepted_sessions: 0
+    maximum_accepted_ambiguous_or_negative_sessions: 0
+  report:
+    - top1_status_by_session
+    - top3_positive_by_session
+    - accepted_status_by_session
+    - abstention_count
+    - ambiguous_frame_activations
+    - clear_frame_confusion
+    - support_count_distribution
+information_boundary:
+  label_fields_used_only_after_actor_scores_are_frozen: true
+  cross_session_evidence_forbidden: true
+  duplicate_hash_votes_per_session: 1
+  evaluator_geometry_used_for_features: false
+execution:
+  maximum_cpu_threads: 4
+  gpu_count: 0
+  create_zip: false
+  render_demo: true

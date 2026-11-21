@@ -37,17 +37,26 @@ def actor_row(sequence: int, delta: tuple[float, float], angle: float) -> dict[s
 
 class MultiviewEvidenceTests(unittest.TestCase):
     def test_motion_is_accumulated_within_one_session(self) -> None:
-        poses = evidence.cumulative_pose_by_frame(
+        poses, admissible = evidence.cumulative_pose_by_frame(
             [actor_row(0, (1.0, 2.0), 0.1), actor_row(1, (3.0, -1.0), 0.2)]
         )
         np.testing.assert_allclose(poses[0], [1.0, 2.0, 0.1])
         np.testing.assert_allclose(poses[1], [4.0, 1.0, 0.3])
+        self.assertEqual(admissible, {0: True, 1: True})
 
     def test_duplicate_hash_cannot_supply_another_vote(self) -> None:
         rows = [actor_row(0, (1.0, 0.0), 0.0), actor_row(1, (2.0, 0.0), 0.0)]
         rows[1]["frame_sha256"] = rows[0]["frame_sha256"]
         with self.assertRaisesRegex(ValueError, "duplicate image hash"):
             evidence.cumulative_pose_by_frame(rows)
+
+    def test_inadmissible_frame_preserves_odometry_but_cannot_vote(self) -> None:
+        rows = [actor_row(0, (1.0, 0.0), 0.0), actor_row(1, (2.0, 0.0), 0.0)]
+        rows[0]["action_clamped"] = True
+        poses, admissible = evidence.cumulative_pose_by_frame(rows)
+        np.testing.assert_allclose(poses[1], [3.0, 0.0, 0.0])
+        self.assertFalse(admissible[0])
+        self.assertTrue(admissible[1])
 
     def test_ambiguous_selection_is_not_counted_as_positive(self) -> None:
         session = evidence.SessionData(
@@ -61,6 +70,7 @@ class MultiviewEvidenceTests(unittest.TestCase):
             correspondences=np.eye(3),
             translation_mm=np.zeros((3, 3)),
             angle_deg=np.zeros((3, 3)),
+            excluded_frame_sequences=[],
         )
         record, _ = evidence.assess_session(
             session,
