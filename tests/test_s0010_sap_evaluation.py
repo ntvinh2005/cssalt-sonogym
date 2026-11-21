@@ -22,6 +22,17 @@ class Estimator:
 
 
 class SapEvaluationTests(unittest.TestCase):
+    def test_insufficient_holdout_stays_inconclusive_despite_descriptive_metrics(self) -> None:
+        metrics = {"gate_pass": True}
+        self.assertEqual(
+            evaluation.heldout_status(False, metrics),
+            "SAP_TRAINING_INCONCLUSIVE",
+        )
+        self.assertEqual(
+            evaluation.heldout_status(True, metrics),
+            "SAP_TRAINED_HELDOUT_PASS",
+        )
+
     def test_external_frozen_correspondence_can_resolve_only_that_deficit(self) -> None:
         readiness = {
             "readiness": {

@@ -149,8 +149,11 @@ def main() -> int:
     parser.add_argument("--merged-dataset", type=Path, required=True)
     parser.add_argument("--evaluation-dataset", type=Path, required=True)
     parser.add_argument("--training-dir", type=Path, required=True)
+    parser.add_argument("--training-result", type=Path)
     parser.add_argument("--correspondence-validation", type=Path)
+    parser.add_argument("--evaluation-correspondence-validation", type=Path)
     parser.add_argument("--evaluation-report", type=Path, required=True)
+    parser.add_argument("--capture-root", type=Path)
     parser.add_argument("--prediction", type=Path, required=True)
     parser.add_argument("--segmentation", type=Path, required=True)
     parser.add_argument("--label-conversion", type=Path, required=True)
@@ -166,9 +169,10 @@ def main() -> int:
     figures_dir = package / "figures"
     examples_dir.mkdir(parents=True)
     readiness = json.loads((args.merged_dataset / "readiness_report.json").read_text())
+    training_result_path = args.training_result or args.training_dir / "training_result.json"
     training_result = (
-        json.loads((args.training_dir / "training_result.json").read_text())
-        if (args.training_dir / "training_result.json").exists()
+        json.loads(training_result_path.read_text())
+        if training_result_path.exists()
         else {"status": "NOT_RUN"}
     )
     evaluation = (
@@ -185,19 +189,26 @@ def main() -> int:
     )
     bone_ids = correction.bone_source_ids(args.label_conversion)
     proposal_rows = read_csv(args.merged_dataset / "proposal_manifest.csv")
+    evaluation_proposal_rows = read_csv(
+        args.evaluation_dataset / "proposal_manifest.csv"
+    )
     example_index = []
-    for level in LEVELS:
-        for kind, row in selected_examples(proposal_rows, level):
-            example_index.append(
-                render_example(
+    for source, source_rows in (
+        ("development", proposal_rows),
+        ("evaluation", evaluation_proposal_rows),
+    ):
+        for level in LEVELS:
+            for kind, row in selected_examples(source_rows, level):
+                rendered = render_example(
                     row=row,
-                    kind=kind,
+                    kind=f"{source}_{kind}",
                     level=level,
                     masks=masks,
                     bone_ids=bone_ids,
                     output=examples_dir,
                 )
-            )
+                rendered["source"] = source
+                example_index.append(rendered)
     write_json(package / "01_EXAMPLE_INDEX.json", example_index)
     shutil.copy2(args.merged_dataset / "readiness_report.json", package / "02_DATASET_READINESS.json")
     shutil.copy2(args.first_dataset / "readiness_report.json", package / "02A_INITIAL_DATASET_READINESS.json")
@@ -207,9 +218,13 @@ def main() -> int:
             args.archive_dataset / "readiness_report.json",
             package / "02C_ARCHIVE_DATASET_READINESS.json",
         )
+    shutil.copy2(
+        args.evaluation_dataset / "readiness_report.json",
+        package / "02D_EVALUATION_DATASET_READINESS.json",
+    )
     shutil.copy2(args.merged_dataset / "sample_manifest.csv", package / "03_SAMPLE_MANIFEST.csv")
-    if (args.training_dir / "training_result.json").exists():
-        shutil.copy2(args.training_dir / "training_result.json", package / "04_TRAINING_RESULT.json")
+    if training_result_path.exists():
+        shutil.copy2(training_result_path, package / "04_TRAINING_RESULT.json")
     if args.evaluation_report.exists():
         shutil.copy2(args.evaluation_report, package / "05_HELDOUT_EVALUATION.json")
     if args.correspondence_validation is not None:
@@ -217,6 +232,19 @@ def main() -> int:
             args.correspondence_validation,
             package / "05A_CORRESPONDENCE_VALIDATION.json",
         )
+    if args.evaluation_correspondence_validation is not None:
+        shutil.copy2(
+            args.evaluation_correspondence_validation,
+            package / "05B_EVALUATION_CORRESPONDENCE_VALIDATION.json",
+        )
+    if args.capture_root is not None:
+        capture_output = package / "capture_verification"
+        capture_output.mkdir()
+        for session in sorted((args.capture_root / "sessions").iterdir()):
+            for name in ("summary.json", "verification_report.json"):
+                source = session / name
+                if source.exists():
+                    shutil.copy2(source, capture_output / f"{session.name}_{name}")
     checkpoints = sorted(args.training_dir.glob("s0010_*_sap_classifier_v1.joblib"))
     for checkpoint in checkpoints:
         shutil.copy2(checkpoint, package / checkpoint.name)
@@ -254,6 +282,11 @@ def main() -> int:
                 f"- {level}: `{value['annotation_status']}`; dataset `{value['dataset_status']}`; blockers: {value['deficits'] or 'none'}.",
             ]
         )
+        evaluated = evaluation.get("levels", {}).get(level, {})
+        lines.append(
+            f"  Held-out: `{evaluated.get('status', 'NOT_RUN')}`; "
+            f"deficits: {evaluated.get('deficits') or 'none'}."
+        )
     if readiness.get("incomplete_sessions"):
         lines.extend(["", "## Incomplete capture sessions", ""])
         for item in readiness["incomplete_sessions"]:
@@ -277,6 +310,9 @@ def main() -> int:
         "first_dataset_readiness_sha256": file_sha256(args.first_dataset / "readiness_report.json"),
         "followup_dataset_readiness_sha256": file_sha256(args.followup_dataset / "readiness_report.json"),
         "merged_dataset_readiness_sha256": file_sha256(args.merged_dataset / "readiness_report.json"),
+        "evaluation_dataset_readiness_sha256": file_sha256(
+            args.evaluation_dataset / "readiness_report.json"
+        ),
         "archive_dataset_readiness_sha256": (
             file_sha256(args.archive_dataset / "readiness_report.json")
             if args.archive_dataset is not None
@@ -286,6 +322,14 @@ def main() -> int:
             file_sha256(args.correspondence_validation)
             if args.correspondence_validation is not None
             else None
+        ),
+        "evaluation_correspondence_validation_sha256": (
+            file_sha256(args.evaluation_correspondence_validation)
+            if args.evaluation_correspondence_validation is not None
+            else None
+        ),
+        "training_result_sha256": (
+            file_sha256(training_result_path) if training_result_path.exists() else None
         ),
         "checkpoint_sha256": {
             checkpoint.name: file_sha256(checkpoint) for checkpoint in checkpoints

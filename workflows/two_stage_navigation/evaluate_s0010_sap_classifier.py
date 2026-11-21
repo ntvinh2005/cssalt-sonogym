@@ -54,6 +54,18 @@ def level_is_ready(
     return False, deficits
 
 
+def heldout_status(readiness_passed: bool, image_metrics: dict[str, Any]) -> str:
+    """Keep descriptive metrics separate from the frozen sufficiency verdict."""
+
+    if not readiness_passed:
+        return "SAP_TRAINING_INCONCLUSIVE"
+    return (
+        "SAP_TRAINED_HELDOUT_PASS"
+        if image_metrics["gate_pass"]
+        else "SAP_TRAINED_HELDOUT_FAIL"
+    )
+
+
 def ambiguity_summary(
     *,
     estimator: Any,
@@ -224,17 +236,19 @@ def main() -> int:
         ready, deficits = level_is_ready(
             level, readiness, correspondence_validation
         )
-        if not ready:
-            results[level] = {
-                "status": "SAP_TRAINING_INCONCLUSIVE",
-                "reason": "evaluation simulator-proxy labels failed the frozen readiness gate",
-                "deficits": deficits,
-            }
-            failed = True
-            continue
         checkpoint = training_dir / f"s0010_{level.lower()}_sap_classifier_v1.joblib"
         if not checkpoint.exists():
-            results[level] = {"status": "SAP_TRAINING_BLOCKED_DATA", "reason": "checkpoint absent"}
+            results[level] = {
+                "status": (
+                    "SAP_TRAINING_INCONCLUSIVE"
+                    if not ready
+                    else "SAP_TRAINING_BLOCKED_DATA"
+                ),
+                "reason": "checkpoint absent",
+                "readiness_gate_passed": ready,
+                "deficits": deficits,
+                "model_inference_executed": False,
+            }
             failed = True
             continue
         bundle = joblib.load(checkpoint)
@@ -303,14 +317,18 @@ def main() -> int:
                     heuristic_labels, heuristic_scores, float(heuristic_threshold)
                 ),
             }
-        status = (
-            "SAP_TRAINED_HELDOUT_PASS"
-            if image_metrics["gate_pass"]
-            else "SAP_TRAINED_HELDOUT_FAIL"
-        )
+        status = heldout_status(ready, image_metrics)
         failed |= status != "SAP_TRAINED_HELDOUT_PASS"
         results[level] = {
             "status": status,
+            "reason": (
+                "descriptive frozen-checkpoint metrics only; evaluation simulator-proxy labels failed the frozen readiness gate"
+                if not ready
+                else "frozen held-out gate evaluated"
+            ),
+            "readiness_gate_passed": ready,
+            "deficits": deficits,
+            "model_inference_executed": True,
             "threshold": threshold,
             "full_image_metrics": image_metrics,
             "patch_metrics": training.metrics(selected_y, patch_scores, threshold),
