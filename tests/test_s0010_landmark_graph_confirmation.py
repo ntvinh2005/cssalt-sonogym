@@ -16,6 +16,7 @@ if str(WORKFLOWS) not in sys.path:
 
 import evaluate_s0010_landmark_graph_confirmation as evaluation  # noqa: E402
 import prepare_s0010_l4_landmark_graph_development as l4_prepare  # noqa: E402
+import train_s0010_l4_landmark_detectors as l4_training  # noqa: E402
 from two_stage_navigation.ultrasound_spatial_map import (  # noqa: E402
     SpatialMapConfig,
 )
@@ -37,6 +38,32 @@ def candidate(frame: int, position_mm: float, score: float = 0.8) -> dict:
 
 
 class LandmarkGraphConfirmationTest(unittest.TestCase):
+    def test_l4_landmark_labels_keep_boundary_and_identity_ambiguous(self) -> None:
+        self.assertEqual(
+            l4_training.proposal_training_state(
+                2.0, visible_pixels=5, frame_is_clear_negative=False
+            ),
+            "POSITIVE",
+        )
+        self.assertEqual(
+            l4_training.proposal_training_state(
+                8.0, visible_pixels=5, frame_is_clear_negative=False
+            ),
+            "AMBIGUOUS",
+        )
+        self.assertEqual(
+            l4_training.proposal_training_state(
+                float("inf"), visible_pixels=0, frame_is_clear_negative=False
+            ),
+            "AMBIGUOUS",
+        )
+        self.assertEqual(
+            l4_training.proposal_training_state(
+                float("inf"), visible_pixels=0, frame_is_clear_negative=True
+            ),
+            "NEGATIVE",
+        )
+
     def test_l4_controls_preserve_scarce_tp_only_poses(self) -> None:
         tp_controls = [{"id": "tp0"}, {"id": "tp1"}]
         other_controls = [{"id": f"other{index}"} for index in range(22)]
