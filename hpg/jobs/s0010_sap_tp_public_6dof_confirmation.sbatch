@@ -20,7 +20,7 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_tp_public_6dof_confirmation_v1.yaml"
 PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_tp_public_6dof_confirmation_v1.sha256"
-EXPECTED_PROTOCOL_SHA="REPLACE_AFTER_PROTOCOL_FREEZE"
+EXPECTED_PROTOCOL_SHA="14dc7cdd79eb671dfde416fb6d397ddc790e149cbe346fdbab22a48bbfe98089"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_tp_public_6dof_confirmation/$SLURM_JOB_ID"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"

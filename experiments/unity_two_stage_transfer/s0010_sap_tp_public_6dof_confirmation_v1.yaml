@@ -1,0 +1,854 @@
+protocol_id: sonogym-s0010-sap-tp-public-6dof-confirmation-v1
+status: FROZEN_BEFORE_FRESH_CAPTURE
+purpose: Evaluate frozen ultrasound pair evidence with synchronized public robot 6DoF
+  geometry on four new pose groups.
+anatomy_id: s0010
+clinical_scope:
+  medial_branch: RIGHT_L4
+  vertebral_level: RIGHT_L5
+  endpoint: bony_surrogate_only
+  clinical_target_validated: false
+source:
+  implementation_commit: e70739a9273b77e1c16d768364aeb367e2b075d2
+  checkpoint: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_prepare/52307091/prepared/sap_tp_pair_model.joblib
+  checkpoint_sha256: 449953374809635726bd0eadfdc8c0686c8310bfd74d967ece4657a577203de3
+  base_protocol: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym/experiments/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_v1r3.yaml
+  base_protocol_sha256: 821b40a5207251a279050d81ee0c42fd1e47705a631b2feaf99166324ab16615
+  training_protocol_sha256: 044772307d78218f9b1e79eaeee5d3782fe8bef14359a4ba3049f0b9d4ba453a
+  opened_development_result: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_6dof_development/52345996/analysis/result.json
+  opened_development_result_sha256: d7d7aa7661018349114538767d71a96c93e1c39c4358a25af1e264b26c9cf78a
+  exact_candidates_sha256: 2c0aa28439f9f22056b783c64a27e21a3d78d3ca56d3613a8b4bdac62cdf3c18
+  source_evidence_status: opened_development_then_unopened_public_6dof_capture
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  privileged_pose_design: true
+  model_refit_after_capture: false
+  stage3_authorized: false
+information_boundaries:
+  actor_inputs:
+  - clean_ultrasound
+  - synchronized_base_to_end_effector_pose_from_robot_proprioception
+  - public_probe_image_calibration
+  - prior_actor_observations
+  privileged_offline_only:
+  - CT_subregion_prediction
+  - native_pixel_to_volume_coordinates
+  - raw_label_slice
+  - SAP_and_TP_masks
+  - absolute_waypoint_bank
+  - world_to_robot_base_transform
+sampling:
+  expected_frames_per_session: 14
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.2
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 100
+  maximum_total_action_steps_per_session: 5000
+  trajectory_start_frames:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  - 12
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio:
+    - 0.02
+    - 0.02
+    - 0.6
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    bank_00:
+    - &id001
+      - 140.0
+      - 128.0
+      - 2.1999999999999957
+    - &id002
+      - 138.0
+      - 126.0
+      - 1.9499999999999966
+    - &id003
+      - 140.0
+      - 126.0
+      - 1.8999999999999968
+    - &id004
+      - 136.0
+      - 128.0
+      - 2.149999999999996
+    - &id005
+      - 150.0
+      - 124.0
+      - 2.174999999999996
+    - &id006
+      - 152.0
+      - 124.0
+      - 2.2749999999999955
+    - &id007
+      - 162.0
+      - 116.0
+      - 2.3249999999999953
+    - &id008
+      - 156.0
+      - 116.0
+      - 2.074999999999996
+    - &id009
+      - 150.0
+      - 123.5
+      - 2.79
+    - &id010
+      - 153.5
+      - 119.5
+      - 2.7900000000000005
+    - &id011
+      - 153.5
+      - 143.5
+      - 2.72
+    - &id012
+      - 155.0
+      - 138.5
+      - 2.82
+    - &id013
+      - 155.0
+      - 142.5
+      - 2.82
+    - &id014
+      - 156.5
+      - 137.5
+      - 2.77
+    bank_01:
+    - &id015
+      - 132.0
+      - 136.0
+      - 2.0499999999999963
+    - &id016
+      - 134.0
+      - 128.0
+      - 1.9999999999999964
+    - &id017
+      - 152.0
+      - 118.0
+      - 1.9249999999999967
+    - &id018
+      - 160.0
+      - 114.0
+      - 2.149999999999996
+    - &id019
+      - 132.0
+      - 136.0
+      - 1.9249999999999967
+    - &id020
+      - 132.0
+      - 138.0
+      - 1.7749999999999972
+    - &id021
+      - 148.0
+      - 126.0
+      - 2.1999999999999957
+    - &id022
+      - 150.0
+      - 126.0
+      - 2.2999999999999954
+    - &id023
+      - 150.0
+      - 123.5
+      - 2.84
+    - &id024
+      - 153.5
+      - 119.5
+      - 2.89
+    - &id025
+      - 155.5
+      - 141.5
+      - 2.6700000000000004
+    - &id026
+      - 156.5
+      - 137.5
+      - 2.8699999999999997
+    - &id027
+      - 156.5
+      - 141.5
+      - 2.89
+    - &id028
+      - 156.5
+      - 144.5
+      - 2.6700000000000004
+    bank_02:
+    - &id029
+      - 154.0
+      - 124.0
+      - 2.374999999999995
+    - &id030
+      - 154.0
+      - 126.0
+      - 2.5499999999999945
+    - &id031
+      - 138.0
+      - 126.0
+      - 1.9999999999999964
+    - &id032
+      - 134.0
+      - 126.0
+      - 1.849999999999997
+    - &id033
+      - 156.0
+      - 122.0
+      - 2.374999999999995
+    - &id034
+      - 152.0
+      - 126.0
+      - 2.424999999999995
+    - &id035
+      - 132.0
+      - 136.0
+      - 1.874999999999997
+    - &id036
+      - 134.0
+      - 128.0
+      - 2.0499999999999963
+    - &id037
+      - 151.5
+      - 122.5
+      - 2.8899999999999997
+    - &id038
+      - 151.5
+      - 124.5
+      - 2.9399999999999995
+    - &id039
+      - 156.5
+      - 142.5
+      - 2.77
+    - &id040
+      - 156.5
+      - 146.5
+      - 2.72
+    - &id041
+      - 156.5
+      - 146.5
+      - 2.77
+    - &id042
+      - 157.5
+      - 139.5
+      - 2.6700000000000004
+    bank_03:
+    - &id043
+      - 132.0
+      - 136.0
+      - 1.9749999999999965
+    - &id044
+      - 134.0
+      - 130.0
+      - 2.2249999999999956
+    - &id045
+      - 156.0
+      - 124.0
+      - 2.5249999999999946
+    - &id046
+      - 156.0
+      - 120.0
+      - 2.2999999999999954
+    - &id047
+      - 128.0
+      - 136.0
+      - 2.974999999999993
+    - &id048
+      - 132.0
+      - 136.0
+      - 2.8999999999999932
+    - &id049
+      - 160.0
+      - 120.0
+      - 2.5249999999999946
+    - &id050
+      - 164.0
+      - 116.0
+      - 2.399999999999995
+    - &id051
+      - 153.5
+      - 119.5
+      - 2.95
+    - &id052
+      - 153.5
+      - 123.5
+      - 2.89
+    - &id053
+      - 157.5
+      - 139.5
+      - 2.72
+    - &id054
+      - 158.0
+      - 141.5
+      - 2.72
+    - &id055
+      - 158.0
+      - 138.5
+      - 2.94
+    - &id056
+      - 158.0
+      - 142.5
+      - 2.94
+  planned_waypoint_evidence_by_bank:
+    bank_00:
+    - frame_sequence: 0
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id001
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 23
+      predicted_tp_first_visible_pixels: 23
+      predicted_target_margin_pixels: 35
+    - frame_sequence: 1
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id002
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 26
+      predicted_tp_first_visible_pixels: 21
+      predicted_target_margin_pixels: 34
+    - frame_sequence: 2
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id003
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 24
+      predicted_tp_first_visible_pixels: 21
+      predicted_target_margin_pixels: 39
+    - frame_sequence: 3
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id004
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 31
+      predicted_tp_first_visible_pixels: 18
+      predicted_target_margin_pixels: 25
+    - frame_sequence: 4
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id005
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 25
+      predicted_tp_first_visible_pixels: 20
+      predicted_target_margin_pixels: 36
+    - frame_sequence: 5
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id006
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 19
+      predicted_tp_first_visible_pixels: 29
+      predicted_target_margin_pixels: 34
+    - frame_sequence: 6
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id007
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 19
+      predicted_tp_first_visible_pixels: 35
+      predicted_target_margin_pixels: 12
+    - frame_sequence: 7
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id008
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 26
+      predicted_tp_first_visible_pixels: 18
+      predicted_target_margin_pixels: 17
+    - frame_sequence: 8
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id009
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 11
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 9
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id010
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 4
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 10
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id011
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 11
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id012
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 12
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id013
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 13
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id014
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    bank_01:
+    - frame_sequence: 0
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id015
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 31
+      predicted_tp_first_visible_pixels: 18
+      predicted_target_margin_pixels: 61
+    - frame_sequence: 1
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id016
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 31
+      predicted_tp_first_visible_pixels: 15
+      predicted_target_margin_pixels: 30
+    - frame_sequence: 2
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id017
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 20
+      predicted_tp_first_visible_pixels: 18
+      predicted_target_margin_pixels: 31
+    - frame_sequence: 3
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id018
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 21
+      predicted_target_margin_pixels: 5
+    - frame_sequence: 4
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id019
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 26
+      predicted_tp_first_visible_pixels: 17
+      predicted_target_margin_pixels: 66
+    - frame_sequence: 5
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id020
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 20
+      predicted_tp_first_visible_pixels: 12
+      predicted_target_margin_pixels: 56
+    - frame_sequence: 6
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id021
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 18
+      predicted_tp_first_visible_pixels: 17
+      predicted_target_margin_pixels: 44
+    - frame_sequence: 7
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id022
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 17
+      predicted_tp_first_visible_pixels: 31
+      predicted_target_margin_pixels: 41
+    - frame_sequence: 8
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id023
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 10
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 9
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id024
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 3
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 10
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id025
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 11
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id026
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 12
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id027
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 13
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id028
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    bank_02:
+    - frame_sequence: 0
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id029
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 17
+      predicted_tp_first_visible_pixels: 34
+      predicted_target_margin_pixels: 34
+    - frame_sequence: 1
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id030
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 17
+      predicted_tp_first_visible_pixels: 31
+      predicted_target_margin_pixels: 34
+    - frame_sequence: 2
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id031
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 31
+      predicted_tp_first_visible_pixels: 17
+      predicted_target_margin_pixels: 29
+    - frame_sequence: 3
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id032
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 23
+      predicted_tp_first_visible_pixels: 17
+      predicted_target_margin_pixels: 25
+    - frame_sequence: 4
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id033
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 17
+      predicted_tp_first_visible_pixels: 33
+      predicted_target_margin_pixels: 29
+    - frame_sequence: 5
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id034
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 33
+      predicted_target_margin_pixels: 38
+    - frame_sequence: 6
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id035
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 25
+      predicted_tp_first_visible_pixels: 16
+      predicted_target_margin_pixels: 66
+    - frame_sequence: 7
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id036
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 31
+      predicted_tp_first_visible_pixels: 12
+      predicted_target_margin_pixels: 24
+    - frame_sequence: 8
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id037
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 6
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 9
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id038
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 18
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 10
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id039
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 11
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id040
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 12
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id041
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 13
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id042
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    bank_03:
+    - frame_sequence: 0
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id043
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 29
+      predicted_tp_first_visible_pixels: 16
+      predicted_target_margin_pixels: 66
+    - frame_sequence: 1
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id044
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 13
+      predicted_tp_first_visible_pixels: 17
+      predicted_target_margin_pixels: 29
+    - frame_sequence: 2
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id045
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 32
+      predicted_target_margin_pixels: 29
+    - frame_sequence: 3
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id046
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 28
+      predicted_target_margin_pixels: 28
+    - frame_sequence: 4
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id047
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 21
+      predicted_target_margin_pixels: 21
+    - frame_sequence: 5
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id048
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 14
+      predicted_tp_first_visible_pixels: 24
+      predicted_target_margin_pixels: 68
+    - frame_sequence: 6
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id049
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 33
+      predicted_target_margin_pixels: 19
+    - frame_sequence: 7
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id050
+      predicted_evaluator_label: PROXY_AMBIGUOUS
+      predicted_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      predicted_sap_first_visible_pixels: 16
+      predicted_tp_first_visible_pixels: 34
+      predicted_target_margin_pixels: 11
+    - frame_sequence: 8
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id051
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 3
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 9
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id052
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 20
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 10
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id053
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 11
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id054
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 12
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id055
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+    - frame_sequence: 13
+      declared_role: CLEAR_NEGATIVE
+      search_pose_index_rad: *id056
+      predicted_evaluator_label: PROXY_NEGATIVE
+      predicted_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      predicted_sap_first_visible_pixels: 0
+      predicted_tp_first_visible_pixels: 0
+      predicted_target_margin_pixels: -1
+sessions:
+- session_id: s0010saptp6dof_00
+  split: unopened_public_6dof_confirmation
+  seed: 2026120100
+  reset_id: s0010saptp6dof_00
+  absolute_waypoint_bank_id: bank_00
+  expected_frame_count: 14
+- session_id: s0010saptp6dof_01
+  split: unopened_public_6dof_confirmation
+  seed: 2026120101
+  reset_id: s0010saptp6dof_01
+  absolute_waypoint_bank_id: bank_01
+  expected_frame_count: 14
+- session_id: s0010saptp6dof_02
+  split: unopened_public_6dof_confirmation
+  seed: 2026120102
+  reset_id: s0010saptp6dof_02
+  absolute_waypoint_bank_id: bank_02
+  expected_frame_count: 14
+- session_id: s0010saptp6dof_03
+  split: unopened_public_6dof_confirmation
+  seed: 2026120103
+  reset_id: s0010saptp6dof_03
+  absolute_waypoint_bank_id: bank_03
+  expected_frame_count: 14
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 50.0
+    maximum_orientation_error_deg: 30.0
+    minimum_l4_visible_fraction: 1.0e-06
+  quality:
+    visibility_normalization_fraction: 0.2
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 14
+  require_all_exact_pose_replay: true
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.9
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+pair_label_gate:
+  maximum_segment_surface_distance_pixels: 4.0
+  minimum_aligned_segment_points: 3
+  minimum_sap_first_visible_pixels: 3
+  minimum_tp_first_visible_pixels: 3
+  minimum_target_image_margin_pixels: 4
+track_window_config:
+  window_columns: 15
+  stride_columns: 5
+  minimum_center_separation_columns: 8
+  maximum_tracks: 2
+decision_gate:
+  minimum_pair_probability: 0.5
+  surface_radius_mm: 2.0
+  relative_pair_vector_tolerance_mm: 4.0
+  minimum_independent_view_support: 1
+  minimum_support_translation_mm: 2.0
+  minimum_support_angle_deg: 1.0
+  support_score_increment: 0.1
+  maximum_counted_support: 2
+final_gate:
+  minimum_top1_correct_sessions: 4
+  minimum_top3_correct_sessions: 4
+  minimum_pair_precision: 0.75
+  maximum_clear_negative_false_accept_rate: 0.1
+  minimum_correct_accepted_targets_per_session: 2
+  minimum_actual_targets_per_session: 4
+  minimum_actual_clear_negatives_per_session: 4
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA_L4
+  cpu_cores: 4
+  memory_gb: 30
+  walltime: 00:30:00
+  maximum_new_gpu_jobs: 1
+  maximum_storage_growth_gb: 1.0
+change_policy:
+- Do not refit the image model or change geometric thresholds after capture.
+- Do not expose evaluator geometry or absolute waypoints to the selector.
+- Do not use confirmation sessions for post-hoc repair.
+- Do not treat visible SAP and TP surfaces as a validated nerve endpoint.
+public_probe_calibration:
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  pixel_resolution_m: 0.0005
+  image_origin_height_m: 0.133
+actor_6dof_gate:
+  maximum_median_coordinate_error_mm: 0.001
+  maximum_p90_coordinate_error_mm: 0.001
+  maximum_coordinate_error_mm: 0.01
+  require_acquisition_id_match: true
+  require_frame_hash_match: true
+  require_same_step_snapshot: true
