@@ -10,6 +10,7 @@ import yaml
 
 from evaluate_s0010_sap_tp_pair_confirmation import target_margin
 from prepare_s0010_sap_tp_pair_confirmation import (
+    capture_pair_is_robust,
     distinct,
     nearby,
     select_pairs,
@@ -28,7 +29,7 @@ ROOT = Path(__file__).parents[1]
 
 class TestSapTpPairConfirmation(unittest.TestCase):
     def test_protocol_uses_segmented_coupled_capture(self) -> None:
-        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1r2"
+        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1r3"
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
@@ -117,6 +118,11 @@ class TestSapTpPairConfirmation(unittest.TestCase):
         first = {"pose_index_rad": [100.0, 100.0, 2.0]}
         second = {"pose_index_rad": [102.0, 100.0, 2.0]}
         self.assertFalse(distinct(first, second))
+
+    def test_angle_only_pair_is_not_capture_robust(self) -> None:
+        first = {"pose_index_rad": [100.0, 100.0, 2.0]}
+        second = {"pose_index_rad": [100.0, 100.0, 2.1]}
+        self.assertFalse(capture_pair_is_robust(first, second))
 
 
 if __name__ == "__main__":

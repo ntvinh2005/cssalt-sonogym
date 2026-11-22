@@ -62,6 +62,13 @@ def nearby(first: dict[str, Any], second: dict[str, Any]) -> bool:
     return bool(translation <= 15.0 and angle <= 15.0)
 
 
+def capture_pair_is_robust(first: dict[str, Any], second: dict[str, Any]) -> bool:
+    """Require commanded translation so tracking tolerance cannot erase a new view."""
+
+    translation, _ = pose_distances(first, second)
+    return bool(translation >= 3.0 and nearby(first, second))
+
+
 def new_against(row: dict[str, Any], excluded: list[dict[str, Any]]) -> bool:
     return all(distinct(row, previous) for previous in excluded)
 
@@ -93,7 +100,7 @@ def select_pairs(
                 if candidate is not first
                 and new_against(candidate, excluded + chosen)
                 and distinct(first, candidate)
-                and nearby(first, candidate)
+                and capture_pair_is_robust(first, candidate)
             ),
             None,
         )

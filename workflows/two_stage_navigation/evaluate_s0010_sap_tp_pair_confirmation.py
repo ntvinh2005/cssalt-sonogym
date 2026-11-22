@@ -99,7 +99,7 @@ def main() -> int:
     args = parser.parse_args()
 
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-s0010-sap-tp-pair-confirmation-v1r2":
+    if protocol["protocol_id"] != "sonogym-s0010-sap-tp-pair-confirmation-v1r3":
         raise ValueError("unexpected protocol identifier")
     checkpoint_path = Path(protocol["source"]["checkpoint"])
     if sha256(checkpoint_path) != protocol["source"]["checkpoint_sha256"]:
@@ -115,16 +115,24 @@ def main() -> int:
     rows: list[dict[str, Any]] = []
     images_by_id: dict[str, np.ndarray] = {}
     all_verification_passed = True
+    carry_forward = protocol["source"].get("carry_forward") or {}
+    carried_sessions = set(carry_forward.get("session_ids", []))
     for session in protocol["sessions"]:
         session_id = session["session_id"]
         session_dir = args.run_root / "sessions" / session_id
         verification = json.loads(
             (session_dir / "verification_report.json").read_text(encoding="utf-8")
         )
+        expected_protocol_sha = (
+            carry_forward.get("protocol_sha256")
+            if session_id in carried_sessions
+            else sha256(args.protocol)
+        )
         verification_passed = bool(
             verification["verdict"] == "PROJECTION_PARITY_PASS"
             and all(bool(value) for value in verification["gates"].values())
             and verification["passed_frame_count"] == verification["frame_count"]
+            and verification["protocol_sha256"] == expected_protocol_sha
         )
         all_verification_passed &= verification_passed
         frames = read_jsonl(session_dir / "public/frames.jsonl")

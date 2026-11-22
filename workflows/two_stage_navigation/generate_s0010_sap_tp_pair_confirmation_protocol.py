@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 
 
-PROTOCOL_ID = "sonogym-s0010-sap-tp-pair-confirmation-v1r2"
+PROTOCOL_ID = "sonogym-s0010-sap-tp-pair-confirmation-v1r3"
 
 
 def sha256(path: Path) -> str:
@@ -27,6 +27,8 @@ def main() -> int:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--implementation-commit", required=True)
+    parser.add_argument("--carry-forward-protocol", type=Path)
+    parser.add_argument("--carry-forward-session-count", type=int, default=0)
     args = parser.parse_args()
 
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
@@ -72,6 +74,36 @@ def main() -> int:
                 "expected_frame_count": 14,
             }
         )
+    carry_forward: dict[str, object] | None = None
+    if args.carry_forward_session_count:
+        if args.carry_forward_protocol is None:
+            raise ValueError("carry-forward session count requires a source protocol")
+        if not 0 < args.carry_forward_session_count < len(sessions):
+            raise ValueError("carry-forward session count must leave a fresh session")
+        source_protocol = yaml.safe_load(
+            args.carry_forward_protocol.read_text(encoding="utf-8")
+        )
+        if source_protocol["source"]["checkpoint_sha256"] != plan["checkpoint_sha256"]:
+            raise ValueError("carry-forward protocol used another checkpoint")
+        for session_index in range(args.carry_forward_session_count):
+            bank_id = f"bank_{session_index:02d}"
+            source_session = source_protocol["sessions"][session_index]
+            if source_session["session_id"] != sessions[session_index]["session_id"]:
+                raise ValueError("carry-forward session identity changed")
+            banks[bank_id] = source_protocol["sampling"][
+                "absolute_waypoint_banks_index"
+            ][bank_id]
+            evidence[bank_id] = source_protocol["sampling"][
+                "planned_waypoint_evidence_by_bank"
+            ][bank_id]
+        carry_forward = {
+            "protocol": str(args.carry_forward_protocol),
+            "protocol_sha256": sha256(args.carry_forward_protocol),
+            "session_ids": [
+                row["session_id"]
+                for row in sessions[: args.carry_forward_session_count]
+            ],
+        }
     protocol = {
         "protocol_id": PROTOCOL_ID,
         "status": "FROZEN_BEFORE_FRESH_CAPTURE",
@@ -91,6 +123,7 @@ def main() -> int:
             "checkpoint_sha256": plan["checkpoint_sha256"],
             "training_protocol_sha256": plan["training_protocol_sha256"],
             "source_evidence_status": "opened_development_training_then_unopened_pose_capture",
+            "carry_forward": carry_forward,
         },
         "scope": {
             "task": "Isaac-robot-US-guidance-v0",
