@@ -13,13 +13,14 @@
 set -euo pipefail
 : "${SONOGYM_CONFIG_FILE:?SONOGYM_CONFIG_FILE was not exported}"
 : "${L4_CAPTURE_JOB_ID:=52358451}"
+: "${L4_CAPTURE_NAMESPACE:=s0010_l4_landmark_graph_development}"
 : "${L4_GRAPH_PROTOCOL:?L4_GRAPH_PROTOCOL was not exported}"
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
 # shellcheck disable=SC1090
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
-SOURCE_RUN="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_l4_landmark_graph_development/$L4_CAPTURE_JOB_ID"
+SOURCE_RUN="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/$L4_CAPTURE_NAMESPACE/$L4_CAPTURE_JOB_ID"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_l4_landmark_detector_development/$SLURM_JOB_ID"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
