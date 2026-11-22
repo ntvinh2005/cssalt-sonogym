@@ -12,9 +12,20 @@ from prepare_s0010_sap_tp_pair_confirmation import (
     nearby,
     select_pairs,
 )
+from two_stage_navigation.coordinates import (
+    is_supported_stage2_dataset_protocol,
+    uses_coupled_stage2_dataset_controller,
+    uses_segmented_stage2_dataset_capture,
+)
 
 
 class TestSapTpPairConfirmation(unittest.TestCase):
+    def test_protocol_uses_segmented_coupled_capture(self) -> None:
+        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1"
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+
     def test_target_margin_uses_core_evidence(self) -> None:
         projected = {
             "sap": np.zeros((8, 10), dtype=bool),
