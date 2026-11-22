@@ -105,6 +105,10 @@ def pair_geometry(
         depth=200,
         pixel_resolution_mm=float(pose["image_resolution_m"]) * 1000.0,
         image_origin_height_mm=float(pose["image_origin_height_m"]) * 1000.0,
+        # The public probe calibration defines image depth along local +z.
+        # A robot-base axis is not an anatomical up direction and must not
+        # conditionally flip this sensor extrinsic.
+        home_up_axis=np.asarray(rotation, dtype=np.float64)[:, 2],
     )
     first_points = segment_points(first, coordinates)
     second_points = segment_points(second, coordinates)
