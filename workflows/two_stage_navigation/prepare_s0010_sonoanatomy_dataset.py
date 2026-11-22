@@ -217,6 +217,10 @@ def main() -> int:
             if not verification_passed:
                 raise ValueError(f"capture verification did not pass: {session}")
             frames = read_jsonl(session / "public/frames.jsonl")
+            replay = read_jsonl(session / "privileged/full_pose_replay.jsonl")
+            replay_by_sequence = {
+                int(row["frame_sequence"]): row for row in replay
+            }
             images = np.load(session / "public/ultrasound.npz")["ultrasound"]
             coordinates = np.load(
                 session / "privileged/pixel_to_volume_coordinates.npz"
@@ -257,12 +261,13 @@ def main() -> int:
                     "frame_sequence": int(frame["frame_sequence"]),
                     "trajectory_id": str(frame.get("trajectory_id", "")),
                     "frame_sha256": frame_hash,
-                    "actor_base_to_ee_position_m": json.dumps(
-                        frame["actor_base_to_ee_position_m"]
+                    "split_pose_position_m": json.dumps(
+                        replay_by_sequence[index]["human_to_ee_position_m"]
                     ),
-                    "actor_base_to_ee_quaternion_wxyz": json.dumps(
-                        frame["actor_base_to_ee_quaternion_wxyz"]
+                    "split_pose_quaternion_wxyz": json.dumps(
+                        replay_by_sequence[index]["human_to_ee_quaternion_wxyz"]
                     ),
+                    "split_pose_source": "privileged_full_pose_replay_not_model_input",
                     "label_provenance": config["label_provenance"],
                     **result.metrics,
                 }

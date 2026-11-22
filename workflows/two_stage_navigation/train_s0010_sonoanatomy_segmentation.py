@@ -73,8 +73,8 @@ def quaternion_angle_deg(first: np.ndarray, second: np.ndarray) -> float:
 
 def parse_pose(row: dict[str, str]) -> tuple[np.ndarray, np.ndarray]:
     return (
-        np.asarray(json.loads(row["actor_base_to_ee_position_m"]), dtype=np.float64),
-        np.asarray(json.loads(row["actor_base_to_ee_quaternion_wxyz"]), dtype=np.float64),
+        np.asarray(json.loads(row["split_pose_position_m"]), dtype=np.float64),
+        np.asarray(json.loads(row["split_pose_quaternion_wxyz"]), dtype=np.float64),
     )
 
 
