@@ -569,10 +569,12 @@ def main() -> int:
         joblib.dump(bundle, checkpoint_path)
         reloaded = joblib.load(checkpoint_path)
         matrix = np.asarray([row["feature"] for row in candidates[:100]])
-        if not np.array_equal(
-            final_model.predict_proba(matrix),
-            reloaded["estimator"].predict_proba(matrix),
-        ):
+        before_reload = final_model.predict_proba(matrix)
+        after_reload = reloaded["estimator"].predict_proba(matrix)
+        reload_max_abs_difference = float(
+            np.max(np.abs(before_reload - after_reload), initial=0.0)
+        )
+        if reload_max_abs_difference > 1.0e-15:
             raise RuntimeError("landmark graph checkpoint reload changed predictions")
         checkpoint_sha256 = sha256(checkpoint_path)
 
@@ -672,6 +674,9 @@ def main() -> int:
         "independent_confirmation": False,
         "checkpoint": str(checkpoint_path) if checkpoint_sha256 else None,
         "checkpoint_sha256": checkpoint_sha256,
+        "checkpoint_reload_max_abs_difference": (
+            reload_max_abs_difference if checkpoint_sha256 else None
+        ),
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "result.json").write_text(

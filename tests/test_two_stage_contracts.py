@@ -269,6 +269,10 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol(public_6dof))
         self.assertTrue(uses_coupled_stage2_dataset_controller(public_6dof))
         self.assertTrue(uses_segmented_stage2_dataset_capture(public_6dof))
+        landmark_graph = "sonogym-s0010-l5-landmark-graph-confirmation-v1"
+        self.assertTrue(is_supported_stage2_dataset_protocol(landmark_graph))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(landmark_graph))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(landmark_graph))
         self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v15"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
