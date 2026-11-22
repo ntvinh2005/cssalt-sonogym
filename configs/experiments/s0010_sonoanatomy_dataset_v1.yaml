@@ -1,0 +1,28 @@
+protocol_id: s0010_sonoanatomy_dataset_v1
+status: OPENED_DEVELOPMENT_LABEL_AUDIT
+anatomy_id: s0010
+label_provenance: SIMULATOR_WEAK_ANATOMICAL_LABEL
+image_support:
+  maximum_track_distance_pixels: 3.0
+sources:
+  - level: L4
+    role: opened_l4_graph_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l4_landmark_graph_development/52358451
+  - level: L4
+    role: opened_l4_focused_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l4_landmark_focused_development/52363363
+  - level: L5
+    role: opened_l5_surface_signal_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l4mb_sap_tp_signal_v1/52300444
+  - level: L5
+    role: opened_l5_public_6dof_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sap_tp_public_6dof_confirmation/52347194
+  - level: L5
+    role: opened_failed_independent_confirmation_now_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l5_landmark_graph_confirmation/52369053
+readiness:
+  minimum_sap_positive_frames_per_level: 20
+  minimum_tp_positive_frames_per_level: 20
+  minimum_sap_positive_sessions_per_level: 3
+  minimum_clear_other_bone_frames_per_level: 20
+
