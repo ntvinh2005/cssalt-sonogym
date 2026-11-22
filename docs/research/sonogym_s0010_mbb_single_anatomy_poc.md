@@ -135,3 +135,22 @@ branch-specific bony surrogate-region definition, followed by a dedicated MBB
 needle/injection simulator contract. Separately, the L4 image model needs a
 session-separated verifier experiment that distinguishes proxy-positive core
 views from boundary-ambiguous views before another active-acquisition claim.
+
+## 2. RIGHT L4 medial-branch target at RIGHT L5 follow-up
+
+The CPU-only follow-up at commit `e89039d` and job `52273102` tested whether the
+historical L5 TP navigation observations also supported a bounded RIGHT L5
+SAP–TP bony relationship. The evaluator could define a reproducible physical
+relationship from provisional CT-model SAP/TP masks, but not a nerve coordinate
+or semantically validated intervention endpoint. The target contract is
+therefore `PARTIAL`.
+
+Across 156 historical search frames, the evaluator found 0 proxy-positive, 100
+ambiguous and 56 negative observations. Neither the fixed TP-relative control
+nor the image-interface method controlled wrong or ambiguous target acceptance.
+The result is `ULTRASOUND_TARGET_LOCALIZATION = FAIL`; no new GPU or closed-loop
+job was eligible. The established RIGHT L5 TP navigation result remains 4/4 and
+is unchanged, while MBB target localization and intervention remain blocked.
+
+The complete contract, method, metrics and artifact references are recorded in
+`docs/research/sonogym_s0010_l4_medial_branch_target.md`.

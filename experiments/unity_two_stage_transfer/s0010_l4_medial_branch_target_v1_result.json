@@ -1,0 +1,54 @@
+{
+  "schema": "s0010-l4-medial-branch-target-result-v1",
+  "source_commit": "e89039dad9d579ae1214cb2e100a6a4a8ac479a6",
+  "source_evidence_status": "historically_opened_development",
+  "source_job": "52039283",
+  "execution_job": "52273102",
+  "protocol_sha256": "b6a0e30aa027d2af122811d6076d6586c3b4f45f532263124d67ff22e401f4cc",
+  "anatomical_target_contract": "PARTIAL",
+  "ultrasound_target_localization": "FAIL",
+  "robot_navigation": "HISTORICAL_REPLAY_ONLY",
+  "full_mbb_intervention": "BLOCKED",
+  "new_closed_loop_execution": false,
+  "frame_count": 156,
+  "frame_label_counts": {
+    "PROXY_POSITIVE": 0,
+    "PROXY_AMBIGUOUS": 100,
+    "PROXY_NEGATIVE": 56,
+    "TECHNICALLY_INVALID": 0
+  },
+  "qualifying_target_visible_sessions": 0,
+  "target_contract": {
+    "endpoint": "bony surrogate only",
+    "clinical_target_validated": false,
+    "nerve_model_available": false,
+    "coordinate_system": "NIfTI RAS millimetres",
+    "minimum_surface_separation_mm": 6.18465843842649,
+    "evaluator_tolerance_mm": 3.0,
+    "right_l5_sap_voxels": 338,
+    "right_l5_tp_voxels": 445,
+    "midpoint_count": 13
+  },
+  "method_summaries": {
+    "tp_only": {
+      "accepted": 156,
+      "wrong_accepted": 56,
+      "ambiguous_accepted": 100,
+      "median_distance_mm": 20.151901565288732
+    },
+    "fixed_tp_relative": {
+      "accepted": 151,
+      "wrong_accepted": 52,
+      "ambiguous_accepted": 99,
+      "median_distance_mm": 8.388919865407711
+    },
+    "image_interface": {
+      "accepted": 147,
+      "wrong_accepted": 54,
+      "ambiguous_accepted": 93,
+      "median_distance_mm": 9.974102817740523
+    }
+  },
+  "review_zip": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4_medial_branch_target_v1/52273102/analysis/s0010_right_l4_medial_branch_target_review.zip",
+  "review_zip_sha256": "688c61817b6d95397b656054ac090006b03db201473fa0ed9b9c09319be62f3d"
+}
