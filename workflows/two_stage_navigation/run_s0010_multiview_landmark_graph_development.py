@@ -35,6 +35,7 @@ FEATURE_PATH = (
     Path(__file__).resolve().parents[2]
     / "source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/stage1_features.py"
 )
+LEVEL_LABEL = {"L4": 28, "L5": 27}
 
 
 def sha256(path: Path) -> str:
@@ -324,6 +325,8 @@ def main() -> int:
     parser.add_argument("--tp-checkpoint", type=Path, required=True)
     parser.add_argument("--sap-checkpoint", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--level", choices=sorted(LEVEL_LABEL), default="L5")
+    parser.add_argument("--tp-positive-class", type=int, default=2)
     args = parser.parse_args()
 
     register_tp_pickle_module()
@@ -338,7 +341,10 @@ def main() -> int:
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
     calibration = protocol["public_probe_calibration"]
     _, sap_mask, tp_mask, contract = target_workflow.load_target_geometry(
-        args.prediction, args.segmentation
+        args.prediction,
+        args.segmentation,
+        level_label=LEVEL_LABEL[args.level],
+        level_name=args.level,
     )
     bone_ids = sap_correction.bone_source_ids(args.label_conversion)
     frame_rows: list[dict[str, Any]] = []
@@ -364,7 +370,9 @@ def main() -> int:
                 image, patch_spec=tp_spec, column_stride_pixels=12
             )
             feature_matrix = np.stack([proposal.feature for proposal in proposals])
-            tp_scores = positive_probability(tp_model, feature_matrix, 2)
+            tp_scores = positive_probability(
+                tp_model, feature_matrix, args.tp_positive_class
+            )
             sap_scores = positive_probability(sap_model, feature_matrix, 1)
             tp_index = int(np.argmax(tp_scores))
             sap_index = int(np.argmax(sap_scores))
@@ -504,7 +512,10 @@ def main() -> int:
     pose_only_candidates = []
     shuffled_geometry_candidates = []
     shuffled_appearance_candidates = []
-    checkpoint_path = args.output_dir / "s0010_l5_multiview_landmark_graph.joblib"
+    checkpoint_path = (
+        args.output_dir
+        / f"s0010_{args.level.lower()}_multiview_landmark_graph.joblib"
+    )
     checkpoint_sha256 = None
     if cross_validation_ready:
         for fold, session_id in enumerate(session_ids):
@@ -552,7 +563,9 @@ def main() -> int:
                 row["pose_only_score"] = float(score)
         final_model = fit_fold(candidates, "__no_heldout_session__", 20261122)
         bundle = {
-            "schema": "s0010-l5-multiview-landmark-graph-v1",
+            "schema": f"s0010-{args.level.lower()}-multiview-landmark-graph-v1",
+            "level": args.level,
+            "tp_positive_class": args.tp_positive_class,
             "estimator": final_model,
             "tp_checkpoint": str(args.tp_checkpoint.resolve()),
             "tp_checkpoint_sha256": sha256(args.tp_checkpoint),
@@ -593,6 +606,7 @@ def main() -> int:
     )
     result = {
         "schema": "s0010-multiview-landmark-graph-development-v1",
+        "level": args.level,
         "opened_development_only": True,
         "tp_checkpoint_sha256": sha256(args.tp_checkpoint),
         "sap_checkpoint_sha256": sha256(args.sap_checkpoint),
