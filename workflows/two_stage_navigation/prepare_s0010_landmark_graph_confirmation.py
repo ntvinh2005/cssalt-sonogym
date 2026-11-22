@@ -21,7 +21,7 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r6"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r7"
 
 
 def protocol_poses(path: Path) -> list[dict[str, Any]]:
@@ -193,6 +193,16 @@ def main() -> int:
             "replacement_seed": 2026120213,
             "reason": "reset_specific_controller_plateau_before_image_acquisition",
         },
+        "technical_controller_correction": {
+            "failed_job": "52364308",
+            "failed_protocol_id": "sonogym-s0010-l5-landmark-graph-confirmation-v1r6",
+            "failed_protocol_sha256": "ccb9e807595ccfda51ca4c92467dd4daf85baf1e15f05a4da4da7f20d1009095",
+            "reason": (
+                "disable_the_3.14_rad_ceiling_assist_because_a_3.00_rad_waypoint_"
+                "settled_at_3.09_rad_and_could_not_meet_the_frozen_1.2_degree_gate"
+            ),
+            "scientific_checkpoint_or_gate_changed": False,
+        },
     }
     protocol["information_boundaries"]["actor_inputs"] = [
         "clean_ultrasound",
@@ -206,6 +216,13 @@ def main() -> int:
     protocol["sampling"]["maximum_initial_positioning_steps"] = 700
     protocol["sampling"]["maximum_action_steps_per_waypoint"] = 200
     protocol["sampling"]["episode_length_s_override"] = 500.0
+    # The command-space ceiling is 3.00 rad.  The inherited 3.14-rad assist
+    # drove the realized pose beyond a requested 3.00-rad waypoint in job
+    # 52364308.  A threshold above every planned waypoint disables that
+    # compensation while preserving the requested poses and acceptance gates.
+    protocol["sampling"]["physical_controller"][
+        "ceiling_assisted_minimum_requested_angle_rad"
+    ] = 3.01
     sessions: list[dict[str, Any]] = []
     plan_sessions: list[dict[str, Any]] = []
     for session_index in range(4):
@@ -235,7 +252,7 @@ def main() -> int:
         session = {
             "session_id": session_id,
             "split": "unopened_l5_landmark_graph_target_confirmation",
-            "seed": 2026120213 if session_index == 3 else 2026120200 + session_index,
+            "seed": 2026120300 + session_index,
             "reset_id": session_id,
             "absolute_waypoint_bank_id": bank_id,
             "expected_frame_count": 14,
@@ -270,7 +287,7 @@ def main() -> int:
         session = {
             "session_id": session_id,
             "split": "unopened_l5_landmark_graph_negative_confirmation",
-            "seed": 2026120200 + session_index,
+            "seed": 2026120300 + session_index,
             "reset_id": session_id,
             "absolute_waypoint_bank_id": bank_id,
             "expected_frame_count": len(rows),
@@ -302,7 +319,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r6.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r7.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
