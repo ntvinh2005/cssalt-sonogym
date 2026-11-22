@@ -143,7 +143,6 @@ def main() -> int:
     prediction_image, sap_mask, tp_mask, contract = target_workflow.load_target_geometry(
         prediction_path=args.prediction,
         segmentation_path=args.segmentation,
-        tp_revision_path=args.tp_revision,
     )
     bone_ids = sap_correction.bone_source_ids(args.label_conversion)
     rows: list[dict[str, Any]] = []

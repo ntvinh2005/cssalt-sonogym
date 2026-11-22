@@ -19,6 +19,12 @@ SPEC.loader.exec_module(MODULE)
 
 
 class PoseAtlasTests(unittest.TestCase):
+    def test_target_geometry_loader_uses_frozen_semantic_volumes(self) -> None:
+        self.assertEqual(
+            tuple(MODULE.target_workflow.load_target_geometry.__annotations__),
+            ("prediction_path", "segmentation_path", "return"),
+        )
+
     def test_pose_diversity_requires_translation_or_rotation(self) -> None:
         base = np.asarray([100.0, 120.0, 2.8])
         self.assertFalse(MODULE.physically_distinct(base, base + [3.0, 0.0, 0.0]))
