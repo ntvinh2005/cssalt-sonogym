@@ -15,6 +15,7 @@ if str(WORKFLOWS) not in sys.path:
     sys.path.insert(0, str(WORKFLOWS))
 
 import evaluate_s0010_landmark_graph_confirmation as evaluation  # noqa: E402
+import prepare_s0010_landmark_graph_confirmation as l5_prepare  # noqa: E402
 import prepare_s0010_l4_landmark_graph_development as l4_prepare  # noqa: E402
 import train_s0010_l4_landmark_detectors as l4_training  # noqa: E402
 import prepare_s0010_l4_landmark_focused_development as l4_focused  # noqa: E402
@@ -39,6 +40,15 @@ def candidate(frame: int, position_mm: float, score: float = 0.8) -> dict:
 
 
 class LandmarkGraphConfirmationTest(unittest.TestCase):
+    def test_distinct_hash_gate_follows_each_session_frame_count(self) -> None:
+        requirements = l5_prepare.distinct_hash_requirements(
+            [
+                {"session_id": "target", "expected_frame_count": 14},
+                {"session_id": "negative", "expected_frame_count": 11},
+            ]
+        )
+        self.assertEqual(requirements, {"target": 14, "negative": 11})
+
     def test_l4_focused_candidates_exclude_opened_center_duplicates(self) -> None:
         centers = [[148.0, 136.0, 2.375], [146.0, 136.0, 2.5]]
         candidates = l4_focused.focused_pose_candidates(centers)

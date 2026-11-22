@@ -301,6 +301,10 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol(landmark_graph_r7))
         self.assertTrue(uses_coupled_stage2_dataset_controller(landmark_graph_r7))
         self.assertTrue(uses_segmented_stage2_dataset_capture(landmark_graph_r7))
+        landmark_graph_r8 = "sonogym-s0010-l5-landmark-graph-confirmation-v1r8"
+        self.assertTrue(is_supported_stage2_dataset_protocol(landmark_graph_r8))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(landmark_graph_r8))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(landmark_graph_r8))
         l4_graph = "sonogym-s0010-l4-landmark-graph-development-v1"
         self.assertTrue(is_supported_stage2_dataset_protocol(l4_graph))
         self.assertTrue(uses_coupled_stage2_dataset_controller(l4_graph))

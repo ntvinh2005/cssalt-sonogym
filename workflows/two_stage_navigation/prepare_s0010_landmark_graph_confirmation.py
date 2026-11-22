@@ -21,12 +21,23 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r7"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r8"
 
 
 def protocol_poses(path: Path) -> list[dict[str, Any]]:
     protocol = yaml.safe_load(path.read_text(encoding="utf-8"))
     return previous.protocol_poses(protocol)
+
+
+def distinct_hash_requirements(
+    sessions: list[dict[str, Any]],
+) -> dict[str, int]:
+    """Require every declared frame to be distinct for each session size."""
+
+    return {
+        str(session["session_id"]): int(session["expected_frame_count"])
+        for session in sessions
+    }
 
 
 def select_available_pairs(
@@ -203,6 +214,16 @@ def main() -> int:
             ),
             "scientific_checkpoint_or_gate_changed": False,
         },
+        "technical_dataset_gate_correction": {
+            "failed_job": "52367817",
+            "failed_protocol_id": "sonogym-s0010-l5-landmark-graph-confirmation-v1r7",
+            "failed_protocol_sha256": "43582781e71c5d9fd8d58d50caac204c46e63c189b20f0d22c08e67ffa54ee13",
+            "reason": (
+                "declare_the_distinct_hash_requirement_per_session_so_the_11_frame_"
+                "negative_controls_are_not_compared_with_the_14_frame_target_default"
+            ),
+            "scientific_checkpoint_or_gate_changed": False,
+        },
     }
     protocol["information_boundaries"]["actor_inputs"] = [
         "clean_ultrasound",
@@ -252,7 +273,7 @@ def main() -> int:
         session = {
             "session_id": session_id,
             "split": "unopened_l5_landmark_graph_target_confirmation",
-            "seed": 2026120300 + session_index,
+            "seed": 2026120400 + session_index,
             "reset_id": session_id,
             "absolute_waypoint_bank_id": bank_id,
             "expected_frame_count": 14,
@@ -287,7 +308,7 @@ def main() -> int:
         session = {
             "session_id": session_id,
             "split": "unopened_l5_landmark_graph_negative_confirmation",
-            "seed": 2026120300 + session_index,
+            "seed": 2026120400 + session_index,
             "reset_id": session_id,
             "absolute_waypoint_bank_id": bank_id,
             "expected_frame_count": len(rows),
@@ -295,6 +316,9 @@ def main() -> int:
         sessions.append(session)
         plan_sessions.append({**session, "rows": rows})
     protocol["sessions"] = sessions
+    protocol["dataset_gate"][
+        "minimum_distinct_frame_hashes_by_session"
+    ] = distinct_hash_requirements(sessions)
     protocol["landmark_graph"] = required
     protocol["landmark_graph"]["minimum_view_translation_mm"] = 2.0
     protocol["landmark_graph"]["minimum_view_angle_deg"] = 1.0
@@ -319,7 +343,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r7.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r8.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
