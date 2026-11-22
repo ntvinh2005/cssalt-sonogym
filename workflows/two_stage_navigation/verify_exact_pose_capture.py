@@ -181,6 +181,7 @@ def main() -> int:
         "sonogym-s0010-l4-landmark-graph-development-v1",
         "sonogym-s0010-l4-landmark-focused-development-v1",
         "sonogym-s0010-l4-landmark-focused-development-v1r1",
+        "sonogym-s0010-sonoanatomy-development-v1",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]

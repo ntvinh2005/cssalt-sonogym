@@ -154,6 +154,7 @@ def main() -> int:
     sampling["planned_waypoint_evidence_by_bank"] = {}
     sampling["trajectory_start_frames"] = list(range(0, 24, 3))
     sampling["expected_frames_per_session"] = 24
+    sampling["maximum_action_steps_per_waypoint"] = 350
     sampling["maximum_total_action_steps_per_session"] = 7000
     sampling["episode_length_s_override"] = 700.0
     sessions = []
