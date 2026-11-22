@@ -1,0 +1,54 @@
+{
+  "schema": "s0010-l4mb-target-observability-execution-result-v1",
+  "source_commit": "3c7d656ba828df7e2230e4d15435a485e2323ab7",
+  "protocol_sha256_at_capture": "089cc97563c90847d91cc172daf9dd513a670713e75372aa0b660e45f68b540d",
+  "protocol_sha256_after_metadata_repair": "a4bf97a2bd861a8fe9294e0011e2623107f1e41d5199042eafb49c0ad1bd37aa",
+  "execution_jobs": [
+    {
+      "job_id": "52277254",
+      "state": "FAILED",
+      "elapsed": "00:00:38",
+      "captured_frames": 0,
+      "failure": "pre-capture protocol validation rejected a zero visibility threshold and a missing verifier allowlist entry"
+    },
+    {
+      "job_id": "52278401",
+      "state": "FAILED",
+      "elapsed": "00:00:47",
+      "captured_frames": 12,
+      "failure": "the first session completed before the verifier required a source implementation_commit field absent from the sealed protocol"
+    }
+  ],
+  "capture": {
+    "expected_sessions": 3,
+    "completed_sessions": 1,
+    "expected_frames": 36,
+    "captured_frames": 12,
+    "distinct_frame_hashes": 12,
+    "fresh_frames": 12,
+    "verification_passed_frames": 12,
+    "coordinate_hash_mismatch_count": 0,
+    "maximum_coordinate_error_index": 0.000032713320294419646,
+    "verification_verdict": "PROJECTION_PARITY_PASS"
+  },
+  "observability": {
+    "capture_complete": false,
+    "target_candidate_frames": 6,
+    "negative_control_frames": 6,
+    "proxy_positive_frames": 0,
+    "proxy_ambiguous_frames": 6,
+    "proxy_negative_frames": 6,
+    "image_supported_positive_frames": 0,
+    "qualifying_sessions": 0,
+    "robot_search_eligible": false,
+    "ultrasound_target_localization": "FAIL"
+  },
+  "scientific_interpretation": "The completed first session adds no positive SAP-TP endpoint observation. All six planned target views remain ambiguous because the SAP core is not a first-visible surface. The two missing sessions prevent a complete execution of the frozen three-session protocol.",
+  "artifacts": {
+    "run_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4mb_target_observability_v1/52278401",
+    "ultrasound_archive_sha256": "c21f6efb41c6f747106169b8b6fa52f624ed2d1a3ad7d8c1365804f6bce1ee12",
+    "coordinate_archive_sha256": "7283e8e8deb17b4dc7660d72398d9404ce5f7b12c1ac4e6f24adb215686f4127",
+    "verification_report_sha256": "f7f3d66056a84bea7a40c90064d0d7b5d00fb46cd0d821028faa5d6e06585858",
+    "partial_evaluation_result_sha256": "96f776f260c98ac8ceee81351733b0bd39706278d3c2fe7c183282c3e0322e94"
+  }
+}

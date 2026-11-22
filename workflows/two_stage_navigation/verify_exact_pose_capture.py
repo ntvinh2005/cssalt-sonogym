@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,41 @@ ACQUISITION = importlib.util.module_from_spec(ACQUISITION_SPEC)
 sys.modules[ACQUISITION_SPEC.name] = ACQUISITION
 ACQUISITION_SPEC.loader.exec_module(ACQUISITION)
 recorded_view_is_fresh = ACQUISITION.recorded_view_is_fresh
+
+
+SYNCHRONIZED_PROTOCOL_IDS = {
+    "sonogym-s0010-sap-observability-v1",
+    "sonogym-s0010-sap-observability-v1r1",
+    "sonogym-s0010-sap-observability-v2",
+    "sonogym-s0010-sap-observability-v2r1",
+    "sonogym-s0010-sap-validation-development-v1",
+    "sonogym-s0010-sap-validation-holdout-v1",
+    "sonogym-s0010-sap-validation-followup-v1",
+    "sonogym-s0010-sap-validation-resume-v1",
+    "sonogym-s0010-sap-validation-resume-v2",
+    "sonogym-s0010-l4mb-target-observability-v1",
+}
+
+
+def requires_synchronized_capture(protocol_id: str) -> bool:
+    return bool(
+        protocol_id.startswith("sonogym-s0010-tp-surface-core-dataset-v")
+        or protocol_id in SYNCHRONIZED_PROTOCOL_IDS
+    )
+
+
+def resolve_source_commit(protocol: dict[str, Any], session: Path) -> tuple[str, str]:
+    source_commit = protocol.get("source", {}).get("implementation_commit")
+    origin = "protocol"
+    if not source_commit:
+        context_commit = session.parents[1] / "context/git-commit.txt"
+        if not context_commit.is_file():
+            raise RuntimeError("protocol and captured run context lack an implementation commit")
+        source_commit = context_commit.read_text(encoding="utf-8").strip()
+        origin = "captured_run_context"
+    if re.fullmatch(r"[0-9a-f]{40}", str(source_commit)) is None:
+        raise RuntimeError("implementation commit is not a full lowercase Git SHA")
+    return str(source_commit), origin
 
 
 def parse_args() -> argparse.Namespace:
@@ -176,22 +212,8 @@ def main() -> int:
         pose = pose_rows[index]
         if int(public["frame_sequence"]) != index or int(pose["frame_sequence"]) != index:
             raise RuntimeError("frame order is not contiguous")
-        synchronized_capture_protocol = bool(
-            protocol["protocol_id"].startswith(
-                "sonogym-s0010-tp-surface-core-dataset-v"
-            )
-            or protocol["protocol_id"]
-            in {
-                "sonogym-s0010-sap-observability-v1",
-                "sonogym-s0010-sap-observability-v1r1",
-                "sonogym-s0010-sap-observability-v2",
-                "sonogym-s0010-sap-observability-v2r1",
-                "sonogym-s0010-sap-validation-development-v1",
-                "sonogym-s0010-sap-validation-holdout-v1",
-                "sonogym-s0010-sap-validation-followup-v1",
-                "sonogym-s0010-sap-validation-resume-v1",
-                "sonogym-s0010-sap-validation-resume-v2",
-            }
+        synchronized_capture_protocol = requires_synchronized_capture(
+            protocol["protocol_id"]
         )
         if synchronized_capture_protocol and public.get("acquisition_id") != pose.get(
             "acquisition_id"
@@ -289,22 +311,8 @@ def main() -> int:
         for row in frame_results
     )
     synchronized_full_pose_replay = all(row["frame_passes"] for row in frame_results)
-    synchronized_capture_protocol = bool(
-        protocol["protocol_id"].startswith(
-            "sonogym-s0010-tp-surface-core-dataset-v"
-        )
-        or protocol["protocol_id"]
-        in {
-            "sonogym-s0010-sap-observability-v1",
-            "sonogym-s0010-sap-observability-v1r1",
-            "sonogym-s0010-sap-observability-v2",
-            "sonogym-s0010-sap-observability-v2r1",
-            "sonogym-s0010-sap-validation-development-v1",
-            "sonogym-s0010-sap-validation-holdout-v1",
-            "sonogym-s0010-sap-validation-followup-v1",
-            "sonogym-s0010-sap-validation-resume-v1",
-            "sonogym-s0010-sap-validation-resume-v2",
-        }
+    synchronized_capture_protocol = requires_synchronized_capture(
+        protocol["protocol_id"]
     )
     coordinate_hash_integrity = all(
         row["saved_coordinate_hash_matches_record"] for row in frame_results
@@ -332,11 +340,13 @@ def main() -> int:
         and viewpoint_diversity
         and (coordinate_hash_integrity or historical_hash_exception)
     )
+    source_commit, source_commit_origin = resolve_source_commit(protocol, session)
     report = {
         "schema": "sonogym-exact-pose-replay-report-v1",
         "protocol_id": protocol["protocol_id"],
         "protocol_sha256": seal,
-        "source_commit": protocol["source"]["implementation_commit"],
+        "source_commit": source_commit,
+        "source_commit_origin": source_commit_origin,
         "raw_volume_path": str(raw_path),
         "raw_volume_sha256": file_sha256(raw_path),
         "frame_count": expected_frames,

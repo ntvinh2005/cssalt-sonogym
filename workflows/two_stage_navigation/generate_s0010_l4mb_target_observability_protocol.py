@@ -73,6 +73,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--atlas", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--implementation-commit", required=True)
     parser.add_argument("--minimum-track-alignment-pixels", type=float, default=4.0)
     parser.add_argument("--minimum-shadow-contrast", type=float, required=True)
     args = parser.parse_args()
@@ -145,6 +146,7 @@ def main() -> int:
             "clinical_target_validated": False,
         },
         "source": {
+            "implementation_commit": args.implementation_commit,
             "pose_atlas": str(args.atlas),
             "pose_atlas_sha256": sha256(args.atlas),
             "pose_atlas_schema": atlas["schema"],

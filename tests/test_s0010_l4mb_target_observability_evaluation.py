@@ -19,6 +19,22 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ObservabilityEvaluationTests(unittest.TestCase):
+    def test_partial_session_selection_cannot_look_complete(self) -> None:
+        protocol = {
+            "sessions": [
+                {"session_id": "session_00"},
+                {"session_id": "session_01"},
+            ]
+        }
+        selected = MODULE.sessions_for_evaluation(protocol, ["session_00"])
+        self.assertEqual([row["session_id"] for row in selected], ["session_00"])
+        self.assertNotEqual(len(selected), len(protocol["sessions"]))
+
+    def test_unknown_session_selection_fails(self) -> None:
+        protocol = {"sessions": [{"session_id": "session_00"}]}
+        with self.assertRaisesRegex(ValueError, "not in the protocol"):
+            MODULE.sessions_for_evaluation(protocol, ["session_99"])
+
     def test_shadow_contrast_uses_clean_image_only(self) -> None:
         image = np.zeros((200, 150), dtype=np.float64)
         image[98:102, 40] = 1.0

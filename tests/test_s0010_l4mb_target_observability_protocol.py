@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -23,6 +24,15 @@ assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+
+VERIFIER_PATH = Path(__file__).parents[1] / "workflows/two_stage_navigation/verify_exact_pose_capture.py"
+VERIFIER_SPEC = importlib.util.spec_from_file_location(
+    "l4mb_exact_pose_verifier", VERIFIER_PATH
+)
+assert VERIFIER_SPEC is not None and VERIFIER_SPEC.loader is not None
+VERIFIER = importlib.util.module_from_spec(VERIFIER_SPEC)
+sys.modules[VERIFIER_SPEC.name] = VERIFIER
+VERIFIER_SPEC.loader.exec_module(VERIFIER)
 
 
 def row(index: int, role: str, pose: list[float]) -> dict[str, object]:
@@ -49,8 +59,34 @@ class ProtocolGeneratorTests(unittest.TestCase):
             (root / "experiments/unity_two_stage_transfer/s0010_l4mb_target_observability_v1.yaml").read_text()
         )
         Stage2LabelConfig(**protocol["labels"]["validity"], **protocol["labels"]["quality"])
+        self.assertRegex(protocol["source"]["implementation_commit"], r"^[0-9a-f]{40}$")
         verifier = (root / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text()
         self.assertIn(MODULE.PROTOCOL_ID, verifier)
+        self.assertTrue(VERIFIER.requires_synchronized_capture(MODULE.PROTOCOL_ID))
+
+    def test_verifier_recovers_commit_from_captured_run_context(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run_root = Path(directory) / "run"
+            session = run_root / "sessions" / "session_00"
+            session.mkdir(parents=True)
+            (run_root / "context").mkdir()
+            commit = "3c7d656ba828df7e2230e4d15435a485e2323ab7"
+            (run_root / "context/git-commit.txt").write_text(commit + "\n")
+            resolved, origin = VERIFIER.resolve_source_commit({"source": {}}, session)
+            self.assertEqual(resolved, commit)
+            self.assertEqual(origin, "captured_run_context")
+
+    def test_resume_job_preserves_parent_protocol_and_only_captures_missing_sessions(self) -> None:
+        job = (
+            Path(__file__).parents[1]
+            / "hpg/jobs/s0010_l4mb_target_observability_v1_resume.sbatch"
+        ).read_text()
+        self.assertIn("52278401", job)
+        self.assertIn("089cc97563c90847d91cc172daf9dd513a670713e75372aa0b660e45f68b540d", job)
+        self.assertIn("cp -a \"$PARENT_RUN/sessions/s0010l4mbobs_00\"", job)
+        self.assertNotIn("capture_session s0010l4mbobs_00", job)
+        self.assertIn("capture_session s0010l4mbobs_01", job)
+        self.assertIn("capture_session s0010l4mbobs_02", job)
 
     def test_pose_distance_uses_physical_translation_or_rotation(self) -> None:
         self.assertFalse(MODULE.pose_distance_clear([100, 100, 2.8], [102, 100, 2.8]))

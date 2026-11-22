@@ -28,6 +28,20 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
+def sessions_for_evaluation(
+    protocol: dict[str, Any], requested_session_ids: list[str] | None
+) -> list[dict[str, Any]]:
+    sessions = list(protocol["sessions"])
+    if not requested_session_ids:
+        return sessions
+    requested = set(requested_session_ids)
+    selected = [row for row in sessions if row["session_id"] in requested]
+    missing = requested - {row["session_id"] for row in selected}
+    if missing:
+        raise ValueError(f"requested sessions are not in the protocol: {sorted(missing)}")
+    return selected
+
+
 def nearest_track_distance(mask: np.ndarray, tracks: list[InterfaceTrack]) -> float | None:
     pixels = np.argwhere(np.asarray(mask, dtype=bool))
     distances: list[float] = []
@@ -146,9 +160,12 @@ def main() -> int:
     parser.add_argument("--segmentation", type=Path, required=True)
     parser.add_argument("--label-conversion", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--session-id", action="append", dest="session_ids")
     args = parser.parse_args()
 
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
+    sessions = sessions_for_evaluation(protocol, args.session_ids)
+    capture_complete = len(sessions) == len(protocol["sessions"])
     gate = protocol["observability_gate"]
     _, sap_mask, tp_mask, contract = target_workflow.load_target_geometry(
         args.prediction, args.segmentation
@@ -158,7 +175,7 @@ def main() -> int:
     rows: list[dict[str, Any]] = []
     images_by_id: dict[str, np.ndarray] = {}
     all_verification_passed = True
-    for session in protocol["sessions"]:
+    for session in sessions:
         session_id = session["session_id"]
         session_dir = args.run_root / "sessions" / session_id
         frames = read_jsonl(session_dir / "public/frames.jsonl")
@@ -213,7 +230,7 @@ def main() -> int:
             )
 
     session_results: list[dict[str, Any]] = []
-    for session in protocol["sessions"]:
+    for session in sessions:
         session_rows = [row for row in rows if row["session_id"] == session["session_id"]]
         target_rows = [
             row for row in session_rows if row["declared_role"] == "TARGET_REGION_CANDIDATE"
@@ -257,6 +274,8 @@ def main() -> int:
     )
     geometry_positive_count = sum(row["evaluator_label"] == "PROXY_POSITIVE" for row in rows)
     if (
+        capture_complete
+        and
         all_verification_passed
         and qualifying_sessions >= int(gate["minimum_positive_sessions"])
         and positive_controls <= int(gate["maximum_positive_control_frames"])
@@ -270,6 +289,9 @@ def main() -> int:
         "schema": "s0010-l4mb-target-observability-result-v1",
         "verdict": verdict,
         "anatomical_target_contract": "PARTIAL",
+        "capture_complete": capture_complete,
+        "evaluated_session_count": len(sessions),
+        "expected_session_count": len(protocol["sessions"]),
         "all_capture_verification_passed": all_verification_passed,
         "frame_count": len(rows),
         "geometry_positive_frame_count": geometry_positive_count,
@@ -286,7 +308,9 @@ def main() -> int:
             )
         },
         "session_results": session_results,
-        "robot_search_eligible": verdict == "TARGET_REGION_OBSERVABLE",
+        "robot_search_eligible": bool(
+            capture_complete and verdict == "TARGET_REGION_OBSERVABLE"
+        ),
     }
     (args.output_dir / "result.json").write_text(
         json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n",
