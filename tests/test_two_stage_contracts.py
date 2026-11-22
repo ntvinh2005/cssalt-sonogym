@@ -265,6 +265,10 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(
             uses_coupled_stage2_dataset_controller("sonogym-stage2-confirmation-v18")
         )
+        public_6dof = "sonogym-s0010-sap-tp-public-6dof-confirmation-v1"
+        self.assertTrue(is_supported_stage2_dataset_protocol(public_6dof))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(public_6dof))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(public_6dof))
         self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v15"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")
