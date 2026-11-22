@@ -49,6 +49,8 @@ for session_id in \
     --protocol "$PROTOCOL" --session-id "$session_id" --output-dir "$SESSION_DIR" \
     --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" --headless --device cuda:0 \
     > "$SESSION_DIR/launcher.log" 2>&1
+  "$PYTHON" -c 'import json,sys; summary=json.load(open(sys.argv[1])); raise SystemExit(0 if summary.get("status") == "PASSED" else 2)' \
+    "$SESSION_DIR/summary.json"
   "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/verify_exact_pose_capture.py" \
     --protocol "$PROTOCOL" --session-dir "$SESSION_DIR" \
     --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" \
