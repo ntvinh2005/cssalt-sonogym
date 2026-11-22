@@ -53,6 +53,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-protocol", type=Path, required=True)
     parser.add_argument("--training-protocol", type=Path, required=True)
+    parser.add_argument("--negative-protocol", type=Path, required=True)
     parser.add_argument("--development-result", type=Path, required=True)
     parser.add_argument("--exact-candidates", type=Path, required=True)
     parser.add_argument("--prediction", type=Path, required=True)
@@ -65,6 +66,9 @@ def main() -> int:
 
     base = yaml.safe_load(args.base_protocol.read_text(encoding="utf-8"))
     training = yaml.safe_load(args.training_protocol.read_text(encoding="utf-8"))
+    negative_protocol = yaml.safe_load(
+        args.negative_protocol.read_text(encoding="utf-8")
+    )
     development = json.loads(args.development_result.read_text(encoding="utf-8"))
     selected = development["selected_configuration"]
     expected = {
@@ -90,7 +94,9 @@ def main() -> int:
         args.patient_surface_dir / "body_surface_normal_array.pt"
     )
 
-    excluded = protocol_poses(training) + protocol_poses(base)
+    excluded = protocol_poses(training) + protocol_poses(base) + protocol_poses(
+        negative_protocol
+    )
     target_pool = [
         row
         for row in pair_prepare.read_exact_candidates(args.exact_candidates)
@@ -100,7 +106,7 @@ def main() -> int:
     ]
     targets = pair_prepare.select_pairs(target_pool, 16, excluded)
     negative_pool = pair_prepare.negative_candidates(
-        base,
+        negative_protocol,
         surface_y=surface_y,
         surface_normals=surface_normals,
         segmentation=segmentation,
