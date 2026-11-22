@@ -518,3 +518,86 @@ historical Stage 1 plus RIGHT L5 TP navigation workflow.
 Further SAP–TP work requires a materially different observable signal, such as
 calibrated multi-view surface geometry with synchronized actor-visible 6DoF
 pose, not another threshold or ExtraTrees retraining pass on these frames.
+
+## 11. Calibrated 6DoF landmark-graph result
+
+### 11.1 Criterion
+
+The actor must rank the correct L5 TP/SAP proposal pair in all four fresh target
+sessions, accept the correct pair in all four, make no wrong accepted selection,
+obtain at least 75% accepted-pair precision and keep the clear-negative
+false-accept rate at or below 10%. L4 must first show independently supported SAP
+and TP proposals in every development session before fresh confirmation is
+eligible. CT labels, native pixel-to-volume coordinates and absolute waypoint
+banks remain evaluator or capture-design inputs only.
+
+### 11.2 Method
+
+The actor reconstructed every proposal from clean ultrasound, synchronized
+robot-base-to-end-effector proprioception and public image calibration. A graph
+ranker combined image scores with the reconstructed TP-to-SAP displacement and
+required support from physically distinct views. Evaluator geometry was opened
+only after each session ranking and decision were frozen.
+
+### 11.3 Setup
+
+| item | value |
+|---|---|
+| L4 focused capture / detector jobs | `52363363` / `52364004` |
+| L5 final protocol preparation | job `52368288`; 59 / 59 tests pass |
+| L5 final protocol SHA-256 | `1367b9ea5bca59eb98795cd2da6ec97298104e9c90654d6859c9546f83fc1fff` |
+| frozen L5 graph checkpoint SHA-256 | `36df29d97e81b95686cb4d93b4872d6652faa68cff2bd0f03d2fb665cc0034fa` |
+| L5 fresh capture / CPU evaluation | jobs `52369053` / `52370256` |
+| L5 evaluator tests | 60 / 60 pass |
+| L5 captured sessions | 4 target and 2 clear-negative sessions |
+| actor 6DoF maximum reconstruction error | 0.000113439 mm |
+
+The earlier L5 jobs `52364308` and `52367817` exposed two technical defects
+before scientific evaluation: unstable 3.14-rad ceiling assistance and a
+14-frame freshness default applied to 11-frame negative sessions. Both defects
+were corrected without changing the model, acceptance threshold or scientific
+gate. The complete capture from `52369053` passed exact-pose and actor-6DoF
+verification for all six sessions.
+
+### 11.4 Results
+
+| measurement | L4 opened development | L5 fresh confirmation |
+|---|---:|---:|
+| sessions | 4 | 4 target + 2 negative |
+| TP-positive frames with correct proposal in top 3 | 28 / 28 | not the release gate |
+| SAP-positive frames | 3 / 56 | evaluated through pair ranking |
+| target-session top-1 correct | 1 / 4 | 3 / 4 |
+| target-session top-3 contains correct | 2 / 4 | 3 / 4 |
+| correct accepted target sessions | 0 / 4 | 2 / 4 |
+| wrong accepted sessions | 0 | 2 |
+| accepted-pair precision | not eligible | 50% |
+| clear-negative false-accept rate | not eligible | 50% |
+
+**Result.** `ACTOR_6DOF_AVAILABLE` and the calibrated reconstruction path are
+engineering passes. Anatomical identification fails: L4 remains limited by
+missing visible SAP evidence in two sessions, while L5 independently reproduces
+a wrong accepted target session and a wrong accepted negative session. The L5
+precision and false-accept rate miss the frozen 75% and 10% gates.
+
+### 11.5 Reading it
+
+- Correct pose synchronization does not by itself provide anatomical identity.
+- L4 TP recognition is strong, but the executed trajectories do not reveal SAP
+  often enough to build or confirm a two-landmark graph.
+- L5 geometry and ultrasound jointly rank the correct pair in three sessions,
+  but a competing bone configuration can receive the same multi-view support.
+- Raising the score threshold after opening these sessions would be post-hoc and
+  would not repair the incorrect top-ranked pair in session `02`.
+- No new closed-loop navigation was eligible. The historical L5 TP navigation
+  result remains valid but is not a SAP/TP or medial-branch-target result.
+- `STAGE2_COMPLETE` and `FULL_MBB_INTERVENTION` remain blocked.
+
+### 11.6 Files
+
+| file | contents |
+|---|---|
+| `s0010_multiview_landmark_graph_result_v1.json` | concise L4/L5 result and provenance |
+| runtime job `52364004/detectors/result.json` | L4 proposal-detector metrics |
+| runtime job `52364004/graph_analysis/result.json` | L4 graph development result |
+| runtime job `52369053/results/evaluation_52370256/result.json` | frozen L5 confirmation result |
+| runtime job `52369053/results/evaluation_52370256/session_results.csv` | per-session acceptance and correctness |

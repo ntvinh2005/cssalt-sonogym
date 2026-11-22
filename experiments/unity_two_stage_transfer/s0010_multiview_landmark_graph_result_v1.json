@@ -1,0 +1,65 @@
+{
+  "actor_6dof": {
+    "available": true,
+    "evaluator_coordinates_used_by_actor": false,
+    "maximum_coordinate_error_mm": 0.00011343889558874176,
+    "source": "robot_base_to_end_effector_proprioception"
+  },
+  "implementation_commits": [
+    "5f919e9c99c6d0d0b55a805417fec42fe2937d92",
+    "733f2a741c74bf9066be02e70b2bde89a81106b4",
+    "e449968abbd9b38b69860d4a15492ab98f212aef",
+    "563f1ed8091c87c94a43bfa26d0e01f83cbc1c47",
+    "c482e93c87e99a51ec469f6e1dc144555e4b9fa8"
+  ],
+  "l4_opened_development": {
+    "capture_job": "52363363",
+    "correct_accepted_sessions": 0,
+    "detector_job": "52364004",
+    "focused_regression_tests_passed": 35,
+    "graph_checkpoint_sha256": "c6c79be3449877424ab22ebe97f5bf1957998f9474884090cef17ab9128ecede",
+    "sap_positive_frames": 3,
+    "sap_top3_positive_frames": 1,
+    "session_count": 4,
+    "tp_positive_frames": 28,
+    "tp_top3_positive_frames": 28,
+    "verdict": "RIGHT_L4_STAGE2_FAIL"
+  },
+  "l5_independent_confirmation": {
+    "accepted_correct_target_sessions": 2,
+    "all_capture_verification_passed": true,
+    "capture_job": "52369053",
+    "clear_negative_false_accept_rate": 0.5,
+    "cpu_evaluation_job": "52370256",
+    "evaluation_regression_tests_passed": 60,
+    "graph_checkpoint_sha256": "36df29d97e81b95686cb4d93b4872d6652faa68cff2bd0f03d2fb665cc0034fa",
+    "negative_session_count": 2,
+    "pair_precision": 0.5,
+    "passed": false,
+    "protocol_prepare_job": "52368288",
+    "protocol_sha256": "1367b9ea5bca59eb98795cd2da6ec97298104e9c90654d6859c9546f83fc1fff",
+    "sample_sufficiency_passed": true,
+    "target_session_count": 4,
+    "top1_correct_target_sessions": 3,
+    "top3_correct_target_sessions": 3,
+    "wrong_accepted_sessions": 2,
+    "verdict": "RIGHT_L5_STAGE2_FAIL"
+  },
+  "limitations": [
+    "The SAP masks are provisional CT-model-derived simulator labels.",
+    "The result does not establish a nerve endpoint or an MBB intervention target.",
+    "No new closed-loop robot navigation was eligible after the confirmation failure.",
+    "The L4 focused capture remained observation-limited for SAP evidence."
+  ],
+  "schema": "s0010-multiview-landmark-graph-result-v1",
+  "stage2_complete": false,
+  "verdicts": {
+    "ACTOR_6DOF": "ACTOR_6DOF_AVAILABLE",
+    "FULL_MBB_INTERVENTION": "BLOCKED",
+    "MULTIVIEW_GEOMETRY": "MULTIVIEW_GEOMETRY_PARTIAL",
+    "RIGHT_L4_STAGE2": "RIGHT_L4_STAGE2_FAIL",
+    "RIGHT_L5_STAGE2": "RIGHT_L5_STAGE2_FAIL",
+    "SAP_TP_IDENTIFICATION": "SAP_TP_IDENTIFICATION_NOT_READY",
+    "STAGE2": "STAGE2_BLOCKED"
+  }
+}
