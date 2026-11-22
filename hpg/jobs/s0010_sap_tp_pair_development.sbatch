@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=sg_sap_tp_pair
 #SBATCH --account=anest-dept
-#SBATCH --qos=anest-dept
-#SBATCH --partition=hpg-milan
+#SBATCH --qos=anest-dept-b
+#SBATCH --partition=hpg-default
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -15,7 +15,7 @@ set -euo pipefail
 # shellcheck disable=SC1090
 source "$SONOGYM_CONFIG_FILE"
 # shellcheck disable=SC1090
-source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
+source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
 PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_tp_pair_development_v1.yaml"
 PROTOCOL_SEAL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_tp_pair_development_v1.sha256"
@@ -29,7 +29,7 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_TH
 export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
 
 mkdir -p "$RUN_DIR"/{analysis,context} "$MPLCONFIGDIR"
-capture_run_context "$RUN_DIR"
+capture_cpu_run_context "$RUN_DIR"
 cp "$PROTOCOL" "$PROTOCOL_SEAL" "$RUN_DIR/context/"
 (cd "$RUN_DIR/context" && sha256sum -c "$(basename "$PROTOCOL_SEAL")")
 
@@ -47,5 +47,5 @@ cp "$PROTOCOL" "$PROTOCOL_SEAL" "$RUN_DIR/context/"
   --output-dir "$RUN_DIR/analysis/result" \
   > "$RUN_DIR/analysis/run.log" 2>&1
 
-capture_run_end "$RUN_DIR"
+capture_cpu_run_end "$RUN_DIR"
 find "$RUN_DIR" -type f -print | sort > "$RUN_DIR/files.txt"
