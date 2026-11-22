@@ -171,6 +171,7 @@ def main() -> int:
         "sonogym-s0010-sap-tp-public-6dof-confirmation-v1",
         "sonogym-s0010-l5-landmark-graph-confirmation-v1",
         "sonogym-s0010-l5-landmark-graph-confirmation-v1r1",
+        "sonogym-s0010-l5-landmark-graph-confirmation-v1r2",
         "sonogym-s0010-l4-landmark-graph-development-v1",
     }:
         raise RuntimeError("unexpected protocol identity")

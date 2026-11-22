@@ -23,6 +23,32 @@ from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 PROTOCOL_ID = "sonogym-s0010-l4-landmark-graph-development-v1"
 
 
+def distribute_controls(
+    tp_controls: list[dict[str, object]],
+    other_controls: list[dict[str, object]],
+    *,
+    session_count: int = 4,
+    controls_per_session: int = 6,
+) -> list[list[dict[str, object]]]:
+    """Spread scarce TP-only controls without duplicating independent poses."""
+
+    required = session_count * controls_per_session
+    if len(tp_controls) + len(other_controls) != required:
+        raise ValueError(
+            "control count does not match the frozen session budget: "
+            f"{len(tp_controls)} + {len(other_controls)} != {required}"
+        )
+    groups: list[list[dict[str, object]]] = [[] for _ in range(session_count)]
+    for index, row in enumerate(tp_controls):
+        groups[index % session_count].append(row)
+    for row in other_controls:
+        group = min(groups, key=len)
+        group.append(row)
+    if any(len(group) != controls_per_session for group in groups):
+        raise RuntimeError("failed to distribute the frozen control budget")
+    return groups
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-protocol", type=Path, required=True)
@@ -83,18 +109,22 @@ def main() -> int:
         for row in negative_pool
         if row["evaluator_reason"] == "OTHER_BONE_OR_BACKGROUND"
     ]
-    tp_controls = graph_prepare.select_available_pairs(
-        tp_only, 2, excluded + targets
-    )
-    if len(tp_controls) < 4:
-        raise ValueError(f"fewer than four independent L4 TP-only controls: {len(tp_controls)}")
-    other_controls = graph_prepare.select_available_pairs(
-        other, 10, excluded + targets + tp_controls
-    )
-    if len(other_controls) < 20:
+    tp_controls = graph_prepare.select_available_pairs(tp_only, 2, excluded + targets)
+    if len(tp_controls) < 2 or len(tp_controls) % 2:
         raise ValueError(
-            f"fewer than twenty independent L4 other-bone controls: {len(other_controls)}"
+            "fewer than one physically independent L4 TP-only control pair: "
+            f"{len(tp_controls)}"
         )
+    required_other_controls = 24 - len(tp_controls)
+    other_controls = graph_prepare.select_available_pairs(
+        other, required_other_controls // 2, excluded + targets + tp_controls
+    )
+    if len(other_controls) < required_other_controls:
+        raise ValueError(
+            "fewer than the required independent L4 other-bone controls: "
+            f"{len(other_controls)} < {required_other_controls}"
+        )
+    control_groups = distribute_controls(tp_controls, other_controls)
 
     protocol = deepcopy(base)
     protocol["protocol_id"] = PROTOCOL_ID
@@ -123,8 +153,7 @@ def main() -> int:
     for session_index in range(4):
         rows = (
             targets[session_index * 8 : (session_index + 1) * 8]
-            + tp_controls[session_index : session_index + 1]
-            + other_controls[session_index * 5 : (session_index + 1) * 5]
+            + control_groups[session_index]
         )
         roles = ["L4_SAP_TP_SURFACE_CANDIDATE"] * 8 + ["CLEAR_NEGATIVE"] * 6
         bank_id = f"bank_{session_index:02d}"

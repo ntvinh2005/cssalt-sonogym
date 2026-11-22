@@ -107,6 +107,23 @@ def validate_segment_action_budget(
     return maximum_actions
 
 
+def resolve_episode_length_s(sampling: Mapping[str, object]) -> float | None:
+    """Validate an explicit technical episode-horizon override."""
+
+    value = sampling.get("episode_length_s_override")
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("episode length override must be finite and positive")
+    try:
+        resolved = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("episode length override must be finite and positive") from exc
+    if not math.isfinite(resolved) or resolved <= 0.0:
+        raise ValueError("episode length override must be finite and positive")
+    return resolved
+
+
 @dataclass(frozen=True)
 class AcquiredView:
     acquisition_id: str

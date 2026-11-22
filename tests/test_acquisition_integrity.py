@@ -140,6 +140,16 @@ class WaypointTests(unittest.TestCase):
         )
         self.assertEqual(maximum, 550)
 
+    def test_episode_length_override_is_explicit_and_positive(self) -> None:
+        self.assertIsNone(MODULE.resolve_episode_length_s({}))
+        self.assertEqual(
+            MODULE.resolve_episode_length_s({"episode_length_s_override": 400}),
+            400.0,
+        )
+        for value in (False, 0, float("nan"), "invalid"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                MODULE.resolve_episode_length_s({"episode_length_s_override": value})
+
 
 class FreshnessTests(unittest.TestCase):
     def test_first_frame_after_reset_is_fresh_without_cross_reset_comparison(self) -> None:

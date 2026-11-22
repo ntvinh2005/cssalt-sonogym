@@ -15,6 +15,7 @@ if str(WORKFLOWS) not in sys.path:
     sys.path.insert(0, str(WORKFLOWS))
 
 import evaluate_s0010_landmark_graph_confirmation as evaluation  # noqa: E402
+import prepare_s0010_l4_landmark_graph_development as l4_prepare  # noqa: E402
 from two_stage_navigation.ultrasound_spatial_map import (  # noqa: E402
     SpatialMapConfig,
 )
@@ -36,6 +37,17 @@ def candidate(frame: int, position_mm: float, score: float = 0.8) -> dict:
 
 
 class LandmarkGraphConfirmationTest(unittest.TestCase):
+    def test_l4_controls_preserve_scarce_tp_only_poses(self) -> None:
+        tp_controls = [{"id": "tp0"}, {"id": "tp1"}]
+        other_controls = [{"id": f"other{index}"} for index in range(22)]
+        groups = l4_prepare.distribute_controls(tp_controls, other_controls)
+        self.assertEqual([len(group) for group in groups], [6, 6, 6, 6])
+        selected = [row["id"] for group in groups for row in group]
+        self.assertEqual(len(selected), len(set(selected)))
+        self.assertEqual(
+            set(selected), {row["id"] for row in tp_controls + other_controls}
+        )
+
     def test_support_requires_distinct_public_poses(self) -> None:
         config = SpatialMapConfig(
             minimum_view_translation_mm=2.0, minimum_view_angle_deg=1.0

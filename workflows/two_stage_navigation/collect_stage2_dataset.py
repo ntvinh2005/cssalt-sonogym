@@ -46,6 +46,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
 )
 from spinal_surgery.evaluation.two_stage_navigation.acquisition_integrity import (  # noqa: E402
     AcquiredView,
+    resolve_episode_length_s,
     validate_actor_6dof_record,
     validate_new_view,
     validate_segment_action_budget,
@@ -205,6 +206,9 @@ def main() -> int:
             protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1
         )
         env_cfg.seed = int(session["seed"])
+        episode_length_s = resolve_episode_length_s(protocol["sampling"])
+        if episode_length_s is not None:
+            env_cfg.episode_length_s = episode_length_s
         env = gym.make(protocol["scope"]["task"], cfg=env_cfg, render_mode=None)
         if exact_pose_replay_enabled:
             env.unwrapped.US_slicer.capture_snapshot_enabled = True
