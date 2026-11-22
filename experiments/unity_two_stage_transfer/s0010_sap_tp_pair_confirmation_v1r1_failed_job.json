@@ -1,0 +1,23 @@
+{
+  "schema": "s0010-sap-tp-pair-confirmation-technical-failure-v1",
+  "job_id": "52305701",
+  "execution_commit": "3952a8a7db3396ab694aa0b9d858fb68a0cf8172",
+  "protocol_id": "sonogym-s0010-sap-tp-pair-confirmation-v1r1",
+  "protocol_sha256": "01af044bee4e21fb90c82717755783732de21cc65bcd42344d7f79a05b43d250",
+  "checkpoint_sha256": "449953374809635726bd0eadfdc8c0686c8310bfd74d967ece4657a577203de3",
+  "slurm_state": "FAILED",
+  "exit_code": "1:0",
+  "elapsed_seconds": 56,
+  "persisted_frame_count": 0,
+  "completed_waypoint_trajectories_before_failure": 13,
+  "partial_action_record_count": 1042,
+  "preflight_test_count": 61,
+  "preflight_tests_passed": true,
+  "failure": "frame 13 coupled pose did not converge after 100 steps",
+  "final_position_error_mm": 1.917518226258711,
+  "final_orientation_error_deg": 0.1473452120965625,
+  "root_cause": "three-control slicing broke a nearby-pose pair and produced a 27.8 mm non-reset transition",
+  "scientific_evaluation_executed": false,
+  "additional_gpu_job_submitted": false,
+  "runtime_output": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_v1r1/52305701"
+}

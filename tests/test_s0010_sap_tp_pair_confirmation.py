@@ -39,7 +39,7 @@ class TestSapTpPairConfirmation(unittest.TestCase):
             (
                 ROOT
                 / "experiments/unity_two_stage_transfer/"
-                "s0010_sap_tp_pair_confirmation_v1r1.yaml"
+                "s0010_sap_tp_pair_confirmation_v1r2.yaml"
             ).read_text(encoding="utf-8")
         )
         sampling = protocol["sampling"]
@@ -56,6 +56,20 @@ class TestSapTpPairConfirmation(unittest.TestCase):
                 separation_multiplier=sampling["waypoint_separation_multiplier"],
             )
             self.assertEqual(resolved.shape, (14, 3))
+            for first, second in zip(resolved[0::2], resolved[1::2]):
+                translation_mm = float(np.linalg.norm(second[:2] - first[:2]) * 1.5)
+                angle_deg = float(
+                    np.degrees(
+                        abs(
+                            np.arctan2(
+                                np.sin(second[2] - first[2]),
+                                np.cos(second[2] - first[2]),
+                            )
+                        )
+                    )
+                )
+                self.assertLessEqual(translation_mm, 15.0)
+                self.assertLessEqual(angle_deg, 15.0)
 
     def test_target_margin_uses_core_evidence(self) -> None:
         projected = {

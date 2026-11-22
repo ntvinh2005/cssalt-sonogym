@@ -440,6 +440,28 @@ the model checkpoint is unchanged.
 | corrected protocol SHA-256 | `01af044bee4e21fb90c82717755783732de21cc65bcd42344d7f79a05b43d250` |
 | corrected regression checks | 61 / 61 pass |
 
+The authorized technical retry, job `52305701`, passed its sealed preflight but
+failed at the final waypoint of its first session before arrays were persisted.
+The first 13 waypoint trajectories completed; the fourteenth transition was
+27.8 mm because dividing each control class into groups of three split an
+intended nearby-pose pair. After 100 steps it remained at 1.918 mm position
+error against the 1.5 mm acceptance tolerance. No scientific evaluation ran.
+
+CPU job `52305904` corrected the plan without changing the checkpoint or
+evaluation gates. Each session now contains seven intact nearby-pose pairs:
+four target pairs and three control pairs. All non-reset pair transitions are
+within 15 mm and 15 degrees. The corrected plan contains 24 target poses, eight
+TP-only controls and ten other-bone/background controls.
+
+| second recovery item | value |
+|---|---|
+| failed technical retry | `52305701`; 56 s; 0 persisted frames |
+| failure action evidence | 1,042 partial action records; 13 completed trajectories |
+| pair-preserving CPU preparation | job `52305904`; commit `18f47050c6fc7017a61ebd5580e42d647f245508` |
+| pair-preserving pose-plan SHA-256 | `47d6483b7345294592ce1549a20b7328a7b9344773b901aec541725ca1cd3471` |
+| pair-preserving protocol | `sonogym-s0010-sap-tp-pair-confirmation-v1r2` |
+| pair-preserving protocol SHA-256 | `2a2e55f93a41c54f05c88048174776f007bb0018b523786408142326164fb34d` |
+
 ## 8. Next concrete action
 
 Do not integrate either pair selector into Stage 2. Preserve the complete-track
@@ -447,8 +469,8 @@ implementation as the stronger development candidate, but the next decisive
 experiment requires additional, distinct SAP/TP and confusing-bone pose groups
 rather than more reset repetitions of the same twelve commands. Those groups,
 the unchanged checkpoint and the one-time evaluation gates are now frozen in
-protocol `v1r1`. Running it requires authorization for one technical GPU retry
-because the already authorized submission was consumed by the pre-capture
-failure. The historical L5 TP pipeline remains the presentation-ready
+protocol `v1r2`. Running it requires new authorization because both the original
+submission and its one authorized technical retry ended before a dataset was
+persisted. The historical L5 TP pipeline remains the presentation-ready
 navigation baseline and must continue to be labelled TP navigation rather than
 MBB target localization.
