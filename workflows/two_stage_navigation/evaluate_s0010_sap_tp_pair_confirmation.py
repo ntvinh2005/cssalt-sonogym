@@ -44,7 +44,9 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def target_margin(projected: dict[str, np.ndarray]) -> int:
-    pixels = np.argwhere(projected["sap"] | projected["tp"])
+    """Return the image-edge margin of the frozen SAP/TP core evidence."""
+
+    pixels = np.argwhere(projected["sap_core"] | projected["tp_core"])
     if not len(pixels):
         return -1
     height, width = projected["sap"].shape

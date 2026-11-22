@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import unittest
 
+import numpy as np
+
+from evaluate_s0010_sap_tp_pair_confirmation import target_margin
 from prepare_s0010_sap_tp_pair_confirmation import (
     distinct,
     nearby,
@@ -12,6 +15,20 @@ from prepare_s0010_sap_tp_pair_confirmation import (
 
 
 class TestSapTpPairConfirmation(unittest.TestCase):
+    def test_target_margin_uses_core_evidence(self) -> None:
+        projected = {
+            "sap": np.zeros((8, 10), dtype=bool),
+            "tp": np.zeros((8, 10), dtype=bool),
+            "sap_core": np.zeros((8, 10), dtype=bool),
+            "tp_core": np.zeros((8, 10), dtype=bool),
+        }
+        projected["sap"][0, 0] = True
+        projected["tp"][7, 9] = True
+        projected["sap_core"][2, 3] = True
+        projected["tp_core"][5, 6] = True
+
+        self.assertEqual(target_margin(projected), 2)
+
     def test_pose_pairs_are_new_and_neighboring(self) -> None:
         rows = [
             {
