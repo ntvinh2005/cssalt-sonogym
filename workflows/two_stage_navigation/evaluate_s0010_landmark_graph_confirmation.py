@@ -26,7 +26,7 @@ from two_stage_navigation.ultrasound_spatial_map import (
 )
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r3"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r4"
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:

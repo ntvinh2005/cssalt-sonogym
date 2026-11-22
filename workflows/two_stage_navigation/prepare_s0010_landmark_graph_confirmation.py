@@ -21,7 +21,7 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r3"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r4"
 
 
 def protocol_poses(path: Path) -> list[dict[str, Any]]:
@@ -124,7 +124,14 @@ def main() -> int:
         and row["tp_first_visible_pixels"] >= 3
         and row["target_margin_pixels"] >= 4
     ]
-    targets = pair_prepare.select_pairs(target_pool, 16, excluded)
+    target_candidates = pair_prepare.select_pairs(target_pool, 17, excluded)
+    targets = target_candidates[:32]
+    # The original session-03 initial command [158, 114, 2.05] plateaued at
+    # roughly three degrees orientation error in three technical attempts.
+    # Replace it before image acquisition with the next identically eligible
+    # reserve, without inspecting any model or evaluator outcome at that pose.
+    unreachable_target = targets[24]
+    targets[24] = target_candidates[32]
     negative_pool = pair_prepare.negative_candidates(
         negative_protocol,
         surface_y=surface_y,
@@ -172,6 +179,11 @@ def main() -> int:
         "exact_candidates_sha256": previous.sha256(args.exact_candidates),
         "opened_development_sessions": bundle["opened_development_session_ids"],
         "source_evidence_status": "frozen_after_opened_development",
+        "technical_waypoint_replacement": {
+            "excluded_pose_index_rad": unreachable_target["pose_index_rad"],
+            "replacement_pose_index_rad": targets[24]["pose_index_rad"],
+            "reason": "controller_orientation_plateau_before_image_acquisition",
+        },
     }
     protocol["information_boundaries"]["actor_inputs"] = [
         "clean_ultrasound",
@@ -280,7 +292,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r3.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r4.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
