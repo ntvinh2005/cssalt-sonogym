@@ -7,6 +7,12 @@ import sys
 import unittest
 from pathlib import Path
 
+from two_stage_navigation.coordinates import (
+    is_supported_stage2_dataset_protocol,
+    uses_coupled_stage2_dataset_controller,
+    uses_segmented_stage2_dataset_capture,
+)
+
 
 PATH = Path(__file__).parents[1] / "workflows/two_stage_navigation/generate_s0010_l4mb_target_observability_protocol.py"
 SPEC = importlib.util.spec_from_file_location("l4mb_observability_protocol", PATH)
@@ -28,6 +34,12 @@ def row(index: int, role: str, pose: list[float]) -> dict[str, object]:
 
 
 class ProtocolGeneratorTests(unittest.TestCase):
+    def test_capture_protocol_uses_synchronized_segmented_controller(self) -> None:
+        protocol_id = MODULE.PROTOCOL_ID
+        self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+
     def test_pose_distance_uses_physical_translation_or_rotation(self) -> None:
         self.assertFalse(MODULE.pose_distance_clear([100, 100, 2.8], [102, 100, 2.8]))
         self.assertTrue(MODULE.pose_distance_clear([100, 100, 2.8], [103, 100, 2.8]))

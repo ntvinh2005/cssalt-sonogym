@@ -1,0 +1,649 @@
+protocol_id: sonogym-s0010-l4mb-target-observability-v1
+status: FROZEN_BEFORE_FRESH_CAPTURE
+purpose: Test whether the provisional RIGHT L5 SAP-TP endpoint relationship is observable
+  from geometry-designed fresh ultrasound views.
+anatomy_id: s0010
+clinical_scope:
+  medial_branch: RIGHT_L4
+  vertebral_level: RIGHT_L5
+  endpoint: bony_surrogate_only
+  clinical_target_validated: false
+source:
+  pose_atlas: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4mb_target_observability_plan/52276866/pose_atlas/pose_atlas.json
+  pose_atlas_sha256: 52b80dbf40c79d42608b9d91e8547ba9bd915d438790a8fd8cebaf8591f55640
+  pose_atlas_schema: s0010-l4mb-target-observability-pose-atlas-v1
+  pose_atlas_status: POSE_ATLAS_EXPLORATORY_READY
+  target_anchor_source: AMBIGUOUS_LOCAL_SEARCH_SEED
+  source_evidence_status: opened_development_pose_design
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_pose_design: true
+  model_training_authorized: false
+  stage3_authorized: false
+information_boundaries:
+  capture_runtime:
+  - frozen_waypoint_commands
+  - clean_ultrasound
+  - robot_motion_feedback
+  privileged_offline_only:
+  - CT_subregion_prediction
+  - native_pixel_to_volume_coordinates
+  - raw_label_slice
+  - target_endpoint_masks
+  future_robot_localizer_forbidden:
+  - absolute_waypoint_bank
+  - target_coordinates
+  - CT_masks
+  - native_pixel_to_volume_coordinates
+inputs:
+  prediction: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  segmentation: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+  tp_revision: 01c910898f1463d89ac2e694c0466ff84967a0bc7dd2a464c700a8d62d5bb565
+sampling:
+  expected_frames_per_session: 12
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.2
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 100
+  maximum_total_action_steps_per_session: 4200
+  trajectory_start_frames:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio:
+    - 0.02
+    - 0.02
+    - 0.6
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    bank_00:
+    - - 158.0
+      - 125.5
+      - 2.74
+    - - 161.8890380859375
+      - 124.35200500488281
+      - 2.7923121452331543
+    - - 155.5
+      - 128.0
+      - 2.74
+    - - 164.9502716064453
+      - 126.17347717285156
+      - 2.8110125064849854
+    - - 156.2928924560547
+      - 128.09576416015625
+      - 2.835775852203369
+    - - 148.0
+      - 129.5
+      - 2.83
+    - - 157.0
+      - 120.5
+      - 2.89
+    - - 157.0
+      - 120.5
+      - 2.95
+    - - 148.0
+      - 125.5
+      - 2.84
+    - - 157.0
+      - 140.5
+      - 2.77
+    - - 160.0
+      - 140.5
+      - 2.89
+    - - 160.0
+      - 143.5
+      - 2.77
+    bank_01:
+    - - 159.5
+      - 124.5
+      - 2.79
+    - - 163.3890380859375
+      - 123.35200500488281
+      - 2.842312145233154
+    - - 157.0
+      - 127.0
+      - 2.79
+    - - 166.4502716064453
+      - 125.17347717285156
+      - 2.861012506484985
+    - - 157.7928924560547
+      - 127.09576416015625
+      - 2.885775852203369
+    - - 149.5
+      - 128.5
+      - 2.88
+    - - 158.5
+      - 119.5
+      - 2.94
+    - - 158.5
+      - 119.5
+      - 3.0
+    - - 149.5
+      - 124.5
+      - 2.8899999999999997
+    - - 158.5
+      - 139.5
+      - 2.82
+    - - 161.5
+      - 139.5
+      - 2.94
+    - - 161.5
+      - 142.5
+      - 2.82
+    bank_02:
+    - - 156.5
+      - 126.5
+      - 2.6900000000000004
+    - - 160.3890380859375
+      - 125.35200500488281
+      - 2.7423121452331545
+    - - 154.0
+      - 129.0
+      - 2.6900000000000004
+    - - 163.4502716064453
+      - 127.17347717285156
+      - 2.7610125064849855
+    - - 154.7928924560547
+      - 129.09576416015625
+      - 2.7857758522033693
+    - - 146.5
+      - 130.5
+      - 2.7800000000000002
+    - - 155.5
+      - 121.5
+      - 2.8400000000000003
+    - - 155.5
+      - 121.5
+      - 2.9000000000000004
+    - - 146.5
+      - 126.5
+      - 2.79
+    - - 155.5
+      - 141.5
+      - 2.72
+    - - 158.5
+      - 141.5
+      - 2.8400000000000003
+    - - 158.5
+      - 144.5
+      - 2.72
+  planned_waypoint_evidence_by_bank:
+    bank_00:
+    - frame_sequence: 0
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_04
+      anchor_frame_sequence: 59
+      anchor_frame_sha256: c9ae0c954f8d546efbdde7b00b251eb99c9eb7e52167b56139ddd2e3b881952c
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 1
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_calibration_03
+      anchor_frame_sequence: 49
+      anchor_frame_sha256: 7fd5f18ed655a3d8bad859fc5b42ce29bca74736397ac9ceb88394d6b3d81e13
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 2
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_04
+      anchor_frame_sequence: 56
+      anchor_frame_sha256: a95778383df4019d6b6f8830da3c12ea7673dbf75244a28f4b7ef1358488c38b
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 3
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_evaluation_04
+      anchor_frame_sequence: 21
+      anchor_frame_sha256: 4bc2b8744cde98598f6be948adfbe4a4636231f2c6affa9c94183b7a1bcab195
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 4
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_07
+      anchor_frame_sequence: 34
+      anchor_frame_sha256: d645ca38d728d5c4fda2e70c86c7b4f64a7fb3af80457646e7874e69bc283f72
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 5
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 37
+      anchor_frame_sha256: aa73a3d2d6e70871bcff9bd255e1d873f2a8ae697b2fb42dfd92ed73e5dc82fc
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 6
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 29
+      anchor_frame_sha256: dbae4fa221fdad7051990c263a7c436417ed619e56819e8fba3dbe311fc52cdb
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 7
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 30
+      anchor_frame_sha256: 1a1f0c1b07ae07525212e5c61e12e57c2d9572716e11406d801fdac381fba320
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 8
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_evaluation_03
+      anchor_frame_sequence: 25
+      anchor_frame_sha256: da3b529c71eaab35db5485989821e7530d17bff4610e034635d43ef05a873bc6
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 9
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 0
+      anchor_frame_sha256: 825c3cd33d97d58465ad3c076c498a32ede41dd8e213bef22bd2c211b1d518ba
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 10
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 1
+      anchor_frame_sha256: 8b561e10b901e4ad0a64c45a29868d663fbb2e907ebb678d643b9844c38f1525
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    - frame_sequence: 11
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 4
+      anchor_frame_sha256: 205c3126460c5a715d798d8a9e2bd8c3b1f2f64093de31f2240cb2dbd6fe1a7e
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - 0.0
+      - 0.0
+      - 0.0
+    bank_01:
+    - frame_sequence: 0
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_04
+      anchor_frame_sequence: 59
+      anchor_frame_sha256: c9ae0c954f8d546efbdde7b00b251eb99c9eb7e52167b56139ddd2e3b881952c
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 1
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_calibration_03
+      anchor_frame_sequence: 49
+      anchor_frame_sha256: 7fd5f18ed655a3d8bad859fc5b42ce29bca74736397ac9ceb88394d6b3d81e13
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 2
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_04
+      anchor_frame_sequence: 56
+      anchor_frame_sha256: a95778383df4019d6b6f8830da3c12ea7673dbf75244a28f4b7ef1358488c38b
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 3
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_evaluation_04
+      anchor_frame_sequence: 21
+      anchor_frame_sha256: 4bc2b8744cde98598f6be948adfbe4a4636231f2c6affa9c94183b7a1bcab195
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 4
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_07
+      anchor_frame_sequence: 34
+      anchor_frame_sha256: d645ca38d728d5c4fda2e70c86c7b4f64a7fb3af80457646e7874e69bc283f72
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 5
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 37
+      anchor_frame_sha256: aa73a3d2d6e70871bcff9bd255e1d873f2a8ae697b2fb42dfd92ed73e5dc82fc
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 6
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 29
+      anchor_frame_sha256: dbae4fa221fdad7051990c263a7c436417ed619e56819e8fba3dbe311fc52cdb
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 7
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 30
+      anchor_frame_sha256: 1a1f0c1b07ae07525212e5c61e12e57c2d9572716e11406d801fdac381fba320
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 8
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_evaluation_03
+      anchor_frame_sequence: 25
+      anchor_frame_sha256: da3b529c71eaab35db5485989821e7530d17bff4610e034635d43ef05a873bc6
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 9
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 0
+      anchor_frame_sha256: 825c3cd33d97d58465ad3c076c498a32ede41dd8e213bef22bd2c211b1d518ba
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 10
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 1
+      anchor_frame_sha256: 8b561e10b901e4ad0a64c45a29868d663fbb2e907ebb678d643b9844c38f1525
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    - frame_sequence: 11
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 4
+      anchor_frame_sha256: 205c3126460c5a715d798d8a9e2bd8c3b1f2f64093de31f2240cb2dbd6fe1a7e
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - 1.5
+      - -1.0
+      - 0.05
+    bank_02:
+    - frame_sequence: 0
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_04
+      anchor_frame_sequence: 59
+      anchor_frame_sha256: c9ae0c954f8d546efbdde7b00b251eb99c9eb7e52167b56139ddd2e3b881952c
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 1
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_calibration_03
+      anchor_frame_sequence: 49
+      anchor_frame_sha256: 7fd5f18ed655a3d8bad859fc5b42ce29bca74736397ac9ceb88394d6b3d81e13
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 2
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_04
+      anchor_frame_sequence: 56
+      anchor_frame_sha256: a95778383df4019d6b6f8830da3c12ea7673dbf75244a28f4b7ef1358488c38b
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 3
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_evaluation_04
+      anchor_frame_sequence: 21
+      anchor_frame_sha256: 4bc2b8744cde98598f6be948adfbe4a4636231f2c6affa9c94183b7a1bcab195
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 4
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_train_07
+      anchor_frame_sequence: 34
+      anchor_frame_sha256: d645ca38d728d5c4fda2e70c86c7b4f64a7fb3af80457646e7874e69bc283f72
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 5
+      declared_role: TARGET_REGION_CANDIDATE
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 37
+      anchor_frame_sha256: aa73a3d2d6e70871bcff9bd255e1d873f2a8ae697b2fb42dfd92ed73e5dc82fc
+      anchor_evaluator_label: PROXY_AMBIGUOUS
+      anchor_evaluator_reason: TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 6
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 29
+      anchor_frame_sha256: dbae4fa221fdad7051990c263a7c436417ed619e56819e8fba3dbe311fc52cdb
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 7
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 30
+      anchor_frame_sha256: 1a1f0c1b07ae07525212e5c61e12e57c2d9572716e11406d801fdac381fba320
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 8
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_evaluation_03
+      anchor_frame_sequence: 25
+      anchor_frame_sha256: da3b529c71eaab35db5485989821e7530d17bff4610e034635d43ef05a873bc6
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: TP_ONLY_WITHOUT_SAP_IN_PLANE
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 9
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 0
+      anchor_frame_sha256: 825c3cd33d97d58465ad3c076c498a32ede41dd8e213bef22bd2c211b1d518ba
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 10
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 1
+      anchor_frame_sha256: 8b561e10b901e4ad0a64c45a29868d663fbb2e907ebb678d643b9844c38f1525
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+    - frame_sequence: 11
+      declared_role: NEGATIVE_CONTROL
+      anchor_session_id: s0010sapval_calibration_00
+      anchor_frame_sequence: 4
+      anchor_frame_sha256: 205c3126460c5a715d798d8a9e2bd8c3b1f2f64093de31f2240cb2dbd6fe1a7e
+      anchor_evaluator_label: PROXY_NEGATIVE
+      anchor_evaluator_reason: OTHER_BONE_OR_BACKGROUND
+      session_pose_offset_index_rad:
+      - -1.5
+      - 1.0
+      - -0.05
+sessions:
+- session_id: s0010l4mbobs_00
+  split: opened_development_observability
+  seed: 2026112500
+  reset_id: s0010l4mbobs_00
+  absolute_waypoint_bank_id: bank_00
+  expected_frame_count: 12
+- session_id: s0010l4mbobs_01
+  split: opened_development_observability
+  seed: 2026112501
+  reset_id: s0010l4mbobs_01
+  absolute_waypoint_bank_id: bank_01
+  expected_frame_count: 12
+- session_id: s0010l4mbobs_02
+  split: opened_development_observability
+  seed: 2026112502
+  reset_id: s0010l4mbobs_02
+  absolute_waypoint_bank_id: bank_02
+  expected_frame_count: 12
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 50.0
+    maximum_orientation_error_deg: 30.0
+    minimum_l4_visible_fraction: 0.0
+  quality:
+    visibility_normalization_fraction: 0.2
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 12
+  require_all_exact_pose_replay: true
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.9
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+observability_gate:
+  minimum_sap_core_first_visible_pixels: 1
+  minimum_tp_core_first_visible_pixels: 1
+  minimum_target_image_margin_pixels: 4
+  maximum_interface_track_distance_pixels: 4.0
+  minimum_posterior_shadow_contrast: 0.05
+  minimum_positive_target_frames_per_session: 2
+  minimum_positive_sessions: 2
+  maximum_positive_control_frames: 0
+  ambiguous_is_not_negative: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA_L4
+  cpu_cores: 4
+  memory_gb: 30
+  walltime: 00:30:00
+  maximum_new_gpu_jobs: 1
+  maximum_storage_growth_gb: 1.0
+change_policy:
+- Do not change waypoints, labels or observability gates after capture.
+- Do not expose atlas geometry or absolute waypoints to a future robot localizer.
+- Do not treat a bony surrogate as a nerve or intervention endpoint.

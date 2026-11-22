@@ -47,6 +47,7 @@ STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-sap-validation-followup-v1",
     "sonogym-s0010-sap-validation-resume-v1",
     "sonogym-s0010-sap-validation-resume-v2",
+    "sonogym-s0010-l4mb-target-observability-v1",
 }
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(4, 15)
@@ -80,6 +81,7 @@ COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-sap-validation-followup-v1",
     "sonogym-s0010-sap-validation-resume-v1",
     "sonogym-s0010-sap-validation-resume-v2",
+    "sonogym-s0010-l4mb-target-observability-v1",
 }
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(5, 15)
@@ -108,6 +110,7 @@ SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-sap-validation-followup-v1",
     "sonogym-s0010-sap-validation-resume-v1",
     "sonogym-s0010-sap-validation-resume-v2",
+    "sonogym-s0010-l4mb-target-observability-v1",
 }
 
 
