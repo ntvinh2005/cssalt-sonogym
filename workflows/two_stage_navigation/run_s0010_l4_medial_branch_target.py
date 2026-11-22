@@ -30,6 +30,7 @@ from two_stage_navigation.l4_medial_branch_target import (
     distance_to_target_region_mm,
     fixed_tp_relative_hypothesis,
     image_target_hypothesis,
+    target_evidence_label,
 )
 from two_stage_navigation.stage1_interfaces import track_bright_interfaces
 
@@ -154,26 +155,6 @@ def projected_masks(
             "tp_uncertain": contract.tp_uncertain,
         }.items()
     }
-
-
-def frame_label(projected: dict[str, np.ndarray], first_bone: np.ndarray) -> tuple[str, str]:
-    visible = {name: mask & first_bone for name, mask in projected.items()}
-    core_pair = bool(np.any(visible["sap_core"]) and np.any(visible["tp_core"]))
-    uncertain_pair = bool(
-        np.any(visible["sap_uncertain"]) and np.any(visible["tp_uncertain"])
-    )
-    full_pair = bool(np.any(visible["sap"]) and np.any(visible["tp"]))
-    if core_pair:
-        return "PROXY_POSITIVE", "BOTH_CORE_ENDPOINTS_FIRST_VISIBLE"
-    if uncertain_pair:
-        return "PROXY_AMBIGUOUS", "UNCERTAINTY_ENDPOINTS_FIRST_VISIBLE"
-    if full_pair:
-        return "PROXY_AMBIGUOUS", "TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE"
-    if np.any(visible["tp"]):
-        return "PROXY_NEGATIVE", "TP_ONLY_WITHOUT_VISIBLE_SAP"
-    if np.any(first_bone):
-        return "PROXY_NEGATIVE", "OTHER_BONE_OR_BACKGROUND"
-    return "TECHNICALLY_INVALID", "NO_FIRST_BONE_SURFACE"
 
 
 def evaluate_hypothesis(
@@ -342,10 +323,176 @@ def render_demo(
     writer.release()
 
 
+def write_reports(output: Path, result: dict[str, Any], protocol: dict[str, Any]) -> None:
+    contract = result["target_contract"]
+    labels = result["frame_label_counts"]
+    summaries = result["method_summaries"]
+    (output / "TARGET_CONTRACT.md").write_text(
+        f"""# RIGHT L4 medial-branch target contract at RIGHT L5
+
+This contract is limited to fixed anatomy `s0010`. It defines evaluator-only research geometry and does not annotate a nerve or intervention endpoint.
+
+## Result
+
+**`ANATOMICAL_TARGET_CONTRACT = PARTIAL`: the independent CT model provides provisional RIGHT L5 SAP and TP masks, but their closest surfaces are {contract['minimum_surface_separation_mm']:.3f} mm apart and neither the nerve nor the junction is semantically labelled.**
+
+| question | result |
+|---|---|
+| A1 RIGHT L5 TP identifiable | yes as model TP plus historical TP surface-core evidence; not one verified whole-TP mask |
+| A2 RIGHT L5 SAP identifiable | provisional model-generated proposal only |
+| A3 junction directly identified | no; only the reproducible closest-apposition relationship is available |
+| A4 nerve or validated target available | no; bony surrogate only |
+| A5 physical evaluator available | yes; RAS millimetres to {contract['midpoint_count']} patient-specific midpoint samples |
+| A6 meaningful localization experiment | exploratory evaluation only; not clinical or intervention validation |
+
+## 1. Geometry — can the simulator define a bounded evaluator region
+
+`l4_medial_branch_target.py:build_target_contract_geometry`, run by `run_s0010_l4_medial_branch_target.py`.
+
+**Criterion.** The masks must be aligned, right-sided, nonempty and disjoint; uncertainty must be derived from the 1.5 mm CT grid; no generic nerve offset is allowed.
+
+### 1.0 Quantities
+
+| quantity | value | source |
+|---|---:|---|
+| RIGHT L5 SAP voxels | {contract['right_l5_sap_voxels']} | frozen V3 prediction |
+| RIGHT L5 TP voxels | {contract['right_l5_tp_voxels']} | frozen V3 prediction |
+| minimum surface separation | {contract['minimum_surface_separation_mm']:.6f} mm | physical RAS distance |
+| core endpoint voxels, SAP / TP | {contract['sap_core_surface_voxels']} / {contract['tp_core_surface_voxels']} | minimum plus one CT voxel |
+| uncertainty endpoint voxels, SAP / TP | {contract['sap_uncertainty_surface_voxels']} / {contract['tp_uncertainty_surface_voxels']} | minimum plus one CT voxel diagonal |
+
+### 1.1 Method
+
+- Retain the frozen V3 RIGHT L5 model SAP and TP masks inside source L5 and the RAS right half.
+- Find the closest surface relationship in physical millimetres.
+- Use one CT voxel for the core separation band and one CT voxel diagonal for uncertainty.
+- Use midpoint samples only as an evaluator distance reference, never as actor input or a nerve coordinate.
+
+### 1.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| run | `{output.parent.name}` | §1 |
+| prediction SHA-256 | `{contract['geometry_provenance']['prediction_sha256']}` | §1 |
+| segmentation SHA-256 | `{contract['geometry_provenance']['segmentation_sha256']}` | §1 |
+| TP revision SHA-256 | `{contract['geometry_provenance']['tp_revision_sha256']}` | §1 |
+
+```bash
+sbatch hpg/jobs/s0010_l4_medial_branch_target_v1.sbatch
+```
+
+Nothing was dropped.
+
+### 1.3 Results
+
+**Verdict: partial**, because the geometry is measurable but the SAP semantics, junction boundary and nerve course are not independently validated.
+
+### 1.4 Reading it
+
+- The midpoint set is not a needle endpoint.
+- The 3.0 mm evaluator gate is a development-resolution gate, not a clinical tolerance.
+
+### 1.5 Files
+
+| file | contents |
+|---|---|
+| `target_contract.json` | exact masks counts, separations, hashes and verdict |
+| `anatomy_target_contract.png` | evaluator-only geometry overview |
+""",
+        encoding="utf-8",
+    )
+    (output / "REPORT.md").write_text(
+        f"""# s0010 RIGHT L4 medial-branch target localization at RIGHT L5
+
+This CPU-only experiment evaluates a bony surrogate from historical Stage 2 observations. It does not run new robot control or an MBB intervention.
+
+## Result
+
+**`ULTRASOUND_TARGET_LOCALIZATION = {result['ultrasound_target_localization']}`: zero of {sum(labels.values())} search frames showed both target-region endpoint surfaces as first-visible bone, so closed-loop execution was not eligible.**
+
+| step | what was measured | criterion | measured | verdict |
+|---|---|---|---|---|
+| 1 | target contract | bounded, measurable, nonclinical surrogate | `{result['anatomical_target_contract']}` | partial |
+| 2 | ultrasound visibility | at least {protocol['evaluation']['minimum_positive_frames_per_session']} positives in {protocol['evaluation']['minimum_qualifying_sessions']} sessions | 0 positives; {labels['PROXY_AMBIGUOUS']} ambiguous; {labels['PROXY_NEGATIVE']} negative | fail |
+| 3 | image-only localization | target evidence with zero wrong and ambiguous accepts | {summaries['image_interface']['wrong_accepted_frame_count']} wrong; {summaries['image_interface']['ambiguous_accepted_frame_count']} ambiguous accepts | fail |
+| 4 | robot execution | only after steps 1–3 pass | historical replay only | not run |
+
+## 1. Ultrasound evidence — is the target region observable
+
+`run_s0010_l4_medial_branch_target.py`, run by the sealed CPU Slurm job.
+
+**Criterion.** Both core endpoint surfaces must be first-visible bone in at least {protocol['evaluation']['minimum_positive_frames_per_session']} distinct frames from each of {protocol['evaluation']['minimum_qualifying_sessions']} sessions. Projected-but-occluded SAP remains ambiguous.
+
+### 1.0 Quantities
+
+| quantity | value | source |
+|---|---:|---|
+| attempted frames | {sum(labels.values())} | four historical sessions |
+| proxy-positive | {labels['PROXY_POSITIVE']} | both endpoints first visible |
+| proxy-ambiguous | {labels['PROXY_AMBIGUOUS']} | projected, occluded or noncore evidence |
+| proxy-negative | {labels['PROXY_NEGATIVE']} | TP-only or other bone without SAP in plane |
+
+### 1.1 Method
+
+- Freeze RIGHT L5 TP proposals from the historical actor.
+- Detect cortical interfaces from clean ultrasound.
+- Compare the fixed TP-relative control with image intensity and posterior-shadow evidence along the interface.
+- Use CT geometry, raw labels and native coordinates only after the actor hypothesis is frozen.
+
+### 1.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| source run | job `52039283` | §1 |
+| CPU run | `{output.parent.name}` | §1 |
+| protocol SHA-256 | `{result['protocol_sha256']}` | §1 |
+| sessions | `{', '.join(protocol['source_sessions'])}` | §1 |
+
+```bash
+SONOGYM_CONFIG_FILE="$PWD/.sonogym.env" sbatch hpg/jobs/s0010_l4_medial_branch_target_v1.sbatch
+```
+
+Nothing was dropped after the declared phase filter; fresh confirmations were excluded by protocol.
+
+### 1.3 Results
+
+| method | accepted | wrong accepted | ambiguous accepted | median distance |
+|---|---:|---:|---:|---:|
+| existing L5 TP proposal | {summaries['tp_only']['accepted_frame_count']} | {summaries['tp_only']['wrong_accepted_frame_count']} | {summaries['tp_only']['ambiguous_accepted_frame_count']} | {summaries['tp_only']['median_distance_to_target_region_mm']:.3f} mm |
+| fixed TP-relative control | {summaries['fixed_tp_relative']['accepted_frame_count']} | {summaries['fixed_tp_relative']['wrong_accepted_frame_count']} | {summaries['fixed_tp_relative']['ambiguous_accepted_frame_count']} | {summaries['fixed_tp_relative']['median_distance_to_target_region_mm']:.3f} mm |
+| image-interface evidence | {summaries['image_interface']['accepted_frame_count']} | {summaries['image_interface']['wrong_accepted_frame_count']} | {summaries['image_interface']['ambiguous_accepted_frame_count']} | {summaries['image_interface']['median_distance_to_target_region_mm']:.3f} mm |
+
+**Verdict: fail**, because no positive frame exists and both candidate methods accept unsupported evidence.
+
+### 1.4 Reading it
+
+- The historical L5 TP workflow remains valid for TP view acquisition.
+- The image-only extension does not establish the TP/SAP relationship.
+- No GPU job or new closed-loop execution is justified by this result.
+
+### 1.5 Files
+
+| file | contents |
+|---|---|
+| `frame_results.csv` | per-frame labels, actor hypotheses and evaluator distances |
+| `session_results.csv` | session-level counts |
+| `demo.mp4` | actual historical observations with separated actor/evaluator panels |
+""",
+        encoding="utf-8",
+    )
+
+
 def make_package(output: Path, result: dict[str, Any], protocol_path: Path) -> Path:
     package = output / "s0010_right_l4_medial_branch_target_review"
     package.mkdir(parents=True, exist_ok=True)
-    for name in ("result.json", "frame_results.csv", "session_results.csv", "target_contract.json"):
+    for name in (
+        "result.json",
+        "frame_results.csv",
+        "session_results.csv",
+        "target_contract.json",
+        "TARGET_CONTRACT.md",
+        "REPORT.md",
+    ):
         shutil.copy2(output / name, package / name)
     shutil.copy2(protocol_path, package / protocol_path.name)
     shutil.copy2(protocol_path.with_suffix(".sha256"), package / protocol_path.with_suffix(".sha256").name)
@@ -462,7 +609,7 @@ def main() -> None:
                 continue
             projected = projected_masks(coordinates[sequence], contract, sap_mask, tp_mask)
             first = first_bone_mask(raw_labels[sequence], bone_ids)
-            label, label_reason = frame_label(projected, first)
+            label, label_reason = target_evidence_label(projected, first)
             tp_only = TargetViewHypothesis(
                 status="ACCEPT",
                 row=float(frame["proposal_row"]),
@@ -573,6 +720,7 @@ def main() -> None:
     write_csv(output / "frame_results.csv", rows)
     write_csv(output / "session_results.csv", session_rows)
     write_json(output / "result.json", result)
+    write_reports(output, result, protocol)
     demo_session = str(protocol["demo_session"])
     render_demo(
         output / "demo.mp4",

@@ -66,7 +66,7 @@ evaluation:
   maximum_ambiguous_accepted_frames: 0
   positive_definition: both core endpoint surfaces are first visible bone
   ambiguous_definition: uncertainty endpoints or noncore TP and SAP are visible
-  negative_definition: TP-only, other bone, or background without visible SAP
+  negative_definition: TP-only, other bone, or background without SAP in the imaging plane
 controls:
   - existing_L5_TP_proposal
   - fixed_TP_relative_prediction

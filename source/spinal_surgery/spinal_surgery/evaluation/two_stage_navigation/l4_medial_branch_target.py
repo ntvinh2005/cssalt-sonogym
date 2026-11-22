@@ -39,6 +39,45 @@ class TargetViewHypothesis:
     reason: str
 
 
+def target_evidence_label(
+    projected: dict[str, np.ndarray], first_bone: np.ndarray
+) -> tuple[str, str]:
+    """Keep projected-but-occluded or boundary evidence out of hard negatives."""
+
+    required = {
+        "sap",
+        "tp",
+        "sap_core",
+        "tp_core",
+        "sap_uncertain",
+        "tp_uncertain",
+    }
+    if set(projected) != required:
+        raise ValueError("projected masks do not match the target contract")
+    first = np.asarray(first_bone, dtype=bool)
+    if any(np.asarray(mask).shape != first.shape for mask in projected.values()):
+        raise ValueError("projected masks and first-bone mask differ in shape")
+    visible = {name: np.asarray(mask, dtype=bool) & first for name, mask in projected.items()}
+    core_pair = bool(np.any(visible["sap_core"]) and np.any(visible["tp_core"]))
+    uncertain_pair = bool(
+        np.any(visible["sap_uncertain"]) and np.any(visible["tp_uncertain"])
+    )
+    full_pair = bool(np.any(visible["sap"]) and np.any(visible["tp"]))
+    if core_pair:
+        return "PROXY_POSITIVE", "BOTH_CORE_ENDPOINTS_FIRST_VISIBLE"
+    if uncertain_pair:
+        return "PROXY_AMBIGUOUS", "UNCERTAINTY_ENDPOINTS_FIRST_VISIBLE"
+    if full_pair:
+        return "PROXY_AMBIGUOUS", "TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE"
+    if any(np.any(projected[name]) for name in ("sap", "sap_core", "sap_uncertain")):
+        return "PROXY_AMBIGUOUS", "SAP_IN_PLANE_BUT_NOT_FIRST_VISIBLE"
+    if np.any(visible["tp"]):
+        return "PROXY_NEGATIVE", "TP_ONLY_WITHOUT_SAP_IN_PLANE"
+    if np.any(first):
+        return "PROXY_NEGATIVE", "OTHER_BONE_OR_BACKGROUND"
+    return "TECHNICALLY_INVALID", "NO_FIRST_BONE_SURFACE"
+
+
 def _surface(mask: np.ndarray) -> np.ndarray:
     structure = ndimage.generate_binary_structure(3, 1)
     return np.asarray(mask, dtype=bool) & ~ndimage.binary_erosion(

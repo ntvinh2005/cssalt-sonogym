@@ -103,6 +103,27 @@ class L4MedialBranchTargetTests(unittest.TestCase):
         self.assertEqual(result.status, "ABSTAIN")
         self.assertEqual(result.reason, "TP_PROPOSAL_NOT_ON_INTERFACE")
 
+    def test_projected_but_occluded_sap_remains_ambiguous(self) -> None:
+        shape = (20, 15)
+        projected = {
+            name: np.zeros(shape, dtype=bool)
+            for name in (
+                "sap",
+                "tp",
+                "sap_core",
+                "tp_core",
+                "sap_uncertain",
+                "tp_uncertain",
+            )
+        }
+        projected["sap"][12, 10] = True
+        projected["tp"][8, 3] = True
+        first = np.zeros(shape, dtype=bool)
+        first[8, 3] = True
+        label, reason = MODULE.target_evidence_label(projected, first)
+        self.assertEqual(label, "PROXY_AMBIGUOUS")
+        self.assertEqual(reason, "SAP_IN_PLANE_BUT_NOT_FIRST_VISIBLE")
+
 
 if __name__ == "__main__":
     unittest.main()
