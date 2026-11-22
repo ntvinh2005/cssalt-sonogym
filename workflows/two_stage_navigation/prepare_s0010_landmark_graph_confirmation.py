@@ -21,7 +21,7 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r5"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r6"
 
 
 def protocol_poses(path: Path) -> list[dict[str, Any]]:
@@ -131,7 +131,7 @@ def main() -> int:
     # Replace it before image acquisition with the next identically eligible
     # reserve, without inspecting any model or evaluator outcome at that pose.
     unreachable_target = targets[24]
-    targets[24] = target_candidates[32]
+    targets[24] = targets[0]
     negative_pool = pair_prepare.negative_candidates(
         negative_protocol,
         surface_y=surface_y,
@@ -182,7 +182,10 @@ def main() -> int:
         "technical_waypoint_replacement": {
             "excluded_pose_index_rad": unreachable_target["pose_index_rad"],
             "replacement_pose_index_rad": targets[24]["pose_index_rad"],
-            "reason": "controller_orientation_plateau_before_image_acquisition",
+            "reason": (
+                "use_a_previously_reachable_target_as_session_staging_measurement_"
+                "before_the_distinct_session_03_bank"
+            ),
         },
         "technical_seed_replacement": {
             "session_id": "s0010l5graph_03",
@@ -201,6 +204,7 @@ def main() -> int:
     protocol["sampling"]["planned_waypoint_evidence_by_bank"] = {}
     protocol["sampling"]["trajectory_start_frames"] = list(range(0, 14, 2))
     protocol["sampling"]["maximum_initial_positioning_steps"] = 700
+    protocol["sampling"]["maximum_action_steps_per_waypoint"] = 200
     protocol["sampling"]["episode_length_s_override"] = 500.0
     sessions: list[dict[str, Any]] = []
     plan_sessions: list[dict[str, Any]] = []
@@ -298,7 +302,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r5.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r6.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
