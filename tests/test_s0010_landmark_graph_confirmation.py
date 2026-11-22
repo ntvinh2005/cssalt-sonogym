@@ -40,6 +40,18 @@ def candidate(frame: int, position_mm: float, score: float = 0.8) -> dict:
 
 
 class LandmarkGraphConfirmationTest(unittest.TestCase):
+    def test_empty_negative_observation_produces_no_scores(self) -> None:
+        class ModelThatMustNotRun:
+            def predict_proba(self, _features: np.ndarray) -> np.ndarray:
+                raise AssertionError("empty observations must not invoke the model")
+
+        model = ModelThatMustNotRun()
+        scores = evaluation.proposal_positive_scores(model, [], 1)
+        self.assertEqual(scores.shape, (0,))
+        candidates: list[dict] = []
+        evaluation.assign_graph_scores(model, candidates)
+        self.assertEqual(candidates, [])
+
     def test_distinct_hash_gate_follows_each_session_frame_count(self) -> None:
         requirements = l5_prepare.distinct_hash_requirements(
             [

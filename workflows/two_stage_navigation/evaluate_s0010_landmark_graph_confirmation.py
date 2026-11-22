@@ -41,6 +41,30 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def proposal_positive_scores(
+    model: Any, proposals: list[Any], positive_class: int
+) -> np.ndarray:
+    """Score public proposals while preserving an empty negative observation."""
+
+    if not proposals:
+        return np.empty(0, dtype=np.float64)
+    features = np.stack([proposal.feature for proposal in proposals])
+    return positive_probability(model, features, positive_class)
+
+
+def assign_graph_scores(model: Any, candidates: list[dict[str, Any]]) -> None:
+    """Attach graph probabilities without rejecting a candidate-free session."""
+
+    if not candidates:
+        return
+    probability = model.predict_proba(
+        np.asarray([row["feature"] for row in candidates])
+    )
+    positive_column = list(model.classes_).index(1)
+    for row, score in zip(candidates, probability[:, positive_column]):
+        row["graph_score"] = float(score)
+
+
 def diverse_support(
     neighbors: list[dict[str, Any]], kind: str, config: SpatialMapConfig
 ) -> int:
@@ -186,10 +210,9 @@ def main() -> int:
             proposals = actor_visible_patch_proposals(
                 image, patch_spec=patch_spec, column_stride_pixels=12
             )
-            features = np.stack([proposal.feature for proposal in proposals])
             scores = {
-                "TP": positive_probability(tp_model, features, 2),
-                "SAP": positive_probability(sap_model, features, 1),
+                "TP": proposal_positive_scores(tp_model, proposals, 2),
+                "SAP": proposal_positive_scores(sap_model, proposals, 1),
             }
             records_by_kind: dict[str, list[dict[str, Any]]] = {}
             for kind in ("TP", "SAP"):
@@ -272,12 +295,7 @@ def main() -> int:
                                 "feature": feature,
                             }
                         )
-        probability = model.predict_proba(
-            np.asarray([row["feature"] for row in candidates])
-        )
-        positive_column = list(model.classes_).index(1)
-        for row, score in zip(candidates, probability[:, positive_column]):
-            row["graph_score"] = float(score)
+        assign_graph_scores(model, candidates)
         candidates_by_session[session_id] = candidates
 
     actor_rankings = {
