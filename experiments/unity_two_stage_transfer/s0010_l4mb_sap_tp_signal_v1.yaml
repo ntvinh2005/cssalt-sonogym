@@ -1,0 +1,266 @@
+protocol_id: sonogym-s0010-l4mb-sap-tp-signal-v1
+status: FROZEN_BEFORE_FRESH_CAPTURE
+purpose: Test whether separate RIGHT L5 SAP and TP first-hit surfaces have clean ultrasound
+  evidence.
+anatomy_id: s0010
+clinical_scope:
+  medial_branch: RIGHT_L4
+  vertebral_level: RIGHT_L5
+  endpoint: bony_surrogate_only
+  clinical_target_validated: false
+source:
+  implementation_commit: e198ce8fe9e00bee006efbd0df234a063b7078b8
+  search_result: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4mb_broad_probe_search/52299785/search/search_result.json
+  search_result_sha256: d88b9fdfca407247d9a150897438fd8d10d6186704760d46f6983674f9447981
+  search_status: SAP_TP_SURFACE_CAPTURE_CANDIDATES_FOUND
+  control_protocol: experiments/unity_two_stage_transfer/s0010_l4mb_target_observability_v1.yaml
+  control_protocol_sha256: d0ba12d66d3f6ecd2fc23f83eb6bed70c878d1888e2b288e619d50708dd2925f
+  source_evidence_status: opened_development_pose_design
+scope:
+  task: Isaac-robot-US-guidance-v0
+  patient_id: s0010
+  ultrasound_mode: conv
+  development_only: true
+  privileged_pose_design: true
+  model_training_authorized: false
+  stage3_authorized: false
+information_boundaries:
+  capture_runtime:
+  - frozen_waypoint_commands
+  - clean_ultrasound
+  - robot_motion_feedback
+  privileged_offline_only:
+  - CT_subregion_prediction
+  - native_pixel_to_volume_coordinates
+  - raw_label_slice
+  - SAP_and_TP_masks
+  future_robot_localizer_forbidden:
+  - absolute_waypoint_bank
+  - target_coordinates
+  - CT_masks
+  - native_pixel_to_volume_coordinates
+inputs:
+  label_conversion: 4ce73c412ef26f69fefe0caf003a531f4fd0928ac24f2248af0a019c4d76ff9a
+  prediction: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  segmentation: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+sampling:
+  expected_frames_per_session: 12
+  physical_tracking_position_tolerance_mm: 1.5
+  physical_tracking_orientation_tolerance_deg: 1.2
+  waypoint_separation_multiplier: 2.0
+  minimum_realized_viewpoint_translation_mm: 2.0
+  minimum_realized_viewpoint_orientation_deg: 1.0
+  maximum_initial_positioning_steps: 350
+  maximum_action_steps_per_waypoint: 100
+  maximum_total_action_steps_per_session: 4200
+  trajectory_start_frames:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 10
+  trajectory_seed_stride: 1000
+  enforce_episode_action_budget: true
+  physical_controller:
+    name: coupled_proportional_target
+    ratio:
+    - 0.02
+    - 0.02
+    - 0.6
+    ceiling_assisted_minimum_requested_angle_rad: 2.99
+    controller_target_angle_rad: 3.14
+    accept_against_evaluator_goal_angle: false
+    capture_angle_ceiling_limited_samples: false
+  absolute_waypoint_banks_index:
+    bank_00: &id001
+    - &id002
+      - 146.0
+      - 128.0
+      - 2.124999999999996
+    - &id003
+      - 146.0
+      - 128.0
+      - 2.1999999999999957
+    - &id004
+      - 150.0
+      - 126.0
+      - 2.2499999999999956
+    - &id005
+      - 144.0
+      - 128.0
+      - 2.0499999999999963
+    - &id006
+      - 148.0
+      - 126.0
+      - 2.0499999999999963
+    - &id007
+      - 150.0
+      - 124.0
+      - 2.074999999999996
+    - &id008
+      - 152.0
+      - 124.0
+      - 2.2249999999999956
+    - &id009
+      - 152.0
+      - 122.0
+      - 2.099999999999996
+    - &id010
+      - 157.0
+      - 120.5
+      - 2.89
+    - &id011
+      - 157.0
+      - 120.5
+      - 2.95
+    - &id012
+      - 148.0
+      - 125.5
+      - 2.84
+    - &id013
+      - 157.0
+      - 140.5
+      - 2.77
+    bank_01: *id001
+    bank_02: *id001
+  planned_waypoint_evidence_by_bank:
+    bank_00: &id014
+    - frame_sequence: 0
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id002
+      predicted_sap_first_visible_pixels: 29
+      predicted_tp_first_visible_pixels: 29
+      predicted_target_margin_pixels: 50
+    - frame_sequence: 1
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id003
+      predicted_sap_first_visible_pixels: 29
+      predicted_tp_first_visible_pixels: 30
+      predicted_target_margin_pixels: 48
+    - frame_sequence: 2
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id004
+      predicted_sap_first_visible_pixels: 29
+      predicted_tp_first_visible_pixels: 32
+      predicted_target_margin_pixels: 40
+    - frame_sequence: 3
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id005
+      predicted_sap_first_visible_pixels: 29
+      predicted_tp_first_visible_pixels: 28
+      predicted_target_margin_pixels: 48
+    - frame_sequence: 4
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id006
+      predicted_sap_first_visible_pixels: 28
+      predicted_tp_first_visible_pixels: 29
+      predicted_target_margin_pixels: 44
+    - frame_sequence: 5
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id007
+      predicted_sap_first_visible_pixels: 28
+      predicted_tp_first_visible_pixels: 28
+      predicted_target_margin_pixels: 37
+    - frame_sequence: 6
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id008
+      predicted_sap_first_visible_pixels: 28
+      predicted_tp_first_visible_pixels: 31
+      predicted_target_margin_pixels: 34
+    - frame_sequence: 7
+      declared_role: SAP_TP_SURFACE_CANDIDATE
+      search_pose_index_rad: *id009
+      predicted_sap_first_visible_pixels: 28
+      predicted_tp_first_visible_pixels: 28
+      predicted_target_margin_pixels: 31
+    - frame_sequence: 8
+      declared_role: NEGATIVE_CONTROL
+      search_pose_index_rad: *id010
+      predicted_sap_first_visible_pixels: null
+      predicted_tp_first_visible_pixels: null
+      predicted_target_margin_pixels: null
+    - frame_sequence: 9
+      declared_role: NEGATIVE_CONTROL
+      search_pose_index_rad: *id011
+      predicted_sap_first_visible_pixels: null
+      predicted_tp_first_visible_pixels: null
+      predicted_target_margin_pixels: null
+    - frame_sequence: 10
+      declared_role: NEGATIVE_CONTROL
+      search_pose_index_rad: *id012
+      predicted_sap_first_visible_pixels: null
+      predicted_tp_first_visible_pixels: null
+      predicted_target_margin_pixels: null
+    - frame_sequence: 11
+      declared_role: NEGATIVE_CONTROL
+      search_pose_index_rad: *id013
+      predicted_sap_first_visible_pixels: null
+      predicted_tp_first_visible_pixels: null
+      predicted_target_margin_pixels: null
+    bank_01: *id014
+    bank_02: *id014
+sessions:
+- session_id: s0010saptpsig_00
+  split: opened_development_observability
+  seed: 2026112600
+  reset_id: s0010saptpsig_00
+  absolute_waypoint_bank_id: bank_00
+  expected_frame_count: 12
+- session_id: s0010saptpsig_01
+  split: opened_development_observability
+  seed: 2026112601
+  reset_id: s0010saptpsig_01
+  absolute_waypoint_bank_id: bank_01
+  expected_frame_count: 12
+- session_id: s0010saptpsig_02
+  split: opened_development_observability
+  seed: 2026112602
+  reset_id: s0010saptpsig_02
+  absolute_waypoint_bank_id: bank_02
+  expected_frame_count: 12
+labels:
+  technical_image_valid: finite_nonconstant_contact_workspace_and_transition_valid
+  validity:
+    maximum_position_error_mm: 50.0
+    maximum_orientation_error_deg: 30.0
+    minimum_l4_visible_fraction: 1.0e-06
+  quality:
+    visibility_normalization_fraction: 0.2
+dataset_gate:
+  minimum_distinct_frame_hashes_per_session: 12
+  require_all_exact_pose_replay: true
+exact_pose_replay:
+  enabled: true
+  image_width_pixels: 150
+  image_depth_pixels: 200
+  label_resolution_m: 0.0015
+  image_origin_height_m: 0.133
+  maximum_coordinate_error_index: 0.001
+  minimum_exact_raw_label_agreement: 0.985
+  minimum_bone_mask_iou: 0.9
+  require_direct_coordinate_exact_agreement: true
+  require_all_frames_to_pass: true
+observability_gate:
+  minimum_sap_first_visible_pixels: 3
+  minimum_tp_first_visible_pixels: 3
+  minimum_target_image_margin_pixels: 4
+  maximum_interface_track_distance_pixels: 4.0
+  minimum_posterior_shadow_contrast: 0.05
+  minimum_supported_target_frames_per_session: 2
+  minimum_supported_sessions: 2
+  maximum_supported_control_frames: 0
+  ambiguous_is_not_negative: true
+resource_bound:
+  account: anest-dept
+  gpu_count: 1
+  gpu_model: NVIDIA_L4
+  cpu_cores: 4
+  memory_gb: 30
+  walltime: 00:30:00
+  maximum_new_gpu_jobs: 1
+  maximum_storage_growth_gb: 1.0
+change_policy:
+- Do not change waypoints or gates after capture.
+- Do not expose privileged geometry or absolute waypoints to a future robot localizer.
+- Do not treat visible SAP and TP surfaces as an MBB endpoint.
