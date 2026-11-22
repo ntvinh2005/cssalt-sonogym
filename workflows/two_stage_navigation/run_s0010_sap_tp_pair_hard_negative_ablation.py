@@ -69,9 +69,11 @@ def load_rows(
     tp_mask: np.ndarray,
     contract: Any,
     bone_ids: set[int],
+    pair_gate: dict[str, Any],
+    track_config: dict[str, Any],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    gate = protocol["pair_label_gate"]
+    gate = pair_gate
     for session in protocol["sessions"]:
         session_id = session["session_id"]
         session_dir = run_root / "sessions" / session_id
@@ -115,7 +117,7 @@ def load_rows(
                     first, second, feature, tp_visible, sap_visible, gate
                 )
                 for first, second, feature in track_window_pair_candidates(
-                    image, **protocol["track_window_config"]
+                    image, **track_config
                 )
             ]
             rows.append(
@@ -201,10 +203,24 @@ def main() -> int:
     )
     bone_ids = sap_correction.bone_source_ids(args.label_conversion)
     training_rows = load_rows(
-        training_protocol, args.training_run, sap_mask, tp_mask, contract, bone_ids
+        training_protocol,
+        args.training_run,
+        sap_mask,
+        tp_mask,
+        contract,
+        bone_ids,
+        development_protocol["pair_label_gate"],
+        development_protocol["track_window_config"],
     )
     development_rows = load_rows(
-        development_protocol, args.development_run, sap_mask, tp_mask, contract, bone_ids
+        development_protocol,
+        args.development_run,
+        sap_mask,
+        tp_mask,
+        contract,
+        bone_ids,
+        development_protocol["pair_label_gate"],
+        development_protocol["track_window_config"],
     )
     sessions = sorted({row["session_id"] for row in development_rows})
     fold_results = []
