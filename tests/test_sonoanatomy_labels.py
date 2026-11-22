@@ -13,6 +13,7 @@ from two_stage_navigation.sonoanatomy_labels import (
     TP_INTERFACE,
     first_bone_surface,
     project_mask,
+    right_level_masks,
     visible_interface_labels,
 )
 from two_stage_navigation.stage1_interfaces import InterfaceTrack
@@ -27,6 +28,17 @@ def coordinate_map(depth: int, width: int) -> np.ndarray:
 
 
 class SonoanatomyLabelTests(unittest.TestCase):
+    def test_right_level_identity_surface_is_not_its_own_uncertainty(self) -> None:
+        prediction = np.zeros((5, 5, 5), dtype=np.uint8)
+        segmentation = np.zeros_like(prediction)
+        segmentation[1:5, 1:5, 1:5] = 28
+        prediction[3, 2, 2] = 5
+        prediction[3, 3, 2] = 6
+        masks = right_level_masks(prediction, segmentation, np.eye(4), "L4")
+        self.assertFalse(np.any(masks["tp"] & masks["uncertainty"]))
+        self.assertFalse(np.any(masks["sap"] & masks["uncertainty"]))
+        self.assertTrue(masks["uncertainty"][2, 2, 2])
+
     def test_project_mask_preserves_native_width_major_pixel_positions(self) -> None:
         depth, width = 4, 3
         mask = np.zeros((5, 5, 1), dtype=bool)

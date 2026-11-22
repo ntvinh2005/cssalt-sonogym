@@ -80,16 +80,19 @@ def right_level_masks(
     if not np.any(tp) or not np.any(sap) or np.any(tp & sap):
         raise ValueError(f"{level} right TP/SAP masks are empty or overlap")
     structure = ndimage.generate_binary_structure(3, 1)
-    shell_tp = ndimage.binary_dilation(tp, structure=structure) & ~ndimage.binary_erosion(
-        tp, structure=structure
-    )
-    shell_sap = ndimage.binary_dilation(sap, structure=structure) & ~ndimage.binary_erosion(
-        sap, structure=structure
-    )
+    identity = tp | sap
+    # The visible cortical interface necessarily lies on the inside boundary
+    # of a predicted bone subregion.  Marking that inside boundary uncertain
+    # would make every physically visible interface ineligible.  Preserve the
+    # model-class voxel as a weak label and ignore only the one-voxel exterior
+    # band, where CT quantization can change the sampled identity.
+    exterior_uncertainty = ndimage.binary_dilation(
+        identity, structure=structure
+    ) & ~identity
     return {
         "tp": tp,
         "sap": sap,
-        "uncertainty": shell_tp | shell_sap,
+        "uncertainty": exterior_uncertainty,
     }
 
 
