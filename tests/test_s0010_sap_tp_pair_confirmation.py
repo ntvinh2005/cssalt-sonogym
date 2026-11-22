@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import numpy as np
+import yaml
 
 from evaluate_s0010_sap_tp_pair_confirmation import target_margin
 from prepare_s0010_sap_tp_pair_confirmation import (
@@ -18,6 +20,10 @@ from two_stage_navigation.coordinates import (
     uses_coupled_stage2_dataset_controller,
     uses_segmented_stage2_dataset_capture,
 )
+from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
+
+
+ROOT = Path(__file__).parents[1]
 
 
 class TestSapTpPairConfirmation(unittest.TestCase):
@@ -27,6 +33,29 @@ class TestSapTpPairConfirmation(unittest.TestCase):
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
         self.assertTrue(requires_synchronized_capture(protocol_id))
+
+    def test_frozen_protocol_waypoints_pass_real_capture_validator(self) -> None:
+        protocol = yaml.safe_load(
+            (
+                ROOT
+                / "experiments/unity_two_stage_transfer/"
+                "s0010_sap_tp_pair_confirmation_v1r1.yaml"
+            ).read_text(encoding="utf-8")
+        )
+        sampling = protocol["sampling"]
+        for bank in sampling["absolute_waypoint_banks_index"].values():
+            resolved = validate_waypoint_bank(
+                bank,
+                command_minimum=[-1.0e9, -1.0e9, -1.0e9],
+                command_maximum=[1.0e9, 1.0e9, 1.0e9],
+                label_resolution_mm=1.5,
+                position_tolerance_mm=sampling["physical_tracking_position_tolerance_mm"],
+                orientation_tolerance_deg=sampling[
+                    "physical_tracking_orientation_tolerance_deg"
+                ],
+                separation_multiplier=sampling["waypoint_separation_multiplier"],
+            )
+            self.assertEqual(resolved.shape, (14, 3))
 
     def test_target_margin_uses_core_evidence(self) -> None:
         projected = {

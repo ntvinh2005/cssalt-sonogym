@@ -1,0 +1,19 @@
+{
+  "schema": "s0010-sap-tp-pair-confirmation-technical-failure-v1",
+  "job_id": "52305012",
+  "execution_commit": "410192352c9743212a70c02719ff7deaddb0814a",
+  "protocol_id": "sonogym-s0010-sap-tp-pair-confirmation-v1",
+  "protocol_sha256": "4a488ad9d50fc6f74be572deb530e9748dabcfd3d7c96cd3e5cb3b79bdc1661b",
+  "checkpoint_sha256": "449953374809635726bd0eadfdc8c0686c8310bfd74d967ece4657a577203de3",
+  "slurm_state": "FAILED",
+  "exit_code": "1:0",
+  "elapsed_seconds": 45,
+  "captured_frame_count": 0,
+  "preflight_test_count": 36,
+  "preflight_tests_passed": true,
+  "primary_failure": "waypoint 2 is swallowed by movement tolerances",
+  "secondary_failure": "exact-pose verifier did not recognize the new protocol identifier",
+  "scientific_evaluation_executed": false,
+  "gpu_retry_submitted": false,
+  "runtime_output": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_v1/52305012"
+}

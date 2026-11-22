@@ -414,13 +414,41 @@ the observability protocol to use synchronized-capture integrity gates, recover
 the captured commit from immutable run context when older sealed metadata lack
 the field, and prevent a partial session selection from appearing complete.
 
-## 7. Next concrete action
+## 7. Fresh-pose confirmation technical recovery
+
+The first frozen confirmation submission, job `52305012`, stopped before the
+first frame. Its 36 code-level tests passed, but the real collector rejected an
+adjacent waypoint separated by exactly the movement-tolerance boundary. The
+exact-pose verifier also lacked the new protocol identifier. No ultrasound
+array was written and no scientific metric was evaluated.
+
+The recovery changes use the same acquisition validator during pose-plan
+construction, require strict separation beyond the tolerance boundary, and
+register the corrected synchronized protocol in the collector and verifier.
+CPU job `52305250` completed the corrected preparation in 49 seconds with 9 / 9
+tests passing. It froze 24 target poses and 18 controls across three sessions;
+the model checkpoint is unchanged.
+
+| recovery item | value |
+|---|---|
+| failed GPU job | `52305012`; 45 s; 0 captured frames |
+| failed protocol SHA-256 | `4a488ad9d50fc6f74be572deb530e9748dabcfd3d7c96cd3e5cb3b79bdc1661b` |
+| corrected CPU preparation | job `52305250`; commit `78947e33fd93fa5ea13bc094473e15b064185d27` |
+| unchanged model SHA-256 | `449953374809635726bd0eadfdc8c0686c8310bfd74d967ece4657a577203de3` |
+| corrected pose-plan SHA-256 | `a753dec05937b444030c0e51322bc6408c0a5d443d818570a91a070d70e28df7` |
+| corrected protocol | `sonogym-s0010-sap-tp-pair-confirmation-v1r1` |
+| corrected protocol SHA-256 | `01af044bee4e21fb90c82717755783732de21cc65bcd42344d7f79a05b43d250` |
+| corrected regression checks | 61 / 61 pass |
+
+## 8. Next concrete action
 
 Do not integrate either pair selector into Stage 2. Preserve the complete-track
 implementation as the stronger development candidate, but the next decisive
 experiment requires additional, distinct SAP/TP and confusing-bone pose groups
-rather than more reset repetitions of the same twelve commands. Freeze those
-groups before capture and evaluate the unchanged selector on session- and
-pose-group-separated observations. The historical L5 TP pipeline remains the
-presentation-ready navigation baseline and must continue to be labelled TP
-navigation rather than MBB target localization.
+rather than more reset repetitions of the same twelve commands. Those groups,
+the unchanged checkpoint and the one-time evaluation gates are now frozen in
+protocol `v1r1`. Running it requires authorization for one technical GPU retry
+because the already authorized submission was consumed by the pre-capture
+failure. The historical L5 TP pipeline remains the presentation-ready
+navigation baseline and must continue to be labelled TP navigation rather than
+MBB target localization.
