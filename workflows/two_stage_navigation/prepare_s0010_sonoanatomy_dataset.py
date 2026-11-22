@@ -170,7 +170,11 @@ def summarize(level: str, rows: list[dict[str, Any]], readiness: dict[str, Any])
 def main() -> int:
     args = parse_args()
     config = yaml.safe_load(args.config.read_text(encoding="utf-8"))
-    if config.get("protocol_id") != "s0010_sonoanatomy_dataset_v1":
+    protocol_id = str(config.get("protocol_id", ""))
+    if protocol_id not in {
+        "s0010_sonoanatomy_dataset_v1",
+        "s0010_sonoanatomy_dataset_v2",
+    }:
         raise ValueError("unexpected dataset protocol")
     if args.output_dir.exists():
         raise FileExistsError(f"refusing to overwrite output: {args.output_dir}")

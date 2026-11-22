@@ -601,3 +601,100 @@ precision and false-accept rate miss the frozen 75% and 10% gates.
 | runtime job `52364004/graph_analysis/result.json` | L4 graph development result |
 | runtime job `52369053/results/evaluation_52370256/result.json` | frozen L5 confirmation result |
 | runtime job `52369053/results/evaluation_52370256/session_results.csv` | per-session acceptance and correctness |
+
+## 12. Simulator-supervised sonoanatomy campaign checkpoint
+
+This section freezes the incomplete 2026-11-22 campaign before a change of
+research direction. It preserves the new implementation and negative results;
+it does not revise the historical Stage 2 verdicts above.
+
+### 12.1 Criterion
+
+The weak-label dataset had to contain image-supported, first-visible TP, SAP
+and other-bone interfaces from at least three independent sessions per level.
+An image-only model then had to distinguish those interfaces on opened,
+session-separated development data before multiview or closed-loop promotion.
+Ambiguous and occluded pixels remained ignored rather than becoming hard
+negative labels.
+
+### 12.2 Method
+
+The label builder combined clean ultrasound tracks with privileged
+pixel-to-volume correspondence and first-acoustic-bone labels. The resulting
+labels are explicitly `SIMULATOR_WEAK_ANATOMICAL_LABEL`; CT-model-derived SAP
+regions remain provisional. A small image-only U-Net predicted TP, SAP,
+other-bone and background interface classes. A separate actor-side multiview
+module was added to cluster image predictions in calibrated 6DoF coordinates
+and abstain unless both TP and SAP have support from distinct frames.
+
+The planned L4 capture broadened the evaluator-designed pose domain to 96
+unique poses in four sessions. Absolute waypoints were capture-design inputs
+only and were not added to actor observations.
+
+### 12.3 Setup
+
+| item | value |
+|---|---|
+| final weak-label dataset job | `52385260`; 282 distinct frames |
+| dataset SHA-256 | `6393b3981d1b3fafed627cde9de5e14a97544ace1b2f6823168a4ca07ca7493c` |
+| segmentation training job | `52387251`; one NVIDIA L4; 4 CPUs; 34 s |
+| L4 checkpoint SHA-256 | `38fcf3ba7257ccea9818b50a5013664762a2ccc30843718cfed4a61936d58863` |
+| L5 checkpoint SHA-256 | `040b7359852a1917e4a35ba3d239371f49eeacd7ae6c7573a9c55d73796a1bce` |
+| widened capture preparation | jobs `52387270`, `52388082` |
+| final capture protocol SHA-256 | `dfd039d7405e6031aa541dcc4741841c3fe18a0be5519c1bf67d608302104707` |
+| multiview implementation commit | `301562f` |
+
+### 12.4 Results
+
+| measurement | RIGHT L4 | RIGHT L5 |
+|---|---:|---:|
+| labelled frames / sessions | 112 / 8 | 170 / 13 |
+| SAP-positive frames / sessions | 23 / 8 | 76 / 11 |
+| SAP interface pixels | 84 | 895 |
+| TP-positive frames | 54 | 77 |
+| other-bone frames | 101 | 139 |
+| opened-development SAP pixel Dice | 0.000 | 0.865 |
+| opened-development SAP frame recall | 0 / 4 | 5 / 5 |
+| opened-development SAP clear negatives | 8 / 8 | 3 / 3 |
+
+The L4 model collapsed to background and was not promoted. The L5 model was
+promising on opened development data, but its TP frame gate accepted the only
+negative frame; it is not independent confirmation and was not promoted.
+
+The broadened L4 capture did not produce a completed dataset. Jobs `52387702`
+and `52389230` exposed a controller conflict for requested 3.0-rad poses: the
+ceiling-assisted controller pursued 3.14 rad while acceptance remained at
+3.0 rad. The latter job stopped fail-closed at 0.513 mm position error and
+3.530 degrees orientation error. Jobs `52388963` and `52389184` stopped at
+launcher startup because an empty `SONOGYM_CONFIG_FILE` was exported; they did
+not run the simulator. Ninety of the 96 planned poses are below 2.99 rad and
+are unaffected by the identified ceiling-assistance conflict.
+
+### 12.5 Reading it
+
+- The campaign established a reproducible weak visible-interface dataset and
+  a working L5 development segmentation signal.
+- It did not improve RIGHT L4 recognition or complete a fresh capture.
+- The L4 failure remains a combination of sparse interface supervision and an
+  unresolved physical capture-plan/controller mismatch, not proof that the
+  structure is acoustically unobservable.
+- The multiview code passed focused unit tests but has not been scientifically
+  evaluated with the planned new capture.
+- `RIGHT_L4_STAGE2`, `RIGHT_L5_STAGE2` and `STAGE2_COMPLETE` remain failed or
+  blocked under their frozen gates. No new closed-loop run was performed.
+
+### 12.6 Files and resume boundary
+
+| file or runtime path | contents |
+|---|---|
+| `s0010_sonoanatomy_dataset_v1/52385260/dataset` | frozen weak-label dataset and review overlays |
+| `s0010_sonoanatomy_segmentation_v1/52387251/training` | L4/L5 checkpoints and opened-development metrics |
+| `s0010_sonoanatomy_capture_prepare/52388082/prepared` | 96-pose capture protocol and seal |
+| `s0010_sonoanatomy_capture_v1/52389230` | fail-closed controller trace and partial actions |
+| `sonoanatomy_labels.py` | visible-interface weak-label construction |
+| `sonoanatomy_segmentation.py` | image-only U-Net implementation |
+| `sonoanatomy_multiview.py` | actor-side semantic clustering and pair abstention |
+
+No campaign job was active when this checkpoint was written. A future resume
+must either remove or redesign the six 3.0-rad waypoints under an explicitly
+versioned protocol; it must not reinterpret the incomplete capture as data.
