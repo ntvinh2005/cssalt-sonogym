@@ -1,0 +1,77 @@
+protocol_id: sonogym-s0010-sap-tp-pair-development-v1
+status: FROZEN_BEFORE_CPU_EVALUATION
+purpose: Determine whether two spatially separated intervals on a complete cortical interface identify RIGHT L5 TP and SAP across distinct recorded viewpoints.
+anatomy_id: s0010
+clinical_scope:
+  medial_branch: RIGHT_L4
+  vertebral_level: RIGHT_L5
+  endpoint: bony_surrogate_only
+  clinical_target_validated: false
+scope:
+  opened_development_only: true
+  cpu_only: true
+  model_training: exploratory_cross_validation
+  robot_integration: false
+information_boundaries:
+  actor_inputs: [clean_ultrasound, prior_clean_ultrasound, executed_relative_motion]
+  evaluator_only: [CT_subregion_prediction, native_pixel_to_volume_coordinates, raw_label_slice, SAP_and_TP_masks]
+  forbidden_actor_inputs: [absolute_waypoint, target_coordinates, privileged_geometry]
+inputs:
+  source_protocol: experiments/unity_two_stage_transfer/s0010_l4mb_sap_tp_signal_v1.yaml
+  source_job: '52300444'
+  source_status: opened_development_observability
+  source_commit: e198ce8fe9e00bee006efbd0df234a063b7078b8
+candidate_mode: track_windows
+segment_config:
+  minimum_depth_fraction: 0.48
+  maximum_depth_fraction: 0.96
+  minimum_column_span: 5
+  minimum_component_pixels: 8
+  maximum_segments: 8
+  ridge_quantile: 0.86
+track_window_config:
+  window_columns: 15
+  stride_columns: 5
+  minimum_center_separation_columns: 8
+  maximum_tracks: 2
+pair_label_gate:
+  maximum_segment_surface_distance_pixels: 4.0
+  minimum_aligned_segment_points: 3
+labels:
+  target_waypoint_groups: [0, 1, 2, 3, 4, 5, 6, 7]
+  clear_negative_waypoint_groups: [8, 9, 11]
+  ambiguous_waypoint_groups: [10]
+cross_validation_folds:
+- fold_id: fold_00
+  held_out_waypoint_groups: [0, 1, 8]
+- fold_id: fold_01
+  held_out_waypoint_groups: [2, 3, 9]
+- fold_id: fold_02
+  held_out_waypoint_groups: [4, 5, 11]
+- fold_id: fold_03
+  held_out_waypoint_groups: [6, 7, 10]
+model:
+  name: ExtraTreesClassifier
+  tree_count: 240
+  maximum_negative_pairs_per_frame: 20
+  random_seed: 20261122
+decision_gate:
+  minimum_pair_probability: 0.50
+  minimum_prior_view_support: 1
+  minimum_support_translation_mm: 2.0
+  minimum_support_angle_deg: 1.0
+  maximum_support_translation_mm: 15.0
+  maximum_support_angle_deg: 15.0
+  maximum_scaled_pair_distance: 1.0
+  support_score_increment: 0.10
+  maximum_counted_support: 2
+final_gate:
+  minimum_target_waypoint_groups_passed: 6
+  maximum_clear_negative_waypoint_groups_failed: 0
+  minimum_accepted_target_pair_precision: 0.75
+interpretation:
+- This is the second and final serious CPU hypothesis in the approved sprint.
+- The complete-interface intervals address the demonstrated fragmentation failure without changing labels or final gates.
+- Every waypoint group is evaluated exactly once by a model that did not fit any reset of that waypoint.
+- Ambiguous waypoint group 10 is reported but excluded from the clear-negative gate.
+- Passing is development evidence only and does not establish a nerve target, independent confirmation, or robot readiness.

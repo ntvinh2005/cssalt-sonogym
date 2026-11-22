@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import ndimage
 
+from .stage1_interfaces import InterfaceTrackerConfig, track_bright_interfaces
 from .ultrasound_surface_features import normalized_image
 
 
@@ -172,4 +173,57 @@ def pair_candidates(
         for second in segments[first_index + 1 :]:
             result.append((first, second, pair_feature(first, second, image.shape)))
             result.append((second, first, pair_feature(second, first, image.shape)))
+    return tuple(result)
+
+
+def track_window_pair_candidates(
+    image: np.ndarray,
+    *,
+    window_columns: int = 15,
+    stride_columns: int = 5,
+    minimum_center_separation_columns: int = 8,
+    maximum_tracks: int = 2,
+) -> tuple[tuple[CorticalSegment, CorticalSegment, np.ndarray], ...]:
+    """Form left-to-right candidate pairs along complete image-derived interfaces."""
+
+    if min(
+        window_columns,
+        stride_columns,
+        minimum_center_separation_columns,
+        maximum_tracks,
+    ) < 1:
+        raise ValueError("track-window settings must be positive")
+    clean = normalized_image(image)
+    ridge, shadow = _ridge_field(clean)
+    segments: list[CorticalSegment] = []
+    tracker_config = InterfaceTrackerConfig(maximum_hypotheses=maximum_tracks)
+    for track in track_bright_interfaces(clean, tracker_config):
+        if len(track.columns) < window_columns:
+            continue
+        for start in range(0, len(track.columns) - window_columns + 1, stride_columns):
+            columns = track.columns[start : start + window_columns].astype(np.float64)
+            rows = track.rows[start : start + window_columns].astype(np.float64)
+            pixel_rows = np.clip(np.rint(rows).astype(int), 0, clean.shape[0] - 1)
+            pixel_columns = np.clip(np.rint(columns).astype(int), 0, clean.shape[1] - 1)
+            distal_rows = np.clip(pixel_rows + 7, 0, clean.shape[0] - 1)
+            segments.append(
+                CorticalSegment(
+                    rows=rows,
+                    columns=columns,
+                    ridge_score=float(np.mean(ridge[pixel_rows, pixel_columns])),
+                    shadow_contrast=float(np.mean(shadow[pixel_rows, pixel_columns])),
+                    intensity_contrast=float(
+                        np.mean(
+                            clean[pixel_rows, pixel_columns]
+                            - clean[distal_rows, pixel_columns]
+                        )
+                    ),
+                )
+            )
+    result: list[tuple[CorticalSegment, CorticalSegment, np.ndarray]] = []
+    for first in segments:
+        for second in segments:
+            if second.center[1] - first.center[1] < minimum_center_separation_columns:
+                continue
+            result.append((first, second, pair_feature(first, second, image.shape)))
     return tuple(result)

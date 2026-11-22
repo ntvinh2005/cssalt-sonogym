@@ -12,6 +12,7 @@ from two_stage_navigation.ultrasound_sap_tp_configuration import (
     cortical_segments,
     pair_candidates,
     pair_feature,
+    track_window_pair_candidates,
 )
 
 
@@ -65,6 +66,22 @@ class TestUltrasoundSapTpConfiguration(unittest.TestCase):
         feature = pair_feature(first, second, (200, 150))
         self.assertEqual(feature.shape, (21,))
         self.assertTrue(np.all(np.isfinite(feature)))
+
+    def test_complete_track_is_partitioned_into_left_to_right_pairs(self) -> None:
+        image = np.zeros((200, 150), dtype=np.float64)
+        columns = np.arange(18, 132)
+        rows = 120 - 15 * np.exp(-((columns - 70) / 20) ** 2)
+        for row, column in zip(np.rint(rows).astype(int), columns):
+            image[row - 1 : row + 2, column] = 1.0
+        pairs = track_window_pair_candidates(
+            image,
+            window_columns=15,
+            stride_columns=5,
+            minimum_center_separation_columns=8,
+            maximum_tracks=1,
+        )
+        self.assertGreater(len(pairs), 0)
+        self.assertTrue(all(first.center[1] < second.center[1] for first, second, _ in pairs))
 
 
 if __name__ == "__main__":

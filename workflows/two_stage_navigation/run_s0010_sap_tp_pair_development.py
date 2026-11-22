@@ -22,6 +22,7 @@ from two_stage_navigation.ultrasound_sap_tp_configuration import (
     CorticalSegment,
     SegmentConfig,
     pair_candidates,
+    track_window_pair_candidates,
 )
 
 
@@ -277,6 +278,12 @@ def main() -> int:
             first_bone = target_workflow.first_bone_mask(raw, bone_ids)
             sap_visible = projected["sap"] & first_bone
             tp_visible = projected["tp"] & first_bone
+            if protocol.get("candidate_mode", "bounded_components") == "track_windows":
+                candidate_pairs = track_window_pair_candidates(
+                    image, **protocol["track_window_config"]
+                )
+            else:
+                candidate_pairs = pair_candidates(image, config)
             pairs = [
                 _pair_record(
                     first,
@@ -286,7 +293,7 @@ def main() -> int:
                     sap_visible,
                     protocol["pair_label_gate"],
                 )
-                for first, second, feature in pair_candidates(image, config)
+                for first, second, feature in candidate_pairs
             ]
             sample_id = f"{session_id}:{index:02d}"
             images_by_id[sample_id] = image
