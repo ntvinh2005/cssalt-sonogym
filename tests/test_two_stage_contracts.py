@@ -317,6 +317,11 @@ class CoordinateTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol(l4_focused_r1))
         self.assertTrue(uses_coupled_stage2_dataset_controller(l4_focused_r1))
         self.assertTrue(uses_segmented_stage2_dataset_capture(l4_focused_r1))
+
+        sonoanatomy = "sonogym-s0010-sonoanatomy-development-v1"
+        self.assertTrue(is_supported_stage2_dataset_protocol(sonoanatomy))
+        self.assertTrue(uses_coupled_stage2_dataset_controller(sonoanatomy))
+        self.assertTrue(uses_segmented_stage2_dataset_capture(sonoanatomy))
         self.assertFalse(is_supported_stage2_dataset_protocol("sonogym-stage2-dataset-v15"))
         with self.assertRaises(ValueError):
             uses_coupled_stage2_dataset_controller("")

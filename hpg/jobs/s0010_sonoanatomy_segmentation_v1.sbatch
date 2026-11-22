@@ -24,7 +24,7 @@ RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sonoanatomy_segmenta
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 
-mkdir -p "$RUN_DIR"/{context,metrics,training}
+mkdir -p "$RUN_DIR"/{context,metrics}
 capture_run_context "$RUN_DIR"
 "$PYTHON" -m unittest -q tests.test_sonoanatomy_labels \
   tests.test_sonoanatomy_segmentation tests.test_acquisition_integrity \
