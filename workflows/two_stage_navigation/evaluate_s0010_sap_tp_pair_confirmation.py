@@ -99,7 +99,7 @@ def main() -> int:
     args = parser.parse_args()
 
     protocol = yaml.safe_load(args.protocol.read_text(encoding="utf-8"))
-    if protocol["protocol_id"] != "sonogym-s0010-sap-tp-pair-confirmation-v1":
+    if protocol["protocol_id"] != "sonogym-s0010-sap-tp-pair-confirmation-v1r1":
         raise ValueError("unexpected protocol identifier")
     checkpoint_path = Path(protocol["source"]["checkpoint"])
     if sha256(checkpoint_path) != protocol["source"]["checkpoint_sha256"]:

@@ -11,6 +11,9 @@ from pathlib import Path
 import yaml
 
 
+PROTOCOL_ID = "sonogym-s0010-sap-tp-pair-confirmation-v1r1"
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -70,7 +73,7 @@ def main() -> int:
             }
         )
     protocol = {
-        "protocol_id": "sonogym-s0010-sap-tp-pair-confirmation-v1",
+        "protocol_id": PROTOCOL_ID,
         "status": "FROZEN_BEFORE_FRESH_CAPTURE",
         "purpose": "Evaluate the frozen image-only SAP/TP interval selector on new pose groups.",
         "anatomy_id": "s0010",

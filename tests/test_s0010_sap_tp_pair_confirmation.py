@@ -12,6 +12,7 @@ from prepare_s0010_sap_tp_pair_confirmation import (
     nearby,
     select_pairs,
 )
+from verify_exact_pose_capture import requires_synchronized_capture
 from two_stage_navigation.coordinates import (
     is_supported_stage2_dataset_protocol,
     uses_coupled_stage2_dataset_controller,
@@ -21,10 +22,11 @@ from two_stage_navigation.coordinates import (
 
 class TestSapTpPairConfirmation(unittest.TestCase):
     def test_protocol_uses_segmented_coupled_capture(self) -> None:
-        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1"
+        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1r1"
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+        self.assertTrue(requires_synchronized_capture(protocol_id))
 
     def test_target_margin_uses_core_evidence(self) -> None:
         projected = {
@@ -67,6 +69,11 @@ class TestSapTpPairConfirmation(unittest.TestCase):
         ]
         chosen = select_pairs(rows, 1, [{"pose_index_rad": [0.0, 100.0, 2.0]}])
         self.assertNotEqual(chosen[0]["pose_index_rad"], [0.0, 100.0, 2.0])
+
+    def test_exact_tolerance_boundary_is_not_a_distinct_view(self) -> None:
+        first = {"pose_index_rad": [100.0, 100.0, 2.0]}
+        second = {"pose_index_rad": [102.0, 100.0, 2.0]}
+        self.assertFalse(distinct(first, second))
 
 
 if __name__ == "__main__":

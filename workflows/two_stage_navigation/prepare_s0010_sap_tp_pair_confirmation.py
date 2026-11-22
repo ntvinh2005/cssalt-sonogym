@@ -21,6 +21,13 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.ultrasound_sap_tp_configuration import (
     track_window_pair_candidates,
 )
+from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
+
+
+LABEL_RESOLUTION_MM = 1.5
+POSITION_TOLERANCE_MM = 1.5
+ORIENTATION_TOLERANCE_DEG = 1.2
+SEPARATION_MULTIPLIER = 2.0
 
 
 def sha256(path: Path) -> str:
@@ -44,7 +51,10 @@ def pose_distances(first: dict[str, Any], second: dict[str, Any]) -> tuple[float
 
 def distinct(first: dict[str, Any], second: dict[str, Any]) -> bool:
     translation, angle = pose_distances(first, second)
-    return bool(translation >= 3.0 or angle >= 2.5)
+    return bool(
+        translation > SEPARATION_MULTIPLIER * POSITION_TOLERANCE_MM
+        or angle > SEPARATION_MULTIPLIER * ORIENTATION_TOLERANCE_DEG
+    )
 
 
 def nearby(first: dict[str, Any], second: dict[str, Any]) -> bool:
@@ -318,6 +328,15 @@ def main() -> int:
             {**row, "declared_role": "CLEAR_NEGATIVE"}
             for row in session_tp + session_other
         ]
+        validate_waypoint_bank(
+            [row["pose_index_rad"] for row in rows_for_session],
+            command_minimum=[-1.0e9, -1.0e9, -1.0e9],
+            command_maximum=[1.0e9, 1.0e9, 1.0e9],
+            label_resolution_mm=LABEL_RESOLUTION_MM,
+            position_tolerance_mm=POSITION_TOLERANCE_MM,
+            orientation_tolerance_deg=ORIENTATION_TOLERANCE_DEG,
+            separation_multiplier=SEPARATION_MULTIPLIER,
+        )
         sessions.append(
             {
                 "session_id": f"s0010saptppair_{session_index:02d}",
