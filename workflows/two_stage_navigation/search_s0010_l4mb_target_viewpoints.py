@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Search physically valid probe commands for RIGHT L5 SAP/TP visibility.
+"""Search physically valid probe commands for RIGHT L4/L5 SAP/TP visibility.
 
 This is an evaluator-only design tool.  It uses the provisional CT subregion
 masks to select commands for a later simulator capture.  Its output is not an
@@ -33,6 +33,7 @@ LABEL_RESOLUTION_M = 0.0015
 PROBE_HEIGHT_M = 0.13
 IMAGE_ORIGIN_HEIGHT_M = 0.133
 PLANE_TOLERANCE_MM = 1.5
+LEVEL_LABEL = {"L4": 28, "L5": 27}
 
 
 def sha256(path: Path) -> str:
@@ -313,11 +314,15 @@ def main() -> int:
     parser.add_argument("--x-step", type=float, default=2.0)
     parser.add_argument("--z-step", type=float, default=2.0)
     parser.add_argument("--angle-step", type=float, default=0.025)
+    parser.add_argument("--level", choices=sorted(LEVEL_LABEL), default="L5")
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
     _, sap_mask, tp_mask, contract = target_workflow.load_target_geometry(
-        args.prediction, args.segmentation
+        args.prediction,
+        args.segmentation,
+        level_label=LEVEL_LABEL[args.level],
+        level_name=args.level,
     )
     segmentation = np.asanyarray(target_workflow.nib.load(str(args.segmentation)).dataobj).astype(
         np.uint8
@@ -376,7 +381,8 @@ def main() -> int:
     else:
         status = "NO_FIRST_VISIBLE_SAP_TP_CANDIDATE"
     result = {
-        "schema": "s0010-l4mb-broad-probe-search-v1",
+        "schema": "s0010-sap-tp-broad-probe-search-v2",
+        "vertebral_level": args.level,
         "status": status,
         "information_boundary": "evaluator_only_waypoint_design",
         "search_domain": {

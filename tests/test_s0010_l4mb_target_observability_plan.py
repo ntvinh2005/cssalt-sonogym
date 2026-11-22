@@ -22,7 +22,13 @@ class PoseAtlasTests(unittest.TestCase):
     def test_target_geometry_loader_uses_frozen_semantic_volumes(self) -> None:
         self.assertEqual(
             tuple(MODULE.target_workflow.load_target_geometry.__annotations__),
-            ("prediction_path", "segmentation_path", "return"),
+            (
+                "prediction_path",
+                "segmentation_path",
+                "level_label",
+                "level_name",
+                "return",
+            ),
         )
 
     def test_pose_diversity_requires_translation_or_rotation(self) -> None:

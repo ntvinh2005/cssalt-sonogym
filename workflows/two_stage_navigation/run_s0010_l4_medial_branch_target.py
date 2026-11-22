@@ -95,7 +95,11 @@ def load_protocol(path: Path) -> tuple[dict[str, Any], str]:
 
 
 def load_target_geometry(
-    prediction_path: Path, segmentation_path: Path
+    prediction_path: Path,
+    segmentation_path: Path,
+    *,
+    level_label: int = L5_LABEL,
+    level_name: str = "L5",
 ) -> tuple[nib.Nifti1Image, np.ndarray, np.ndarray, TargetContractGeometry]:
     prediction_image = nib.load(str(prediction_path))
     segmentation_image = nib.load(str(segmentation_path))
@@ -115,13 +119,13 @@ def load_target_geometry(
             )
         ),
     )[:, 0]
-    level_points = np.argwhere(segmentation == L5_LABEL)
+    level_points = np.argwhere(segmentation == level_label)
     if not len(level_points):
-        raise ValueError("L5 source segmentation is empty")
+        raise ValueError(f"{level_name} source segmentation is empty")
     midline = float(np.median(x_world[level_points[:, 0]]))
     right = x_world[:, None, None] > midline
-    sap_mask = (prediction == SAP_LABEL) & (segmentation == L5_LABEL) & right
-    tp_mask = (prediction == TP_LABEL) & (segmentation == L5_LABEL) & right
+    sap_mask = (prediction == SAP_LABEL) & (segmentation == level_label) & right
+    tp_mask = (prediction == TP_LABEL) & (segmentation == level_label) & right
     contract = build_target_contract_geometry(
         sap_mask=sap_mask, tp_mask=tp_mask, affine=prediction_image.affine
     )

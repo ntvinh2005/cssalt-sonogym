@@ -23,6 +23,7 @@ SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/co
 LABEL_CONVERSION="$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml"
 PATIENT_SURFACE="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010"
 CALIBRATION_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_l4mb_target_observability_v1_resume/52283924"
+: "${SEARCH_LEVEL:=L5}"
 
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
@@ -43,6 +44,7 @@ set +e
   --label-conversion "$LABEL_CONVERSION" \
   --patient-surface-dir "$PATIENT_SURFACE" \
   --calibration-capture-root "$CALIBRATION_ROOT" \
+  --level "$SEARCH_LEVEL" \
   --output-dir "$RUN_DIR/search" \
   > "$RUN_DIR/stdout.json" 2> "$RUN_DIR/stderr.log"
 SEARCH_STATUS=$?
