@@ -8,11 +8,10 @@ intervention target.
 ## Result
 
 **`ULTRASOUND_TARGET_LOCALIZATION = FAIL`.** Neither the four historical Stage 2
-sessions nor the completed first session of the geometry-designed capture
-contained a frame in which the provisional RIGHT L5 SAP and TP target-region
-endpoint surfaces were both first-visible bone. The fresh capture ended after
-one of three sessions because of a post-capture metadata-verifier defect, so a
-new closed-loop run remains scientifically ineligible.
+sessions nor the completed three-session geometry-designed capture contained a
+frame in which the provisional RIGHT L5 SAP and TP target-region endpoint
+surfaces were both first-visible bone. A new closed-loop run therefore remains
+scientifically ineligible.
 
 | required verdict | result |
 |---|---|
@@ -166,7 +165,8 @@ target-search execution was submitted.
 
 ## 3. Fresh capture — did geometry-designed views reveal both endpoint surfaces
 
-`evaluate_s0010_l4mb_target_observability.py`, capture job `52278401`.
+`evaluate_s0010_l4mb_target_observability.py`, capture jobs `52278401` and
+`52283924`.
 
 **Criterion.** The frozen protocol requires at least two supported target
 frames in each of at least two sessions, zero supported negative controls, and
@@ -186,12 +186,13 @@ inputs.
 
 | what | value | spec |
 |---|---|---|
-| capture run | `52278401`, source `3c7d656ba828df7e2230e4d15435a485e2323ab7` | §3 |
+| initial capture | `52278401`, source `3c7d656ba828df7e2230e4d15435a485e2323ab7` | §3 |
+| bounded resume | `52283924`, source `16bcb3b6b4b4197f4eb30501558329ee750a157b` | §3 |
 | frozen protocol | SHA-256 `089cc97563c90847d91cc172daf9dd513a670713e75372aa0b660e45f68b540d` | §3 |
-| resources | one NVIDIA L4, four CPUs, 30 GB, 47 s | §3 |
+| resume resources | one NVIDIA L4, four CPUs, 30 GB, 1 min 51 s | §3 |
 | attempted | 3 sessions, 36 frames | §3 |
-| completed | 1 session, 12 frames | §3 |
-| not run after verifier exit | 2 sessions, 24 frames | §3 |
+| completed | 3 sessions, 36 frames | §3 |
+| dropped | 0 frames | §3 |
 
 ```bash
 SONOGYM_CONFIG_FILE="$PWD/.sonogym.env" \
@@ -199,58 +200,60 @@ SONOGYM_CONFIG_FILE="$PWD/.sonogym.env" \
 ```
 
 The first session was captured before the verifier raised a missing metadata
-field. CPU replay after the technical repair used the immutable protocol and
-run context stored by the job.
+field. The bounded resume preserved that immutable protocol and session, then
+captured only the two missing sessions.
 
 ### 3.3 Results
 
 | completed-session measurement | value |
 |---|---:|
-| exact-pose replay | 12 / 12 frames |
-| distinct frame hashes | 12 / 12 frames |
-| fresh viewpoints | 12 / 12 frames |
-| coordinate-array hash mismatches | 0 / 12 frames |
-| maximum coordinate error | 0.0000327133 voxel-index |
-| planned target frames | 6 |
-| both endpoint cores first-visible | 0 / 6 frames |
-| ambiguous target frames | 6 / 6 frames |
-| negative controls | 6 / 6 frames |
-| image-supported positive frames | 0 / 12 frames |
+| exact-pose replay | 36 / 36 frames |
+| distinct frame hashes | 36 / 36 frames |
+| distinct acquisition identifiers | 36 / 36 frames |
+| fresh viewpoints | 36 / 36 frames |
+| coordinate-array hash mismatches | 0 / 36 frames |
+| maximum coordinate error | 0.0000376263 voxel-index |
+| planned target frames | 18 |
+| both endpoint cores first-visible | 0 / 18 frames |
+| ambiguous target frames | 18 / 18 frames |
+| negative controls classified negative | 16 / 18 frames |
+| negative controls classified ambiguous | 2 / 18 frames |
+| image-supported positive frames | 0 / 36 frames |
 
-**Verdict: fail.** The completed session supplies no positive endpoint
-observation, and the missing two sessions prevent completion of the frozen
-observability protocol. Robot search therefore remains ineligible.
+**Verdict: fail.** The completed three-session protocol supplies no positive
+endpoint observation. Robot search therefore remains ineligible.
 
 ### 3.4 Reading it
 
 - The acquisition synchronization and exact-pose mapping passed for all saved frames.
-- The six target candidates intersect SAP and TP outside the accepted endpoint core.
+- All 18 target candidates intersect SAP and TP outside the accepted endpoint core.
 - The SAP core was not the first visible bone surface in any target candidate.
-- The result does not show that every possible probe pose is unobservable.
-- Completing the two missing sessions requires a separately authorized GPU submission.
+- The result rejects this frozen pose family, not every physically possible probe pose.
+- Repeating small offsets around these waypoints is not justified by the result.
 
 ### 3.5 Files
 
 | file | contents |
 |---|---|
 | `s0010_l4mb_target_observability_v1_result.json` | capture, verification and observability counts |
-| runtime `sessions/s0010l4mbobs_00/verification_report.json` | 12-frame replay and freshness gates |
-| runtime `results/evaluation_partial/frame_results.csv` | per-frame clean-image and evaluator evidence |
-| runtime `results/evaluation_partial/clean_ultrasound_summary.png` | clean images with evaluator captions |
+| runtime `sessions/*/verification_report.json` | 36-frame replay and freshness gates |
+| runtime `results/evaluation/frame_results.csv` | per-frame clean-image and evaluator evidence |
+| runtime `results/evaluation/clean_ultrasound_summary.png` | clean images with evaluator captions |
 
 ## 4. Engineering checks
 
-The original CPU execution ran 29 focused regressions. After the fresh-capture
-failure, 43 focused regressions passed in 0.150 seconds. The new checks require
+The original CPU execution ran 29 focused regressions. The resume preflight ran
+44 focused regressions; all passed in 0.116 seconds. The new checks require
 the observability protocol to use synchronized-capture integrity gates, recover
 the captured commit from immutable run context when older sealed metadata lack
 the field, and prevent a partial session selection from appearing complete.
 
 ## 5. Next concrete action
 
-Do not train another classifier or start robot target search from this frame
-pool. The two frozen offset sessions remain the smallest completion step; their
-results can either expose the required relationship or close this exact pose
-design without changing its gate. The historical L5 TP pipeline remains the
-presentation-ready navigation baseline, but it must continue to be labelled TP
-navigation rather than MBB target localization.
+Do not train another classifier, repeat this pose family, or start robot target
+search from this frame pool. The next defensible change must alter the
+observable objective or provide a qualitatively different acoustic path to the
+provisional endpoint relationship; small waypoint offsets have now failed in
+three sessions. The historical L5 TP pipeline remains the presentation-ready
+navigation baseline, but it must continue to be labelled TP navigation rather
+than MBB target localization.
