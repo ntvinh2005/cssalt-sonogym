@@ -104,9 +104,9 @@ def main() -> int:
         for row in negative_pool
         if row["evaluator_reason"] == "OTHER_BONE_OR_BACKGROUND"
     ]
-    tp_controls = pair_prepare.select_pairs(tp_only, 8, excluded + targets)
+    tp_controls = pair_prepare.select_pairs(tp_only, 4, excluded + targets)
     other_controls = pair_prepare.select_pairs(
-        other, 44, excluded + targets + tp_controls
+        other, 48, excluded + targets + tp_controls
     )
 
     protocol = deepcopy(base)
@@ -141,8 +141,8 @@ def main() -> int:
     for session_index in range(4):
         rows = (
             targets[session_index * 8 : (session_index + 1) * 8]
-            + tp_controls[session_index * 2 : (session_index + 1) * 2]
-            + other_controls[session_index * 4 : (session_index + 1) * 4]
+            + tp_controls[session_index : session_index + 1]
+            + other_controls[session_index * 5 : (session_index + 1) * 5]
         )
         roles = ["SAP_TP_SURFACE_CANDIDATE"] * 8 + ["CLEAR_NEGATIVE"] * 6
         bank_id = f"bank_{session_index:02d}"
@@ -174,7 +174,7 @@ def main() -> int:
         plan_sessions.append({**session, "rows": rows})
     for negative_index in range(2):
         session_index = 4 + negative_index
-        rows = other_controls[16 + negative_index * 14 : 30 + negative_index * 14]
+        rows = other_controls[20 + negative_index * 14 : 34 + negative_index * 14]
         roles = ["CLEAR_NEGATIVE"] * 14
         bank_id = f"bank_{session_index:02d}"
         session_id = f"s0010l5graph_{session_index:02d}"
