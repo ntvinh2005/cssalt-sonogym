@@ -9,7 +9,7 @@ clinical_scope:
   endpoint: bony_surrogate_only
   clinical_target_validated: false
 source:
-  implementation_commit: 3c7d656ba828df7e2230e4d15435a485e2323ab7
+  implementation_commit: 33cd9836b0644a7339daa09b2be645c2baa4b655
   pose_atlas: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4mb_target_observability_plan/52276866/pose_atlas/pose_atlas.json
   pose_atlas_sha256: 52b80dbf40c79d42608b9d91e8547ba9bd915d438790a8fd8cebaf8591f55640
   pose_atlas_schema: s0010-l4mb-target-observability-pose-atlas-v1

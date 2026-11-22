@@ -2,7 +2,7 @@
   "schema": "s0010-l4mb-target-observability-execution-result-v1",
   "source_commit": "3c7d656ba828df7e2230e4d15435a485e2323ab7",
   "protocol_sha256_at_capture": "089cc97563c90847d91cc172daf9dd513a670713e75372aa0b660e45f68b540d",
-  "protocol_sha256_after_metadata_repair": "a4bf97a2bd861a8fe9294e0011e2623107f1e41d5199042eafb49c0ad1bd37aa",
+  "protocol_sha256_after_metadata_repair": "d0ba12d66d3f6ecd2fc23f83eb6bed70c878d1888e2b288e619d50708dd2925f",
   "execution_jobs": [
     {
       "job_id": "52277254",
