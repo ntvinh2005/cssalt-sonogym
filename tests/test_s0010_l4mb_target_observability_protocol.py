@@ -7,11 +7,14 @@ import sys
 import unittest
 from pathlib import Path
 
+import yaml
+
 from two_stage_navigation.coordinates import (
     is_supported_stage2_dataset_protocol,
     uses_coupled_stage2_dataset_controller,
     uses_segmented_stage2_dataset_capture,
 )
+from two_stage_navigation.stage2_models import Stage2LabelConfig
 
 
 PATH = Path(__file__).parents[1] / "workflows/two_stage_navigation/generate_s0010_l4mb_target_observability_protocol.py"
@@ -39,6 +42,15 @@ class ProtocolGeneratorTests(unittest.TestCase):
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))
+
+    def test_frozen_protocol_passes_label_schema_and_verifier_allowlist(self) -> None:
+        root = Path(__file__).parents[1]
+        protocol = yaml.safe_load(
+            (root / "experiments/unity_two_stage_transfer/s0010_l4mb_target_observability_v1.yaml").read_text()
+        )
+        Stage2LabelConfig(**protocol["labels"]["validity"], **protocol["labels"]["quality"])
+        verifier = (root / "workflows/two_stage_navigation/verify_exact_pose_capture.py").read_text()
+        self.assertIn(MODULE.PROTOCOL_ID, verifier)
 
     def test_pose_distance_uses_physical_translation_or_rotation(self) -> None:
         self.assertFalse(MODULE.pose_distance_clear([100, 100, 2.8], [102, 100, 2.8]))

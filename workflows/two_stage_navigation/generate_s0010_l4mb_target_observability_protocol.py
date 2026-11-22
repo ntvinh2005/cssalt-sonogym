@@ -211,7 +211,7 @@ def main() -> int:
             "validity": {
                 "maximum_position_error_mm": 50.0,
                 "maximum_orientation_error_deg": 30.0,
-                "minimum_l4_visible_fraction": 0.0,
+                "minimum_l4_visible_fraction": 0.000001,
             },
             "quality": {"visibility_normalization_fraction": 0.20},
         },
