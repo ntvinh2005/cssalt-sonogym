@@ -253,9 +253,16 @@ def main() -> int:
                     "source_role": source["role"],
                     "source_root": str(root),
                     "session_id": session.name,
+                    "acquisition_id": str(frame["acquisition_id"]),
                     "frame_sequence": int(frame["frame_sequence"]),
                     "trajectory_id": str(frame.get("trajectory_id", "")),
                     "frame_sha256": frame_hash,
+                    "actor_base_to_ee_position_m": json.dumps(
+                        frame["actor_base_to_ee_position_m"]
+                    ),
+                    "actor_base_to_ee_quaternion_wxyz": json.dumps(
+                        frame["actor_base_to_ee_quaternion_wxyz"]
+                    ),
                     "label_provenance": config["label_provenance"],
                     **result.metrics,
                 }
