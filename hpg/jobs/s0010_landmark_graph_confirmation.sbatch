@@ -40,7 +40,8 @@ cp "$PROTOCOL" "$PROTOCOL_SEAL" "$RUN_DIR/context/"
 (cd "$RUN_DIR/context" && sha256sum -c "$(basename "$PROTOCOL_SEAL")")
 "$PYTHON" -m unittest -q \
   tests.test_acquisition_integrity tests.test_ultrasound_spatial_map \
-  tests.test_two_stage_contracts > "$RUN_DIR/results/preflight-tests.log" 2>&1
+  tests.test_two_stage_contracts tests.test_s0010_landmark_graph_confirmation \
+  > "$RUN_DIR/results/preflight-tests.log" 2>&1
 
 nvidia-smi --query-gpu=timestamp,name,driver_version,utilization.gpu,memory.used,memory.total \
   --format=csv --loop=2 > "$RUN_DIR/metrics/gpu-telemetry.csv" &

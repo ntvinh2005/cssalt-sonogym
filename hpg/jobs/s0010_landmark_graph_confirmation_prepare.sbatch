@@ -31,7 +31,8 @@ mkdir -p "$RUN_DIR"
 capture_cpu_run_context "$RUN_DIR"
 "$PYTHON" -m unittest -q \
   tests.test_acquisition_integrity tests.test_ultrasound_spatial_map \
-  tests.test_two_stage_contracts > "$RUN_DIR/tests.log" 2>&1
+  tests.test_two_stage_contracts tests.test_s0010_landmark_graph_confirmation \
+  > "$RUN_DIR/tests.log" 2>&1
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/prepare_s0010_landmark_graph_confirmation.py" \
   --base-protocol "$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_tp_public_6dof_confirmation_v1.yaml" \
   --exclude-protocol "$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_v1r3.yaml" \
