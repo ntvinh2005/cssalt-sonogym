@@ -9,7 +9,7 @@ clinical_scope:
   endpoint: bony_surrogate_only
   clinical_target_validated: false
 source:
-  implementation_commit: e70739a9273b77e1c16d768364aeb367e2b075d2
+  implementation_commit: 2728211036fae3d76011db93f1689119413685c0
   checkpoint: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_prepare/52307091/prepared/sap_tp_pair_model.joblib
   checkpoint_sha256: 449953374809635726bd0eadfdc8c0686c8310bfd74d967ece4657a577203de3
   base_protocol: /blue/lampotan/share/vinhnguyen1/cssalt-sonogym/experiments/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_v1r3.yaml
