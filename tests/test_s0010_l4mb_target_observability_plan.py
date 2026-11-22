@@ -59,6 +59,15 @@ class PoseAtlasTests(unittest.TestCase):
         projected["tp_core"][2, 3] = True
         self.assertEqual(MODULE.visible_score(gradient, projected, first), (1, 1, 1.0))
 
+    def test_ambiguous_seed_is_not_relabelled_positive(self) -> None:
+        row = {
+            "evaluator_label": "PROXY_AMBIGUOUS",
+            "evaluator_reason": "TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE",
+            "sap_core_projected_pixels": 4,
+            "tp_core_projected_pixels": 8,
+        }
+        self.assertEqual(row["evaluator_label"], "PROXY_AMBIGUOUS")
+
 
 if __name__ == "__main__":
     unittest.main()

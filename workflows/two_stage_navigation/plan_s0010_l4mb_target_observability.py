@@ -223,11 +223,26 @@ def main() -> int:
         and row["evaluator_reason"] == "OTHER_BONE_OR_BACKGROUND"
     ]
     ambiguous = [row for row in rows if row["evaluator_label"] == "PROXY_AMBIGUOUS"]
+    near_target = [
+        row
+        for row in ambiguous
+        if row["evaluator_reason"] == "TP_AND_SAP_VISIBLE_OUTSIDE_TARGET_CORE"
+        and int(row["sap_core_projected_pixels"]) > 0
+        and int(row["tp_core_projected_pixels"]) > 0
+    ]
+    target_pool = positives if len(positives) >= TARGET_ANCHOR_COUNT else near_target
+    target_anchor_source = (
+        "GEOMETRIC_POSITIVE"
+        if len(positives) >= TARGET_ANCHOR_COUNT
+        else "AMBIGUOUS_LOCAL_SEARCH_SEED"
+    )
     targets = select_diverse(
-        positives,
+        target_pool,
         TARGET_ANCHOR_COUNT,
         ranking_fields=(
             "combined_core_first_visible_pixels",
+            "sap_core_projected_pixels",
+            "tp_core_projected_pixels",
             "target_core_margin_pixels",
             "surface_gradient_median",
         ),
@@ -244,11 +259,14 @@ def main() -> int:
             ranking_fields=("target_core_margin_pixels", "surface_gradient_median"),
         )
     )
-    status = (
-        "POSE_ATLAS_READY"
-        if len(targets) == TARGET_ANCHOR_COUNT and len(controls) == CONTROL_ANCHOR_COUNT
-        else "POSE_ATLAS_INSUFFICIENT"
-    )
+    if len(targets) == TARGET_ANCHOR_COUNT and len(controls) == CONTROL_ANCHOR_COUNT:
+        status = (
+            "POSE_ATLAS_READY"
+            if target_anchor_source == "GEOMETRIC_POSITIVE"
+            else "POSE_ATLAS_EXPLORATORY_READY"
+        )
+    else:
+        status = "POSE_ATLAS_INSUFFICIENT"
     plan = {
         "schema": "s0010-l4mb-target-observability-pose-atlas-v1",
         "status": status,
@@ -258,6 +276,7 @@ def main() -> int:
         "candidate_counts": {
             "PROXY_POSITIVE": len(positives),
             "PROXY_AMBIGUOUS": len(ambiguous),
+            "AMBIGUOUS_LOCAL_SEARCH_SEED": len(near_target),
             "TP_ONLY_WITHOUT_SAP_IN_PLANE": len(tp_only),
             "OTHER_BONE_OR_BACKGROUND": len(other_controls),
         },
@@ -266,6 +285,8 @@ def main() -> int:
             "control_anchor_count": CONTROL_ANCHOR_COUNT,
             "minimum_translation_separation_index": MINIMUM_TRANSLATION_SEPARATION_INDEX,
             "minimum_angle_separation_rad": MINIMUM_ANGLE_SEPARATION_RAD,
+            "target_anchor_source": target_anchor_source,
+            "positive_definition_unchanged": True,
         },
         "input_hashes": {
             "prediction": sha256(args.prediction),
@@ -287,7 +308,7 @@ def main() -> int:
     if tp_only or other_controls:
         write_csv(args.output_dir / "negative_candidates.csv", tp_only + other_controls)
     print(json.dumps({"status": status, **plan["candidate_counts"]}, sort_keys=True))
-    return 0 if status == "POSE_ATLAS_READY" else 2
+    return 0 if status in {"POSE_ATLAS_READY", "POSE_ATLAS_EXPLORATORY_READY"} else 2
 
 
 if __name__ == "__main__":

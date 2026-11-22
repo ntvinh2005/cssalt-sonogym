@@ -78,7 +78,7 @@ def main() -> int:
     args = parser.parse_args()
 
     atlas = json.loads(args.atlas.read_text(encoding="utf-8"))
-    if atlas.get("status") != "POSE_ATLAS_READY":
+    if atlas.get("status") not in {"POSE_ATLAS_READY", "POSE_ATLAS_EXPLORATORY_READY"}:
         raise ValueError("pose atlas is not ready")
     targets = list(atlas["target_anchors"])
     controls = list(atlas["control_anchors"])
@@ -102,7 +102,7 @@ def main() -> int:
                     "frame_sequence": anchor_index,
                     "declared_role": (
                         "TARGET_REGION_CANDIDATE"
-                        if row["evaluator_label"] == "PROXY_POSITIVE"
+                        if anchor_index < len(targets)
                         else "NEGATIVE_CONTROL"
                     ),
                     "anchor_session_id": row["session_id"],
@@ -148,6 +148,8 @@ def main() -> int:
             "pose_atlas": str(args.atlas),
             "pose_atlas_sha256": sha256(args.atlas),
             "pose_atlas_schema": atlas["schema"],
+            "pose_atlas_status": atlas["status"],
+            "target_anchor_source": atlas["selection"]["target_anchor_source"],
             "source_evidence_status": "opened_development_pose_design",
         },
         "scope": {
