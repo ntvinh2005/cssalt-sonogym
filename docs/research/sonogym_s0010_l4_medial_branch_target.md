@@ -240,7 +240,85 @@ endpoint observation. Robot search therefore remains ineligible.
 | runtime `results/evaluation/frame_results.csv` | per-frame clean-image and evaluator evidence |
 | runtime `results/evaluation/clean_ultrasound_summary.png` | clean images with evaluator captions |
 
-## 4. Engineering checks
+## 4. Broad probe-angle test — is any SAP–TP surface signal present
+
+`search_s0010_l4mb_target_viewpoints.py` and
+`evaluate_s0010_sap_tp_signal.py`, jobs `52299785` and `52300444`.
+
+**Criterion.** The geometry search was frozen over the native command domain.
+The fresh-image gate then required at least three first-hit SAP pixels and
+three first-hit TP pixels, a four-pixel image margin, cortical-track distance
+at most four pixels and posterior-shadow contrast at least 0.05. At least two
+target frames in two sessions and zero supported controls were required. These
+settings were fixed before opening the fresh images.
+
+### 4.1 Method
+
+The first search tested the strict endpoint cores and returned no valid pose.
+The second, distinct question tested whether separate SAP and TP surfaces could
+be seen in the same image without calling them the intervention endpoint. The
+evaluator-only CT masks supplied eight frozen probe poses; the capture runtime
+received only those commands. Clean-image cortical tracks and shadow evidence
+were computed independently of the masks, and privileged first-hit anatomy was
+opened only for scoring.
+
+The reduced-pose plane model was used only to screen commands. Against the 36
+previous full-pose captures it had median point error 0.838 mm, p90 2.602 mm,
+p95 5.712 mm and maximum 9.189 mm. Therefore every new frame was rechecked with
+the synchronized full pose and native coordinate array.
+
+### 4.2 Setup
+
+| item | value |
+|---|---|
+| search domain | x 100–180 by 2 indices; z 70–200 by 2; angle 1–3 by 0.025 rad |
+| strict-core search | job `52299421`; valid no-candidate result |
+| surface search | job `52299785`; 4 CPU; 4 min 10 s |
+| fresh capture | job `52300444`; one NVIDIA L4; 4 CPU; 30 GB; 1 min 51 s |
+| execution commit | `306b1ae8fbb0c37c98fa35019ab081d0547d8c9c` |
+| protocol SHA-256 | `044772307d78218f9b1e79eaeee5d3782fe8bef14359a4ba3049f0b9d4ba453a` |
+| storage | approximately 21 MB |
+
+### 4.3 Results
+
+| measurement | result |
+|---|---:|
+| pose commands with both cores crossing the plane | 1,393 |
+| poses with both endpoint cores first-visible | 0 |
+| poses with separate SAP and TP surfaces first-visible | 860 |
+| fresh sessions / frames | 3 / 36 |
+| replay, freshness and integrity gates | 36 / 36 pass |
+| maximum full-pose coordinate error | 0.00003617 voxel-index |
+| geometry-supported target frames | 24 / 24 |
+| clean-image-supported target frames | 19 / 24 |
+| supported targets by session | 6 / 8; 6 / 8; 7 / 8 |
+| supported controls | 0 / 12 |
+
+**Verdict: `SAP_TP_IMAGE_SIGNAL_SUPPORTED`.** The simulator can render a
+repeatable ultrasound configuration in which evaluator-confirmed RIGHT L5 SAP
+and TP first-hit surfaces align with separate clean-image cortical/shadow
+evidence.
+
+### 4.4 Reading it
+
+- This answers the observability question positively for the broader SAP–TP
+  surface configuration.
+- It does not rescue the strict endpoint-core test: that result remains 0.
+- It does not show that an image-only actor can assign SAP and TP identities.
+- It does not define a nerve coordinate, validated MBB target or intervention
+  endpoint.
+- The new images are opened development evidence, not independent confirmation.
+
+### 4.5 Files
+
+| file | contents |
+|---|---|
+| `s0010_l4mb_sap_tp_signal_v1_result.json` | concise immutable result |
+| runtime `results/evaluation/frame_results.csv` | all image and geometry measurements |
+| runtime `results/evaluation/sap_tp_signal_review.png` | clean images beside evaluator overlays |
+| runtime `sessions/*/verification_report.json` | synchronized replay, freshness and integrity |
+
+## 5. Engineering checks
 
 The original CPU execution ran 29 focused regressions. The resume preflight ran
 44 focused regressions; all passed in 0.116 seconds. The new checks require
@@ -248,12 +326,13 @@ the observability protocol to use synchronized-capture integrity gates, recover
 the captured commit from immutable run context when older sealed metadata lack
 the field, and prevent a partial session selection from appearing complete.
 
-## 5. Next concrete action
+## 6. Next concrete action
 
-Do not train another classifier, repeat this pose family, or start robot target
-search from this frame pool. The next defensible change must alter the
-observable objective or provide a qualitatively different acoustic path to the
-provisional endpoint relationship; small waypoint offsets have now failed in
-three sessions. The historical L5 TP pipeline remains the presentation-ready
-navigation baseline, but it must continue to be labelled TP navigation rather
-than MBB target localization.
+Do not use the strict endpoint core as the next learning target. The new
+surface-configured frames justify a development-only actor experiment that
+asks whether clean ultrasound and motion can distinguish the relative SAP–TP
+configuration from other bone views. Its labels must retain separate SAP, TP,
+control and ambiguous states, and its evaluation must use new session groups.
+Until that actor experiment succeeds, the historical L5 TP pipeline remains
+the presentation-ready navigation baseline and must continue to be labelled TP
+navigation rather than MBB target localization.

@@ -1,0 +1,75 @@
+{
+  "schema": "s0010-l4mb-sap-tp-signal-execution-result-v1",
+  "implementation_commit": "e198ce8fe9e00bee006efbd0df234a063b7078b8",
+  "capture_commit": "306b1ae8fbb0c37c98fa35019ab081d0547d8c9c",
+  "protocol_sha256": "044772307d78218f9b1e79eaeee5d3782fe8bef14359a4ba3049f0b9d4ba453a",
+  "execution_jobs": [
+    {
+      "job_id": "52299421",
+      "purpose": "strict endpoint-core broad search",
+      "state": "FAILED",
+      "elapsed": "00:03:12",
+      "exit_code": "2:0",
+      "scientific_result": "valid no-candidate status; zero simultaneous first-visible endpoint-core poses"
+    },
+    {
+      "job_id": "52299785",
+      "purpose": "separate SAP and TP first-surface broad search",
+      "state": "COMPLETED",
+      "elapsed": "00:04:10",
+      "exit_code": "0:0",
+      "scientific_result": "860 geometry-screened capture candidates"
+    },
+    {
+      "job_id": "52300444",
+      "purpose": "fresh simulator capture and clean-image evaluation",
+      "state": "COMPLETED",
+      "elapsed": "00:01:51",
+      "exit_code": "0:0",
+      "scientific_result": "SAP_TP_IMAGE_SIGNAL_SUPPORTED"
+    }
+  ],
+  "geometry_search": {
+    "command_domain_x_index": [100.0, 180.0, 2.0],
+    "command_domain_z_index": [70.0, 200.0, 2.0],
+    "command_domain_angle_rad": [1.0, 3.0, 0.025],
+    "coarse_core_covisible_pose_count": 1393,
+    "simultaneous_first_visible_endpoint_core_pose_count": 0,
+    "separate_sap_tp_first_surface_pose_count": 860,
+    "search_result_sha256": "d88b9fdfca407247d9a150897438fd8d10d6186704760d46f6983674f9447981"
+  },
+  "capture": {
+    "session_count": 3,
+    "frame_count": 36,
+    "target_frame_count": 24,
+    "control_frame_count": 12,
+    "distinct_frame_hash_count": 36,
+    "verification_passed_frame_count": 36,
+    "maximum_coordinate_error_index": 0.00003616558390717728,
+    "verification_verdict": "PROJECTION_PARITY_PASS",
+    "storage_size_mb_approximate": 21
+  },
+  "observability": {
+    "geometry_supported_target_frame_count": 24,
+    "image_supported_target_frame_count": 19,
+    "image_supported_control_frame_count": 0,
+    "image_supported_target_frames_by_session": [6, 6, 7],
+    "qualifying_session_count": 3,
+    "evaluator_verdict": "SAP_TP_IMAGE_SIGNAL_SUPPORTED",
+    "endpoint_core_observability": "NOT_DEMONSTRATED",
+    "actor_semantic_identification": "NOT_TESTED"
+  },
+  "scientific_interpretation": "Fresh simulator images contain reproducible clean-image cortical and posterior-shadow evidence at evaluator-confirmed first-visible RIGHT L5 SAP and TP surfaces. This demonstrates an observable SAP-TP surface configuration for development, not autonomous semantic identification, the endpoint core, a nerve coordinate or an MBB intervention target.",
+  "artifacts": {
+    "search_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4mb_broad_probe_search/52299785",
+    "capture_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_l4mb_sap_tp_signal_v1/52300444",
+    "evaluation_result_sha256": "80bd6779d8692567079eb78fc88da5ed587550e9c6122c4dfd7f3a108f5077b2",
+    "frame_results_sha256": "5ed2c0ba8a247f876572229c1280398cc4ed2c5dabaf103f5bd31982a05dd802",
+    "review_figure_sha256": "c50c50bfc2917abb73e64d1eb19abb18254ce45f68de98f333bc9cc99d7940cc",
+    "ultrasound_archive_sha256_by_session": {
+      "s0010saptpsig_00": "cc131afd5f5beca592668c798f094f31935288fcbc22563f390af3efde69a530",
+      "s0010saptpsig_01": "d7da7f5c83142523c407e4c1102d3976ec82c352ecbf4029d5fa2be3aa44df05",
+      "s0010saptpsig_02": "cffb187e0e3a667f6cc8fbd429a529fa81f159d6f61a84abdb821003fb92859e"
+    }
+  }
+}
