@@ -1,0 +1,15 @@
+{
+  "schema": "s0010-sap-tp-pair-confirmation-technical-failure-v1",
+  "job_id": "52306775",
+  "execution_commit": "2b92dd38a41df9fe305f02e711de3b32afa60edd",
+  "protocol_id": "sonogym-s0010-sap-tp-pair-confirmation-v1r2",
+  "protocol_sha256": "2a2e55f93a41c54f05c88048174776f007bb0018b523786408142326164fb34d",
+  "completed_sessions": ["s0010saptppair_00", "s0010saptppair_01"],
+  "completed_frame_count": 28,
+  "failed_session": "s0010saptppair_02",
+  "failure": "freshness gate rejected frame 11",
+  "realized_translation_mm": 0.6772336328267021,
+  "realized_orientation_deg": 0.647638537100609,
+  "scientific_evaluation_executed": false,
+  "runtime_output": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_pair_confirmation_v1r2/52306775"
+}

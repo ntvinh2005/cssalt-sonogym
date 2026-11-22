@@ -1,0 +1,16 @@
+{
+  "schema": "s0010-sap-tp-pair-improvement-result-v1",
+  "opened_development_frame_count": 42,
+  "hard_negative_job": "52309007",
+  "hard_negative_passed": false,
+  "hard_negative_false_accept_rates": [0.4, 0.3333333333333333, 0.42857142857142855],
+  "image_only_rejection_job": "52309333",
+  "image_only_rejection_passed": false,
+  "image_only_rejection_false_accept_rates": [0.0, 0.16666666666666666, 0.14285714285714285],
+  "image_only_rejection_pair_precisions": [1.0, 0.75, 0.5],
+  "image_only_rejection_correct_accepted_targets": [3, 3, 1],
+  "final_checkpoint_written": false,
+  "stage2_integration_eligible": false,
+  "scientific_verdict": "NO_PROMOTION_FALSE_ACCEPT_CONTROL_NOT_REPRODUCIBLE",
+  "runtime_output": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_sap_tp_pair_hard_negative_ablation/52309333"
+}

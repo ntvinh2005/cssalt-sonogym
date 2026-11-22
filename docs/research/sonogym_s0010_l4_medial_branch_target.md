@@ -462,15 +462,59 @@ TP-only controls and ten other-bone/background controls.
 | pair-preserving protocol | `sonogym-s0010-sap-tp-pair-confirmation-v1r2` |
 | pair-preserving protocol SHA-256 | `2a2e55f93a41c54f05c88048174776f007bb0018b523786408142326164fb34d` |
 
-## 8. Next concrete action
+## 8. Fresh-pose confirmation result
 
-Do not integrate either pair selector into Stage 2. Preserve the complete-track
-implementation as the stronger development candidate, but the next decisive
-experiment requires additional, distinct SAP/TP and confusing-bone pose groups
-rather than more reset repetitions of the same twelve commands. Those groups,
-the unchanged checkpoint and the one-time evaluation gates are now frozen in
-protocol `v1r2`. Running it requires new authorization because both the original
-submission and its one authorized technical retry ended before a dataset was
-persisted. The historical L5 TP pipeline remains the presentation-ready
-navigation baseline and must continue to be labelled TP navigation rather than
-MBB target localization.
+Jobs `52306775` and `52308098` produced the final 42-frame confirmation set.
+The first job preserved two complete sessions before the third session's
+freshness gate correctly rejected a sub-threshold movement. Protocol `v1r3`
+carried those verified sessions by their original protocol hash and acquired a
+replacement third session with translation-supported pose pairs. The model and
+all decision gates remained frozen.
+
+| measurement | result |
+|---|---:|
+| synchronized, distinct frames | 42 / 42 |
+| exact-pose replay pass | 42 / 42 |
+| coordinate hash mismatches | 0 |
+| maximum coordinate error | 0.0000352 voxel-index |
+| target / clear-negative / ambiguous frames | 19 / 18 / 5 |
+| session top-1 correct | 3 / 3 |
+| session top-3 contains correct | 3 / 3 |
+| correct accepted pairs | 9 |
+| accepted clear negatives | 7 / 18 |
+| pair precision | 56.25% |
+| clear-negative false-accept rate | 38.89% |
+
+**Verdict: fail.** Ranking transferred to all three fresh pose groups, but the
+unchanged acceptance rule did not control confusing bone views. The frozen
+requirements were at least 75% pair precision and at most 10% clear-negative
+false accepts.
+
+## 9. Bounded improvement tests
+
+The 42 confirmation frames became opened development evidence after the failed
+frozen evaluation. Two CPU hypotheses were tested with each confirmation
+session held out in turn.
+
+1. Adding geometry-labelled clear negatives to pair-model training did not
+   improve acceptance. False-accept rates remained 40.0%, 33.3% and 42.9%.
+2. Keeping the frozen pair ranker and adding an image-only rejection model
+   reduced false accepts to 0%, 16.7% and 14.3%. It passed one of three sessions,
+   but the third session retained only one correct accepted target and 50% pair
+   precision.
+
+No new checkpoint was released. Adjusting a threshold on these opened sessions
+would be post-hoc tuning and cannot establish confirmation.
+
+## 10. Final decision and next concrete action
+
+The SAP–TP surface configuration is observable and ranks correctly in the
+tested fresh sessions, but the current image representation cannot reliably
+decide when to accept it rather than another bony configuration. Do not
+integrate this selector into Stage 2 and do not label it as medial-branch target
+localization. The strongest presentation-ready autonomous result remains the
+historical Stage 1 plus RIGHT L5 TP navigation workflow.
+
+Further SAP–TP work requires a materially different observable signal, such as
+calibrated multi-view surface geometry with synchronized actor-visible 6DoF
+pose, not another threshold or ExtraTrees retraining pass on these frames.
