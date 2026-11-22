@@ -16,7 +16,7 @@ import prepare_s0010_sap_tp_6dof_confirmation as previous
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l4-landmark-focused-development-v1"
+PROTOCOL_ID = "sonogym-s0010-l4-landmark-focused-development-v1r1"
 LABEL_RESOLUTION_MM = 1.5
 
 
@@ -144,6 +144,7 @@ def main() -> int:
     sampling["planned_waypoint_evidence_by_bank"] = {}
     sampling["trajectory_start_frames"] = list(range(0, 14, 2))
     sampling["maximum_initial_positioning_steps"] = 700
+    sampling["maximum_action_steps_per_waypoint"] = 200
     sampling["episode_length_s_override"] = 500.0
     sessions = []
     used_targets: set[tuple[float, float, float]] = set()
@@ -199,7 +200,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l4_landmark_focused_development_v1.yaml"
+    protocol_path = args.output_dir / "s0010_l4_landmark_focused_development_v1r1.yaml"
     protocol_path.write_text(yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8")
     protocol_path.with_suffix(".sha256").write_text(
         f"{previous.sha256(protocol_path)}  {protocol_path.name}\n", encoding="utf-8"

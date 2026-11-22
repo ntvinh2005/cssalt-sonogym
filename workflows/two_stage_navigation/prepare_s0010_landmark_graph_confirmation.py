@@ -21,7 +21,7 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r4"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r5"
 
 
 def protocol_poses(path: Path) -> list[dict[str, Any]]:
@@ -184,6 +184,12 @@ def main() -> int:
             "replacement_pose_index_rad": targets[24]["pose_index_rad"],
             "reason": "controller_orientation_plateau_before_image_acquisition",
         },
+        "technical_seed_replacement": {
+            "session_id": "s0010l5graph_03",
+            "excluded_seed": 2026120203,
+            "replacement_seed": 2026120213,
+            "reason": "reset_specific_controller_plateau_before_image_acquisition",
+        },
     }
     protocol["information_boundaries"]["actor_inputs"] = [
         "clean_ultrasound",
@@ -225,7 +231,7 @@ def main() -> int:
         session = {
             "session_id": session_id,
             "split": "unopened_l5_landmark_graph_target_confirmation",
-            "seed": 2026120200 + session_index,
+            "seed": 2026120213 if session_index == 3 else 2026120200 + session_index,
             "reset_id": session_id,
             "absolute_waypoint_bank_id": bank_id,
             "expected_frame_count": 14,
@@ -292,7 +298,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r4.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r5.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
