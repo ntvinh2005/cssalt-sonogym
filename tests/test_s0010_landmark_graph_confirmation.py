@@ -17,6 +17,7 @@ if str(WORKFLOWS) not in sys.path:
 import evaluate_s0010_landmark_graph_confirmation as evaluation  # noqa: E402
 import prepare_s0010_l4_landmark_graph_development as l4_prepare  # noqa: E402
 import train_s0010_l4_landmark_detectors as l4_training  # noqa: E402
+import prepare_s0010_l4_landmark_focused_development as l4_focused  # noqa: E402
 from two_stage_navigation.ultrasound_spatial_map import (  # noqa: E402
     SpatialMapConfig,
 )
@@ -38,6 +39,13 @@ def candidate(frame: int, position_mm: float, score: float = 0.8) -> dict:
 
 
 class LandmarkGraphConfirmationTest(unittest.TestCase):
+    def test_l4_focused_candidates_exclude_opened_center_duplicates(self) -> None:
+        centers = [[148.0, 136.0, 2.375], [146.0, 136.0, 2.5]]
+        candidates = l4_focused.focused_pose_candidates(centers)
+        self.assertEqual(len(candidates), len({tuple(row) for row in candidates}))
+        self.assertFalse(any(row in centers for row in candidates))
+        self.assertGreaterEqual(len(candidates), 40)
+
     def test_l4_landmark_labels_keep_boundary_and_identity_ambiguous(self) -> None:
         self.assertEqual(
             l4_training.proposal_training_state(
