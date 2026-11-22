@@ -280,7 +280,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r1.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r2.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
