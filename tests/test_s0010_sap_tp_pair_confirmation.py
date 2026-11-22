@@ -28,7 +28,7 @@ ROOT = Path(__file__).parents[1]
 
 class TestSapTpPairConfirmation(unittest.TestCase):
     def test_protocol_uses_segmented_coupled_capture(self) -> None:
-        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1r1"
+        protocol_id = "sonogym-s0010-sap-tp-pair-confirmation-v1r2"
         self.assertTrue(is_supported_stage2_dataset_protocol(protocol_id))
         self.assertTrue(uses_coupled_stage2_dataset_controller(protocol_id))
         self.assertTrue(uses_segmented_stage2_dataset_capture(protocol_id))

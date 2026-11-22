@@ -51,6 +51,7 @@ STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-l4mb-sap-tp-signal-v1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1r1",
+    "sonogym-s0010-sap-tp-pair-confirmation-v1r2",
 }
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(4, 15)
@@ -88,6 +89,7 @@ COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-l4mb-sap-tp-signal-v1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1r1",
+    "sonogym-s0010-sap-tp-pair-confirmation-v1r2",
 }
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     f"sonogym-stage2-dataset-v{version}" for version in range(5, 15)
@@ -120,6 +122,7 @@ SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-l4mb-sap-tp-signal-v1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1r1",
+    "sonogym-s0010-sap-tp-pair-confirmation-v1r2",
 }
 
 

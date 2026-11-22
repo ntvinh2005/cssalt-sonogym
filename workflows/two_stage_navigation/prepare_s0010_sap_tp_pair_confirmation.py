@@ -313,14 +313,19 @@ def main() -> int:
         for row in negative_pool
         if row["evaluator_reason"] == "OTHER_BONE_OR_BACKGROUND"
     ]
-    tp_controls = select_pairs(tp_only, 5, old_poses + targets)[:9]
-    other_controls = select_pairs(other, 5, old_poses + targets + tp_controls)[:9]
+    tp_controls = select_pairs(tp_only, 4, old_poses + targets)
+    other_controls = select_pairs(other, 5, old_poses + targets + tp_controls)
+
+    control_slices = (
+        (tp_controls[0:4], other_controls[0:2]),
+        (tp_controls[4:6], other_controls[2:6]),
+        (tp_controls[6:8], other_controls[6:10]),
+    )
 
     sessions: list[dict[str, Any]] = []
     for session_index in range(3):
         session_targets = targets[session_index * 8 : (session_index + 1) * 8]
-        session_tp = tp_controls[session_index * 3 : (session_index + 1) * 3]
-        session_other = other_controls[session_index * 3 : (session_index + 1) * 3]
+        session_tp, session_other = control_slices[session_index]
         rows_for_session = [
             {**row, "declared_role": "SAP_TP_SURFACE_CANDIDATE"}
             for row in session_targets

@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 
 
-PROTOCOL_ID = "sonogym-s0010-sap-tp-pair-confirmation-v1r1"
+PROTOCOL_ID = "sonogym-s0010-sap-tp-pair-confirmation-v1r2"
 
 
 def sha256(path: Path) -> str:
