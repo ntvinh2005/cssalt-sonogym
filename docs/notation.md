@@ -236,6 +236,30 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It prevents vertebral centroids, mesh quantiles, or classifier confidence from becoming invented nerve or injection coordinates.
 - **Source:** approved by user, 2026-11-16.
 
+### ANATOMICAL_TARGET_CONTRACT
+- **Kind:** object
+- **Definition:** The RIGHT L4 medial-branch target-definition verdict on fixed anatomy `s0010`: `VALIDATED_SURROGATE` requires an independently supported bony surrogate with bounded uncertainty, `PARTIAL` permits evaluator-only exploratory geometry with unresolved semantics, and `BLOCKED` means no defensible target region can be constructed.
+- **Intuition:** It separates a reproducible bone relationship from an annotated nerve or clinically validated intervention endpoint.
+- **Source:** approved by user, 2026-11-21.
+
+### ULTRASOUND_TARGET_LOCALIZATION
+- **Kind:** object
+- **Definition:** The verdict for ultrasound-based localization of the RIGHT L4 medial-branch bony target at RIGHT L5: `PASS`, `DEVELOPMENT_ONLY`, `FAIL`, or `NOT_RUN`, with `PASS` requiring frozen evaluation evidence beyond already opened development sessions.
+- **Intuition:** It prevents TP detection or a privileged geometry projection from being reported as target-region localization.
+- **Source:** approved by user, 2026-11-21.
+
+### ROBOT_NAVIGATION
+- **Kind:** object
+- **Definition:** The execution verdict for the first-target robot workflow: `NEW_CLOSED_LOOP_PASS`, `NEW_CLOSED_LOOP_FAIL`, `HISTORICAL_REPLAY_ONLY`, or `NOT_RUN`.
+- **Intuition:** It distinguishes actual new physical simulator control from offline analysis and historical replay.
+- **Source:** approved by user, 2026-11-21.
+
+### FULL_MBB_INTERVENTION
+- **Kind:** object
+- **Definition:** The separate intervention verdict, which remains `BLOCKED` until a validated target, needle/injection contract, executed simulator intervention, and independent evaluation all exist.
+- **Intuition:** Ultrasound navigation alone cannot establish an MBB procedure result.
+- **Source:** approved by user, 2026-11-21.
+
 ### TP_SURFACE_CORE
 - **Kind:** object
 - **Definition:** The versioned, conservative distal surface subset of a RIGHT L4 or L5 transverse-process candidate, excluding its unresolved base and carrying separate anatomical-approval and image-semantic-review states.

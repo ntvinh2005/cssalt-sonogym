@@ -1,0 +1,81 @@
+protocol_id: s0010_l4_medial_branch_target_v1
+status: FROZEN_BEFORE_CPU_FINAL_COMPARISON
+anatomy_id: s0010
+clinical_scope:
+  medial_branch: RIGHT_L4
+  vertebral_level: RIGHT_L5
+  endpoint: bony_surrogate_only
+  nerve_model_available: false
+  clinically_validated_target: false
+  references:
+    - https://pmc.ncbi.nlm.nih.gov/articles/PMC7362874/
+    - https://pmc.ncbi.nlm.nih.gov/articles/PMC10193888/
+inputs:
+  prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+  tp_revision_sha256: 01c910898f1463d89ac2e694c0466ff84967a0bc7dd2a464c700a8d62d5bb565
+source_experiment:
+  experiment_id: s0010_mbb_single_anatomy_poc_v3
+  job_id: 52039283
+  evidence_status: historically_opened_development
+source_sessions:
+  - mbbpoc_v3_00
+  - mbbpoc_v3_01
+  - mbbpoc_v3_02
+  - mbbpoc_v3_03
+method_selection_sessions:
+  - mbbpoc_v3_00
+  - mbbpoc_v3_01
+final_comparison_sessions:
+  - mbbpoc_v3_02
+  - mbbpoc_v3_03
+independent_confirmation_claim: forbidden
+include_phases:
+  - coarse
+  - fine
+  - micro
+fixed_tp_relative_control:
+  column_offset_pixels: 40.0
+actor_method:
+  inputs:
+    - clean_ultrasound
+    - frozen_L5_TP_proposal
+    - stage1_level_prior
+    - executed_motion_history
+  minimum_column_offset_pixels: 20
+  maximum_column_offset_pixels: 65
+  smoothing_width_pixels: 5
+  minimum_evidence_score: 0.55
+  maximum_proposal_track_distance_pixels: 6.0
+  minimum_image_margin_pixels: 4
+  privileged_inputs_forbidden:
+    - CT_prediction
+    - source_segmentation
+    - native_pixel_to_volume_coordinates
+    - target_region_coordinates
+    - raw_labels
+evaluation:
+  target_distance_tolerance_mm: 3.0
+  tolerance_basis: >-
+    Nonclinical development gate covering one 1.5 mm semantic-boundary voxel,
+    the 1.299 mm CT half-voxel diagonal, and the 0.354 mm ultrasound half-pixel
+    diagonal; it is not an intervention tolerance.
+  minimum_positive_frames_per_session: 2
+  minimum_qualifying_sessions: 2
+  maximum_wrong_accepted_frames: 0
+  maximum_ambiguous_accepted_frames: 0
+  positive_definition: both core endpoint surfaces are first visible bone
+  ambiguous_definition: uncertainty endpoints or noncore TP and SAP are visible
+  negative_definition: TP-only, other bone, or background without visible SAP
+controls:
+  - existing_L5_TP_proposal
+  - fixed_TP_relative_prediction
+  - incorrect_anatomical_level
+  - near_identical_pose_not_independent
+demo_session: mbbpoc_v3_01
+resource_bound:
+  account: anest-dept
+  cpu_cores: 4
+  memory_gb: 16
+  gpu_count: 0
+  walltime: 00:30:00
