@@ -58,6 +58,7 @@ SYNCHRONIZED_PROTOCOL_IDS = {
     "sonogym-s0010-sap-validation-resume-v1",
     "sonogym-s0010-sap-validation-resume-v2",
     "sonogym-s0010-l4mb-target-observability-v1",
+    "sonogym-s0010-l4mb-sap-tp-signal-v1",
 }
 
 
@@ -160,6 +161,7 @@ def main() -> int:
         "sonogym-s0010-sap-validation-resume-v1",
         "sonogym-s0010-sap-validation-resume-v2",
         "sonogym-s0010-l4mb-target-observability-v1",
+        "sonogym-s0010-l4mb-sap-tp-signal-v1",
     }:
         raise RuntimeError("unexpected protocol identity")
     seal = protocol_path.with_suffix(".sha256").read_text(encoding="utf-8").split()[0]
