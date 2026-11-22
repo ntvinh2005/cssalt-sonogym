@@ -229,6 +229,48 @@ def frame_metrics(
     }
 
 
+def pair_frame_metrics(
+    probabilities: np.ndarray,
+    targets: np.ndarray,
+    thresholds: dict[str, dict[str, Any]],
+) -> dict[str, int | float]:
+    truth_tp = np.any(targets == 1, axis=(1, 2))
+    truth_sap = np.any(targets == 2, axis=(1, 2))
+    predicted_tp = (
+        np.sum(
+            probabilities[:, 1] >= float(thresholds["TP"]["threshold"]),
+            axis=(1, 2),
+        )
+        >= int(thresholds["TP"]["minimum_pixels"])
+    )
+    predicted_sap = (
+        np.sum(
+            probabilities[:, 2] >= float(thresholds["SAP"]["threshold"]),
+            axis=(1, 2),
+        )
+        >= int(thresholds["SAP"]["minimum_pixels"])
+    )
+    truth = truth_tp & truth_sap
+    predicted = predicted_tp & predicted_sap
+    tp = int(np.count_nonzero(truth & predicted))
+    fp = int(np.count_nonzero(~truth & predicted))
+    fn = int(np.count_nonzero(truth & ~predicted))
+    tn = int(np.count_nonzero(~truth & ~predicted))
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+        "precision": precision,
+        "recall": recall,
+        "false_accept_rate": fp / (fp + tn) if fp + tn else 0.0,
+        "accepted_frame_count": int(np.count_nonzero(predicted)),
+        "abstained_frame_count": int(len(predicted) - np.count_nonzero(predicted)),
+    }
+
+
 def calibrate(probabilities: np.ndarray, targets: np.ndarray, class_id: int) -> dict[str, Any]:
     candidates = []
     for threshold in (0.30, 0.40, 0.50, 0.60, 0.70):
@@ -466,6 +508,9 @@ def train_level(
         "class_weights": weights.cpu().tolist(),
         "calibration_thresholds": thresholds,
         "development_frame_metrics": development_frame,
+        "development_pair_frame_metrics": pair_frame_metrics(
+            development_probabilities, development_targets, thresholds
+        ),
         "development_pixel_metrics": pixel_metrics(
             development_probabilities, development_targets
         ),

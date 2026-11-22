@@ -3,11 +3,15 @@ from __future__ import annotations
 import unittest
 
 import torch
+import numpy as np
 
 from two_stage_navigation.sonoanatomy_segmentation import (
     SmallUNet,
     interface_loss,
     normalized_ultrasound,
+)
+from workflows.two_stage_navigation.train_s0010_sonoanatomy_segmentation import (
+    pair_frame_metrics,
 )
 
 
@@ -34,6 +38,24 @@ class SonoanatomySegmentationTests(unittest.TestCase):
         self.assertGreaterEqual(float(normalized.min()), 0.0)
         self.assertLessEqual(float(normalized.max()), 1.0)
         self.assertTrue(torch.allclose(normalized[0], normalized[1]))
+
+    def test_pair_metrics_require_both_tp_and_sap(self) -> None:
+        probabilities = np.zeros((2, 4, 4, 4), dtype=np.float32)
+        targets = np.zeros((2, 4, 4), dtype=np.uint8)
+        targets[0, 1, 1] = 1
+        targets[0, 1, 2] = 2
+        targets[1, 2, 1] = 1
+        probabilities[0, 1, 1, 1] = 0.9
+        probabilities[0, 2, 1, 2] = 0.9
+        probabilities[1, 1, 2, 1] = 0.9
+        thresholds = {
+            "TP": {"threshold": 0.5, "minimum_pixels": 1},
+            "SAP": {"threshold": 0.5, "minimum_pixels": 1},
+        }
+        result = pair_frame_metrics(probabilities, targets, thresholds)
+        self.assertEqual(result["tp"], 1)
+        self.assertEqual(result["fp"], 0)
+        self.assertEqual(result["tn"], 1)
 
 
 if __name__ == "__main__":
