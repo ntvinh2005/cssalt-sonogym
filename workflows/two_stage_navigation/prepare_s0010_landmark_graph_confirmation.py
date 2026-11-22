@@ -83,7 +83,7 @@ def main() -> int:
         and row["tp_first_visible_pixels"] >= 3
         and row["target_margin_pixels"] >= 4
     ]
-    targets = pair_prepare.select_pairs(target_pool, 32, excluded)
+    targets = pair_prepare.select_pairs(target_pool, 16, excluded)
     negative_pool = pair_prepare.negative_candidates(
         negative_protocol,
         surface_y=surface_y,
@@ -104,9 +104,9 @@ def main() -> int:
         for row in negative_pool
         if row["evaluator_reason"] == "OTHER_BONE_OR_BACKGROUND"
     ]
-    tp_controls = pair_prepare.select_pairs(tp_only, 4, excluded + targets)
+    tp_controls = pair_prepare.select_pairs(tp_only, 2, excluded + targets)
     other_controls = pair_prepare.select_pairs(
-        other, 48, excluded + targets + tp_controls
+        other, 24, excluded + targets + tp_controls
     )
 
     protocol = deepcopy(base)
