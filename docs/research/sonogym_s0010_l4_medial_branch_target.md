@@ -7,11 +7,12 @@ intervention target.
 
 ## Result
 
-**`ULTRASOUND_TARGET_LOCALIZATION = FAIL`.** Neither the four historical Stage 2
-sessions nor the completed three-session geometry-designed capture contained a
-frame in which the provisional RIGHT L5 SAP and TP target-region endpoint
-surfaces were both first-visible bone. A new closed-loop run therefore remains
-scientifically ineligible.
+**`ULTRASOUND_TARGET_LOCALIZATION = FAIL`.** The geometry-designed capture
+demonstrated a broader visible SAP/TP surface configuration, but the stronger
+of two image-only pair selectors passed only 3 / 8 frozen target waypoint
+groups and made a wrong top-1 selection in 1 / 3 sessions. The strict endpoint
+and a safe autonomous target-view rule therefore remain unavailable, so a new
+closed-loop run is scientifically ineligible.
 
 | required verdict | result |
 |---|---|
@@ -318,21 +319,108 @@ evidence.
 | runtime `results/evaluation/sap_tp_signal_review.png` | clean images beside evaluator overlays |
 | runtime `sessions/*/verification_report.json` | synchronized replay, freshness and integrity |
 
-## 5. Engineering checks
+## 5. Image-only pair selection — can the actor distinguish the SAP–TP configuration
+
+`ultrasound_sap_tp_configuration.py`, run by
+`hpg/jobs/s0010_sap_tp_pair_development.sbatch`. It selects two local cortical
+intervals from clean ultrasound and uses prior actor-visible motion only to
+require support from a distinct earlier view.
+
+**Criterion.** Before either CPU comparison, the protocol required at least 6
+/ 8 target waypoint groups to pass, no more than 0 / 3 clear-negative waypoint
+groups to fail, and at least 75% of accepted target frames to select the
+evaluator-confirmed TP/SAP interval assignment. Each waypoint group had to be
+evaluated by a model that fit none of its three reset repetitions. Ambiguous
+waypoint group 10 was excluded from the clear-negative gate.
+
+### 5.1 Method
+
+The first hypothesis extracted disconnected local cortical components. The
+second and final hypothesis partitioned each complete image-derived cortical
+track into spatially separated intervals because §4 showed that SAP and TP
+often lie on one visually continuous interface. Both used the same geometry
+labels, cross-validation folds, 0.50 pair-probability threshold, distinct-view
+support rule and final gate. CT masks, native coordinates, absolute waypoints
+and evaluator labels were absent from the model inputs.
+
+### 5.2 Setup
+
+| item | value |
+|---|---|
+| source capture | job `52300444`; 3 sessions; 36 frames |
+| disconnected-component protocol | `s0010_sap_tp_pair_development_v1.yaml`; SHA-256 `2a7aae96b7cce2302af1982048f531ca9c84e8bfc3857da3843d1de275f11bd2` |
+| complete-track protocol | `s0010_sap_tp_track_pair_development_v1.yaml`; SHA-256 `5ef4cbbbd3136d9a2c5fa2345c5343e4ad62d0ad498e5028510d11d93173d21d` |
+| execution commits | `4f3b9f1`; `8630e56` |
+| CPU jobs | `52302642`, 20 s; `52303002`, 32 s; 4 CPU each; 0 GPU |
+| model | 240-tree ExtraTrees; image-derived pair features only |
+
+```bash
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env" \
+  hpg/jobs/s0010_sap_tp_pair_development.sbatch
+
+sbatch --export=ALL,SONOGYM_CONFIG_FILE="$PWD/.sonogym.env",SAP_TP_PAIR_PROTOCOL_STEM=s0010_sap_tp_track_pair_development_v1 \
+  hpg/jobs/s0010_sap_tp_pair_development.sbatch
+```
+
+| sample accounting | count |
+|---|---:|
+| acquired frames | 36 |
+| target frames | 24 |
+| clear-negative frames | 9 |
+| ambiguous frames excluded from the negative gate | 3 |
+| final analyzed frames | 36 |
+
+### 5.3 Results
+
+| measurement | disconnected components | complete-track intervals |
+|---|---:|---:|
+| target waypoint groups passed | 1 / 8 | 3 / 8 |
+| clear-negative waypoint groups failed | 0 / 3 | 0 / 3 |
+| accepted target pair precision | 5 / 7 (71.4%) | 6 / 8 (75.0%) |
+| accepted clear-negative frames | 0 / 9 | 2 / 9 |
+| session top-1 correct pair | not used | 2 / 3 |
+| session top-3 contains a correct pair | not used | 3 / 3 |
+
+**Verdict: fail.** The stronger representation improved target coverage from
+1 / 8 to 3 / 8 waypoint groups and reached the pair-precision boundary, but
+it remained below the frozen 6 / 8 coverage requirement and accepted a clear
+negative in two frames of one reset session.
+
+### 5.4 Reading it
+
+- The image contains usable relative SAP/TP surface information in some views.
+- Complete cortical tracks match the observed rendering better than requiring two disconnected components.
+- Waypoint groups 0, 2, 3, 4 and 6 did not obtain repeatable accepted pairs across resets.
+- The second method ranked a correct pair first in 2 / 3 sessions and within the top three in 3 / 3 sessions.
+- The third session also placed accepted clear-negative frames in its candidate list, so top-three coverage alone is not a safe navigation rule.
+- The data are opened development evidence and repeat the same twelve waypoint commands across resets.
+- No junction coordinate, target-view pose, robot action or needle endpoint was released from this experiment.
+
+### 5.5 Files
+
+| file | contents |
+|---|---|
+| `s0010_sap_tp_pair_development_result_v1.json` | immutable comparison and job provenance |
+| runtime job `52302642/analysis/result` | disconnected-component per-frame and group results |
+| runtime job `52303002/analysis/result` | complete-track per-frame, group and figure outputs |
+| `tests/test_ultrasound_sap_tp_configuration.py` | image-only extraction and leakage-focused checks |
+
+## 6. Engineering checks
 
 The original CPU execution ran 29 focused regressions. The resume preflight ran
-44 focused regressions; all passed in 0.116 seconds. The new checks require
+44 focused regressions; all passed in 0.116 seconds. Jobs `52302642` and
+`52303002` ran 6 and 7 focused tests respectively; all passed. The new checks require
 the observability protocol to use synchronized-capture integrity gates, recover
 the captured commit from immutable run context when older sealed metadata lack
 the field, and prevent a partial session selection from appearing complete.
 
-## 6. Next concrete action
+## 7. Next concrete action
 
-Do not use the strict endpoint core as the next learning target. The new
-surface-configured frames justify a development-only actor experiment that
-asks whether clean ultrasound and motion can distinguish the relative SAP–TP
-configuration from other bone views. Its labels must retain separate SAP, TP,
-control and ambiguous states, and its evaluation must use new session groups.
-Until that actor experiment succeeds, the historical L5 TP pipeline remains
-the presentation-ready navigation baseline and must continue to be labelled TP
+Do not integrate either pair selector into Stage 2. Preserve the complete-track
+implementation as the stronger development candidate, but the next decisive
+experiment requires additional, distinct SAP/TP and confusing-bone pose groups
+rather than more reset repetitions of the same twelve commands. Freeze those
+groups before capture and evaluate the unchanged selector on session- and
+pose-group-separated observations. The historical L5 TP pipeline remains the
+presentation-ready navigation baseline and must continue to be labelled TP
 navigation rather than MBB target localization.

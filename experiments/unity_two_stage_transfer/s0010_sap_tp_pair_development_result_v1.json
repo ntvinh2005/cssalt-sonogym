@@ -1,0 +1,46 @@
+{
+  "anatomy_id": "s0010",
+  "clinical_target_validated": false,
+  "conclusion": "The complete-interface interval representation improves development pair selection but does not pass the frozen actor-readiness gate.",
+  "data_status": "opened_development_only",
+  "hypotheses": [
+    {
+      "accepted_target_pair_precision": 0.7142857142857143,
+      "clear_negative_waypoint_group_count": 3,
+      "clear_negative_waypoint_groups_failed": 0,
+      "job_id": "52302642",
+      "name": "bounded_components",
+      "result_sha256": "015d7d22ea260cb4628798f945a01e1c95815a92294f6fc3328e9fed31955e43",
+      "target_waypoint_group_count": 8,
+      "target_waypoint_groups_passed": 1,
+      "verdict": "fail"
+    },
+    {
+      "accepted_clear_negative_frame_count": 2,
+      "accepted_clear_negative_frame_total": 9,
+      "accepted_target_pair_precision": 0.75,
+      "clear_negative_waypoint_group_count": 3,
+      "clear_negative_waypoint_groups_failed": 0,
+      "job_id": "52303002",
+      "name": "complete_interface_intervals",
+      "result_sha256": "7da7b37917df85867f03724905a4df8b286a2cd342d019ba9902fe135b65f095",
+      "session_top1_correct_pair_count": 2,
+      "session_top1_total": 3,
+      "session_top3_contains_correct_pair_count": 3,
+      "session_top3_total": 3,
+      "target_waypoint_group_count": 8,
+      "target_waypoint_groups_passed": 3,
+      "verdict": "fail"
+    }
+  ],
+  "junction_localization_executed": false,
+  "needle_or_intervention_executed": false,
+  "source_capture_job": "52300444",
+  "source_capture_protocol_sha256": "044772307d78218f9b1e79eaeee5d3782fe8bef14359a4ba3049f0b9d4ba453a",
+  "source_frame_count": 36,
+  "technical_failure_job": {
+    "job_id": "52302410",
+    "reason": "anest-dept initial QoS rejected a zero-GPU job before execution",
+    "replacement_changed_scientific_protocol": false
+  }
+}
