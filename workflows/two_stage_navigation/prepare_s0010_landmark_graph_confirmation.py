@@ -29,6 +29,47 @@ def protocol_poses(path: Path) -> list[dict[str, Any]]:
     return previous.protocol_poses(protocol)
 
 
+def select_available_pairs(
+    rows: list[dict[str, Any]],
+    maximum_pair_count: int,
+    excluded: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Select every robust distinct pair available, up to a frozen maximum."""
+
+    chosen: list[dict[str, Any]] = []
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            -min(
+                int(row.get("sap_first_visible_pixels", 0)),
+                int(row.get("tp_first_visible_pixels", 0)),
+            ),
+            -int(row.get("target_margin_pixels", -1)),
+            tuple(pair_prepare.pose(row)),
+        ),
+    )
+    for first in ordered:
+        if not pair_prepare.new_against(first, excluded + chosen):
+            continue
+        second = next(
+            (
+                candidate
+                for candidate in ordered
+                if candidate is not first
+                and pair_prepare.new_against(candidate, excluded + chosen)
+                and pair_prepare.distinct(first, candidate)
+                and pair_prepare.capture_pair_is_robust(first, candidate)
+            ),
+            None,
+        )
+        if second is None:
+            continue
+        chosen.extend((first, second))
+        if len(chosen) == maximum_pair_count * 2:
+            break
+    return chosen
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-protocol", type=Path, required=True)
@@ -105,9 +146,14 @@ def main() -> int:
         if row["evaluator_reason"] == "OTHER_BONE_OR_BACKGROUND"
     ]
     tp_controls = pair_prepare.select_pairs(tp_only, 2, excluded + targets)
-    other_controls = pair_prepare.select_pairs(
+    other_controls = select_available_pairs(
         other, 24, excluded + targets + tp_controls
     )
+    if len(other_controls) < 32:
+        raise ValueError(
+            "fewer than 32 physically distinct other-bone controls remain: "
+            f"{len(other_controls)}"
+        )
 
     protocol = deepcopy(base)
     protocol["protocol_id"] = PROTOCOL_ID
@@ -172,10 +218,14 @@ def main() -> int:
         }
         sessions.append(session)
         plan_sessions.append({**session, "rows": rows})
-    for negative_index in range(2):
+    negative_controls = other_controls[20:]
+    negative_split = len(negative_controls) // 2
+    negative_session_rows = [
+        negative_controls[:negative_split], negative_controls[negative_split:]
+    ]
+    for negative_index, rows in enumerate(negative_session_rows):
         session_index = 4 + negative_index
-        rows = other_controls[20 + negative_index * 14 : 34 + negative_index * 14]
-        roles = ["CLEAR_NEGATIVE"] * 14
+        roles = ["CLEAR_NEGATIVE"] * len(rows)
         bank_id = f"bank_{session_index:02d}"
         session_id = f"s0010l5graph_{session_index:02d}"
         waypoints = [row["pose_index_rad"] for row in rows]
@@ -199,7 +249,7 @@ def main() -> int:
             "seed": 2026120200 + session_index,
             "reset_id": session_id,
             "absolute_waypoint_bank_id": bank_id,
-            "expected_frame_count": 14,
+            "expected_frame_count": len(rows),
         }
         sessions.append(session)
         plan_sessions.append({**session, "rows": rows})
@@ -216,7 +266,9 @@ def main() -> int:
         "maximum_clear_negative_false_accept_rate": 0.10,
         "minimum_actual_targets_per_target_session": 4,
         "minimum_actual_clear_negatives_per_target_session": 4,
-        "minimum_actual_clear_negatives_per_negative_session": 12,
+        "minimum_actual_clear_negatives_per_negative_session": max(
+            4, min(len(rows) for rows in negative_session_rows) - 2
+        ),
     }
     protocol["change_policy"] = [
         "Do not refit any checkpoint or change graph thresholds after capture.",
