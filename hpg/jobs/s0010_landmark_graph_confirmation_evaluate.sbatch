@@ -21,6 +21,7 @@ source "$SONOGYM_CONFIG_FILE"
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common_cpu.sh"
 
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_l5_landmark_graph_confirmation/$CONFIRMATION_JOB_ID"
+EVAL_OUTPUT_DIR="$RUN_DIR/results/evaluation_$SLURM_JOB_ID"
 PREDICTION="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sap_semantic_review_v3/52078067/raw_prediction/s0010.nii.gz"
 SEGMENTATION="$SONOGYM_ASSETS_DATA_DIR/HumanModels/selected_dataset_stl/s0010/combined_label_map.nii.gz"
 LABEL_CONVERSION="$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/lab/sensors/cfgs/label_conversion.yaml"
@@ -32,8 +33,8 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_TH
   echo "protocol SHA-256 changed" >&2
   exit 2
 }
-mkdir -p "$RUN_DIR/results/evaluation" "$RUN_DIR/cpu_evaluation_context"
-capture_cpu_run_context "$RUN_DIR/cpu_evaluation_context"
+mkdir -p "$RUN_DIR/results" "$RUN_DIR/cpu_evaluation_context_$SLURM_JOB_ID"
+capture_cpu_run_context "$RUN_DIR/cpu_evaluation_context_$SLURM_JOB_ID"
 "$PYTHON" -m unittest -q \
   tests.test_acquisition_integrity tests.test_ultrasound_spatial_map \
   tests.test_two_stage_contracts tests.test_s0010_landmark_graph_confirmation \
@@ -41,7 +42,7 @@ capture_cpu_run_context "$RUN_DIR/cpu_evaluation_context"
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/evaluate_s0010_landmark_graph_confirmation.py" \
   --protocol "$LANDMARK_GRAPH_PROTOCOL" --run-root "$RUN_DIR" \
   --prediction "$PREDICTION" --segmentation "$SEGMENTATION" \
-  --label-conversion "$LABEL_CONVERSION" --output-dir "$RUN_DIR/results/evaluation" \
+  --label-conversion "$LABEL_CONVERSION" --output-dir "$EVAL_OUTPUT_DIR" \
   > "$RUN_DIR/results/cpu-evaluation.log" 2>&1
-capture_cpu_run_end "$RUN_DIR/cpu_evaluation_context"
+capture_cpu_run_end "$RUN_DIR/cpu_evaluation_context_$SLURM_JOB_ID"
 find -L "$RUN_DIR" -type f -print | sort > "$RUN_DIR/files.txt"
