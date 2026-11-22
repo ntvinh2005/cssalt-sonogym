@@ -40,11 +40,11 @@ class TestSapTpPairConfirmation(unittest.TestCase):
             (
                 ROOT
                 / "experiments/unity_two_stage_transfer/"
-                "s0010_sap_tp_pair_confirmation_v1r2.yaml"
+                "s0010_sap_tp_pair_confirmation_v1r3.yaml"
             ).read_text(encoding="utf-8")
         )
         sampling = protocol["sampling"]
-        for bank in sampling["absolute_waypoint_banks_index"].values():
+        for bank_id, bank in sampling["absolute_waypoint_banks_index"].items():
             resolved = validate_waypoint_bank(
                 bank,
                 command_minimum=[-1.0e9, -1.0e9, -1.0e9],
@@ -71,6 +71,14 @@ class TestSapTpPairConfirmation(unittest.TestCase):
                 )
                 self.assertLessEqual(translation_mm, 15.0)
                 self.assertLessEqual(angle_deg, 15.0)
+                if bank_id == "bank_02":
+                    self.assertGreaterEqual(translation_mm, 3.0)
+
+        carry_forward = protocol["source"]["carry_forward"]
+        self.assertEqual(
+            carry_forward["session_ids"],
+            ["s0010saptppair_00", "s0010saptppair_01"],
+        )
 
     def test_target_margin_uses_core_evidence(self) -> None:
         projected = {
