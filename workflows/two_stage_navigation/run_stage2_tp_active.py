@@ -48,6 +48,9 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
     assert_no_privileged_fields,
     ultrasound_sha256,
 )
+from spinal_surgery.evaluation.two_stage_navigation.acquisition_integrity import (  # noqa: E402
+    validate_actor_6dof_record,
+)
 from spinal_surgery.evaluation.two_stage_navigation.coordinates import wrap_to_pi  # noqa: E402
 from spinal_surgery.evaluation.two_stage_navigation.stage1_features import (  # noqa: E402
     PatchSpec,
@@ -354,6 +357,9 @@ def main() -> int:
             realized = current_realized_pose(unwrapped).copy()
             sequence = len(public_rows)
             frame_hash = ultrasound_sha256(image)
+            actor_position = tensor_row(snapshot["actor_base_to_ee_pos"])
+            actor_quaternion = tensor_row(snapshot["actor_base_to_ee_quat"])
+            actor_rotation = rotation_columns_from_quaternion_wxyz(actor_quaternion)
             view = TargetView(
                 target=target_name,
                 frame_sequence=sequence,
@@ -389,8 +395,15 @@ def main() -> int:
                 "image_valid": image_valid,
                 "producer_advanced": producer_advanced,
                 "action_step_count": len(trajectory),
+                "actor_base_to_ee_position_m": actor_position.tolist(),
+                "actor_base_to_ee_quaternion_wxyz": actor_quaternion.tolist(),
+                "actor_base_to_ee_rotation_columns": actor_rotation.tolist(),
+                "actor_joint_position_rad": tensor_row(snapshot["actor_joint_pos"]).tolist(),
+                "simulation_step": int(snapshot["simulation_step"]),
+                "simulation_time_s": float(snapshot["simulation_time_s"]),
             }
             assert_no_privileged_fields(public)
+            validate_actor_6dof_record(public)
             local = np.asarray(
                 snapshot["native_local_image_coordinates_m"].detach().cpu().numpy(), dtype=np.float64
             )
@@ -424,6 +437,12 @@ def main() -> int:
                     "human_to_ee_position_m": human_position.tolist(),
                     "human_to_ee_quaternion_wxyz": human_quaternion.tolist(),
                     "human_to_ee_rotation_columns": rotation.tolist(),
+                    "world_to_base_position_m": tensor_row(
+                        snapshot["world_to_base_pos"]
+                    ).tolist(),
+                    "world_to_base_quaternion_wxyz": tensor_row(
+                        snapshot["world_to_base_quat"]
+                    ).tolist(),
                     "image_origin_height_m": float(snapshot["image_origin_height_m"]),
                     "label_resolution_m": float(snapshot["label_resolution_m"]),
                     "image_resolution_m": float(snapshot["image_resolution_m"]),

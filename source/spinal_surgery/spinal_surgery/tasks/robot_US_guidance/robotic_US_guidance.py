@@ -531,10 +531,26 @@ class roboticUSEnv(DirectRLEnv):
         else:
             raise ValueError("Invalid observation mode")
         if self.US_slicer.capture_snapshot_enabled:
+            world_to_base_pose = self.robot.data.root_link_state_w[:, 0:7]
+            base_to_ee_pos, base_to_ee_quat = subtract_frame_transforms(
+                world_to_base_pose[:, 0:3],
+                world_to_base_pose[:, 3:7],
+                self.US_ee_pose_w[:, 0:3],
+                self.US_ee_pose_w[:, 3:7],
+            )
             self.US_slicer.annotate_latest_acquisition(
                 producer_sequence=int(self.num_step),
                 simulation_step=int(self._sim_step_counter),
                 simulation_time_s=float(self._sim_step_counter * self.physics_dt),
+                actor_base_to_ee_pos=base_to_ee_pos.detach().clone(),
+                actor_base_to_ee_quat=base_to_ee_quat.detach().clone(),
+                actor_joint_pos=self.robot.data.joint_pos[
+                    :, self.robot_entity_cfg.joint_ids
+                ]
+                .detach()
+                .clone(),
+                world_to_base_pos=world_to_base_pose[:, 0:3].detach().clone(),
+                world_to_base_quat=world_to_base_pose[:, 3:7].detach().clone(),
             )
         # torch.cuda.synchronize()  # Wait for GPU work to finish
         # end = time.time()

@@ -209,3 +209,30 @@ def assert_detector_input_is_actor_visible(record: Mapping[str, object]) -> None
     leaked = sorted(PRIVILEGED_KEYS.intersection(record))
     if leaked:
         raise ValueError(f"privileged detector input fields: {leaked}")
+
+
+def validate_actor_6dof_record(record: Mapping[str, object]) -> None:
+    position = np.asarray(record["actor_base_to_ee_position_m"], dtype=np.float64)
+    quaternion = np.asarray(
+        record["actor_base_to_ee_quaternion_wxyz"], dtype=np.float64
+    )
+    rotation = np.asarray(
+        record["actor_base_to_ee_rotation_columns"], dtype=np.float64
+    )
+    joints = np.asarray(record["actor_joint_position_rad"], dtype=np.float64)
+    if position.shape != (3,) or quaternion.shape != (4,) or rotation.shape != (3, 3):
+        raise ValueError("actor 6DoF arrays have invalid shapes")
+    if joints.ndim != 1 or joints.size < 6:
+        raise ValueError("actor joint position must contain the robot joints")
+    if not all(np.all(np.isfinite(value)) for value in (position, quaternion, rotation, joints)):
+        raise ValueError("actor 6DoF values must be finite")
+    if not np.isclose(np.linalg.norm(quaternion), 1.0, atol=1e-5):
+        raise ValueError("actor quaternion must have unit norm")
+    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-5):
+        raise ValueError("actor rotation must be orthonormal")
+    if not np.isclose(np.linalg.det(rotation), 1.0, atol=1e-5):
+        raise ValueError("actor rotation must be right-handed")
+    simulation_step = int(record["simulation_step"])
+    simulation_time_s = float(record["simulation_time_s"])
+    if simulation_step < 0 or not math.isfinite(simulation_time_s) or simulation_time_s < 0.0:
+        raise ValueError("actor acquisition time is invalid")

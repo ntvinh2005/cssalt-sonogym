@@ -60,6 +60,31 @@ class SnapshotTests(unittest.TestCase):
                 {"pixels": [1, 2], "human_img_coords": [0, 1]}
             )
 
+    def test_actor_6dof_record_accepts_robot_pose_and_joint_state(self) -> None:
+        MODULE.validate_actor_6dof_record(
+            {
+                "actor_base_to_ee_position_m": [0.1, 0.2, 0.3],
+                "actor_base_to_ee_quaternion_wxyz": [1.0, 0.0, 0.0, 0.0],
+                "actor_base_to_ee_rotation_columns": np.eye(3).tolist(),
+                "actor_joint_position_rad": [0.0] * 7,
+                "simulation_step": 12,
+                "simulation_time_s": 0.1,
+            }
+        )
+
+    def test_actor_6dof_record_rejects_nonrigid_rotation(self) -> None:
+        with self.assertRaisesRegex(ValueError, "orthonormal"):
+            MODULE.validate_actor_6dof_record(
+                {
+                    "actor_base_to_ee_position_m": [0.1, 0.2, 0.3],
+                    "actor_base_to_ee_quaternion_wxyz": [1.0, 0.0, 0.0, 0.0],
+                    "actor_base_to_ee_rotation_columns": np.diag([1.0, 1.0, 2.0]),
+                    "actor_joint_position_rad": [0.0] * 7,
+                    "simulation_step": 12,
+                    "simulation_time_s": 0.1,
+                }
+            )
+
 
 class WaypointTests(unittest.TestCase):
     def test_waypoints_swallowed_by_tolerance_are_rejected(self) -> None:

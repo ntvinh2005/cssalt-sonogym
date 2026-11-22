@@ -10,8 +10,11 @@ from two_stage_navigation.ultrasound_spatial_map import (
     SpatialLocalizerConfig,
     SpatialMapConfig,
     SpatialViewCandidate,
+    associate_calibrated_spatial_points,
     associate_spatial_points,
+    calibrated_cortical_map_points,
     calibrated_image_coordinates_mm,
+    coordinates_in_target_frame_mm,
     cortical_map_points,
     frame_support_counts,
     rank_spatial_target_views,
@@ -86,6 +89,14 @@ class UltrasoundSpatialMapTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, signature)
             self.assertNotIn(forbidden, source)
+        calibrated_source = inspect.getsource(calibrated_cortical_map_points)
+        for forbidden in (
+            "raw_label",
+            "segmentation",
+            "native_coordinate",
+            "target_coordinate",
+        ):
+            self.assertNotIn(forbidden, calibrated_source)
 
     def test_calibrated_coordinates_preserve_native_axes_and_units(self) -> None:
         coordinates = calibrated_image_coordinates_mm(
@@ -110,6 +121,48 @@ class UltrasoundSpatialMapTests(unittest.TestCase):
                 pixel_resolution_mm=0.5,
                 image_origin_height_mm=100.0,
             )
+
+    def test_calibrated_cortical_points_use_full_pose(self) -> None:
+        points = calibrated_cortical_map_points(
+            interface_image(row=120),
+            end_effector_position_m=(0.1, 0.2, 0.3),
+            rotation_columns=np.eye(3),
+            frame_sequence=0,
+            frame_sha256="a",
+            image_origin_height_mm=100.0,
+        )
+        point = next(value for value in points if value.column == 72)
+        np.testing.assert_allclose(point.coordinate_mm, [98.5, 200.0, 459.5])
+        np.testing.assert_allclose(point.tangent, [1.0, 0.0, 0.0])
+
+    def test_calibrated_association_requires_tangent_compatibility(self) -> None:
+        points = (
+            CorticalMapPoint(
+                0, "a", "t", 100, 75, (0.0, 0.0, 0.0), 1.0, (1.0, 0.0, 0.0)
+            ),
+            CorticalMapPoint(
+                1, "b", "u", 100, 75, (0.5, 0.0, 0.0), 1.0, (0.0, 1.0, 0.0)
+            ),
+        )
+        edges = associate_calibrated_spatial_points(
+            points,
+            poses_by_frame={
+                0: ((0.0, 0.0, 0.0), np.eye(3)),
+                1: ((0.002, 0.0, 0.0), np.eye(3)),
+            },
+        )
+        self.assertEqual(edges, ())
+
+    def test_coordinate_frame_conversion_preserves_units_and_handedness(self) -> None:
+        rotation = np.asarray([[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+        result = coordinates_in_target_frame_mm(
+            np.asarray([[1.0, 2.0, 3.0]]),
+            world_to_source_position_m=(0.1, 0.0, 0.0),
+            world_to_source_rotation=rotation,
+            world_to_target_position_m=(0.0, 0.2, 0.0),
+            world_to_target_rotation=np.eye(3),
+        )
+        np.testing.assert_allclose(result, [[98.0, -199.0, 3.0]])
 
     def test_spatial_support_changes_target_ranking(self) -> None:
         points = []

@@ -25,6 +25,7 @@ class SpatialMapConfig:
     association_radius_mm: float = 4.0
     minimum_view_translation_mm: float = 0.75
     minimum_view_angle_deg: float = 0.75
+    maximum_tangent_angle_deg: float = 60.0
     include_depth: bool = True
 
     def __post_init__(self) -> None:
@@ -35,6 +36,7 @@ class SpatialMapConfig:
             self.association_radius_mm,
             self.minimum_view_translation_mm,
             self.minimum_view_angle_deg,
+            self.maximum_tangent_angle_deg,
         )
         if not all(math.isfinite(float(value)) and float(value) > 0 for value in positive):
             raise ValueError("spatial-map settings must be finite and positive")
@@ -49,6 +51,7 @@ class CorticalMapPoint:
     column: int
     coordinate_mm: tuple[float, float, float]
     confidence: float
+    tangent: tuple[float, float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -256,6 +259,174 @@ def calibrated_image_coordinates_mm(
         + lateral_grid[:, :, None] * rotation[:, 0]
         + depth_grid[:, :, None] * rotation[:, 2]
     )
+
+
+def coordinates_in_target_frame_mm(
+    coordinates_mm: np.ndarray,
+    *,
+    world_to_source_position_m: Sequence[float],
+    world_to_source_rotation: np.ndarray,
+    world_to_target_position_m: Sequence[float],
+    world_to_target_rotation: np.ndarray,
+) -> np.ndarray:
+    coordinates = np.asarray(coordinates_mm, dtype=np.float64)
+    source_position = np.asarray(world_to_source_position_m, dtype=np.float64)
+    source_rotation = np.asarray(world_to_source_rotation, dtype=np.float64)
+    target_position = np.asarray(world_to_target_position_m, dtype=np.float64)
+    target_rotation = np.asarray(world_to_target_rotation, dtype=np.float64)
+    if coordinates.shape[-1] != 3:
+        raise ValueError("coordinates must end in three spatial values")
+    if source_position.shape != (3,) or target_position.shape != (3,):
+        raise ValueError("frame positions must have shape (3,)")
+    if source_rotation.shape != (3, 3) or target_rotation.shape != (3, 3):
+        raise ValueError("frame rotations must have shape (3, 3)")
+    world = coordinates @ source_rotation.T + source_position * 1000.0
+    return (world - target_position * 1000.0) @ target_rotation
+
+
+def calibrated_cortical_map_points(
+    image: np.ndarray,
+    *,
+    end_effector_position_m: Sequence[float],
+    rotation_columns: np.ndarray,
+    frame_sequence: int,
+    frame_sha256: str,
+    config: SpatialMapConfig = SpatialMapConfig(),
+    tracker_config: InterfaceTrackerConfig = InterfaceTrackerConfig(),
+    image_origin_height_mm: float = 133.0,
+) -> tuple[CorticalMapPoint, ...]:
+    array = np.asarray(image, dtype=np.float64)
+    if array.ndim != 2 or not np.all(np.isfinite(array)):
+        raise ValueError("image must be a finite two-dimensional array")
+    if frame_sequence < 0 or not frame_sha256:
+        raise ValueError("frame identity is incomplete")
+    coordinates = calibrated_image_coordinates_mm(
+        end_effector_position_m=end_effector_position_m,
+        rotation_columns=rotation_columns,
+        width=array.shape[1],
+        depth=array.shape[0],
+        pixel_resolution_mm=config.pixel_resolution_mm,
+        image_origin_height_mm=image_origin_height_mm,
+        home_up_axis=np.asarray(rotation_columns, dtype=np.float64)[:, 2],
+    )
+    rotation = np.asarray(rotation_columns, dtype=np.float64)
+    result: list[CorticalMapPoint] = []
+    for track in track_bright_interfaces(array, tracker_config):
+        for column in range(
+            int(track.columns[0]),
+            int(track.columns[-1]) + 1,
+            config.sample_stride_pixels,
+        ):
+            row = int(np.clip(round(track.row_at(float(column))), 0, array.shape[0] - 1))
+            lower_column = max(int(track.columns[0]), column - 1)
+            upper_column = min(int(track.columns[-1]), column + 1)
+            lower_row = float(track.row_at(float(lower_column)))
+            upper_row = float(track.row_at(float(upper_column)))
+            delta_column = max(upper_column - lower_column, 1)
+            row_slope = (upper_row - lower_row) / delta_column
+            tangent = rotation[:, 0] + row_slope * rotation[:, 2]
+            tangent /= max(float(np.linalg.norm(tangent)), 1e-12)
+            coordinate = coordinates[row, column]
+            result.append(
+                CorticalMapPoint(
+                    frame_sequence=frame_sequence,
+                    frame_sha256=frame_sha256,
+                    track_id=track.track_id,
+                    row=row,
+                    column=column,
+                    coordinate_mm=tuple(float(value) for value in coordinate),
+                    confidence=float(track.mean_ridge_score),
+                    tangent=tuple(float(value) for value in tangent),
+                )
+            )
+    return tuple(result)
+
+
+def calibrated_pose_is_distinct(
+    left_position_m: Sequence[float],
+    left_rotation: np.ndarray,
+    right_position_m: Sequence[float],
+    right_rotation: np.ndarray,
+    config: SpatialMapConfig = SpatialMapConfig(),
+) -> bool:
+    left_position = np.asarray(left_position_m, dtype=np.float64)
+    right_position = np.asarray(right_position_m, dtype=np.float64)
+    first_rotation = np.asarray(left_rotation, dtype=np.float64)
+    second_rotation = np.asarray(right_rotation, dtype=np.float64)
+    if left_position.shape != (3,) or right_position.shape != (3,):
+        raise ValueError("positions must have shape (3,)")
+    if first_rotation.shape != (3, 3) or second_rotation.shape != (3, 3):
+        raise ValueError("rotations must have shape (3, 3)")
+    if not all(
+        np.all(np.isfinite(value))
+        for value in (left_position, right_position, first_rotation, second_rotation)
+    ):
+        raise ValueError("poses must be finite")
+    translation_mm = float(np.linalg.norm(right_position - left_position) * 1000.0)
+    relative = first_rotation.T @ second_rotation
+    cosine = float(np.clip((np.trace(relative) - 1.0) / 2.0, -1.0, 1.0))
+    angle_deg = math.degrees(math.acos(cosine))
+    return bool(
+        translation_mm >= config.minimum_view_translation_mm
+        or angle_deg >= config.minimum_view_angle_deg
+    )
+
+
+def associate_calibrated_spatial_points(
+    points: Sequence[CorticalMapPoint],
+    *,
+    poses_by_frame: dict[int, tuple[Sequence[float], np.ndarray]],
+    config: SpatialMapConfig = SpatialMapConfig(),
+) -> tuple[SpatialAssociation, ...]:
+    hashes_by_frame: dict[int, str] = {}
+    grouped: dict[int, list[int]] = {}
+    for index, point in enumerate(points):
+        prior = hashes_by_frame.setdefault(point.frame_sequence, point.frame_sha256)
+        if prior != point.frame_sha256:
+            raise ValueError("one frame sequence has multiple image hashes")
+        grouped.setdefault(point.frame_sequence, []).append(index)
+    if len(set(hashes_by_frame.values())) != len(hashes_by_frame):
+        raise ValueError("duplicate image hash cannot create independent map support")
+    tangent_cosine = math.cos(math.radians(config.maximum_tangent_angle_deg))
+    result: list[SpatialAssociation] = []
+    frames = sorted(grouped)
+    for frame_offset, left_frame in enumerate(frames):
+        for right_frame in frames[frame_offset + 1 :]:
+            left_pose = poses_by_frame[left_frame]
+            right_pose = poses_by_frame[right_frame]
+            if not calibrated_pose_is_distinct(
+                left_pose[0], left_pose[1], right_pose[0], right_pose[1], config
+            ):
+                continue
+            left_indices = np.asarray(grouped[left_frame], dtype=np.int64)
+            right_indices = np.asarray(grouped[right_frame], dtype=np.int64)
+            left = np.asarray([points[index].coordinate_mm for index in left_indices])
+            right = np.asarray([points[index].coordinate_mm for index in right_indices])
+            distances = np.linalg.norm(left[:, None, :] - right[None, :, :], axis=2)
+            left_best = np.argmin(distances, axis=1)
+            right_best = np.argmin(distances, axis=0)
+            for local_left, local_right in enumerate(left_best):
+                if right_best[local_right] != local_left:
+                    continue
+                distance = float(distances[local_left, local_right])
+                if distance > config.association_radius_mm:
+                    continue
+                first = points[int(left_indices[local_left])]
+                second = points[int(right_indices[local_right])]
+                if first.tangent is not None and second.tangent is not None:
+                    alignment = abs(
+                        float(np.dot(np.asarray(first.tangent), np.asarray(second.tangent)))
+                    )
+                    if alignment < tangent_cosine:
+                        continue
+                result.append(
+                    SpatialAssociation(
+                        left_index=int(left_indices[local_left]),
+                        right_index=int(right_indices[local_right]),
+                        actor_distance_mm=distance,
+                    )
+                )
+    return tuple(result)
 
 
 def associate_spatial_points(

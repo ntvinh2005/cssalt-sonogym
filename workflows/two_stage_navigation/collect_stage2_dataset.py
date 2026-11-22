@@ -46,6 +46,7 @@ from spinal_surgery.evaluation.two_stage_navigation.contracts import (  # noqa: 
 )
 from spinal_surgery.evaluation.two_stage_navigation.acquisition_integrity import (  # noqa: E402
     AcquiredView,
+    validate_actor_6dof_record,
     validate_new_view,
     validate_segment_action_budget,
     validate_waypoint_bank,
@@ -507,7 +508,24 @@ def main() -> int:
                 "image_valid": technical_valid,
                 "physical_viewpoint_check": viewpoint_check,
             }
+            if snapshot is not None:
+                actor_position = tensor_row(snapshot["actor_base_to_ee_pos"])
+                actor_quaternion = tensor_row(snapshot["actor_base_to_ee_quat"])
+                public_row.update(
+                    actor_base_to_ee_position_m=actor_position.tolist(),
+                    actor_base_to_ee_quaternion_wxyz=actor_quaternion.tolist(),
+                    actor_base_to_ee_rotation_columns=(
+                        rotation_columns_from_quaternion_wxyz(actor_quaternion).tolist()
+                    ),
+                    actor_joint_position_rad=tensor_row(
+                        snapshot["actor_joint_pos"]
+                    ).tolist(),
+                    simulation_step=int(snapshot["simulation_step"]),
+                    simulation_time_s=float(snapshot["simulation_time_s"]),
+                )
             assert_no_privileged_fields(public_row)
+            if snapshot is not None:
+                validate_actor_6dof_record(public_row)
             public_rows.append(public_row)
             privileged_rows.append(
                 {
@@ -617,6 +635,12 @@ def main() -> int:
                         ).tolist(),
                         "world_to_ee_quaternion_wxyz": tensor_row(
                             snapshot["world_to_ee_quat"]
+                        ).tolist(),
+                        "world_to_base_position_m": tensor_row(
+                            snapshot["world_to_base_pos"]
+                        ).tolist(),
+                        "world_to_base_quaternion_wxyz": tensor_row(
+                            snapshot["world_to_base_quat"]
                         ).tolist(),
                         "ultrasound_array_sha256": array_sha256(image),
                         "raw_label_array_sha256": array_sha256(raw),
