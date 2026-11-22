@@ -57,6 +57,7 @@ STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-l5-landmark-graph-confirmation-v1",
     "sonogym-s0010-l5-landmark-graph-confirmation-v1r1",
     "sonogym-s0010-l5-landmark-graph-confirmation-v1r2",
+    "sonogym-s0010-l5-landmark-graph-confirmation-v1r3",
     "sonogym-s0010-l4-landmark-graph-development-v1",
 }
 COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
@@ -101,6 +102,7 @@ COUPLED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-l5-landmark-graph-confirmation-v1",
     "sonogym-s0010-l5-landmark-graph-confirmation-v1r1",
     "sonogym-s0010-l5-landmark-graph-confirmation-v1r2",
+    "sonogym-s0010-l5-landmark-graph-confirmation-v1r3",
     "sonogym-s0010-l4-landmark-graph-development-v1",
 }
 SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
@@ -140,6 +142,7 @@ SEGMENTED_STAGE2_DATASET_PROTOCOLS = frozenset(
     "sonogym-s0010-l5-landmark-graph-confirmation-v1",
     "sonogym-s0010-l5-landmark-graph-confirmation-v1r1",
     "sonogym-s0010-l5-landmark-graph-confirmation-v1r2",
+    "sonogym-s0010-l5-landmark-graph-confirmation-v1r3",
     "sonogym-s0010-l4-landmark-graph-development-v1",
 }
 

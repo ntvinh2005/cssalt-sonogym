@@ -21,7 +21,7 @@ import search_s0010_l4mb_target_viewpoints as search
 from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
-PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r2"
+PROTOCOL_ID = "sonogym-s0010-l5-landmark-graph-confirmation-v1r3"
 
 
 def protocol_poses(path: Path) -> list[dict[str, Any]]:
@@ -182,8 +182,8 @@ def main() -> int:
     protocol["sampling"]["absolute_waypoint_banks_index"] = {}
     protocol["sampling"]["planned_waypoint_evidence_by_bank"] = {}
     protocol["sampling"]["trajectory_start_frames"] = list(range(0, 14, 2))
-    protocol["sampling"]["maximum_initial_positioning_steps"] = 500
-    protocol["sampling"]["episode_length_s_override"] = 400.0
+    protocol["sampling"]["maximum_initial_positioning_steps"] = 700
+    protocol["sampling"]["episode_length_s_override"] = 500.0
     sessions: list[dict[str, Any]] = []
     plan_sessions: list[dict[str, Any]] = []
     for session_index in range(4):
@@ -280,7 +280,7 @@ def main() -> int:
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r2.yaml"
+    protocol_path = args.output_dir / "s0010_l5_landmark_graph_confirmation_v1r3.yaml"
     protocol_path.write_text(
         yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8"
     )
