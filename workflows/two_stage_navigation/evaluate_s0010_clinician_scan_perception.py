@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+from scipy import ndimage
 import torch
 import yaml
 
@@ -220,6 +221,7 @@ def trajectory_scoped_pair_decision(
                 {observation.frame_sequence for observation in current}
             ),
             "pair_decision": decision_payload(decision),
+            "semantic_clusters": [asdict(cluster) for cluster in clusters],
         }
         rows.append(row)
         if decision.status == "ACCEPT" and decision.selected is not None:
@@ -239,6 +241,77 @@ def trajectory_scoped_pair_decision(
         "selected_trajectory_id": trajectory_id,
         "selected_pair_decision": decision_payload(selected),
         "trajectory_decisions": rows,
+    }
+
+
+def evaluate_selected_pair_identity(
+    scoped: Mapping[str, Any],
+    observations: Sequence[SemanticObservation],
+    frames: Sequence[Mapping[str, Any]],
+    labels: np.ndarray,
+    archive_index_by_frame: Mapping[tuple[str, int], int],
+    *,
+    maximum_distance_pixels: float = 3.0,
+) -> dict[str, Any]:
+    """Evaluate an actor-selected pair against held-back simulator-proxy labels."""
+
+    if scoped["status"] != "ACCEPT":
+        return {"accepted": False, "pair_correct": False, "structures": {}}
+    selected_trajectory = str(scoped["selected_trajectory_id"])
+    trajectory = next(
+        row
+        for row in scoped["trajectory_decisions"]
+        if row["trajectory_id"] == selected_trajectory
+    )
+    selected = trajectory["pair_decision"]["selected"]
+    if selected is None:
+        raise ValueError("accepted trajectory has no selected pair")
+    frame_by_sequence = {int(row["frame_sequence"]): row for row in frames}
+    current = [
+        observation
+        for observation in observations
+        if str(frame_by_sequence[observation.frame_sequence]["trajectory_id"])
+        == selected_trajectory
+    ]
+    structures = {}
+    for name, class_id, cluster_key in (
+        ("TP", 1, "tp_cluster_index"),
+        ("SAP", 2, "sap_cluster_index"),
+    ):
+        cluster = trajectory["semantic_clusters"][int(selected[cluster_key])]
+        correct = []
+        distances = []
+        for observation_index in cluster["observation_indices"]:
+            observation = current[int(observation_index)]
+            frame = frame_by_sequence[observation.frame_sequence]
+            key = (str(frame["session_id"]), observation.frame_sequence)
+            if key not in archive_index_by_frame:
+                raise ValueError(f"missing evaluator label for frame: {key}")
+            target = labels[int(archive_index_by_frame[key])] == class_id
+            row = int(np.clip(round(observation.row), 0, target.shape[0] - 1))
+            column = int(np.clip(round(observation.column), 0, target.shape[1] - 1))
+            if np.any(target):
+                distance = ndimage.distance_transform_edt(~target)
+                value = float(distance[row, column])
+            else:
+                value = None
+            distances.append(value)
+            correct.append(value is not None and value <= maximum_distance_pixels)
+        structures[name] = {
+            "correct_observation_count": int(sum(correct)),
+            "observation_count": len(correct),
+            "majority_correct": bool(sum(correct) > len(correct) / 2.0),
+            "distances_pixels": distances,
+        }
+    return {
+        "accepted": True,
+        "pair_correct": bool(
+            structures["TP"]["majority_correct"]
+            and structures["SAP"]["majority_correct"]
+        ),
+        "selected_trajectory_id": selected_trajectory,
+        "maximum_distance_pixels": maximum_distance_pixels,
+        "structures": structures,
     }
 
 
@@ -314,6 +387,18 @@ def main() -> int:
         if args.frame_results is not None
         else read_dataset_manifest(args.dataset_manifest, args.run_root)
     )
+    evaluator_labels = None
+    archive_index_by_frame: dict[tuple[str, int], int] = {}
+    if args.dataset_manifest is not None:
+        evaluator_labels = np.load(args.dataset_manifest.parent / "dataset.npz")["labels"]
+        with args.dataset_manifest.open(newline="", encoding="utf-8") as handle:
+            archive_index_by_frame = {
+                (row["session_id"], int(row["frame_sequence"])): int(
+                    row["archive_index"]
+                )
+                for row in csv.DictReader(handle)
+                if Path(row["source_root"]).resolve() == args.run_root.resolve()
+            }
     checkpoints = {"L4": args.l4_checkpoint, "L5": args.l5_checkpoint}
     models = {}
     bundles = {}
@@ -328,6 +413,7 @@ def main() -> int:
     actor_sessions: list[dict[str, Any]] = []
     control_rows: list[dict[str, Any]] = []
     joined_rows: list[dict[str, Any]] = []
+    scoped_identity_rows: list[dict[str, Any]] = []
     for session_spec in protocol["sessions"]:
         session_id = str(session_spec["session_id"])
         level = str(session_spec["vertebral_level"])
@@ -409,6 +495,20 @@ def main() -> int:
         }
         assert_no_privileged_fields(actor_session)
         actor_sessions.append(actor_session)
+        if evaluator_labels is not None:
+            scoped_identity_rows.append(
+                {
+                    "session_id": session_id,
+                    "vertebral_level": level,
+                    **evaluate_selected_pair_identity(
+                        scoped_decision,
+                        observations,
+                        frames,
+                        evaluator_labels,
+                        archive_index_by_frame,
+                    ),
+                }
+            )
         control_rows.append(
             {
                 "session_id": session_id,
@@ -438,6 +538,17 @@ def main() -> int:
         row["trajectory_scoped_pair_decision"]["status"] == "ACCEPT"
         for row in actor_sessions
     )
+    scoped_identity_by_level = {}
+    for level in ("L4", "L5"):
+        current = [row for row in scoped_identity_rows if row["vertebral_level"] == level]
+        accepted = sum(bool(row["accepted"]) for row in current)
+        correct = sum(bool(row["pair_correct"]) for row in current)
+        scoped_identity_by_level[level] = {
+            "correct_accepted_pairs": correct,
+            "accepted_pairs": accepted,
+            "precision": correct / accepted if accepted else 0.0,
+            "sessions": current,
+        }
     evaluator_result = {
         "schema": "s0010-clinician-scan-perception-evaluation-v1",
         "scientific_status": "OPENED_FEASIBILITY_NOT_INDEPENDENT_CONFIRMATION",
@@ -468,6 +579,9 @@ def main() -> int:
             "coverage": trajectory_scoped_accepted_sessions / len(actor_sessions),
             "pair_identity_correctness": "NOT_MEASURED_BY_FRAME_PRESENCE_LABELS",
         },
+        "trajectory_scoped_pair_identity_against_provisional_weak_labels": (
+            scoped_identity_by_level if scoped_identity_rows else "NOT_AVAILABLE"
+        ),
         "controls": control_rows,
         "limitations": [
             "Capture waypoints were evaluator-designed and are not an autonomous policy.",

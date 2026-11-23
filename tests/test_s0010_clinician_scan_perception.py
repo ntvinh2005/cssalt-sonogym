@@ -8,6 +8,7 @@ import numpy as np
 
 from evaluate_s0010_clinician_scan_perception import (
     binary_metrics,
+    evaluate_selected_pair_identity,
     predicted_presence,
     read_dataset_manifest,
     trajectory_scoped_pair_decision,
@@ -118,6 +119,46 @@ class ClinicianScanPerceptionTests(unittest.TestCase):
         self.assertEqual(result["status"], "ACCEPT")
         self.assertEqual(result["selected_trajectory_id"], "second")
         self.assertEqual(len(result["trajectory_decisions"]), 2)
+
+    def test_selected_pair_identity_is_evaluator_only_and_explicit(self) -> None:
+        observations = (
+            self.observation("TP", 0, 0.0, 0.9),
+            self.observation("TP", 1, 0.5, 0.9),
+            self.observation("SAP", 2, 8.0, 0.9),
+            self.observation("SAP", 3, 8.5, 0.9),
+        )
+        frames = [
+            {"session_id": "session", "frame_sequence": index, "trajectory_id": "sweep"}
+            for index in range(4)
+        ]
+        scoped = trajectory_scoped_pair_decision(observations, frames)
+        labels = np.zeros((4, 200, 150), dtype=np.uint8)
+        for index, observation in enumerate(observations):
+            labels[index, int(observation.row), int(observation.column)] = (
+                1 if observation.semantic_class == "TP" else 2
+            )
+
+        result = evaluate_selected_pair_identity(
+            scoped,
+            observations,
+            frames,
+            labels,
+            {("session", index): index for index in range(4)},
+        )
+
+        self.assertTrue(result["accepted"])
+        self.assertTrue(result["pair_correct"])
+
+        labels[:, :, :] = 0
+        negative = evaluate_selected_pair_identity(
+            scoped,
+            observations,
+            frames,
+            labels,
+            {("session", index): index for index in range(4)},
+        )
+        self.assertFalse(negative["pair_correct"])
+        self.assertEqual(negative["structures"]["TP"]["distances_pixels"], [None, None])
 
 
 if __name__ == "__main__":
