@@ -96,6 +96,20 @@ def session_directories(root: Path) -> list[Path]:
     return sorted(result)
 
 
+def selected_session_directories(
+    root: Path, session_ids: list[str] | None
+) -> list[Path]:
+    available = {path.name: path for path in session_directories(root)}
+    if session_ids is None:
+        return sorted(available.values())
+    if not session_ids or len(set(session_ids)) != len(session_ids):
+        raise ValueError("source session_ids must be nonempty and unique")
+    missing = sorted(set(session_ids) - set(available))
+    if missing:
+        raise ValueError(f"capture source is missing sessions: {missing}")
+    return [available[session_id] for session_id in session_ids]
+
+
 def label_overlay(
     output: Path,
     image: np.ndarray,
@@ -208,7 +222,10 @@ def main() -> int:
     for source in config["sources"]:
         level = str(source["level"])
         root = expanded_path(str(source["root"]))
-        for session in session_directories(root):
+        requested_sessions = source.get("session_ids")
+        if requested_sessions is not None:
+            requested_sessions = [str(value) for value in requested_sessions]
+        for session in selected_session_directories(root, requested_sessions):
             verification = json.loads(
                 (session / "verification_report.json").read_text(encoding="utf-8")
             )

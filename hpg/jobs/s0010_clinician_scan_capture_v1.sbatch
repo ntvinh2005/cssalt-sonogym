@@ -22,7 +22,13 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 PROTOCOL="$CLINICIAN_SCAN_PROTOCOL"
 PROTOCOL_SEAL="${PROTOCOL%.yaml}.sha256"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_clinician_scan_feasibility_v1/$SLURM_JOB_ID"
+SCAN_DESIGN_VERSION="${CLINICIAN_SCAN_DESIGN_VERSION:-v1}"
+[[ "$SCAN_DESIGN_VERSION" == "v1" || "$SCAN_DESIGN_VERSION" == "v2" ]] || exit 2
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_clinician_scan_feasibility_${SCAN_DESIGN_VERSION}/$SLURM_JOB_ID"
+CAMERA_ARGS=()
+if [[ "$SCAN_DESIGN_VERSION" == "v2" ]]; then
+  CAMERA_ARGS+=(--enable_cameras)
+fi
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
@@ -49,6 +55,7 @@ for session_id in \
   "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/collect_stage2_dataset.py" \
     --protocol "$PROTOCOL" --session-id "$session_id" --output-dir "$SESSION_DIR" \
     --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" --headless --device cuda:0 \
+    "${CAMERA_ARGS[@]}" \
     > "$SESSION_DIR/launcher.log" 2>&1
   "$PYTHON" -c 'import json,sys; summary=json.load(open(sys.argv[1])); raise SystemExit(0 if summary.get("status") == "PASSED" else 2)' \
     "$SESSION_DIR/summary.json"

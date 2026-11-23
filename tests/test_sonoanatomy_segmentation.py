@@ -12,6 +12,7 @@ from two_stage_navigation.sonoanatomy_segmentation import (
 )
 from workflows.two_stage_navigation.train_s0010_sonoanatomy_segmentation import (
     pair_frame_metrics,
+    should_stop_training,
 )
 
 
@@ -56,6 +57,11 @@ class SonoanatomySegmentationTests(unittest.TestCase):
         self.assertEqual(result["tp"], 1)
         self.assertEqual(result["fp"], 0)
         self.assertEqual(result["tn"], 1)
+
+    def test_early_stopping_waits_for_foreground_learning_window(self) -> None:
+        self.assertFalse(should_stop_training(completed_epochs=11, stale_epochs=10))
+        self.assertTrue(should_stop_training(completed_epochs=20, stale_epochs=10))
+        self.assertFalse(should_stop_training(completed_epochs=20, stale_epochs=9))
 
 
 if __name__ == "__main__":

@@ -32,6 +32,7 @@ app_launcher = AppLauncher(args)
 simulation_app = app_launcher.app
 
 import gymnasium as gym  # noqa: E402
+import cv2  # noqa: E402
 import nibabel as nib  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
@@ -115,6 +116,65 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             handle.write(json.dumps(row, sort_keys=True, allow_nan=False) + "\n")
 
 
+class RobotVideoRecorder:
+    """Record actual Isaac actions and acquisition endpoints as evaluator evidence."""
+
+    def __init__(self, env: Any, output: Path, config: dict[str, Any]) -> None:
+        self.env = env
+        self.output = output
+        self.fps = int(config["fps"])
+        self.action_stride = int(config["action_stride"])
+        self.writer: cv2.VideoWriter | None = None
+        self.action_count = 0
+        self.frame_count = 0
+        self.phase = "initial"
+        if self.fps <= 0 or self.action_stride <= 0:
+            raise ValueError("robot-video fps and action stride must be positive")
+
+    def set_phase(self, phase: str) -> None:
+        self.phase = phase
+
+    def capture(
+        self, _status: dict[str, Any] | None = None, *, force: bool = False
+    ) -> None:
+        if not force:
+            self.action_count += 1
+            if self.action_count % self.action_stride:
+                return
+        frame = np.asarray(self.env.render())
+        if frame.ndim != 3 or frame.shape[2] not in {3, 4}:
+            raise RuntimeError(f"unexpected Isaac render shape: {frame.shape}")
+        bgr = cv2.cvtColor(frame[:, :, :3].astype(np.uint8), cv2.COLOR_RGB2BGR)
+        cv2.rectangle(bgr, (0, 0), (bgr.shape[1], 42), (10, 10, 10), -1)
+        cv2.putText(
+            bgr,
+            f"Isaac execution | {self.phase} | action {self.action_count}",
+            (14, 28),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.62,
+            (235, 235, 235),
+            1,
+            cv2.LINE_AA,
+        )
+        if self.writer is None:
+            self.output.parent.mkdir(parents=True, exist_ok=True)
+            self.writer = cv2.VideoWriter(
+                str(self.output),
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                float(self.fps),
+                (bgr.shape[1], bgr.shape[0]),
+            )
+            if not self.writer.isOpened():
+                raise RuntimeError("cannot create robot execution video")
+        self.writer.write(bgr)
+        self.frame_count += 1
+
+    def close(self) -> None:
+        if self.writer is not None:
+            self.writer.release()
+            self.writer = None
+
+
 def load_protocol() -> tuple[dict[str, Any], dict[str, Any], Path]:
     path = Path(args.protocol).resolve()
     protocol = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -191,6 +251,7 @@ def main() -> int:
         "seed": int(session["seed"]),
     }
     env = None
+    video: RobotVideoRecorder | None = None
     action_rows: list[dict[str, Any]] = []
     public_rows: list[dict[str, Any]] = []
     privileged_rows: list[dict[str, Any]] = []
@@ -209,7 +270,13 @@ def main() -> int:
         episode_length_s = resolve_episode_length_s(protocol["sampling"])
         if episode_length_s is not None:
             env_cfg.episode_length_s = episode_length_s
-        env = gym.make(protocol["scope"]["task"], cfg=env_cfg, render_mode=None)
+        visualization = protocol.get("visualization", {})
+        record_robot_video = bool(visualization.get("record_robot_video", False))
+        env = gym.make(
+            protocol["scope"]["task"],
+            cfg=env_cfg,
+            render_mode="rgb_array" if record_robot_video else None,
+        )
         if exact_pose_replay_enabled:
             env.unwrapped.US_slicer.capture_snapshot_enabled = True
             env.unwrapped.US_slicer.capture_session_id = str(session["session_id"])
@@ -222,6 +289,19 @@ def main() -> int:
             raise RuntimeError("unexpected policy observation shape")
         if unwrapped.US_slicer.sim_mode != "conv" or unwrapped.scene.num_envs != 1:
             raise RuntimeError("collector requires one conv SonoGym environment")
+        if record_robot_video:
+            unwrapped.sim.set_camera_view(
+                eye=tuple(float(value) for value in visualization["camera_eye_world_m"]),
+                target=tuple(
+                    float(value) for value in visualization["camera_target_world_m"]
+                ),
+            )
+            video = RobotVideoRecorder(
+                env,
+                public_dir / "robot_execution.mp4",
+                visualization,
+            )
+            video.capture(force=True)
 
         raw_path = (
             Path(args.assets_data_dir)
@@ -337,6 +417,8 @@ def main() -> int:
                 ]
             )
             action_start = len(action_rows)
+            if video is not None:
+                video.set_phase(f"{trajectory_id} frame {frame_sequence}")
             controller_target = waypoint.copy()
             acceptance_target = waypoint.copy()
             movement_orientation_tolerance = orientation_tolerance
@@ -363,6 +445,7 @@ def main() -> int:
                         controller.get("capture_angle_ceiling_limited_samples", False)
                     ),
                     trajectory_sink=action_rows,
+                    step_callback=None if video is None else video.capture,
                 )
             else:
                 trajectory = move_to_pose(
@@ -527,6 +610,9 @@ def main() -> int:
                     simulation_step=int(snapshot["simulation_step"]),
                     simulation_time_s=float(snapshot["simulation_time_s"]),
                 )
+            if video is not None:
+                video.capture(force=True)
+                public_row["robot_video_frame_index"] = video.frame_count - 1
             assert_no_privileged_fields(public_row)
             if snapshot is not None:
                 validate_actor_6dof_record(public_row)
@@ -732,6 +818,10 @@ def main() -> int:
             exact_pose_replay_enabled=exact_pose_replay_enabled,
             exact_pose_replay_passed_frames=exact_pose_replay_passed_frames,
             exact_pose_replay_all_frames_passed=exact_pose_replay_all_frames_passed,
+            robot_video=(
+                None if video is None else "public/robot_execution.mp4"
+            ),
+            robot_video_frame_count=0 if video is None else video.frame_count,
         )
         return 0 if exact_pose_replay_all_frames_passed else 3
     except Exception as error:
@@ -743,6 +833,8 @@ def main() -> int:
         if action_rows:
             write_jsonl(privileged_dir / "actions_partial.jsonl", action_rows)
         write_json(output / "summary.json", summary)
+        if video is not None:
+            video.close()
         if env is not None:
             env.close()
 

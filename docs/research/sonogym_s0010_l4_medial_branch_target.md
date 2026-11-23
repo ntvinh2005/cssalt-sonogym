@@ -7,18 +7,21 @@ intervention target.
 
 ## Result
 
-**`ULTRASOUND_TARGET_LOCALIZATION = FAIL`.** The geometry-designed capture
-demonstrated a broader visible SAP/TP surface configuration, but the stronger
-of two image-only pair selectors passed only 3 / 8 frozen target waypoint
-groups and made a wrong top-1 selection in 1 / 3 sessions. The strict endpoint
-and a safe autonomous target-view rule therefore remain unavailable, so a new
-closed-loop run is scientifically ineligible.
+**`STAGE2_COMPLETE = FAIL`.** The 2026-11-23 clinician-inspired feasibility
+capture executed both requested scan families with 96 / 96 fresh observations,
+but produced only 1 / 4 image-supported reversible transitions, no qualifying
+longitudinal TP-to-AP transition, and no frozen perception result satisfying
+the pair-precision and false-acceptance gates at both levels. A fresh autonomous
+closed-loop run therefore remains scientifically ineligible.
 
 | required verdict | result |
 |---|---|
 | `ANATOMICAL_TARGET_CONTRACT` | `PARTIAL` |
 | `ULTRASOUND_TARGET_LOCALIZATION` | `FAIL` |
-| `ROBOT_NAVIGATION` | `HISTORICAL_REPLAY_ONLY` |
+| `ROBOT_NAVIGATION` | `PARTIAL` (feasibility executed; not autonomous) |
+| `RIGHT_L4_STAGE2` | `FAIL` |
+| `RIGHT_L5_STAGE2` | `FAIL` |
+| `STAGE2_COMPLETE` | `FAIL` |
 | `FULL_MBB_INTERVENTION` | `BLOCKED` |
 
 ## 1. Target contract — is the endpoint definable
@@ -698,3 +701,311 @@ are unaffected by the identified ceiling-assistance conflict.
 No campaign job was active when this checkpoint was written. A future resume
 must either remove or redesign the six 3.0-rad waypoints under an explicitly
 versioned protocol; it must not reinterpret the incomplete capture as data.
+
+## 13. Clinician-inspired scan execution — are the two scan families physically feasible and observable
+
+`prepare_s0010_clinician_scan.py`, `collect_stage2_dataset.py` and
+`evaluate_s0010_clinician_scan.py`, run by Slurm jobs `52475568`, `52476333`
+and `52477256`. They prepare evaluator-assisted waypoints, execute them in the
+simulator and measure actual motion, freshness and weak visible-interface
+transitions.
+
+**Criterion.** Motion feasibility requires every acquired frame to have valid
+contact, a fresh acquisition identity, an accepted action and synchronized
+realized pose. Anatomical observability additionally requires the declared
+image-only morphology change to agree with the privileged TP loss/return pattern;
+SAP observability requires image-supported SAP evidence in both sessions at a
+level. These criteria were frozen before job `52477256`.
+
+### 13.1 Method
+
+The v2 protocol corrected the patient-relative lateral direction and separated
+the two scan families. The longitudinal sequence starts in a TP region, moves
+laterally, reverses on a nearby parallel path, returns through the TP region and
+continues medially. The transverse sequence changes the realized orientation,
+moves cranially and then reverses caudally. All actor-side image measurements
+use clean ultrasound, executed pose, contact, acquisition identity and prior
+observations. Weak interface labels are opened only by the evaluator.
+
+| clinical reference | reference timestamps | intended probe movement | executed probe movement | expected ultrasound transition | observed transition | freshness/contact | anatomical interpretation | limitation | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| Video A | 01:50–03:47 | longitudinal TP region toward AP and lamina regions | right-side longitudinal medial-lateral sweep | repeated TP interfaces change toward AP-region morphology | no SAP-supported longitudinal endpoint in 4 / 4 sessions | 32 / 32 valid | TP-region boundary evidence only | evaluator-designed waypoints; no lamina identity gate | `FAIL` |
+| Video B S03/S05/S07 | 04:48–08:06; 15:18–15:44 | lateral TP loss, medial return, AP-region candidate | outward motion 4 / 4; medial return 4 / 4; parallel turn 1 / 4 | TP loss, return and neighboring AP morphology | privileged loss/return occurred, but actor morphology and SAP endpoint did not jointly pass | 32 / 32 valid | reversible TP-region survey, not SAP identity | simulator morphology did not reproduce the complete sequence | `PARTIAL` |
+| Video B S10–S13 | 19:29–25:30 | transverse repositioning, cranial-caudal forward/reverse sweep | cranial motion 4 / 4; caudal return 4 / 4 | posterior-shadow and deep-window change with recovery | actor/evaluator transition agreement in L4 session `00` only | 32 / 32 valid | one repeatable L4 boundary transition | not the identity of a specific rediscovered TP | `PARTIAL` |
+| Video B S06/S08/S11 | 08:42–09:34; 16:26–16:48; 21:36–22:16 | local or alternative-view cross-check | 32 additional alternative-view observations | independent TP/SAP regional support | 3 SAP-supported L5 frames and 8 SAP-supported L4 frames over all scan families | 32 / 32 valid | sparse simulator-proxy SAP evidence | facet/AP-region appearance is not SAP identity | `INCONCLUSIVE` |
+
+### 13.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| code revision | `c635dcf834e02bed7c7d92c4a1d6e0b3047a8faa` plus captured dirty patch | §13 |
+| anatomy | fixed `s0010`; RIGHT L4 and RIGHT L5 | §13 |
+| prepared protocol | job `52475568`; SHA-256 `97539e710d8602d4cff090a7c98a351c1607ea8bd19c92a876f921d1af717f92` | §13 |
+| capture | job `52476333`; 1 NVIDIA L4; 4 CPUs | §13 |
+| evaluator | job `52477256`; 4 CPUs | §13 |
+| inputs | `s0010_clinician_scan_feasibility_v2/52476333` | §13 |
+| image transition filters | intensity below 0.20 in a 42-pixel distal band; deepest 28% image rows | `docs/notation.md` |
+
+```bash
+sbatch --export=ALL,SONOGYM_CONFIG_FILE=<machine-config>,CLINICIAN_SCAN_DESIGN_VERSION=v2 \
+  hpg/jobs/s0010_clinician_scan_capture_v1.sbatch
+
+python workflows/two_stage_navigation/evaluate_s0010_clinician_scan.py \
+  --protocol <capture>/context/s0010_clinician_scan_feasibility_v2.yaml \
+  --run-root <capture> --prediction <prediction.nii.gz> \
+  --segmentation <segmentation.nii.gz> --label-conversion <labels.json> \
+  --output-dir <evaluation>
+```
+
+Nothing was dropped: 96 attempted observations, 0 dropped, **96 final**.
+
+### 13.3 Results
+
+| measurement, capture job `52476333` | measured | criterion | verdict |
+|---|---:|---:|---|
+| image valid | 96 / 96 (100%) | 96 / 96 | pass |
+| contact valid | 96 / 96 (100%) | 96 / 96 | pass |
+| action accepted | 96 / 96 (100%) | 96 / 96 | pass |
+| distinct image hashes | 96 / 96 (100%) | 96 / 96 | pass |
+| tracking position error | median 1.185 mm; p90 1.368 mm; maximum 1.715 mm | exact-capture verifier | pass |
+| tracking orientation error | median 0.543 degrees; p90 0.924 degrees; maximum 1.196 degrees | exact-capture verifier | pass |
+| longitudinal transition | 0 / 4 sessions (0%) | all required sequence elements | fail |
+| transverse reversible transition | 1 / 4 sessions (25%) | actor/evaluator agreement | fail |
+
+| weak-label observability, evaluator job `52477256` | RIGHT L4 | RIGHT L5 |
+|---|---:|---:|
+| TP-supported frames | 31 / 48 (64.6%) | 15 / 48 (31.3%) |
+| SAP-supported frames | 8 / 48 (16.7%) | 3 / 48 (6.3%) |
+| TP-and-SAP-supported frames | 6 / 48 (12.5%) | 1 / 48 (2.1%) |
+| sessions meeting SAP observability | 0 / 2 (0%) | 0 / 2 (0%) |
+
+**Verdict: motion feasibility passes, anatomical transition observability
+fails.** Both scan families are physically executable, but the complete
+image-supported sequence passes in only 1 / 4 sessions and SAP observability
+passes at neither level.
+
+### 13.4 Reading it
+
+- Nominal angle values were not treated as proof of imaging-plane identity.
+- Camera motion, commanded pose and synchronized realized pose remain separate.
+- A changed image hash is necessary but not sufficient; contact, action and
+  producer sequence also passed for every observation.
+- The capture is an evaluator-assisted feasibility experiment, not an actor
+  policy and not autonomous landmark localization.
+- AP-region or facet-like evidence was not promoted to SAP identity.
+
+### 13.5 Files
+
+| file | contents |
+|---|---|
+| `configs/experiments/s0010_sonoanatomy_dataset_v2.yaml` | v2 source/session selection |
+| runtime job `52476333/sessions` | executed robot, ultrasound and synchronized pose records |
+| runtime job `52477256/evaluation/frame_results.csv` | per-frame motion and image measurements |
+| runtime job `52477256/evaluation/trajectory_results.csv` | per-scan transition verdicts |
+| runtime job `52477256/evaluation/weak_interface_labels.npz` | evaluator-only weak labels |
+
+## 14. Perception and information value — do new observations support SAP/TP identity
+
+`prepare_s0010_sonoanatomy_dataset.py`,
+`train_s0010_sonoanatomy_segmentation.py` and
+`evaluate_s0010_clinician_scan_perception.py`, run by Slurm jobs `52477797`,
+`52478035`, `52478290` and `52478433`. They build the expanded dataset, fit
+image-only models and compare frame and multiview decisions with provisional
+weak labels.
+
+**Criterion.** An eligible pair selector requires accepted-pair precision at
+least 75%, clear-negative false-acceptance at most 10%, nontrivial coverage and
+both level-specific gates to pass before fresh closed-loop execution. A model
+that abstains on all sessions does not satisfy coverage. The scan-v2 replay is
+opened development evidence because its frames contributed to the training
+dataset.
+
+### 14.1 Method
+
+The dataset builder restricted L4 and L5 source sessions independently and
+preserved session-level train, calibration and development separation. The
+first bounded 60-epoch run showed that L5 early-stopping occurred before the
+historical foreground-learning onset. The single retry kept the data, seed,
+architecture, loss and maximum epochs unchanged and prevented patience-based
+stopping before 20 completed epochs. No hyperparameter sweep followed.
+
+The perception replay computes image-only TP, SAP and other-bone observations,
+projects them through actor-visible synchronized 6DoF and applies the same
+physical-viewpoint separation rule. Duplicate viewpoints, repeated hashes,
+missing SAP evidence, reversed order and cyclic pose-image mismatch are explicit
+controls.
+
+### 14.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| dataset | job `52477797`; 378 distinct frames; SHA-256 `dd7f744b69f7382efdb5467ae2b984f1adb501208932e25e6865b9a2e5a71939` | §14 |
+| first training | job `52478035`; L5 stopped at epoch 11 before foreground learning | §14 |
+| bounded retry | job `52478290`; minimum 20 epochs before early stopping | §14 |
+| L4 checkpoint | SHA-256 `2e0f7b88ca4a7c815df414d3955215eaf691d6abaf29516254b0b6c1feb912e7` | §14 |
+| L5 checkpoint | SHA-256 `e5627eb9096da6e0d466a531531987c5f487fba850247ef1f5e58285bfcab6c9` | §14 |
+| scan replay | job `52478433`; capture job `52476333` | §14 |
+| resources | each training run: 1 NVIDIA L4 and 4 CPUs; replay: 4 CPUs | §14 |
+
+```bash
+sbatch --export=ALL,SONOGYM_CONFIG_FILE=<machine-config>,\
+SONOANATOMY_DATASET_JOB_ID=52477797,\
+SONOANATOMY_DATASET_NAMESPACE=s0010_sonoanatomy_dataset_v2,\
+SONOANATOMY_SEGMENTATION_NAMESPACE=s0010_sonoanatomy_segmentation_v2r1 \
+  hpg/jobs/s0010_sonoanatomy_segmentation_v1.sbatch
+
+sbatch --export=ALL,SONOGYM_CONFIG_FILE=<machine-config>,\
+CLINICIAN_SCAN_CAPTURE_JOB_ID=52476333,\
+CLINICIAN_SCAN_EVALUATION_JOB_ID=52477256,\
+CLINICIAN_SCAN_DESIGN_VERSION=v2,\
+SONOANATOMY_SEGMENTATION_JOB_ID=52478290,\
+SONOANATOMY_SEGMENTATION_NAMESPACE=s0010_sonoanatomy_segmentation_v2r1 \
+  hpg/jobs/s0010_clinician_scan_perception_v1.sbatch
+```
+
+Nothing was dropped from the scan replay: 96 attempted observations, 0 dropped,
+**96 final**. Near-duplicate training frames were excluded by the dataset split
+logic and recorded in each checkpoint bundle.
+
+### 14.3 Results
+
+| opened development, training job `52478290` | RIGHT L4 | RIGHT L5 | gate |
+|---|---:|---:|---:|
+| pair precision | 6 / 11 (54.5%) | 4 / 5 (80.0%) | at least 75% |
+| pair recall | 6 / 6 (100%) | 4 / 4 (100%) | report |
+| clear-negative false-acceptance | 5 / 18 (27.8%) | 1 / 4 (25.0%) | at most 10% |
+| model gate | fail | fail | both levels pass |
+
+| opened scan-v2 replay, job `52478433` | RIGHT L4 | RIGHT L5 |
+|---|---:|---:|
+| TP frame precision | 28 / 29 (96.6%) | 15 / 20 (75.0%) |
+| SAP frame precision | 8 / 33 (24.2%) | 2 / 4 (50.0%) |
+| pair frame precision | 6 / 22 (27.3%) | 1 / 3 (33.3%) |
+| pair false-positive rate | 16 / 42 (38.1%) | 2 / 47 (4.3%) |
+| multiview session acceptance | 0 / 2 (0%) | 0 / 2 (0%) |
+
+| information arm, job `52478433` | observed result | interpretation |
+|---|---|---|
+| static ultrasound | pair precision 7 / 25 (28.0%) over both levels | insufficient SAP discrimination |
+| static ultrasound plus pose | not separately decision-gated | no isolated information-gain claim |
+| unordered multiview | 0 / 4 sessions accepted | coverage failure |
+| ordered observations | reversing order changed no original abstention; 0 / 4 accepted | current rule uses geometry, not temporal direction |
+| active clinician-inspired scanning | not autonomous; evaluator-designed capture only | not measured |
+
+| control, job `52478433` | abstained | residual failure |
+|---|---:|---|
+| repeated image hash | 4 / 4 (100%) | none |
+| duplicate viewpoint | 4 / 4 (100%) | none |
+| missing SAP evidence | 4 / 4 (100%) | none |
+| reversed observation order | 4 / 4 (100%) | no information gain over original abstentions |
+| cyclic pose-image mismatch | 3 / 4 (75%) | one incorrect L4 acceptance |
+| competing bone | unresolved in 4 / 4 (100%) | current pair rule does not use other-bone rejection |
+
+**Verdict: perception and information value fail.** The bounded retry repaired
+the L5 background collapse, but neither level passed the false-acceptance gate,
+the scan-v2 replay had poor SAP precision, and the multiview rule provided no
+session coverage.
+
+### 14.4 Reading it
+
+- The new capture contains 11 simulator-proxy SAP-supported frames, so the
+  failure is not equivalent to zero signal.
+- The present model cannot distinguish that sparse signal from competing bone
+  reliably enough for Stage 2 acceptance.
+- The scan replay is not independent confirmation and cannot establish
+  generalization even if its metrics had passed.
+- A second hyperparameter sweep is not justified by the observed competing-bone
+  and longitudinal-observability failures.
+
+### 14.5 Files
+
+| file | contents |
+|---|---|
+| runtime job `52477797/dataset` | expanded weak-label dataset and manifest |
+| runtime job `52478290/training/result.json` | level-specific opened-development metrics |
+| runtime job `52478290/training/*.pt` | bounded-retry checkpoints |
+| runtime job `52478433/evaluation/actor` | actor-only predictions and session decisions |
+| runtime job `52478433/evaluation/evaluator/result.json` | frame metrics and controls |
+
+## 15. Stage 2 promotion — is fresh autonomous evaluation scientifically eligible
+
+`build_s0010_clinician_scan_review.py`, run by Slurm job `52478983`. It
+produces synchronized full and blinded replays and records the final promotion
+decision without exposing evaluator data to the actor.
+
+**Criterion.** `STAGE2_COMPLETE` requires correct RIGHT L4/L5 TP and SAP
+identity, accepted-pair precision at least 75%, clear-negative false-acceptance
+at most 10%, actor-only navigation, physical return, fresh ultrasound
+confirmation and four fresh integrated sessions. Full MBB intervention is out
+of scope and remains blocked.
+
+### 15.1 Method
+
+The promotion audit consumes the frozen motion, perception and control results.
+It does not run fresh autonomous sessions after a development gate fails. The
+full replay places privileged weak labels only in panel 4; the blinded replay
+withholds that panel while leaving actor-visible panels 1–3 unchanged.
+
+### 15.2 Setup
+
+| what | value | spec |
+|---|---|---|
+| review-video job | `52478983`; 4 CPUs | §15 |
+| source capture | job `52476333`; 96 observations | §13 |
+| source perception | job `52478433` | §14 |
+| output | 192 frames per video; 8 fps; 1280 × 720 | §15 |
+| fresh closed-loop job | not submitted because §14 failed | §15 criterion |
+
+```bash
+sbatch --export=ALL,SONOGYM_CONFIG_FILE=<machine-config>,\
+CLINICIAN_SCAN_CAPTURE_JOB_ID=52476333,\
+CLINICIAN_SCAN_EVALUATION_JOB_ID=52477256,\
+CLINICIAN_SCAN_PERCEPTION_JOB_ID=52478433 \
+  hpg/jobs/s0010_clinician_scan_review_v2.sbatch
+```
+
+Nothing was dropped: all 96 acquired observations appear in both videos.
+
+### 15.3 Results
+
+```text
+RIGHT_L4_TP_IDENTIFICATION = PARTIAL
+RIGHT_L4_SAP_IDENTIFICATION = FAIL
+RIGHT_L5_TP_IDENTIFICATION = PARTIAL
+RIGHT_L5_SAP_IDENTIFICATION = FAIL
+
+LONGITUDINAL_MEDIAL_LATERAL_SWEEP = PARTIAL
+TRANSVERSE_CRANIAL_CAUDAL_SWEEP = PARTIAL
+REVERSIBLE_TRANSITION_EVIDENCE = PARTIAL
+
+ANATOMICAL_DISCRIMINATION = FAIL
+ACTOR_ONLY_NAVIGATION = FAIL
+FRESH_CONFIRMATION = FAIL
+
+RIGHT_L4_STAGE2 = FAIL
+RIGHT_L5_STAGE2 = FAIL
+STAGE2_COMPLETE = FAIL
+
+FULL_MBB_INTERVENTION = BLOCKED
+```
+
+**Verdict: Stage 2 promotion fails.** No fresh closed-loop session was run,
+because both level-specific perception gates and the anatomical-observability
+gate failed before promotion.
+
+### 15.4 Reading it
+
+- The physical scan procedure is feasible on `s0010` under evaluator-assisted
+  waypoints.
+- The current evidence does not support an autonomous SAP/TP identity claim.
+- The remaining blocker is reproducible: sparse longitudinal SAP observation,
+  weak SAP/competing-bone discrimination and no multiview coverage.
+- This is simulator-proxy validation only, not clinical anatomical validation.
+
+### 15.5 Files
+
+| file | contents |
+|---|---|
+| runtime job `52478983/review/s0010_clinician_scan_actual_execution_full.mp4` | synchronized four-panel replay; SHA-256 `cc155ff79d7b61a5a40a6eeadbe88f625a0e46a8af64b71d3f3000ca18b60cd8` |
+| runtime job `52478983/review/s0010_clinician_scan_actual_execution_blinded.mp4` | blinded replay; SHA-256 `aa9ca00bdcde1098ed7b92bddfd9305ccea2320fef5b7a0d70c8c5dcf2d35949` |
+| runtime job `52478983/review/manifest.json` | source paths, information boundary and checksums |

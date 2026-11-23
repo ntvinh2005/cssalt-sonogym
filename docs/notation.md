@@ -24,6 +24,24 @@
 - **Intuition:** Direction-dependent change can support a TP boundary hypothesis more strongly than one static cortical appearance.
 - **Source:** approved by user, 2026-11-22; ASRA (2019).
 
+### Reversible longitudinal medial-lateral sweep
+- **Kind:** method
+- **Definition:** A longitudinal-plane acquisition sequence that starts with image-supported TP-region evidence, moves toward the right-lateral boundary, reverses on a physically distinct parallel path, and continues medially toward an evaluator-labeled AP-region candidate; the candidate region is not promoted to SAP identity.
+- **Intuition:** Ordered loss, return, and neighboring-region evidence can test a TP/AP boundary hypothesis more strongly than independent static frames.
+- **Source:** approved by user, 2026-11-23; supplied clinician-video analyses A and B.
+
+### Posterior acoustic-shadow fraction
+- **Kind:** metric
+- **Definition:** For the first actor-visible bright-interface track in a clean ultrasound frame, the fraction of normalized pixels below intensity 0.20 in the 42-pixel distal band beginning three pixels beneath the tracked interface.
+- **Intuition:** It measures how much low-intensity posterior shadow follows the selected cortical interface without using simulator anatomy.
+- **Source:** approved by user, 2026-11-23; implementation operationalization of the supplied clinician-video analysis B13.
+
+### Deep-window visibility
+- **Kind:** metric
+- **Definition:** The mean actor-visible robust-normalized ultrasound intensity in the deepest 28% of image rows.
+- **Intuition:** It provides a simple image-only measure of whether deeper tissue remains visible during a motion-conditioned cortical transition.
+- **Source:** approved by user, 2026-11-23; implementation operationalization of the supplied clinician-video analysis B13.
+
 ### SPATIAL_GEOMETRY_VALIDATED
 - **Kind:** object
 - **Definition:** The spatial-reconstruction verdict used when an actor-accessible calibrated probe transform reproduces saved native physical coordinates within the frozen coordinate-error gate and mapped cortical candidates pass the declared bone-surface consistency controls.

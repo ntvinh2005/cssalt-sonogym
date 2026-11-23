@@ -22,6 +22,7 @@ from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
 PROTOCOL_ID = "sonogym-s0010-clinician-scan-feasibility-v1"
+PROTOCOL_ID_V2 = "sonogym-s0010-clinician-scan-feasibility-v2"
 LONG_AXIS_ANGLE_RAD = math.pi / 2.0
 TRANSVERSE_ANGLE_RAD = 2.95
 LABEL_RESOLUTION_MM = 1.5
@@ -102,7 +103,7 @@ def distinct_anchor_rows(
 
 
 def longitudinal_sweep(anchor: np.ndarray) -> list[np.ndarray]:
-    """Move lateral-to-medial while the image plane follows the spine axis."""
+    """Move medial-to-lateral while the image plane follows the spine axis."""
 
     result = []
     for offset in (-12, -9, -6, -3, 0, 3, 6, 9):
@@ -110,6 +111,95 @@ def longitudinal_sweep(anchor: np.ndarray) -> list[np.ndarray]:
         if not pose_is_valid(pose):
             raise ValueError("longitudinal sweep leaves the native workspace")
         result.append(pose)
+    return result
+
+
+def reversible_longitudinal_sweep(
+    anchor: np.ndarray,
+    evaluator: Any,
+    *,
+    minimum_interface_pixels: int = 3,
+) -> list[np.ndarray]:
+    """Design an opened TP-loss/reappearance/AP-region feasibility sweep.
+
+    Patient-x increases toward the right/lateral side for the current s0010
+    command frame.  The return path is offset cranially by one command step so
+    that it tests reversibility without reusing an exact acquisition pose.
+    """
+
+    candidates = []
+    for z_offset in range(-12, 13, 3):
+        outward_z = float(anchor[1] + z_offset)
+        for return_z_delta in (-3.0, 3.0):
+            return_z = outward_z + return_z_delta
+            for lateral_step in (3.0, 6.0, 9.0):
+                for start_offset in range(-18, 19, 3):
+                    start_x = float(anchor[0] + start_offset)
+                    poses = [
+                        np.asarray([start_x, outward_z, LONG_AXIS_ANGLE_RAD]),
+                        np.asarray(
+                            [start_x + lateral_step, outward_z, LONG_AXIS_ANGLE_RAD]
+                        ),
+                        np.asarray(
+                            [start_x + 2 * lateral_step, outward_z, LONG_AXIS_ANGLE_RAD]
+                        ),
+                        np.asarray(
+                            [start_x + 2 * lateral_step, return_z, LONG_AXIS_ANGLE_RAD]
+                        ),
+                        np.asarray(
+                            [start_x + lateral_step, return_z, LONG_AXIS_ANGLE_RAD]
+                        ),
+                        np.asarray([start_x, return_z, LONG_AXIS_ANGLE_RAD]),
+                        np.asarray(
+                            [start_x - lateral_step, return_z, LONG_AXIS_ANGLE_RAD]
+                        ),
+                        np.asarray(
+                            [start_x - 2 * lateral_step, return_z, LONG_AXIS_ANGLE_RAD]
+                        ),
+                    ]
+                    if not all(pose_is_valid(pose) for pose in poses):
+                        continue
+                    evidence = [evaluator(pose) for pose in poses]
+                    tp = [int(row["tp_first_visible_pixels"]) for row in evidence]
+                    sap = [int(row["sap_first_visible_pixels"]) for row in evidence]
+                    start_supported = tp[0] >= minimum_interface_pixels
+                    lateral_loss = tp[2] < minimum_interface_pixels
+                    reverse_return = max(tp[4:6]) >= minimum_interface_pixels
+                    medial_ap_candidate = max(sap[6:8]) >= minimum_interface_pixels
+                    rank = (
+                        int(
+                            start_supported
+                            and lateral_loss
+                            and reverse_return
+                            and medial_ap_candidate
+                        ),
+                        int(start_supported) + int(lateral_loss) + int(reverse_return)
+                        + int(medial_ap_candidate),
+                        max(tp[0], tp[1]) - tp[2],
+                        max(tp[4:6]) - tp[3],
+                        max(sap[6:8]),
+                        -lateral_step,
+                        -abs(start_offset),
+                        -abs(z_offset),
+                    )
+                    diagnostic = {
+                        "start_x": start_x,
+                        "outward_z": outward_z,
+                        "return_z": return_z,
+                        "lateral_step_index": lateral_step,
+                        "tp_pixels": tp,
+                        "sap_pixels": sap,
+                    }
+                    candidates.append((rank, poses, diagnostic))
+    best = max(candidates, key=lambda row: row[0]) if candidates else None
+    if best is None or best[0][0] != 1:
+        raise ValueError(
+            "no longitudinal line supports TP start, lateral loss, reverse return, "
+            f"and medial AP-region evidence; best={None if best is None else best[2]}"
+        )
+    result = best[1]
+    validate_sequence(result)
+    validate_pose_bank(result)
     return result
 
 
@@ -220,6 +310,9 @@ def main() -> int:
     parser.add_argument("--label-conversion", type=Path, required=True)
     parser.add_argument("--patient-surface-dir", type=Path, required=True)
     parser.add_argument("--implementation-commit", required=True)
+    parser.add_argument(
+        "--scan-design-version", choices=("v1", "v2"), default="v1"
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
 
@@ -268,7 +361,16 @@ def main() -> int:
         )
         level_plans = []
         for variant in range(2):
-            long_poses = longitudinal_sweep(longitudinal[variant]["pose"])
+            try:
+                long_poses = (
+                    longitudinal_sweep(longitudinal[variant]["pose"])
+                    if args.scan_design_version == "v1"
+                    else reversible_longitudinal_sweep(
+                        longitudinal[variant]["pose"], evaluator
+                    )
+                )
+            except ValueError as error:
+                raise ValueError(f"{level} variant {variant}: {error}") from error
             transition_poses = cranial_caudal_transition(
                 transverse[variant]["pose"], evaluator
             )
@@ -296,8 +398,13 @@ def main() -> int:
             session_id = f"s0010clinical{level.lower()}_{variant:02d}"
             banks[bank_id] = [pose.tolist() for pose in all_poses]
             evidence_banks[bank_id] = []
+            longitudinal_role = (
+                "LONGITUDINAL_LATERAL_SWEEP"
+                if args.scan_design_version == "v1"
+                else "LONGITUDINAL_MEDIAL_LATERAL_REVERSIBLE_SWEEP"
+            )
             for scan_kind, poses in (
-                ("LONGITUDINAL_LATERAL_SWEEP", long_poses),
+                (longitudinal_role, long_poses),
                 ("TRANSVERSE_CRANIAL_CAUDAL_SWEEP", transition_poses),
                 ("ALTERNATIVE_VIEW_CONFIRMATION", alternative_poses),
             ):
@@ -331,7 +438,9 @@ def main() -> int:
         design_summary[level] = level_plans
 
     protocol = deepcopy(base)
-    protocol["protocol_id"] = PROTOCOL_ID
+    protocol["protocol_id"] = (
+        PROTOCOL_ID if args.scan_design_version == "v1" else PROTOCOL_ID_V2
+    )
     protocol["status"] = "FROZEN_OPENED_CLINICIAN_SCAN_FEASIBILITY"
     protocol["purpose"] = (
         "Test whether real longitudinal, transverse, cranial-caudal and "
@@ -370,9 +479,29 @@ def main() -> int:
         "No pose at or above 2.99 rad is allowed because the current controller cannot track it fail-closed.",
         "A nearby parallel reverse sweep tests reappearance without reusing an exact pose.",
     ]
+    if args.scan_design_version == "v2":
+        protocol["scan_design_version"] = "v2"
+        protocol["visualization"] = {
+            "record_robot_video": True,
+            "camera_eye_world_m": [1.8, -1.8, 1.6],
+            "camera_target_world_m": [0.0, -0.35, 0.9],
+            "framing_contract": "full_available_patient_asset_plus_robot_and_probe",
+            "fps": 15,
+            "action_stride": 10,
+            "actor_input": False,
+        }
+        protocol["change_policy"].extend(
+            [
+                "Patient-x increasing is treated as right-lateral in the audited s0010 command frame.",
+                "The longitudinal path must show evaluator-side TP start, lateral loss, reverse return, and medial AP-region evidence.",
+                "The AP-region evidence is not a verified SAP identity or autonomous actor target.",
+            ]
+        )
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
-    protocol_path = args.output_dir / "s0010_clinician_scan_feasibility_v1.yaml"
+    protocol_path = args.output_dir / (
+        f"s0010_clinician_scan_feasibility_{args.scan_design_version}.yaml"
+    )
     protocol_path.write_text(yaml.safe_dump(protocol, sort_keys=False), encoding="utf-8")
     protocol_path.with_suffix(".sha256").write_text(
         f"{sha256(protocol_path)}  {protocol_path.name}\n", encoding="utf-8"
@@ -389,6 +518,8 @@ def main() -> int:
         "transverse_offset_from_orthogonal_deg": math.degrees(math.pi - TRANSVERSE_ANGLE_RAD),
         "anatomical_labels": "SIMULATOR_WEAK_ANATOMICAL_LABEL",
     }
+    if args.scan_design_version == "v2":
+        result["scan_design_version"] = "v2"
     (args.output_dir / "manifest.json").write_text(
         json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

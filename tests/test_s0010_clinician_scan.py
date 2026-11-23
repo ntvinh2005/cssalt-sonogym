@@ -38,6 +38,44 @@ class ClinicianScanTests(unittest.TestCase):
         scan.validate_pose_bank(poses)
         scan.validate_sequence(poses)
 
+    def test_reversible_longitudinal_sweep_has_ordered_region_evidence(self) -> None:
+        def evaluator(pose: np.ndarray) -> dict[str, int]:
+            return {
+                "tp_first_visible_pixels": 10 if 137.0 <= pose[0] < 146.0 else 0,
+                "sap_first_visible_pixels": 8 if pose[0] <= 137.0 else 0,
+            }
+
+        poses = scan.reversible_longitudinal_sweep(
+            np.asarray([140.0, 130.0, scan.LONG_AXIS_ANGLE_RAD]), evaluator
+        )
+        self.assertEqual(len(poses), 8)
+        self.assertGreater(poses[2][0], poses[0][0])
+        self.assertLess(poses[-1][0], poses[3][0])
+        self.assertFalse(np.isclose(poses[3][1], poses[2][1]))
+        evidence = [evaluator(pose) for pose in poses]
+        self.assertGreaterEqual(evidence[0]["tp_first_visible_pixels"], 3)
+        self.assertLess(evidence[2]["tp_first_visible_pixels"], 3)
+        self.assertGreaterEqual(
+            max(row["tp_first_visible_pixels"] for row in evidence[4:6]), 3
+        )
+        self.assertGreaterEqual(
+            max(row["sap_first_visible_pixels"] for row in evidence[6:8]), 3
+        )
+        scan.validate_sequence(poses)
+        scan.validate_pose_bank(poses)
+
+    def test_reversible_longitudinal_sweep_fails_without_ap_region(self) -> None:
+        def evaluator(pose: np.ndarray) -> dict[str, int]:
+            return {
+                "tp_first_visible_pixels": 10 if pose[0] < 146.0 else 0,
+                "sap_first_visible_pixels": 0,
+            }
+
+        with self.assertRaisesRegex(ValueError, "medial AP-region"):
+            scan.reversible_longitudinal_sweep(
+                np.asarray([140.0, 130.0, scan.LONG_AXIS_ANGLE_RAD]), evaluator
+            )
+
     def test_alternative_views_never_use_untrackable_ceiling(self) -> None:
         poses = scan.alternative_view_sweep(np.asarray([140.0, 130.0, 2.95]))
         self.assertTrue(all(row[2] < 2.99 for row in poses))

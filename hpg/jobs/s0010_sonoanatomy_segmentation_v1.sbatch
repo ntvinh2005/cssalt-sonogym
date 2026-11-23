@@ -19,8 +19,10 @@ source "$SONOGYM_CONFIG_FILE"
 # shellcheck disable=SC1090
 source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
-DATASET_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sonoanatomy_dataset_v1/$SONOANATOMY_DATASET_JOB_ID/dataset"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sonoanatomy_segmentation_v1/$SLURM_JOB_ID"
+DATASET_NAMESPACE="${SONOANATOMY_DATASET_NAMESPACE:-s0010_sonoanatomy_dataset_v1}"
+SEGMENTATION_NAMESPACE="${SONOANATOMY_SEGMENTATION_NAMESPACE:-s0010_sonoanatomy_segmentation_v1}"
+DATASET_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/$DATASET_NAMESPACE/$SONOANATOMY_DATASET_JOB_ID/dataset"
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/$SEGMENTATION_NAMESPACE/$SLURM_JOB_ID"
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 

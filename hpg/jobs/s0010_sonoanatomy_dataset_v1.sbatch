@@ -30,6 +30,7 @@ mkdir -p "$RUN_DIR"
 capture_cpu_run_context "$RUN_DIR"
 "$PYTHON" -m unittest -q tests.test_sonoanatomy_labels \
   tests.test_acquisition_integrity tests.test_s0010_landmark_graph_confirmation \
+  tests.test_s0010_sonoanatomy_dataset \
   > "$RUN_DIR/tests.log" 2>&1
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/prepare_s0010_sonoanatomy_dataset.py" \
   --config "$CONFIG" --prediction "$PREDICTION" --segmentation "$SEGMENTATION" \

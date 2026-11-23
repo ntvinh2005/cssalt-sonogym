@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import math
 from typing import Literal, Mapping, Sequence
 
@@ -20,6 +21,13 @@ class SemanticObservation:
     semantic_class: SemanticClass
     frame_sequence: int
     frame_sha256: str
+    viewpoint_id: str
+    viewpoint_position_m: tuple[float, float, float]
+    viewpoint_rotation_columns: tuple[
+        tuple[float, float, float],
+        tuple[float, float, float],
+        tuple[float, float, float],
+    ]
     row: float
     column: float
     coordinate_mm: tuple[float, float, float]
@@ -95,6 +103,17 @@ def semantic_observations(
         raise ValueError("probabilities must be 4 x H x W")
     if frame_sequence < 0 or not frame_sha256:
         raise ValueError("frame identity is incomplete")
+    viewpoint_values = np.concatenate(
+        (
+            np.asarray(end_effector_position_m, dtype="<f8").reshape(-1),
+            np.asarray(rotation_columns, dtype="<f8").reshape(-1),
+        )
+    )
+    if viewpoint_values.shape != (12,) or not np.all(np.isfinite(viewpoint_values)):
+        raise ValueError("actor viewpoint must contain finite position and rotation")
+    viewpoint_id = hashlib.sha256(
+        np.round(viewpoint_values, decimals=9).tobytes()
+    ).hexdigest()
     coordinates = calibrated_image_coordinates_mm(
         end_effector_position_m=end_effector_position_m,
         rotation_columns=rotation_columns,
@@ -124,6 +143,14 @@ def semantic_observations(
                     semantic_class=name,
                     frame_sequence=frame_sequence,
                     frame_sha256=frame_sha256,
+                    viewpoint_id=viewpoint_id,
+                    viewpoint_position_m=tuple(
+                        float(value) for value in viewpoint_values[:3]
+                    ),
+                    viewpoint_rotation_columns=tuple(
+                        tuple(float(value) for value in column)
+                        for column in np.asarray(rotation_columns, dtype=np.float64)
+                    ),
                     row=float(np.sum(rows * weights) / total),
                     column=float(np.sum(columns * weights) / total),
                     coordinate_mm=tuple(float(value) for value in coordinate),
@@ -138,11 +165,17 @@ def cluster_observations(
     observations: Sequence[SemanticObservation],
     *,
     association_radius_mm: float,
+    minimum_view_translation_mm: float = 2.0,
+    minimum_view_rotation_deg: float = 1.0,
 ) -> tuple[SemanticCluster, ...]:
     """Cluster same-class observations without counting a frame twice."""
 
-    if association_radius_mm <= 0.0:
-        raise ValueError("association radius must be positive")
+    if (
+        association_radius_mm <= 0.0
+        or minimum_view_translation_mm < 0.0
+        or minimum_view_rotation_deg < 0.0
+    ):
+        raise ValueError("association and viewpoint separation settings are invalid")
     if len({(row.frame_sequence, row.frame_sha256) for row in observations}) != len(
         {row.frame_sequence for row in observations}
     ):
@@ -155,7 +188,37 @@ def cluster_observations(
             first = observations[members[0]]
             if first.semantic_class != observation.semantic_class:
                 continue
-            if any(observations[item].frame_sequence == observation.frame_sequence for item in members):
+            if any(
+                observations[item].frame_sequence == observation.frame_sequence
+                or observations[item].frame_sha256 == observation.frame_sha256
+                or observations[item].viewpoint_id == observation.viewpoint_id
+                for item in members
+            ):
+                continue
+            viewpoint_is_distinct = True
+            for item in members:
+                prior = observations[item]
+                translation_mm = 1000.0 * float(
+                    np.linalg.norm(
+                        np.asarray(prior.viewpoint_position_m)
+                        - np.asarray(observation.viewpoint_position_m)
+                    )
+                )
+                left_rotation = np.asarray(prior.viewpoint_rotation_columns)
+                right_rotation = np.asarray(observation.viewpoint_rotation_columns)
+                cosine = np.clip(
+                    (np.trace(left_rotation.T @ right_rotation) - 1.0) / 2.0,
+                    -1.0,
+                    1.0,
+                )
+                rotation_deg = math.degrees(math.acos(float(cosine)))
+                if (
+                    translation_mm < minimum_view_translation_mm
+                    and rotation_deg < minimum_view_rotation_deg
+                ):
+                    viewpoint_is_distinct = False
+                    break
+            if not viewpoint_is_distinct:
                 continue
             distances = [
                 float(

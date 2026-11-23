@@ -25,6 +25,8 @@ from two_stage_navigation.sonoanatomy_segmentation import (
 
 
 CLASS_NAME = {0: "BACKGROUND", 1: "TP", 2: "SAP", 3: "OTHER_BONE"}
+EARLY_STOPPING_PATIENCE = 10
+MINIMUM_EPOCHS_BEFORE_EARLY_STOPPING = 20
 
 
 def parse_args() -> argparse.Namespace:
@@ -179,6 +181,13 @@ def class_weights(labels: np.ndarray, rows: list[dict[str, str]]) -> torch.Tenso
     weights = np.clip(weights, 0.25, 8.0)
     weights[0] = 0.05
     return torch.tensor(weights, dtype=torch.float32)
+
+
+def should_stop_training(*, completed_epochs: int, stale_epochs: int) -> bool:
+    return bool(
+        completed_epochs >= MINIMUM_EPOCHS_BEFORE_EARLY_STOPPING
+        and stale_epochs >= EARLY_STOPPING_PATIENCE
+    )
 
 
 @torch.no_grad()
@@ -442,7 +451,7 @@ def train_level(
             stale = 0
         else:
             stale += 1
-        if stale >= 10:
+        if should_stop_training(completed_epochs=epoch + 1, stale_epochs=stale):
             break
     if best_state is None:
         raise RuntimeError("training produced no checkpoint")
