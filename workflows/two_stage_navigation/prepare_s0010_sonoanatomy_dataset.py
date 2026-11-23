@@ -97,9 +97,20 @@ def session_directories(root: Path) -> list[Path]:
 
 
 def selected_session_directories(
-    root: Path, session_ids: list[str] | None
+    root: Path,
+    session_ids: list[str] | None,
+    *,
+    layout: str = "sessions_subdirectory",
 ) -> list[Path]:
-    available = {path.name: path for path in session_directories(root)}
+    if layout == "sessions_subdirectory":
+        candidates = session_directories(root)
+    elif layout == "direct_children":
+        candidates = sorted(path for path in root.iterdir() if path.is_dir())
+        if not candidates:
+            raise ValueError(f"capture has no direct session directories: {root}")
+    else:
+        raise ValueError(f"unsupported session layout: {layout}")
+    available = {path.name: path for path in candidates}
     if session_ids is None:
         return sorted(available.values())
     if not session_ids or len(set(session_ids)) != len(session_ids):
@@ -108,6 +119,32 @@ def selected_session_directories(
     if missing:
         raise ValueError(f"capture source is missing sessions: {missing}")
     return [available[session_id] for session_id in session_ids]
+
+
+def capture_verification_passed(session: Path, mode: str) -> bool:
+    if mode == "verification_report":
+        verification = json.loads(
+            (session / "verification_report.json").read_text(encoding="utf-8")
+        )
+        return bool(
+            verification.get("gates")
+            and all(bool(value) for value in verification["gates"].values())
+            and int(verification.get("passed_frame_count", -1))
+            == int(
+                verification.get(
+                    "frame_count", len(verification.get("frames", []))
+                )
+            )
+        )
+    if mode == "completed_stage2_summary":
+        summary = json.loads((session / "summary.json").read_text(encoding="utf-8"))
+        return bool(
+            summary.get("status") == "COMPLETED"
+            and int(summary.get("frame_count", -1)) > 0
+            and (session / "results/actor_result.json.sha256").is_file()
+            and (session / "results/evaluation_report.json.sha256").is_file()
+        )
+    raise ValueError(f"unsupported capture verification mode: {mode}")
 
 
 def label_overlay(
@@ -190,6 +227,7 @@ def main() -> int:
         "s0010_sonoanatomy_dataset_v2",
         "s0010_sonoanatomy_dataset_v3",
         "s0010_sonoanatomy_dataset_v4",
+        "s0010_sonoanatomy_dataset_v5",
     }:
         raise ValueError("unexpected dataset protocol")
     if args.output_dir.exists():
@@ -227,15 +265,15 @@ def main() -> int:
         requested_sessions = source.get("session_ids")
         if requested_sessions is not None:
             requested_sessions = [str(value) for value in requested_sessions]
-        for session in selected_session_directories(root, requested_sessions):
-            verification = json.loads(
-                (session / "verification_report.json").read_text(encoding="utf-8")
-            )
-            verification_passed = bool(
-                verification.get("gates")
-                and all(bool(value) for value in verification["gates"].values())
-                and int(verification.get("passed_frame_count", -1))
-                == int(verification.get("frame_count", len(verification.get("frames", []))))
+        layout = str(source.get("session_layout", "sessions_subdirectory"))
+        verification_mode = str(source.get("verification", "verification_report"))
+        frame_target_level = source.get("frame_target_level")
+        session_namespace = str(source.get("session_id_namespace", ""))
+        for session in selected_session_directories(
+            root, requested_sessions, layout=layout
+        ):
+            verification_passed = capture_verification_passed(
+                session, verification_mode
             )
             if not verification_passed:
                 raise ValueError(f"capture verification did not pass: {session}")
@@ -251,9 +289,22 @@ def main() -> int:
             raw_labels = np.load(session / "privileged/raw_labels.npz")["raw_labels"]
             if not (len(frames) == len(images) == len(coordinates) == len(raw_labels)):
                 raise ValueError(f"session arrays differ in length: {session}")
+            if verification_mode == "completed_stage2_summary":
+                summary = json.loads(
+                    (session / "summary.json").read_text(encoding="utf-8")
+                )
+                if int(summary["frame_count"]) != len(frames):
+                    raise ValueError(f"stage2 summary frame count differs: {session}")
             for index, (frame, image, coordinate_map, raw) in enumerate(
                 zip(frames, images, coordinates, raw_labels)
             ):
+                if (
+                    frame_target_level is not None
+                    and not str(frame.get("target_name", "")).startswith(
+                        f"{frame_target_level}_"
+                    )
+                ):
+                    continue
                 image = np.asarray(image, dtype=np.float32)
                 frame_hash = str(frame["frame_sha256"])
                 if ultrasound_sha256(image) != frame_hash:
@@ -279,7 +330,11 @@ def main() -> int:
                     "level": level,
                     "source_role": source["role"],
                     "source_root": str(root),
-                    "session_id": session.name,
+                    "session_id": (
+                        f"{session_namespace}/{session.name}"
+                        if session_namespace
+                        else session.name
+                    ),
                     "acquisition_id": str(frame["acquisition_id"]),
                     "frame_sequence": int(frame["frame_sequence"]),
                     "trajectory_id": str(frame.get("trajectory_id", "")),

@@ -1,0 +1,83 @@
+protocol_id: s0010_sonoanatomy_dataset_v5
+status: OPENED_ACTIVE_SCAN_HARD_CASE_DEVELOPMENT
+anatomy_id: s0010
+label_provenance: SIMULATOR_WEAK_ANATOMICAL_LABEL
+image_support:
+  maximum_track_distance_pixels: 3.0
+sources:
+  - level: L4
+    role: opened_l4_graph_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l4_landmark_graph_development/52358451
+  - level: L4
+    role: opened_l4_focused_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l4_landmark_focused_development/52363363
+  - level: L4
+    role: opened_clinician_scan_feasibility
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_clinician_scan_feasibility_v2/52476333
+    session_ids: [s0010clinicall4_00, s0010clinicall4_01]
+  - level: L4
+    role: opened_additional_sonoanatomy_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sonoanatomy_capture_v2/${SONOANATOMY_CAPTURE_JOB_ID}
+    session_ids: [s0010sonodevv2l4_00, s0010sonodevv2l4_01, s0010sonodevv2l4_02, s0010sonodevv2l4_03]
+  - level: L4
+    role: opened_tp_hard_negative_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sonoanatomy_hard_negative_capture_v1/${SONOANATOMY_HARD_CAPTURE_JOB_ID}
+    session_ids: [s0010sonohardv1l4_00, s0010sonohardv1l4_01, s0010sonohardv1l4_02]
+  - level: L4
+    role: opened_active_scan_development_52492727
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52492727/stage2
+    session_layout: direct_children
+    verification: completed_stage2_summary
+    frame_target_level: L4
+    session_id_namespace: job_52492727_l4
+    session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
+  - level: L4
+    role: opened_active_scan_development_52494467
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52494467/stage2
+    session_layout: direct_children
+    verification: completed_stage2_summary
+    frame_target_level: L4
+    session_id_namespace: job_52494467_l4
+    session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
+  - level: L5
+    role: opened_l5_surface_signal_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l4mb_sap_tp_signal_v1/52300444
+  - level: L5
+    role: opened_l5_public_6dof_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sap_tp_public_6dof_confirmation/52347194
+  - level: L5
+    role: opened_failed_independent_confirmation_now_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_l5_landmark_graph_confirmation/52369053
+  - level: L5
+    role: opened_clinician_scan_feasibility
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_clinician_scan_feasibility_v2/52476333
+    session_ids: [s0010clinicall5_00, s0010clinicall5_01]
+  - level: L5
+    role: opened_additional_sonoanatomy_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sonoanatomy_capture_v2/${SONOANATOMY_CAPTURE_JOB_ID}
+    session_ids: [s0010sonodevv2l5_00, s0010sonodevv2l5_01, s0010sonodevv2l5_02, s0010sonodevv2l5_03]
+  - level: L5
+    role: opened_tp_hard_negative_development
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sonoanatomy_hard_negative_capture_v1/${SONOANATOMY_HARD_CAPTURE_JOB_ID}
+    session_ids: [s0010sonohardv1l5_00, s0010sonohardv1l5_01, s0010sonohardv1l5_02]
+  - level: L5
+    role: opened_active_scan_development_52492727
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52492727/stage2
+    session_layout: direct_children
+    verification: completed_stage2_summary
+    frame_target_level: L5
+    session_id_namespace: job_52492727_l5
+    session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
+  - level: L5
+    role: opened_active_scan_development_52494467
+    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52494467/stage2
+    session_layout: direct_children
+    verification: completed_stage2_summary
+    frame_target_level: L5
+    session_id_namespace: job_52494467_l5
+    session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
+readiness:
+  minimum_sap_positive_frames_per_level: 20
+  minimum_tp_positive_frames_per_level: 20
+  minimum_sap_positive_sessions_per_level: 3
+  minimum_clear_other_bone_frames_per_level: 20
