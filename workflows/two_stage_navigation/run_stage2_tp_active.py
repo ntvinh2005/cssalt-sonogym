@@ -76,6 +76,7 @@ from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan impo
     ScanConfig,
     ScanEvidence,
     ScanState,
+    staged_orientation_targets,
 )
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_multiview import (  # noqa: E402
     MultiviewConfig,
@@ -355,6 +356,28 @@ def main() -> int:
                 row["phase"] = phase
             action_rows.extend(trajectory)
             return trajectory
+
+        def stage_orientation_change(target: np.ndarray, phase: str) -> None:
+            """Execute large plane changes without coupling them to translation."""
+
+            current = current_realized_pose(unwrapped).copy()
+            maximum_step = float(
+                protocol.get("sonoanatomy_scan", {}).get(
+                    "maximum_orientation_step_rad", 0.35
+                )
+            )
+            intermediates = staged_orientation_targets(
+                current,
+                target,
+                maximum_step_rad=maximum_step,
+            )
+            for index, intermediate in enumerate(intermediates, start=1):
+                move(
+                    intermediate,
+                    f"{phase}:orientation_stage_{index}_of_{len(intermediates)}",
+                    float(motion["coarse_position_tolerance_mm"]),
+                    float(motion["coarse_orientation_tolerance_deg"]),
+                )
 
         def acquire(target_pose: np.ndarray, target_name: str, phase: str, position_tolerance: float, angle_tolerance: float) -> TargetView:
             nonlocal previous_producer, local_coordinates
@@ -662,6 +685,10 @@ def main() -> int:
                             ScanState.REVERSE_MEDIAL_SURVEY,
                         }
                         else f"{target_name}:transverse"
+                    )
+                    stage_orientation_change(
+                        scan_pose,
+                        f"{target_name}:sonoanatomy:{current_state.value}",
                     )
                     scan_view = acquire(
                         scan_pose,

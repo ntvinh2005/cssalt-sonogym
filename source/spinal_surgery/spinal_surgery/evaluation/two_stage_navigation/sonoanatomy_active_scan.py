@@ -61,6 +61,35 @@ class ScanEvidence:
         return self.image_valid and self.contact_ok and self.producer_advanced
 
 
+def staged_orientation_targets(
+    current_pose_index: Sequence[float],
+    target_pose_index: Sequence[float],
+    *,
+    maximum_step_rad: float,
+) -> tuple[np.ndarray, ...]:
+    """Return rotation-only intermediate poses for a large plane change."""
+
+    current = np.asarray(current_pose_index, dtype=np.float64)
+    target = np.asarray(target_pose_index, dtype=np.float64)
+    if (
+        current.shape != (3,)
+        or target.shape != (3,)
+        or not np.all(np.isfinite(current))
+        or not np.all(np.isfinite(target))
+        or not np.isfinite(maximum_step_rad)
+        or maximum_step_rad <= 0.0
+    ):
+        raise ValueError("orientation staging inputs are invalid")
+    difference = float((target[2] - current[2] + np.pi) % (2.0 * np.pi) - np.pi)
+    step_count = max(1, int(np.ceil(abs(difference) / maximum_step_rad)))
+    result = []
+    for index in range(1, step_count):
+        intermediate = current.copy()
+        intermediate[2] = current[2] + difference * index / step_count
+        result.append(intermediate)
+    return tuple(result)
+
+
 class ClinicianSweepController:
     """Choose scan poses from fresh ultrasound evidence and executed motion history."""
 

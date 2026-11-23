@@ -72,6 +72,7 @@ search:
 sonoanatomy_scan:
   longitudinal_angle_rad: 1.5707963267948966
   transverse_angle_rad: 2.95
+  maximum_orientation_step_rad: 0.35
   translation_step_index: 3.0
   reference_offsets_index: [-6.0, -3.0, 0.0, 3.0, 6.0]
   maximum_lateral_steps: 4

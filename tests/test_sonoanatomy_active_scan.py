@@ -9,6 +9,7 @@ from two_stage_navigation.sonoanatomy_active_scan import (
     ScanConfig,
     ScanEvidence,
     ScanState,
+    staged_orientation_targets,
 )
 
 
@@ -72,6 +73,17 @@ class ClinicianSweepControllerTests(unittest.TestCase):
             poses.append(pose)
             controller.observe(self.evidence(controller, frame, tp=frame == 2))
         self.assertTrue(all(np.isclose(row[2], 1.7) for row in poses))
+
+    def test_large_orientation_change_is_split_without_translation(self) -> None:
+        rows = staged_orientation_targets(
+            [147.0, 142.0, 2.8],
+            [141.0, 142.0, 1.57],
+            maximum_step_rad=0.35,
+        )
+        self.assertEqual(len(rows), 3)
+        self.assertTrue(all(np.allclose(row[:2], [147.0, 142.0]) for row in rows))
+        angles = [2.8, *(float(row[2]) for row in rows), 1.57]
+        self.assertLessEqual(max(abs(right - left) for left, right in zip(angles, angles[1:])), 0.35)
 
 
 if __name__ == "__main__":

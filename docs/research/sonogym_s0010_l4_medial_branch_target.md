@@ -1008,4 +1008,114 @@ gate failed before promotion.
 |---|---|
 | runtime job `52478983/review/s0010_clinician_scan_actual_execution_full.mp4` | synchronized four-panel replay; SHA-256 `cc155ff79d7b61a5a40a6eeadbe88f625a0e46a8af64b71d3f3000ca18b60cd8` |
 | runtime job `52478983/review/s0010_clinician_scan_actual_execution_blinded.mp4` | blinded replay; SHA-256 `aa9ca00bdcde1098ed7b92bddfd9305ccea2320fef5b7a0d70c8c5dcf2d35949` |
+
+## 16. Hard-negative repair and trajectory-scoped SAP/TP identity
+
+Jobs `52482280`, `52485117`, `52485420`, `52485680`, and `52488270`
+replace the failed §14 perception result with an opened-development repair. The
+historical failure remains valid for its frozen checkpoints and capture.
+
+**Goal.** Determine whether additional TP-negative/SAP-or-other-bone views and
+executed-trajectory boundaries can repair SAP/TP discrimination before a fresh
+closed-loop run.
+
+### 16.1 Method
+
+The added capture contains both TP-positive views and actor-mined hard
+negatives where TP is absent while SAP or competing bone can remain visible.
+Training retained clean ultrasound as the only image input, added a bounded
+negative-frame presence loss, and kept level-specific checkpoints. The actor
+clusters observations only within one executed trajectory and selects the
+highest-scoring supported trajectory. Provisional interface labels are used
+only after the actor result is sealed to measure selected-cluster identity.
+
+The fresh controller frozen at commits `876b038` and `f98a2c9` starts from the
+working Stage 1 and TP handoff, searches for a longitudinal TP reference,
+moves laterally until TP evidence is lost or the budget is reached, reverses
+medially, and then executes a distinct transverse cranial-caudal sweep. It
+abstains on stale or invalid acquisition and requires physical return plus new
+TP-and-SAP ultrasound evidence.
+
+### 16.2 Reproducible setup
+
+| item | value |
+|---|---|
+| additional SAP/TP capture | job `52482280`; 8 / 8 sessions; 192 / 192 distinct frames |
+| hard-negative capture | job `52485117`; 6 / 6 sessions; 144 / 144 distinct frames |
+| dataset | job `52485420`; 714 unique frames; SHA-256 `9fb58a09605ddb2a1b8bae4dd612192236de479510cbcd8aabcd5b9a6b245987` |
+| L4 checkpoint | job `52485680`; SHA-256 `e8f03ce7dac42329f716ff8f63b0dbe8da50f5fd55d067475f3fb3eef5e35cb3` |
+| L5 checkpoint | job `52485680`; SHA-256 `d5688fd3bc8e1fd6703e2c96bc3a310e017ee508ede32c53dcce9ea3f875e1ca` |
+| opened replay | job `52488270`; capture job `52482280` |
+| fresh protocol | `s0010_mbb_single_anatomy_poc_protocol_v4.yaml`; SHA-256 `c5fa959c670762a848c41bb09bdaba8ad7219be5f359f2fd4c86f6e280f94e75` |
+
+All captures used one NVIDIA L4 and four CPUs. Dataset assembly, replay, and
+evaluation were CPU-only. The hard-negative source added 19 TP-negative L4
+frames and 20 TP-negative L5 frames, including TP-negative/SAP-positive views.
+
+### 16.3 Results
+
+| frozen v7 development split | RIGHT L4 | RIGHT L5 |
+|---|---:|---:|
+| pair precision | 6 / 6 (100%) | 7 / 9 (77.8%) |
+| clear-negative false-acceptance | 0 / 10 (0%) | 2 / 12 (16.7%) |
+| pair recall | 6 / 12 (50.0%) | 7 / 11 (63.6%) |
+
+The L5 development false-acceptance gate does not pass. The independently
+calibrated L5 rule did pass its opened calibration gate, so the checkpoint was
+retained for a bounded trajectory-scoped replay rather than declared complete.
+
+| opened trajectory replay, job `52488270` | RIGHT L4 | RIGHT L5 |
+|---|---:|---:|
+| pair frame precision | 18 / 20 (90.0%) | 31 / 34 (91.2%) |
+| pair frame false-positive rate | 2 / 62 (3.2%) | 3 / 58 (5.2%) |
+| trajectory-scoped session acceptance | 4 / 4 | 4 / 4 |
+| selected pair identity within 3 pixels | 4 / 4 | 4 / 4 |
+
+The old full-scan multiview rule accepted 0 / 8 sessions because it mixed
+separate scan trajectories. The trajectory-scoped actor accepted 8 / 8 and
+the evaluator found the selected TP and SAP cluster identities correct in
+8 / 8. This result includes development sessions used in training and is not
+an independent confirmation.
+
+### 16.4 Interpretation
+
+- The fixed `s0010` simulator contains usable TP/SAP ultrasound signal.
+- The dominant data problem was not a lack of generic TP-positive frames; it
+  was a lack of hard TP-negative views containing SAP or competing bone.
+- Executed trajectory boundaries add useful information, but the opened replay
+  alone does not prove autonomous navigation.
+- The remaining scientific gate is four fresh actor-only sessions with physical
+  return and fresh ultrasound confirmation. The review videos must be rebuilt
+  from that execution rather than reusing the evaluator-designed capture.
+
+```text
+RIGHT_L4_TP_IDENTIFICATION = OPENED_PASS
+RIGHT_L4_SAP_IDENTIFICATION = OPENED_PASS
+RIGHT_L5_TP_IDENTIFICATION = OPENED_PASS
+RIGHT_L5_SAP_IDENTIFICATION = OPENED_PASS
+
+LONGITUDINAL_MEDIAL_LATERAL_SWEEP = IMPLEMENTED_NOT_FRESHLY_EXECUTED
+TRANSVERSE_CRANIAL_CAUDAL_SWEEP = IMPLEMENTED_NOT_FRESHLY_EXECUTED
+REVERSIBLE_TRANSITION_EVIDENCE = OPENED_PASS
+
+ANATOMICAL_DISCRIMINATION = OPENED_PASS
+ACTOR_ONLY_NAVIGATION = NOT_YET_EXECUTED
+FRESH_CONFIRMATION = NOT_YET_EXECUTED
+
+RIGHT_L4_STAGE2 = NOT_YET_CONFIRMED
+RIGHT_L5_STAGE2 = NOT_YET_CONFIRMED
+STAGE2_COMPLETE = NOT_YET_CONFIRMED
+
+FULL_MBB_INTERVENTION = BLOCKED
+```
+
+### 16.5 Files
+
+| file | contents |
+|---|---|
+| `source/spinal_surgery/spinal_surgery/evaluation/two_stage_navigation/sonoanatomy_active_scan.py` | actor-side observation-driven scan state machine |
+| `workflows/two_stage_navigation/run_stage2_tp_active.py` | Stage 1/TP handoff, SAP/TP sweeps, return, and fresh confirmation |
+| `workflows/two_stage_navigation/evaluate_stage2_tp_active.py` | privileged selected-cluster and fresh-label evaluation |
+| runtime job `52488270/evaluation/actor` | opened actor predictions and trajectory decisions |
+| runtime job `52488270/evaluation/evaluator/result.json` | opened frame and selected-pair identity metrics |
 | runtime job `52478983/review/manifest.json` | source paths, information boundary and checksums |
