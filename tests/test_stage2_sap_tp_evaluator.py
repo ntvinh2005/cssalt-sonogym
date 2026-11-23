@@ -6,11 +6,23 @@ import numpy as np
 
 from workflows.two_stage_navigation.evaluate_stage2_tp_active import (
     binary_pair_metrics,
+    proposal_from_frame,
     semantic_pair_identity,
 )
 
 
 class Stage2SapTpEvaluatorTests(unittest.TestCase):
+    def test_missing_actor_proposal_is_explicit(self) -> None:
+        self.assertIsNone(
+            proposal_from_frame(
+                {
+                    "proposal_track_id": None,
+                    "proposal_row": None,
+                    "proposal_column": None,
+                }
+            )
+        )
+
     def test_selected_clusters_require_majority_correct_tp_and_sap(self) -> None:
         labels = {
             index: np.zeros((12, 12), dtype=np.uint8) for index in range(4)

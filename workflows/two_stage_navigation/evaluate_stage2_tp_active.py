@@ -135,6 +135,17 @@ def proxy_state(
     return state, {"core_counts": counts, "uncertain_counts": uncertain, **diagnostics}
 
 
+def proposal_from_frame(frame: dict[str, Any]) -> PatchProposal | None:
+    if frame.get("proposal_row") is None or frame.get("proposal_column") is None:
+        return None
+    return PatchProposal(
+        str(frame["proposal_track_id"]),
+        float(frame["proposal_row"]),
+        float(frame["proposal_column"]),
+        np.empty(0),
+    )
+
+
 def save_overlay(
     path: Path,
     image: np.ndarray,
@@ -153,9 +164,19 @@ def save_overlay(
             value["uncertain_columns"], value["uncertain_rows"],
             s=4, c="#ff00ff", alpha=0.45,
         )
-    column_start = int(round(float(row["proposal_column"]) - 24))
-    row_start = int(round(float(row["proposal_row"]) - 34))
-    axes[1].add_patch(plt.Rectangle((column_start, row_start), 48, 80, fill=False, edgecolor="lime", linewidth=1.5))
+    if row.get("proposal_row") is not None and row.get("proposal_column") is not None:
+        column_start = int(round(float(row["proposal_column"]) - 24))
+        row_start = int(round(float(row["proposal_row"]) - 34))
+        axes[1].add_patch(
+            plt.Rectangle(
+                (column_start, row_start),
+                48,
+                80,
+                fill=False,
+                edgecolor="lime",
+                linewidth=1.5,
+            )
+        )
     axes[1].set_title("Evaluator-only geometry overlay")
     for axis in axes:
         axis.axis("off")
@@ -425,21 +446,25 @@ def main() -> int:
                 "uncertain_rows": uncertain["rows"][uncertain["inside"]],
                 "uncertain_columns": uncertain["columns"][uncertain["inside"]],
             }
-        proposal = PatchProposal(
-            str(frame["proposal_track_id"]),
-            float(frame["proposal_row"]),
-            float(frame["proposal_column"]),
-            np.empty(0),
-        )
-        state, diagnostics = proxy_state(str(frame["target_name"]), proposal, projections)
-        row_index = int(np.clip(round(float(frame["proposal_row"])), 0, 199))
-        column_index = int(np.clip(round(float(frame["proposal_column"])), 0, 149))
-        # Native coordinates are flattened from (width, depth), while actor images
-        # are displayed as (depth, width).
-        estimated_index = coordinates[sequence, column_index * 200 + row_index]
-        geometry = geometries[str(frame["target_name"])]
-        core = geometry["vertices"][geometry["core"]]
-        distance_mm = float(np.min(np.linalg.norm(core - estimated_index, axis=1)) * 1.5)
+        proposal = proposal_from_frame(frame)
+        if proposal is None:
+            state = "PROXY_NEGATIVE"
+            diagnostics = {"reason": "NO_ACTOR_PROPOSAL"}
+            distance_mm = None
+        else:
+            state, diagnostics = proxy_state(
+                str(frame["target_name"]), proposal, projections
+            )
+            row_index = int(np.clip(round(float(frame["proposal_row"])), 0, 199))
+            column_index = int(np.clip(round(float(frame["proposal_column"])), 0, 149))
+            # Native coordinates are flattened from (width, depth), while actor images
+            # are displayed as (depth, width).
+            estimated_index = coordinates[sequence, column_index * 200 + row_index]
+            geometry = geometries[str(frame["target_name"])]
+            core = geometry["vertices"][geometry["core"]]
+            distance_mm = float(
+                np.min(np.linalg.norm(core - estimated_index, axis=1)) * 1.5
+            )
         frame_evaluation[sequence] = {
             "frame_sequence": sequence,
             "frame_sha256": frame["frame_sha256"],
@@ -472,8 +497,13 @@ def main() -> int:
         selected_sequence = target["selected_frame_sequence"]
         selected = None if selected_sequence is None else frame_evaluation[int(selected_sequence)]
         confirmations = [frame_evaluation[int(value)] for value in target["fresh_confirmation_frame_sequences"]]
-        errors = [] if selected is None else [selected["interface_point_to_core_error_mm"]]
-        errors.extend(row["interface_point_to_core_error_mm"] for row in confirmations)
+        candidate_errors = (
+            [] if selected is None else [selected["interface_point_to_core_error_mm"]]
+        )
+        candidate_errors.extend(
+            row["interface_point_to_core_error_mm"] for row in confirmations
+        )
+        errors = [value for value in candidate_errors if value is not None]
         positive_confirmation_count = sum(
             row["proxy_state"] == "PROXY_POSITIVE" for row in confirmations
         )
