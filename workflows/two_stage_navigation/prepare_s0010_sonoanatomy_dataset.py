@@ -188,6 +188,7 @@ def main() -> int:
     if protocol_id not in {
         "s0010_sonoanatomy_dataset_v1",
         "s0010_sonoanatomy_dataset_v2",
+        "s0010_sonoanatomy_dataset_v3",
     }:
         raise ValueError("unexpected dataset protocol")
     if args.output_dir.exists():

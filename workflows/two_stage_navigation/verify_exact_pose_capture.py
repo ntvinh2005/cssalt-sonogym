@@ -62,6 +62,7 @@ SYNCHRONIZED_PROTOCOL_IDS = {
     "sonogym-s0010-sap-tp-pair-confirmation-v1r1",
     "sonogym-s0010-sap-tp-pair-confirmation-v1r2",
     "sonogym-s0010-sap-tp-pair-confirmation-v1r3",
+    "sonogym-s0010-sonoanatomy-development-v2",
 }
 
 
@@ -182,6 +183,7 @@ def main() -> int:
         "sonogym-s0010-l4-landmark-focused-development-v1",
         "sonogym-s0010-l4-landmark-focused-development-v1r1",
         "sonogym-s0010-sonoanatomy-development-v1",
+        "sonogym-s0010-sonoanatomy-development-v2",
         "sonogym-s0010-clinician-scan-feasibility-v1",
         "sonogym-s0010-clinician-scan-feasibility-v2",
     }:
