@@ -15,6 +15,13 @@ class ClinicianScanTests(unittest.TestCase):
         self.assertTrue(
             all(np.isclose(row[2], scan.LONG_AXIS_ANGLE_RAD) for row in poses)
         )
+        steps_mm = [
+            np.linalg.norm(after[:2] - before[:2]) * scan.LABEL_RESOLUTION_MM
+            for before, after in zip(poses, poses[1:])
+        ]
+        self.assertTrue(
+            all(value > scan.CAPTURE_POSITION_SEPARATION_MM for value in steps_mm)
+        )
         scan.validate_sequence(poses)
 
     def test_transition_moves_forward_and_then_reverses(self) -> None:

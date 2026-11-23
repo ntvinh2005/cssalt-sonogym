@@ -18,12 +18,16 @@ import yaml
 import correct_s0010_sap_observability_v1 as sap_correction
 import run_s0010_l4_medial_branch_target as target_workflow
 import search_s0010_l4mb_target_viewpoints as search
+from two_stage_navigation.acquisition_integrity import validate_waypoint_bank
 
 
 PROTOCOL_ID = "sonogym-s0010-clinician-scan-feasibility-v1"
 LONG_AXIS_ANGLE_RAD = math.pi / 2.0
 TRANSVERSE_ANGLE_RAD = 2.95
 LABEL_RESOLUTION_MM = 1.5
+MINIMUM_COMMAND_TRANSLATION = 3.0
+CAPTURE_POSITION_SEPARATION_MM = 3.0
+CAPTURE_ORIENTATION_SEPARATION_DEG = 2.4
 POSE_MINIMUM = np.asarray([100.0, 70.0, 1.0], dtype=np.float64)
 POSE_MAXIMUM = np.asarray([180.0, 200.0, 3.0], dtype=np.float64)
 
@@ -101,7 +105,7 @@ def longitudinal_sweep(anchor: np.ndarray) -> list[np.ndarray]:
     """Move lateral-to-medial while the image plane follows the spine axis."""
 
     result = []
-    for offset in (-8, -6, -4, -2, 0, 2, 4, 6):
+    for offset in (-12, -9, -6, -3, 0, 3, 6, 9):
         pose = np.asarray([anchor[0] + offset, anchor[1], LONG_AXIS_ANGLE_RAD])
         if not pose_is_valid(pose):
             raise ValueError("longitudinal sweep leaves the native workspace")
@@ -116,7 +120,7 @@ def cranial_caudal_transition(
     """Select a forward scan with the largest TP change, then reverse it."""
 
     line = []
-    for offset in range(-10, 12, 2):
+    for offset in range(-15, 18, 3):
         pose = np.asarray([anchor[0], anchor[1] + offset, TRANSVERSE_ANGLE_RAD])
         if pose_is_valid(pose):
             line.append((pose, evaluator(pose)))
@@ -130,7 +134,11 @@ def cranial_caudal_transition(
     boundary = int(np.argmax(decreases))
     start = min(max(boundary - 2, 0), len(line) - 5)
     forward = [line[index][0] for index in range(start, start + 5)]
-    lateral_offset = 2.0 if forward[0][0] <= POSE_MAXIMUM[0] - 2.0 else -2.0
+    lateral_offset = (
+        MINIMUM_COMMAND_TRANSLATION
+        if forward[0][0] <= POSE_MAXIMUM[0] - MINIMUM_COMMAND_TRANSLATION
+        else -MINIMUM_COMMAND_TRANSLATION
+    )
     reverse = [
         np.asarray(
             [
@@ -148,7 +156,11 @@ def alternative_view_sweep(anchor: np.ndarray) -> list[np.ndarray]:
     """Rotate through physically acquired views near the target region."""
 
     angles = (LONG_AXIS_ANGLE_RAD, 1.80, 2.05, 2.30, 2.55, 2.75, 2.95, 2.65)
-    lateral_offset = -2.0 if anchor[0] >= POSE_MINIMUM[0] + 2.0 else 2.0
+    lateral_offset = (
+        -MINIMUM_COMMAND_TRANSLATION
+        if anchor[0] >= POSE_MINIMUM[0] + MINIMUM_COMMAND_TRANSLATION
+        else MINIMUM_COMMAND_TRANSLATION
+    )
     result = [
         np.asarray([anchor[0] + lateral_offset, anchor[1], angle]) for angle in angles
     ]
@@ -163,8 +175,11 @@ def validate_sequence(poses: list[np.ndarray]) -> None:
     for before, after in zip(poses, poses[1:]):
         translation_mm = float(np.linalg.norm(after[:2] - before[:2]) * LABEL_RESOLUTION_MM)
         rotation_deg = math.degrees(abs(float(after[2] - before[2])))
-        if translation_mm < 2.0 and rotation_deg < 1.0:
-            raise ValueError("consecutive scan views are not physically distinct")
+        if (
+            translation_mm <= CAPTURE_POSITION_SEPARATION_MM
+            and rotation_deg <= CAPTURE_ORIENTATION_SEPARATION_DEG
+        ):
+            raise ValueError("consecutive scan views fail the capture separation gate")
 
 
 def validate_pose_bank(poses: list[np.ndarray]) -> None:
@@ -262,6 +277,21 @@ def main() -> int:
                 validate_sequence(poses)
             all_poses = long_poses + transition_poses + alternative_poses
             validate_pose_bank(all_poses)
+            validate_waypoint_bank(
+                all_poses,
+                command_minimum=POSE_MINIMUM,
+                command_maximum=POSE_MAXIMUM,
+                label_resolution_mm=LABEL_RESOLUTION_MM,
+                position_tolerance_mm=float(
+                    base["sampling"]["physical_tracking_position_tolerance_mm"]
+                ),
+                orientation_tolerance_deg=float(
+                    base["sampling"]["physical_tracking_orientation_tolerance_deg"]
+                ),
+                separation_multiplier=float(
+                    base["sampling"].get("waypoint_separation_multiplier", 1.0)
+                ),
+            )
             bank_id = f"{level.lower()}_bank_{variant:02d}"
             session_id = f"s0010clinical{level.lower()}_{variant:02d}"
             banks[bank_id] = [pose.tolist() for pose in all_poses]
