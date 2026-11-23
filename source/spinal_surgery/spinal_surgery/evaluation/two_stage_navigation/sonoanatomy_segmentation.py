@@ -93,3 +93,35 @@ def interface_loss(
     )
     dice = (numerator + 1.0) / (denominator + 1.0)
     return cross_entropy + torch.mean(1.0 - dice)
+
+
+def negative_presence_loss(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    *,
+    class_ids: tuple[int, ...] = (1, 2),
+    top_k_pixels: int = 20,
+) -> torch.Tensor:
+    """Penalize high class probabilities in frames with no visible class interface."""
+
+    if logits.ndim != 4 or target.shape != logits.shape[:1] + logits.shape[2:]:
+        raise ValueError("logits and target shapes are incompatible")
+    if top_k_pixels <= 0:
+        raise ValueError("top_k_pixels must be positive")
+    probabilities = torch.softmax(logits, dim=1)
+    losses = []
+    for class_id in class_ids:
+        if class_id <= 0 or class_id >= logits.shape[1]:
+            raise ValueError(f"invalid foreground class: {class_id}")
+        negative_frames = ~torch.any(target == class_id, dim=(1, 2))
+        if not torch.any(negative_frames):
+            continue
+        values = probabilities[negative_frames, class_id].flatten(1)
+        count = min(top_k_pixels, values.shape[1])
+        strongest = torch.topk(values, k=count, dim=1).values
+        losses.append(
+            -torch.log1p(-torch.clamp(strongest, max=1.0 - 1.0e-6)).mean()
+        )
+    if not losses:
+        return logits.sum() * 0.0
+    return torch.stack(losses).mean()

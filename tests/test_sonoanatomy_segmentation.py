@@ -8,6 +8,7 @@ import numpy as np
 from two_stage_navigation.sonoanatomy_segmentation import (
     SmallUNet,
     interface_loss,
+    negative_presence_loss,
     normalized_ultrasound,
 )
 from workflows.two_stage_navigation.train_s0010_sonoanatomy_segmentation import (
@@ -35,6 +36,19 @@ class SonoanatomySegmentationTests(unittest.TestCase):
         self.assertTrue(torch.isfinite(loss))
         loss.backward()
         self.assertIsNotNone(logits.grad)
+
+    def test_negative_presence_loss_penalizes_false_foreground_hotspots(self) -> None:
+        target = torch.zeros(2, 4, 4, dtype=torch.long)
+        low = torch.zeros(2, 4, 4, 4, requires_grad=True)
+        high = torch.zeros(2, 4, 4, 4, requires_grad=True)
+        high.data[:, 1, :2, :2] = 5.0
+
+        low_loss = negative_presence_loss(low, target, top_k_pixels=4)
+        high_loss = negative_presence_loss(high, target, top_k_pixels=4)
+
+        self.assertGreater(float(high_loss.detach()), float(low_loss.detach()))
+        high_loss.backward()
+        self.assertIsNotNone(high.grad)
 
     def test_normalization_is_per_image_and_bounded(self) -> None:
         image = torch.stack((torch.arange(16), torch.arange(16) + 100)).reshape(2, 4, 4).float()

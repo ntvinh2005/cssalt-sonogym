@@ -20,6 +20,7 @@ from torch.utils.data import DataLoader, Dataset
 from two_stage_navigation.sonoanatomy_segmentation import (
     SmallUNet,
     interface_loss,
+    negative_presence_loss,
     normalized_ultrasound,
 )
 
@@ -31,6 +32,8 @@ PAIR_PRECISION_GATE = 0.75
 PAIR_FALSE_ACCEPT_RATE_GATE = 0.10
 FRAME_THRESHOLDS = (0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90)
 FRAME_MINIMUM_PIXELS = (1, 2, 3, 5, 8, 12, 20)
+NEGATIVE_PRESENCE_WEIGHT = 0.25
+NEGATIVE_PRESENCE_TOP_K_PIXELS = 20
 
 
 def parse_args() -> argparse.Namespace:
@@ -394,6 +397,27 @@ def pixel_metrics(probabilities: np.ndarray, targets: np.ndarray) -> dict[str, A
     return result
 
 
+def negative_presence_score(
+    probabilities: np.ndarray,
+    targets: np.ndarray,
+    *,
+    class_ids: tuple[int, ...] = (1, 2),
+    top_k_pixels: int = NEGATIVE_PRESENCE_TOP_K_PIXELS,
+) -> float:
+    values = []
+    for class_id in class_ids:
+        negative = ~np.any(targets == class_id, axis=(1, 2))
+        if not np.any(negative):
+            continue
+        flattened = probabilities[negative, class_id].reshape(
+            np.count_nonzero(negative), -1
+        )
+        count = min(top_k_pixels, flattened.shape[1])
+        strongest = np.partition(flattened, -count, axis=1)[:, -count:]
+        values.append(float(np.mean(strongest)))
+    return float(np.mean(values)) if values else 0.0
+
+
 def localization_error_pixels(
     probabilities: np.ndarray,
     targets: np.ndarray,
@@ -490,8 +514,15 @@ def train_level(
         for batch_images, batch_labels, _ in train_loader:
             optimizer.zero_grad(set_to_none=True)
             normalized = normalized_ultrasound(batch_images.to(device))[:, None]
-            loss = interface_loss(
-                model(normalized), batch_labels.to(device), weights
+            labels_on_device = batch_labels.to(device)
+            logits = model(normalized)
+            loss = interface_loss(logits, labels_on_device, weights) + (
+                NEGATIVE_PRESENCE_WEIGHT
+                * negative_presence_loss(
+                    logits,
+                    labels_on_device,
+                    top_k_pixels=NEGATIVE_PRESENCE_TOP_K_PIXELS,
+                )
             )
             loss.backward()
             optimizer.step()
@@ -503,6 +534,10 @@ def train_level(
         calibration_loss = 1.0 - 0.5 * (
             calibration_pixel["TP"]["dice"] + calibration_pixel["SAP"]["dice"]
         )
+        calibration_negative_presence = negative_presence_score(
+            calibration_probabilities, calibration_targets
+        )
+        calibration_loss += NEGATIVE_PRESENCE_WEIGHT * calibration_negative_presence
         history.append(
             {
                 "epoch": epoch,
@@ -510,6 +545,7 @@ def train_level(
                 "calibration_objective": calibration_loss,
                 "calibration_tp_dice": calibration_pixel["TP"]["dice"],
                 "calibration_sap_dice": calibration_pixel["SAP"]["dice"],
+                "calibration_negative_presence": calibration_negative_presence,
             }
         )
         if calibration_loss + 1.0e-6 < best_loss:
