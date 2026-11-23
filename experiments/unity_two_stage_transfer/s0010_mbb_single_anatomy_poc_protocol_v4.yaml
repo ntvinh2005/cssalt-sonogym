@@ -84,6 +84,8 @@ sonoanatomy_scan:
   minimum_score_margin: 0.0
   active_rescan_offsets_index:
     - [0.0, 0.0, 0.0]
+    - [0.0, 0.0, -0.04]
+    - [0.0, 0.0, 0.04]
     - [-2.0, 0.0, 0.0]
     - [2.0, 0.0, 0.0]
     - [0.0, -2.0, 0.0]

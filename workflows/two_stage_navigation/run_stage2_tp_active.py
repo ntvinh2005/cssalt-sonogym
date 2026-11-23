@@ -794,6 +794,29 @@ def main() -> int:
                         )
                     )
 
+                fallback_transverse_executed = False
+                if (
+                    controller.state == ScanState.ABSTAIN
+                    and controller.reason == "REFERENCE_TP_NOT_FOUND"
+                ):
+                    fallback_transverse_executed = True
+                    transverse_trajectory = f"{target_name}:transverse_fallback"
+                    tp_anchor = np.asarray(decision.selected.pose_index, dtype=np.float64)
+                    for offset in scan_config.transverse_offsets_index:
+                        pose = np.asarray(
+                            [
+                                tp_anchor[0],
+                                tp_anchor[1] + offset,
+                                scan_config.transverse_angle_rad,
+                            ],
+                            dtype=np.float64,
+                        )
+                        acquire_semantic(
+                            pose,
+                            state_name="TRANSVERSE_TP_HANDOFF_FALLBACK",
+                            trajectory_id=transverse_trajectory,
+                        )
+
                 tp_candidates = [
                     row for row in semantic_frames if row["tp_predicted"]
                 ]
@@ -1001,6 +1024,7 @@ def main() -> int:
                 target_result["sonoanatomy"] = {
                     "checkpoint_sha256": semantic_model["sha256"],
                     "controller_transition_evidence": controller.transition_evidence(),
+                    "fallback_transverse_executed": fallback_transverse_executed,
                     "trajectory_decisions": trajectory_decisions,
                     "selected_trajectory_id": selected_semantic_trajectory,
                     "selected_pair_decision": selected_semantic_pair,
