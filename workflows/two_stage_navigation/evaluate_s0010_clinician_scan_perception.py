@@ -189,6 +189,59 @@ def decide(observations: Sequence[SemanticObservation]) -> PairDecision:
     return decide_tp_sap_pair(clusters, config=MultiviewConfig())
 
 
+def trajectory_scoped_pair_decision(
+    observations: Sequence[SemanticObservation],
+    frames: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Select the strongest accepted pair without mixing separate executed sweeps."""
+
+    trajectory_by_frame = {
+        int(frame["frame_sequence"]): str(frame["trajectory_id"]) for frame in frames
+    }
+    grouped: dict[str, list[SemanticObservation]] = {}
+    for observation in observations:
+        trajectory = trajectory_by_frame.get(observation.frame_sequence)
+        if trajectory is None:
+            raise ValueError("semantic observation has no action trajectory")
+        grouped.setdefault(trajectory, []).append(observation)
+    config = MultiviewConfig(
+        association_radius_mm=4.0,
+        minimum_supporting_frames_per_structure=2,
+        minimum_score_margin=0.0,
+    )
+    rows = []
+    accepted = []
+    for trajectory_id, current in grouped.items():
+        clusters = cluster_observations(current, association_radius_mm=4.0)
+        decision = decide_tp_sap_pair(clusters, config=config)
+        row = {
+            "trajectory_id": trajectory_id,
+            "frame_sequences": sorted(
+                {observation.frame_sequence for observation in current}
+            ),
+            "pair_decision": decision_payload(decision),
+        }
+        rows.append(row)
+        if decision.status == "ACCEPT" and decision.selected is not None:
+            accepted.append((decision.selected.score, trajectory_id, decision))
+    if not accepted:
+        return {
+            "status": "ABSTAIN",
+            "reason": "NO_TRAJECTORY_WITH_SUPPORTED_PAIR",
+            "selected_trajectory_id": None,
+            "selected_pair_decision": None,
+            "trajectory_decisions": rows,
+        }
+    _, trajectory_id, selected = max(accepted, key=lambda row: (row[0], row[1]))
+    return {
+        "status": "ACCEPT",
+        "reason": "STRONGEST_TRAJECTORY_SUPPORTED_PAIR",
+        "selected_trajectory_id": trajectory_id,
+        "selected_pair_decision": decision_payload(selected),
+        "trajectory_decisions": rows,
+    }
+
+
 def controls(
     probabilities: np.ndarray,
     frames: Sequence[Mapping[str, Any]],
@@ -339,6 +392,7 @@ def main() -> int:
             )
         clusters = cluster_observations(observations, association_radius_mm=5.0)
         pair_decision = decide_tp_sap_pair(clusters, config=MultiviewConfig())
+        scoped_decision = trajectory_scoped_pair_decision(observations, frames)
         actor_session = {
             "schema": "s0010-clinician-scan-perception-actor-session-v1",
             "session_id": session_id,
@@ -348,6 +402,7 @@ def main() -> int:
             "semantic_observation_count": len(observations),
             "semantic_clusters": [asdict(row) for row in clusters],
             "pair_decision": decision_payload(pair_decision),
+            "trajectory_scoped_pair_decision": scoped_decision,
             "checkpoint_sha256": file_sha256(checkpoints[level]),
             "decision_mode": "causal_prefix_eligible_but_full_scan_consumed",
             "oracle_waypoint_capture": True,
@@ -376,8 +431,12 @@ def main() -> int:
             )
             for name in ("TP", "SAP", "PAIR")
         }
-    accepted_sessions = sum(
+    full_scan_accepted_sessions = sum(
         row["pair_decision"]["status"] == "ACCEPT" for row in actor_sessions
+    )
+    trajectory_scoped_accepted_sessions = sum(
+        row["trajectory_scoped_pair_decision"]["status"] == "ACCEPT"
+        for row in actor_sessions
     )
     evaluator_result = {
         "schema": "s0010-clinician-scan-perception-evaluation-v1",
@@ -398,9 +457,15 @@ def main() -> int:
         },
         "frame_metrics_against_provisional_weak_labels": level_results,
         "multiview_pair_acceptance": {
-            "accepted_sessions": accepted_sessions,
+            "accepted_sessions": full_scan_accepted_sessions,
             "total_sessions": len(actor_sessions),
-            "coverage": accepted_sessions / len(actor_sessions),
+            "coverage": full_scan_accepted_sessions / len(actor_sessions),
+            "pair_identity_correctness": "NOT_MEASURED_BY_FRAME_PRESENCE_LABELS",
+        },
+        "trajectory_scoped_pair_acceptance": {
+            "accepted_sessions": trajectory_scoped_accepted_sessions,
+            "total_sessions": len(actor_sessions),
+            "coverage": trajectory_scoped_accepted_sessions / len(actor_sessions),
             "pair_identity_correctness": "NOT_MEASURED_BY_FRAME_PRESENCE_LABELS",
         },
         "controls": control_rows,
@@ -409,6 +474,7 @@ def main() -> int:
             "Weak interface labels are simulator proxies, not clinical anatomical validation.",
             "Frame presence does not verify the identity of a selected three-dimensional pair.",
             "The current pair rule does not use OTHER_BONE to reject competing bone.",
+            "Trajectory scoping uses executed action groups but not temporal order within a sweep.",
         ],
     }
     write_json(evaluator_dir / "result.json", evaluator_result)

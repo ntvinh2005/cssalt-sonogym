@@ -10,10 +10,32 @@ from evaluate_s0010_clinician_scan_perception import (
     binary_metrics,
     predicted_presence,
     read_dataset_manifest,
+    trajectory_scoped_pair_decision,
 )
+from two_stage_navigation.sonoanatomy_multiview import SemanticObservation
 
 
 class ClinicianScanPerceptionTests(unittest.TestCase):
+    @staticmethod
+    def observation(kind: str, frame: int, coordinate: float, confidence: float) -> SemanticObservation:
+        return SemanticObservation(
+            semantic_class=kind,
+            frame_sequence=frame,
+            frame_sha256=f"{frame:064d}",
+            viewpoint_id=f"view-{frame}",
+            viewpoint_position_m=(0.003 * frame, 0.0, 0.0),
+            viewpoint_rotation_columns=(
+                (1.0, 0.0, 0.0),
+                (0.0, 1.0, 0.0),
+                (0.0, 0.0, 1.0),
+            ),
+            row=100.0,
+            column=75.0,
+            coordinate_mm=(coordinate, 0.0, 0.0),
+            confidence=confidence,
+            pixel_count=5,
+        )
+
     def test_binary_metrics_report_explicit_counts(self) -> None:
         result = binary_metrics(
             np.asarray([True, True, False, False]),
@@ -71,6 +93,31 @@ class ClinicianScanPerceptionTests(unittest.TestCase):
 
         self.assertEqual(set(result), {("session", 0)})
         self.assertEqual(result[("session", 0)]["both_supported"], "False")
+
+    def test_trajectory_scoping_selects_strongest_sweep_without_mixing(self) -> None:
+        observations = (
+            self.observation("TP", 0, 0.0, 0.7),
+            self.observation("TP", 1, 0.5, 0.7),
+            self.observation("SAP", 2, 8.0, 0.7),
+            self.observation("SAP", 3, 8.5, 0.7),
+            self.observation("TP", 4, 30.0, 0.95),
+            self.observation("TP", 5, 30.5, 0.95),
+            self.observation("SAP", 6, 38.0, 0.95),
+            self.observation("SAP", 7, 38.5, 0.95),
+        )
+        frames = [
+            {
+                "frame_sequence": index,
+                "trajectory_id": "first" if index < 4 else "second",
+            }
+            for index in range(8)
+        ]
+
+        result = trajectory_scoped_pair_decision(observations, frames)
+
+        self.assertEqual(result["status"], "ACCEPT")
+        self.assertEqual(result["selected_trajectory_id"], "second")
+        self.assertEqual(len(result["trajectory_decisions"]), 2)
 
 
 if __name__ == "__main__":
