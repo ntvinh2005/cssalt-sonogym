@@ -11,6 +11,8 @@ from two_stage_navigation.sonoanatomy_segmentation import (
     normalized_ultrasound,
 )
 from workflows.two_stage_navigation.train_s0010_sonoanatomy_segmentation import (
+    FRAME_MINIMUM_PIXELS,
+    FRAME_THRESHOLDS,
     calibrate_pair,
     pair_frame_metrics,
     should_stop_training,
@@ -78,6 +80,19 @@ class SonoanatomySegmentationTests(unittest.TestCase):
         self.assertEqual(result["metrics"]["recall"], 1.0)
         self.assertGreaterEqual(result["thresholds"]["TP"]["threshold"], 0.6)
         self.assertGreaterEqual(result["thresholds"]["SAP"]["threshold"], 0.6)
+
+    def test_pair_calibration_reports_when_no_candidate_meets_gates(self) -> None:
+        probabilities = np.zeros((2, 4, 2, 2), dtype=np.float32)
+        targets = np.zeros((2, 2, 2), dtype=np.uint8)
+        targets[0, 0, 0] = 1
+        targets[0, 0, 1] = 2
+        probabilities[:, 1, :, :] = max(FRAME_THRESHOLDS)
+        probabilities[:, 2, :, :] = max(FRAME_THRESHOLDS)
+        self.assertGreaterEqual(max(FRAME_MINIMUM_PIXELS), 4)
+
+        result = calibrate_pair(probabilities, targets)
+
+        self.assertFalse(result["gate_passed"])
 
     def test_early_stopping_waits_for_foreground_learning_window(self) -> None:
         self.assertFalse(should_stop_training(completed_epochs=11, stale_epochs=10))

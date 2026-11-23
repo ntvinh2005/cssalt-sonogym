@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 
 from evaluate_s0010_clinician_scan_perception import (
     binary_metrics,
     predicted_presence,
+    read_dataset_manifest,
 )
 
 
@@ -36,6 +39,24 @@ class ClinicianScanPerceptionTests(unittest.TestCase):
         self.assertFalse(result["sap_predicted"])
         self.assertEqual(result["tp_predicted_pixels"], 2)
         self.assertEqual(result["sap_predicted_pixels"], 1)
+
+    def test_dataset_manifest_truth_is_scoped_to_capture_root(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            capture = root / "capture"
+            capture.mkdir()
+            manifest = root / "manifest.csv"
+            manifest.write_text(
+                "source_root,session_id,frame_sequence,has_tp_interface,has_sap_interface\n"
+                f"{capture},session,0,True,False\n"
+                f"{root / 'other'},other,0,True,True\n",
+                encoding="utf-8",
+            )
+
+            result = read_dataset_manifest(manifest, capture)
+
+        self.assertEqual(set(result), {("session", 0)})
+        self.assertEqual(result[("session", 0)]["both_supported"], "False")
 
 
 if __name__ == "__main__":

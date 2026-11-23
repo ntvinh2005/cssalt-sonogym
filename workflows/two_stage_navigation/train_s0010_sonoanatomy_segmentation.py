@@ -523,11 +523,9 @@ def train_level(
         for class_id in (1, 2, 3)
     }
     pair_calibration = calibrate_pair(calibration_probabilities, calibration_targets)
-    thresholds = {
-        "TP": pair_calibration["thresholds"]["TP"],
-        "SAP": pair_calibration["thresholds"]["SAP"],
-        "OTHER_BONE": independently_calibrated_thresholds["OTHER_BONE"],
-    }
+    thresholds = dict(independently_calibrated_thresholds)
+    if pair_calibration["gate_passed"]:
+        thresholds.update(pair_calibration["thresholds"])
     checkpoint = output / f"s0010_{level.lower()}_sonoanatomy_unet_v1.pt"
     torch.save(
         {

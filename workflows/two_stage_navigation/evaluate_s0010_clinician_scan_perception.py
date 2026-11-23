@@ -37,7 +37,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--run-root", type=Path, required=True)
-    parser.add_argument("--frame-results", type=Path, required=True)
+    evidence = parser.add_mutually_exclusive_group(required=True)
+    evidence.add_argument("--frame-results", type=Path)
+    evidence.add_argument("--dataset-manifest", type=Path)
     parser.add_argument("--l4-checkpoint", type=Path, required=True)
     parser.add_argument("--l5-checkpoint", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -73,6 +75,33 @@ def read_frame_results(path: Path) -> dict[tuple[str, int], dict[str, str]]:
     result = {(row["session_id"], int(row["frame_sequence"])): row for row in rows}
     if len(result) != len(rows):
         raise ValueError("frame results contain duplicate frame identities")
+    return result
+
+
+def read_dataset_manifest(
+    path: Path, run_root: Path
+) -> dict[tuple[str, int], dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = [
+            row
+            for row in csv.DictReader(handle)
+            if Path(row["source_root"]).resolve() == run_root.resolve()
+        ]
+    result = {
+        (row["session_id"], int(row["frame_sequence"])): {
+            "tp_supported": row["has_tp_interface"],
+            "sap_supported": row["has_sap_interface"],
+            "both_supported": str(
+                row["has_tp_interface"].lower() == "true"
+                and row["has_sap_interface"].lower() == "true"
+            ),
+        }
+        for row in rows
+    }
+    if not result:
+        raise ValueError("dataset manifest has no rows for the capture root")
+    if len(result) != len(rows):
+        raise ValueError("dataset manifest contains duplicate frame identities")
     return result
 
 
@@ -222,9 +251,14 @@ def main() -> int:
     if protocol.get("protocol_id") not in {
         "sonogym-s0010-clinician-scan-feasibility-v1",
         "sonogym-s0010-clinician-scan-feasibility-v2",
+        "sonogym-s0010-sonoanatomy-development-v2",
     }:
         raise ValueError("unexpected protocol")
-    evaluator_frames = read_frame_results(args.frame_results)
+    evaluator_frames = (
+        read_frame_results(args.frame_results)
+        if args.frame_results is not None
+        else read_dataset_manifest(args.dataset_manifest, args.run_root)
+    )
     checkpoints = {"L4": args.l4_checkpoint, "L5": args.l5_checkpoint}
     models = {}
     bundles = {}
@@ -347,7 +381,11 @@ def main() -> int:
         "schema": "s0010-clinician-scan-perception-evaluation-v1",
         "scientific_status": "OPENED_FEASIBILITY_NOT_INDEPENDENT_CONFIRMATION",
         "capture_protocol_sha256": file_sha256(args.protocol),
-        "frame_results_sha256": file_sha256(args.frame_results),
+        "evaluator_evidence": {
+            "kind": "frame_results" if args.frame_results is not None else "dataset_manifest",
+            "path": str((args.frame_results or args.dataset_manifest).resolve()),
+            "sha256": file_sha256(args.frame_results or args.dataset_manifest),
+        },
         "checkpoints": {
             level: {
                 "path": str(path.resolve()),
