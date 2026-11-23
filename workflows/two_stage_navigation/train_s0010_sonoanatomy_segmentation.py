@@ -27,6 +27,10 @@ from two_stage_navigation.sonoanatomy_segmentation import (
 CLASS_NAME = {0: "BACKGROUND", 1: "TP", 2: "SAP", 3: "OTHER_BONE"}
 EARLY_STOPPING_PATIENCE = 10
 MINIMUM_EPOCHS_BEFORE_EARLY_STOPPING = 20
+PAIR_PRECISION_GATE = 0.75
+PAIR_FALSE_ACCEPT_RATE_GATE = 0.10
+FRAME_THRESHOLDS = (0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90)
+FRAME_MINIMUM_PIXELS = (1, 2, 3, 5, 8, 12, 20)
 
 
 def parse_args() -> argparse.Namespace:
@@ -282,8 +286,8 @@ def pair_frame_metrics(
 
 def calibrate(probabilities: np.ndarray, targets: np.ndarray, class_id: int) -> dict[str, Any]:
     candidates = []
-    for threshold in (0.30, 0.40, 0.50, 0.60, 0.70):
-        for minimum_pixels in (1, 2, 3, 5):
+    for threshold in FRAME_THRESHOLDS:
+        for minimum_pixels in FRAME_MINIMUM_PIXELS:
             metrics = frame_metrics(
                 probabilities,
                 targets,
@@ -304,6 +308,59 @@ def calibrate(probabilities: np.ndarray, targets: np.ndarray, class_id: int) -> 
             row["minimum_pixels"],
         ),
     )
+
+
+def calibrate_pair(
+    probabilities: np.ndarray,
+    targets: np.ndarray,
+) -> dict[str, Any]:
+    """Select TP/SAP thresholds on calibration data using the pair acceptance gates."""
+    candidates: list[dict[str, Any]] = []
+    for tp_threshold in FRAME_THRESHOLDS:
+        for tp_minimum_pixels in FRAME_MINIMUM_PIXELS:
+            for sap_threshold in FRAME_THRESHOLDS:
+                for sap_minimum_pixels in FRAME_MINIMUM_PIXELS:
+                    thresholds = {
+                        "TP": {
+                            "threshold": tp_threshold,
+                            "minimum_pixels": tp_minimum_pixels,
+                        },
+                        "SAP": {
+                            "threshold": sap_threshold,
+                            "minimum_pixels": sap_minimum_pixels,
+                        },
+                    }
+                    metrics = pair_frame_metrics(probabilities, targets, thresholds)
+                    candidates.append({"thresholds": thresholds, "metrics": metrics})
+
+    eligible = [
+        row
+        for row in candidates
+        if row["metrics"]["precision"] >= PAIR_PRECISION_GATE
+        and row["metrics"]["false_accept_rate"] <= PAIR_FALSE_ACCEPT_RATE_GATE
+        and row["metrics"]["accepted_frame_count"] > 0
+    ]
+    pool = eligible if eligible else candidates
+    selected = max(
+        pool,
+        key=lambda row: (
+            row["metrics"]["recall"],
+            row["metrics"]["precision"],
+            -row["metrics"]["false_accept_rate"],
+            row["metrics"]["accepted_frame_count"],
+            row["thresholds"]["TP"]["threshold"],
+            row["thresholds"]["SAP"]["threshold"],
+            row["thresholds"]["TP"]["minimum_pixels"],
+            row["thresholds"]["SAP"]["minimum_pixels"],
+        ),
+    )
+    return {
+        **selected,
+        "gate_passed": bool(eligible),
+        "precision_gate": PAIR_PRECISION_GATE,
+        "false_accept_rate_gate": PAIR_FALSE_ACCEPT_RATE_GATE,
+        "candidate_count": len(candidates),
+    }
 
 
 def pixel_metrics(probabilities: np.ndarray, targets: np.ndarray) -> dict[str, Any]:
@@ -459,11 +516,17 @@ def train_level(
     calibration_indices, calibration_probabilities, calibration_targets = predict(
         model, calibration_loader, device
     )
-    thresholds = {
+    independently_calibrated_thresholds = {
         CLASS_NAME[class_id]: calibrate(
             calibration_probabilities, calibration_targets, class_id
         )
         for class_id in (1, 2, 3)
+    }
+    pair_calibration = calibrate_pair(calibration_probabilities, calibration_targets)
+    thresholds = {
+        "TP": pair_calibration["thresholds"]["TP"],
+        "SAP": pair_calibration["thresholds"]["SAP"],
+        "OTHER_BONE": independently_calibrated_thresholds["OTHER_BONE"],
     }
     checkpoint = output / f"s0010_{level.lower()}_sonoanatomy_unet_v1.pt"
     torch.save(
@@ -516,6 +579,8 @@ def train_level(
         "epochs_completed": len(history),
         "class_weights": weights.cpu().tolist(),
         "calibration_thresholds": thresholds,
+        "independently_calibrated_thresholds": independently_calibrated_thresholds,
+        "calibration_pair_selection": pair_calibration,
         "development_frame_metrics": development_frame,
         "development_pair_frame_metrics": pair_frame_metrics(
             development_probabilities, development_targets, thresholds
