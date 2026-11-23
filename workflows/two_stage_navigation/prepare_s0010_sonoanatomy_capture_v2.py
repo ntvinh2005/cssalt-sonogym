@@ -24,6 +24,8 @@ POSE_MINIMUM = np.asarray([100.0, 70.0, 1.0], dtype=np.float64)
 POSE_MAXIMUM = np.asarray([180.0, 200.0, 3.0], dtype=np.float64)
 POSITION_SEPARATION_MM = 3.0
 ORIENTATION_SEPARATION_DEG = 2.4
+TRACKING_ORIENTATION_TOLERANCE_DEG = 1.2
+MINIMUM_REALIZED_VIEW_ROTATION_DEG = 1.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -70,9 +72,9 @@ def local_sweep(anchor: np.ndarray) -> list[np.ndarray]:
     """Acquire distinct local translations and angles around one observed pose."""
 
     if anchor[2] > 2.84:
-        offsets = (-0.15, -0.10, -0.05, 0.0)
+        offsets = (-0.30, -0.20, -0.10, 0.0)
     else:
-        offsets = (-0.10, -0.05, 0.0, 0.05)
+        offsets = (-0.20, -0.10, 0.0, 0.10)
     x, z, angle = (float(value) for value in anchor)
     result = [
         np.asarray([x, z, angle + offsets[0]]),
@@ -88,6 +90,17 @@ def local_sweep(anchor: np.ndarray) -> list[np.ndarray]:
         raise ValueError(f"local sweep leaves the command domain: {anchor.tolist()}")
     if not all(poses_are_separated(before, after) for before, after in zip(result, result[1:])):
         raise ValueError("local sweep contains consecutive views below the separation gate")
+    same_position_rotations = [
+        math.degrees(abs(float(after[2] - before[2])))
+        for before, after in zip(result, result[1:])
+        if np.allclose(before[:2], after[:2])
+    ]
+    if not all(
+        rotation - 2.0 * TRACKING_ORIENTATION_TOLERANCE_DEG
+        > MINIMUM_REALIZED_VIEW_ROTATION_DEG
+        for rotation in same_position_rotations
+    ):
+        raise ValueError("angle steps cannot guarantee a distinct realized viewpoint")
     return result
 
 

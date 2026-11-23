@@ -27,6 +27,15 @@ class SonoanatomyCaptureV2Test(unittest.TestCase):
         self.assertLess(max(float(pose[2]) for pose in poses), 2.99)
         self.assertIn(2.95, [float(pose[2]) for pose in poses])
 
+    def test_angle_steps_remain_distinct_after_opposed_tracking_errors(self) -> None:
+        poses = local_sweep(np.asarray([150.0, 130.0, 2.4]))
+        same_position = [
+            np.degrees(abs(float(second[2] - first[2])))
+            for first, second in zip(poses, poses[1:])
+            if np.allclose(first[:2], second[:2])
+        ]
+        self.assertTrue(all(value - 2.0 * 1.2 > 1.0 for value in same_position))
+
 
 if __name__ == "__main__":
     unittest.main()
