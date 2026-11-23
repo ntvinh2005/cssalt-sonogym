@@ -33,15 +33,45 @@ def main() -> int:
             raise RuntimeError(f"missing Stage 2 evaluation: {path}")
         stage2_reports.append(json.loads(path.read_text()))
     target_rows = [row for report in stage2_reports for row in report["target_reports"]]
-    target_successes = sum(bool(row["proxy_target_view_success"]) for row in target_rows)
+    target_successes = sum(
+        bool(row.get("integrated_target_success", row["proxy_target_view_success"]))
+        for row in target_rows
+    )
     all_target_views = target_successes == len(target_rows) == 8
-    partial_pass = bool(stage1_pass and all_target_views)
+    semantic_metrics = [
+        row["semantic_frame_metrics"]
+        for row in target_rows
+        if row.get("semantic_frame_metrics") is not None
+    ]
+    semantic_tp = sum(int(row["tp"]) for row in semantic_metrics)
+    semantic_fp = sum(int(row["fp"]) for row in semantic_metrics)
+    semantic_tn = sum(int(row["tn"]) for row in semantic_metrics)
+    semantic_fn = sum(int(row["fn"]) for row in semantic_metrics)
+    semantic_precision = (
+        semantic_tp / (semantic_tp + semantic_fp)
+        if semantic_tp + semantic_fp
+        else 0.0
+    )
+    semantic_false_accept_rate = (
+        semantic_fp / (semantic_fp + semantic_tn)
+        if semantic_fp + semantic_tn
+        else 0.0
+    )
     errors = [
         float(row["localization_error_mm"])
         for row in target_rows
         if row["localization_error_mm"] is not None
     ]
     actor_accepts = sum(report["actor_outcome"] == "TARGET_VIEWS_CONFIRMED" for report in stage2_reports)
+    stage2_complete = bool(
+        stage1_pass
+        and all_target_views
+        and actor_accepts == len(stage2_reports) == 4
+        and semantic_metrics
+        and semantic_precision >= float(protocol["evaluator"]["pair_precision_gate"])
+        and semantic_false_accept_rate
+        <= float(protocol["evaluator"]["clear_negative_false_accept_rate_gate"])
+    )
     actor_results = []
     summaries = []
     for session in protocol["execution"]["sessions"]:
@@ -74,7 +104,12 @@ def main() -> int:
             "valid_view_failure_rate": 1.0 - target_successes / len(target_rows),
             "actor_session_abstention_rate": 1.0 - actor_accepts / len(stage2_reports),
             "fresh_confirmation_success_count": sum(
-                bool(row["proxy_target_view_success"])
+                bool(
+                    row.get(
+                        "integrated_target_success",
+                        row["proxy_target_view_success"],
+                    )
+                )
                 for row in target_rows
             ),
             "frame_count": sum(int(actor["frame_count"]) for actor in actor_results),
@@ -98,6 +133,15 @@ def main() -> int:
             "mean_tp_interface_localization_error_mm": None if not errors else mean(errors),
             "maximum_tp_interface_localization_error_mm": None if not errors else max(errors),
             "target_reports": target_rows,
+            "semantic_pair_frame_metrics": {
+                "tp": semantic_tp,
+                "fp": semantic_fp,
+                "fn": semantic_fn,
+                "tn": semantic_tn,
+                "precision": semantic_precision,
+                "clear_negative_false_accept_rate": semantic_false_accept_rate,
+            },
+            "stage2_complete": stage2_complete,
         },
         "mbb_intervention": {
             "target_region_localized": False,
@@ -117,10 +161,10 @@ def main() -> int:
         "end_to_end_failure_rate": 1.0,
         "failure_rate": 1.0,
         "abstention_rate": 1.0 - actor_accepts / len(stage2_reports),
-        "milestone_verdict": "PARTIAL_PASS" if partial_pass else "BLOCKED",
+        "milestone_verdict": "STAGE2_COMPLETE" if stage2_complete else "BLOCKED",
         "scientific_scope": (
-            "fixed-s0010 simulator proxy; TP surface-core view acquisition only; "
-            "not whole-TP, SAP, nerve, injection-target or clinical validation"
+            "fixed-s0010 simulator-proxy RIGHT L4/L5 TP and provisional SAP "
+            "identification; not nerve, injection-target or clinical validation"
         ),
         "historical_stage2_confirmation": "CONFIRMATION_NO_GO",
     }

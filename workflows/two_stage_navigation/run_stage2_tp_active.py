@@ -771,6 +771,9 @@ def main() -> int:
                         {
                             "trajectory_id": trajectory_id,
                             "pair_decision": pair_payload,
+                            "semantic_observations": [
+                                asdict(row) for row in semantic_rows
+                            ],
                             "semantic_clusters": [asdict(row) for row in clusters],
                         }
                     )

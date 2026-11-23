@@ -10,16 +10,17 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v3.yaml"
+POC_PROTOCOL_VERSION="${POC_PROTOCOL_VERSION:-v3}"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_${POC_PROTOCOL_VERSION}.yaml"
 STAGE1_ACTOR_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_group_a_confirmation_actor_protocol_v1.yaml"
 STAGE1_EVALUATION_PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/stage1_group_a_confirmation_evaluation_protocol_v1.yaml"
 GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v3/$SLURM_JOB_ID"
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_${POC_PROTOCOL_VERSION}/$SLURM_JOB_ID"
 mkdir -p "$RUN_DIR"/{context,metrics,results,stage1/sessions,stage1/results,stage2}
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "${PROTOCOL%.yaml}.sha256" "$STAGE1_ACTOR_PROTOCOL" \
    "$STAGE1_EVALUATION_PROTOCOL" "$RUN_DIR/context/"
-(cd "$RUN_DIR/context" && sha256sum -c s0010_mbb_single_anatomy_poc_protocol_v3.sha256)
+(cd "$RUN_DIR/context" && sha256sum -c "s0010_mbb_single_anatomy_poc_protocol_${POC_PROTOCOL_VERSION}.sha256")
 
 nvidia-smi --query-gpu=timestamp,name,driver_version,utilization.gpu,memory.used,memory.total \
     --format=csv > "$RUN_DIR/metrics/gpu-before.csv"
@@ -42,11 +43,20 @@ if [[ "$TP_TEST_RC" -eq 0 && "$ACTIVE_TEST_RC" -eq 0 ]]; then
 else
     MBB_TEST_RC=99
 fi
+if [[ "$TP_TEST_RC" -eq 0 && "$ACTIVE_TEST_RC" -eq 0 && "$MBB_TEST_RC" -eq 0 ]]; then
+    "$PYTHON" -m unittest -q tests.test_sonoanatomy_active_scan \
+        tests.test_sonoanatomy_multiview tests.test_sonoanatomy_segmentation \
+        tests.test_stage2_sap_tp_evaluator \
+        > "$RUN_DIR/results/tests-sap-tp-active.log" 2>&1
+    SAP_TP_TEST_RC=$?
+else
+    SAP_TP_TEST_RC=99
+fi
 
 STAGE1_CAPTURE_RC=0
 STAGE1_ACTOR_RC=99
 STAGE1_EVALUATOR_RC=99
-if [[ "$TP_TEST_RC" -eq 0 && "$ACTIVE_TEST_RC" -eq 0 && "$MBB_TEST_RC" -eq 0 ]]; then
+if [[ "$TP_TEST_RC" -eq 0 && "$ACTIVE_TEST_RC" -eq 0 && "$MBB_TEST_RC" -eq 0 && "$SAP_TP_TEST_RC" -eq 0 ]]; then
     mapfile -t STAGE1_IDS < <(
         "$PYTHON" -c 'import sys,yaml; [print(x["session_id"]) for x in yaml.safe_load(open(sys.argv[1]))["sessions"]]' "$STAGE1_ACTOR_PROTOCOL"
     )
@@ -148,6 +158,7 @@ sstat --jobs="${SLURM_JOB_ID}.batch" --format=JobID,AveCPU,MaxRSS,MaxVMSize -P \
     echo "tp_active_test_exit_code=$TP_TEST_RC"
     echo "active_regression_test_exit_code=$ACTIVE_TEST_RC"
     echo "mbb_contract_test_exit_code=$MBB_TEST_RC"
+    echo "sap_tp_active_test_exit_code=$SAP_TP_TEST_RC"
     echo "stage1_capture_exit_code=$STAGE1_CAPTURE_RC"
     echo "stage1_actor_exit_code=$STAGE1_ACTOR_RC"
     echo "stage1_evaluator_exit_code=$STAGE1_EVALUATOR_RC"
@@ -159,7 +170,7 @@ capture_run_end "$RUN_DIR"
 du -sb "$RUN_DIR" > "$RUN_DIR/metrics/storage-bytes.txt"
 find "$RUN_DIR" -type f -print | sort > "$RUN_DIR/files.txt"
 
-if [[ "$TP_TEST_RC" -ne 0 || "$ACTIVE_TEST_RC" -ne 0 || "$MBB_TEST_RC" -ne 0 ]]; then exit 2; fi
+if [[ "$TP_TEST_RC" -ne 0 || "$ACTIVE_TEST_RC" -ne 0 || "$MBB_TEST_RC" -ne 0 || "$SAP_TP_TEST_RC" -ne 0 ]]; then exit 2; fi
 if [[ "$STAGE1_CAPTURE_RC" -ne 0 ]]; then exit "$STAGE1_CAPTURE_RC"; fi
 if [[ "$STAGE1_ACTOR_RC" -ne 0 ]]; then exit "$STAGE1_ACTOR_RC"; fi
 if [[ "$STAGE1_EVALUATOR_RC" -ne 0 ]]; then exit "$STAGE1_EVALUATOR_RC"; fi
