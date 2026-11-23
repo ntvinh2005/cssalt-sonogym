@@ -81,6 +81,12 @@ sonoanatomy_scan:
   association_radius_mm: 4.0
   minimum_supporting_frames_per_structure: 2
   minimum_score_margin: 0.0
+  active_rescan_offsets_index:
+    - [0.0, 0.0, 0.0]
+    - [-2.0, 0.0, 0.0]
+    - [2.0, 0.0, 0.0]
+    - [0.0, -2.0, 0.0]
+    - [0.0, 2.0, 0.0]
   confirmation_dither_offsets:
     - [0.75, 0.0, 0.0]
     - [-0.75, 0.0, 0.0]

@@ -668,32 +668,18 @@ def main() -> int:
                 semantic_frames: list[dict[str, Any]] = []
                 observations_by_trajectory: dict[str, list[SemanticObservation]] = {}
 
-                while controller.state not in {
-                    ScanState.SAP_TP_IDENTITY_INFERENCE,
-                    ScanState.ABSTAIN,
-                }:
-                    scan_pose = controller.next_pose()
-                    if scan_pose is None:
-                        break
-                    current_state = controller.state
-                    trajectory_id = (
-                        f"{target_name}:longitudinal"
-                        if current_state
-                        in {
-                            ScanState.ACQUIRE_REFERENCE_TP_REGION,
-                            ScanState.LONGITUDINAL_LATERAL_SURVEY,
-                            ScanState.REVERSE_MEDIAL_SURVEY,
-                        }
-                        else f"{target_name}:transverse"
-                    )
-                    stage_orientation_change(
-                        scan_pose,
-                        f"{target_name}:sonoanatomy:{current_state.value}",
-                    )
+                def acquire_semantic(
+                    scan_pose: np.ndarray,
+                    *,
+                    state_name: str,
+                    trajectory_id: str,
+                ) -> tuple[TargetView, dict[str, Any]]:
+                    phase = f"{target_name}:sonoanatomy:{state_name}"
+                    stage_orientation_change(scan_pose, phase)
                     scan_view = acquire(
                         scan_pose,
                         target_name,
-                        f"{target_name}:sonoanatomy:{current_state.value}",
+                        phase,
                         float(motion["fine_position_tolerance_mm"]),
                         float(motion["fine_orientation_tolerance_deg"]),
                     )
@@ -706,7 +692,7 @@ def main() -> int:
                     public = public_rows[-1]
                     public.update(
                         {
-                            "scan_state": current_state.value,
+                            "scan_state": state_name,
                             "trajectory_id": trajectory_id,
                             "tp_predicted": bool(presence["tp_predicted"]),
                             "sap_predicted": bool(presence["sap_predicted"]),
@@ -746,10 +732,35 @@ def main() -> int:
                         "frame_sha256": scan_view.frame_sha256,
                         "pose_index": list(scan_view.pose_index),
                         "trajectory_id": trajectory_id,
-                        "scan_state": current_state.value,
+                        "scan_state": state_name,
                         **presence,
                     }
                     semantic_frames.append(semantic_frame)
+                    return scan_view, presence
+
+                while controller.state not in {
+                    ScanState.SAP_TP_IDENTITY_INFERENCE,
+                    ScanState.ABSTAIN,
+                }:
+                    scan_pose = controller.next_pose()
+                    if scan_pose is None:
+                        break
+                    current_state = controller.state
+                    trajectory_id = (
+                        f"{target_name}:longitudinal"
+                        if current_state
+                        in {
+                            ScanState.ACQUIRE_REFERENCE_TP_REGION,
+                            ScanState.LONGITUDINAL_LATERAL_SURVEY,
+                            ScanState.REVERSE_MEDIAL_SURVEY,
+                        }
+                        else f"{target_name}:transverse"
+                    )
+                    scan_view, presence = acquire_semantic(
+                        scan_pose,
+                        state_name=current_state.value,
+                        trajectory_id=trajectory_id,
+                    )
                     controller.observe(
                         ScanEvidence(
                             frame_sequence=scan_view.frame_sequence,
@@ -766,10 +777,57 @@ def main() -> int:
                                 presence["sap_predicted_pixels"]
                             ),
                             image_valid=scan_view.image_valid,
-                            contact_ok=bool(public["contact_ok"]),
+                            contact_ok=bool(public_rows[-1]["contact_ok"]),
                             producer_advanced=scan_view.producer_advanced,
                         )
                     )
+
+                tp_candidates = [
+                    row for row in semantic_frames if row["tp_predicted"]
+                ]
+                sap_candidates = [
+                    row for row in semantic_frames if row["sap_predicted"]
+                ]
+                if tp_candidates and sap_candidates:
+                    strongest = [
+                        max(
+                            tp_candidates,
+                            key=lambda row: (
+                                int(row["tp_predicted_pixels"]),
+                                -int(row["frame_sequence"]),
+                            ),
+                        ),
+                        max(
+                            sap_candidates,
+                            key=lambda row: (
+                                int(row["sap_predicted_pixels"]),
+                                -int(row["frame_sequence"]),
+                            ),
+                        ),
+                    ]
+                    unique_anchors = []
+                    seen_anchor_poses = set()
+                    for row in strongest:
+                        key = tuple(
+                            round(float(value), 3) for value in row["pose_index"]
+                        )
+                        if key not in seen_anchor_poses:
+                            unique_anchors.append(np.asarray(row["pose_index"], dtype=np.float64))
+                            seen_anchor_poses.add(key)
+                    active_trajectory = f"{target_name}:active_rescan"
+                    seen_rescan_poses = set()
+                    for anchor in unique_anchors:
+                        for offset in scan_spec["active_rescan_offsets_index"]:
+                            pose = anchor + np.asarray(offset, dtype=np.float64)
+                            key = tuple(round(float(value), 3) for value in pose)
+                            if key in seen_rescan_poses:
+                                continue
+                            seen_rescan_poses.add(key)
+                            acquire_semantic(
+                                pose,
+                                state_name="ACTIVE_RESCAN",
+                                trajectory_id=active_trajectory,
+                            )
 
                 trajectory_decisions = []
                 accepted_trajectories = []
