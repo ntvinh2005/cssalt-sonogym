@@ -222,7 +222,14 @@ def frame_metrics(
     minimum_pixels: int,
 ) -> dict[str, int | float]:
     truth = np.any(targets == class_id, axis=(1, 2))
-    predicted = np.sum(probabilities[:, class_id] >= threshold, axis=(1, 2)) >= minimum_pixels
+    winner = np.argmax(probabilities, axis=1)
+    predicted = (
+        np.sum(
+            (probabilities[:, class_id] >= threshold) & (winner == class_id),
+            axis=(1, 2),
+        )
+        >= minimum_pixels
+    )
     tp = int(np.count_nonzero(truth & predicted))
     fp = int(np.count_nonzero(~truth & predicted))
     fn = int(np.count_nonzero(truth & ~predicted))
@@ -249,16 +256,19 @@ def pair_frame_metrics(
 ) -> dict[str, int | float]:
     truth_tp = np.any(targets == 1, axis=(1, 2))
     truth_sap = np.any(targets == 2, axis=(1, 2))
+    winner = np.argmax(probabilities, axis=1)
     predicted_tp = (
         np.sum(
-            probabilities[:, 1] >= float(thresholds["TP"]["threshold"]),
+            (probabilities[:, 1] >= float(thresholds["TP"]["threshold"]))
+            & (winner == 1),
             axis=(1, 2),
         )
         >= int(thresholds["TP"]["minimum_pixels"])
     )
     predicted_sap = (
         np.sum(
-            probabilities[:, 2] >= float(thresholds["SAP"]["threshold"]),
+            (probabilities[:, 2] >= float(thresholds["SAP"]["threshold"]))
+            & (winner == 2),
             axis=(1, 2),
         )
         >= int(thresholds["SAP"]["minimum_pixels"])

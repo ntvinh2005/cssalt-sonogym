@@ -124,9 +124,12 @@ def semantic_observations(
         home_up_axis=np.asarray(rotation_columns, dtype=np.float64)[:, 2],
     )
     result: list[SemanticObservation] = []
+    winner = np.argmax(probability, axis=0)
     for class_id, name in ((1, "TP"), (2, "SAP"), (3, "OTHER_BONE")):
         specification = thresholds[name]
-        mask = probability[class_id] >= float(specification["threshold"])
+        mask = (
+            probability[class_id] >= float(specification["threshold"])
+        ) & (winner == class_id)
         components, count = ndimage.label(mask, structure=np.ones((3, 3), dtype=np.uint8))
         minimum_pixels = int(specification["minimum_pixels"])
         for component_id in range(1, count + 1):

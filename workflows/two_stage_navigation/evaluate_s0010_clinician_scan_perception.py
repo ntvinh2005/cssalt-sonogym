@@ -129,10 +129,12 @@ def predicted_presence(
     thresholds: Mapping[str, Mapping[str, float | int]],
 ) -> dict[str, bool | int]:
     result: dict[str, bool | int] = {}
+    winner = np.argmax(probabilities, axis=0)
     for class_id, name in ((1, "TP"), (2, "SAP"), (3, "OTHER_BONE")):
         pixels = int(
             np.count_nonzero(
-                probabilities[class_id] >= float(thresholds[name]["threshold"])
+                (probabilities[class_id] >= float(thresholds[name]["threshold"]))
+                & (winner == class_id)
             )
         )
         result[f"{name.lower()}_predicted_pixels"] = pixels

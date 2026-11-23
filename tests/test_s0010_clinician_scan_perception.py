@@ -40,6 +40,20 @@ class ClinicianScanPerceptionTests(unittest.TestCase):
         self.assertEqual(result["tp_predicted_pixels"], 2)
         self.assertEqual(result["sap_predicted_pixels"], 1)
 
+    def test_presence_does_not_count_a_nonwinning_class(self) -> None:
+        probabilities = np.zeros((4, 3, 3), dtype=np.float32)
+        probabilities[1, 1, 1] = 0.8
+        probabilities[2, 1, 1] = 0.9
+        thresholds = {
+            name: {"threshold": 0.7, "minimum_pixels": 1}
+            for name in ("TP", "SAP", "OTHER_BONE")
+        }
+
+        result = predicted_presence(probabilities, thresholds)
+
+        self.assertFalse(result["tp_predicted"])
+        self.assertTrue(result["sap_predicted"])
+
     def test_dataset_manifest_truth_is_scoped_to_capture_root(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

@@ -3,11 +3,14 @@ from __future__ import annotations
 from dataclasses import replace
 import unittest
 
+import numpy as np
+
 from two_stage_navigation.sonoanatomy_multiview import (
     MultiviewConfig,
     SemanticObservation,
     cluster_observations,
     decide_tp_sap_pair,
+    semantic_observations,
 )
 
 
@@ -45,6 +48,26 @@ def stale_observation(kind: str, frame: int, x: float) -> SemanticObservation:
 
 
 class SonoanatomyMultiviewTests(unittest.TestCase):
+    def test_semantic_observation_requires_class_to_win_the_pixel(self) -> None:
+        probabilities = np.zeros((4, 4, 4), dtype=np.float32)
+        probabilities[1, 1, 1] = 0.8
+        probabilities[2, 1, 1] = 0.9
+        thresholds = {
+            name: {"threshold": 0.7, "minimum_pixels": 1}
+            for name in ("TP", "SAP", "OTHER_BONE")
+        }
+
+        rows = semantic_observations(
+            probabilities,
+            thresholds=thresholds,
+            end_effector_position_m=(0.0, 0.0, 0.0),
+            rotation_columns=np.eye(3),
+            frame_sequence=0,
+            frame_sha256="0" * 64,
+        )
+
+        self.assertEqual([row.semantic_class for row in rows], ["SAP"])
+
     def test_duplicate_frame_does_not_create_independent_cluster_support(self) -> None:
         rows = (observation("TP", 0, 0.0), observation("TP", 0, 0.5))
         clusters = cluster_observations(rows, association_radius_mm=2.0)
