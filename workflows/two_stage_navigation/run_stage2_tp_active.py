@@ -562,6 +562,11 @@ def main() -> int:
             freshness_retries = int(scan_spec.get("maximum_freshness_retries", 0))
             if freshness_retries not in {0, 1}:
                 raise ValueError("semantic freshness retry count must be zero or one")
+            semantic_move_attempts = int(
+                scan_spec.get("maximum_semantic_move_attempts", 1)
+            )
+            if semantic_move_attempts not in {1, 2}:
+                raise ValueError("semantic move attempts must be one or two")
             if freshness_retries:
                 validate_confirmation_motion(
                     [scan_spec["freshness_retry_dither_offset_index"]],
@@ -826,14 +831,27 @@ def main() -> int:
                         dtype=np.float64,
                     )
                     retry_count = 0
-                    while True:
-                        scan_view = acquire(
-                            scan_pose,
-                            target_name,
-                            phase,
-                            float(motion["fine_position_tolerance_mm"]),
-                            float(motion["fine_orientation_tolerance_deg"]),
+
+                    def acquire_scan_pose() -> TargetView:
+                        maximum_attempts = int(
+                            scan_spec.get("maximum_semantic_move_attempts", 1)
                         )
+                        for attempt in range(1, maximum_attempts + 1):
+                            try:
+                                return acquire(
+                                    scan_pose,
+                                    target_name,
+                                    f"{phase}:move_attempt_{attempt}_of_{maximum_attempts}",
+                                    float(motion["fine_position_tolerance_mm"]),
+                                    float(motion["fine_orientation_tolerance_deg"]),
+                                )
+                            except TimeoutError:
+                                if attempt == maximum_attempts:
+                                    raise
+                        raise RuntimeError("semantic movement attempt loop is empty")
+
+                    while True:
+                        scan_view = acquire_scan_pose()
                         public = public_rows[-1]
                         public.update(
                             {
