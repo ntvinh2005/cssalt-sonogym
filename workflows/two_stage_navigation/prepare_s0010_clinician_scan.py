@@ -130,14 +130,28 @@ def cranial_caudal_transition(
     boundary = int(np.argmax(decreases))
     start = min(max(boundary - 2, 0), len(line) - 5)
     forward = [line[index][0] for index in range(start, start + 5)]
-    return forward + [forward[3], forward[2], forward[1]]
+    lateral_offset = 2.0 if forward[0][0] <= POSE_MAXIMUM[0] - 2.0 else -2.0
+    reverse = [
+        np.asarray(
+            [
+                forward[index][0] + lateral_offset,
+                forward[index][1],
+                forward[index][2],
+            ]
+        )
+        for index in (3, 2, 1)
+    ]
+    return forward + reverse
 
 
 def alternative_view_sweep(anchor: np.ndarray) -> list[np.ndarray]:
-    """Rotate through physically acquired views without changing the target position."""
+    """Rotate through physically acquired views near the target region."""
 
-    angles = (LONG_AXIS_ANGLE_RAD, 1.90, 2.20, 2.50, 2.75, 2.95, 2.50, 1.90)
-    result = [np.asarray([anchor[0], anchor[1], angle]) for angle in angles]
+    angles = (LONG_AXIS_ANGLE_RAD, 1.80, 2.05, 2.30, 2.55, 2.75, 2.95, 2.65)
+    lateral_offset = -2.0 if anchor[0] >= POSE_MINIMUM[0] + 2.0 else 2.0
+    result = [
+        np.asarray([anchor[0] + lateral_offset, anchor[1], angle]) for angle in angles
+    ]
     if not all(pose_is_valid(pose) for pose in result):
         raise ValueError("alternative-view sweep leaves the native workspace")
     return result
@@ -151,6 +165,14 @@ def validate_sequence(poses: list[np.ndarray]) -> None:
         rotation_deg = math.degrees(abs(float(after[2] - before[2])))
         if translation_mm < 2.0 and rotation_deg < 1.0:
             raise ValueError("consecutive scan views are not physically distinct")
+
+
+def validate_pose_bank(poses: list[np.ndarray]) -> None:
+    """Reject exact pose reuse across sequences before the capture contract does."""
+
+    keys = {tuple(np.round(pose, 9)) for pose in poses}
+    if len(keys) != len(poses):
+        raise ValueError("scan bank contains duplicate poses")
 
 
 def evidence_row(
@@ -239,6 +261,7 @@ def main() -> int:
             for poses in (long_poses, transition_poses, alternative_poses):
                 validate_sequence(poses)
             all_poses = long_poses + transition_poses + alternative_poses
+            validate_pose_bank(all_poses)
             bank_id = f"{level.lower()}_bank_{variant:02d}"
             session_id = f"s0010clinical{level.lower()}_{variant:02d}"
             banks[bank_id] = [pose.tolist() for pose in all_poses]
@@ -315,7 +338,7 @@ def main() -> int:
         "This capture is opened feasibility evidence, never independent confirmation.",
         "Absolute waypoints and anatomical masks are experiment-design and evaluator-only inputs.",
         "No pose at or above 2.99 rad is allowed because the current controller cannot track it fail-closed.",
-        "Repeated return poses demonstrate reappearance but do not count as independent views.",
+        "A nearby parallel reverse sweep tests reappearance without reusing an exact pose.",
     ]
 
     args.output_dir.mkdir(parents=True, exist_ok=False)
