@@ -21,6 +21,7 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 DATASET_NAMESPACE="${SONOANATOMY_DATASET_NAMESPACE:-s0010_sonoanatomy_dataset_v1}"
 SEGMENTATION_NAMESPACE="${SONOANATOMY_SEGMENTATION_NAMESPACE:-s0010_sonoanatomy_segmentation_v1}"
+TRAINING_SEED="${SONOANATOMY_TRAINING_SEED:-20261122}"
 DATASET_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/$DATASET_NAMESPACE/$SONOANATOMY_DATASET_JOB_ID/dataset"
 RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/$SEGMENTATION_NAMESPACE/$SLURM_JOB_ID"
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
@@ -37,7 +38,7 @@ TELEMETRY_PID=$!
 trap 'kill "$TELEMETRY_PID" 2>/dev/null || true' EXIT
 "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/train_s0010_sonoanatomy_segmentation.py" \
   --dataset-root "$DATASET_ROOT" --output-dir "$RUN_DIR/training" \
-  --device cuda --epochs 60 --batch-size 8 \
+  --device cuda --epochs 60 --batch-size 8 --seed "$TRAINING_SEED" \
   > "$RUN_DIR/training.log" 2> "$RUN_DIR/training.stderr.log"
 kill "$TELEMETRY_PID" 2>/dev/null || true
 wait "$TELEMETRY_PID" 2>/dev/null || true
