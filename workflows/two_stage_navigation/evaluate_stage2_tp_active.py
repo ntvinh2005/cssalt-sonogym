@@ -540,10 +540,16 @@ def main() -> int:
             semantic_pair_success = bool(
                 target["decision"] == "ACCEPT"
                 and semantic_identity["pair_correct"]
-                and semantic_confirmation_rows
-                and all(
+                and len(semantic_confirmation_rows)
+                == len(protocol["sonoanatomy_scan"]["confirmation_dither_offsets"])
+                and sum(
                     row["tp_supported"] and row["sap_supported"]
                     for row in semantic_confirmation_rows
+                )
+                >= int(
+                    protocol["evaluator"][
+                        "minimum_proxy_positive_semantic_confirmations"
+                    ]
                 )
             )
         integrated_success = bool(
@@ -562,6 +568,16 @@ def main() -> int:
                 "proxy_target_view_success": proxy_pass,
                 "semantic_pair_identity": semantic_identity,
                 "semantic_fresh_confirmations": semantic_confirmation_rows,
+                "semantic_positive_fresh_confirmation_count": sum(
+                    row["tp_supported"] and row["sap_supported"]
+                    for row in semantic_confirmation_rows
+                ),
+                "minimum_proxy_positive_semantic_confirmations": int(
+                    protocol["evaluator"].get(
+                        "minimum_proxy_positive_semantic_confirmations",
+                        len(semantic_confirmation_rows),
+                    )
+                ),
                 "semantic_frame_metrics": semantic_frame_metrics,
                 "semantic_pair_success": semantic_pair_success,
                 "integrated_target_success": integrated_success,

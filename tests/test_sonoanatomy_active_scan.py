@@ -9,6 +9,7 @@ from two_stage_navigation.sonoanatomy_active_scan import (
     ScanConfig,
     ScanEvidence,
     ScanState,
+    pair_confirmation_requirement_met,
     staged_orientation_targets,
 )
 
@@ -84,6 +85,25 @@ class ClinicianSweepControllerTests(unittest.TestCase):
         self.assertTrue(all(np.allclose(row[:2], [147.0, 142.0]) for row in rows))
         angles = [2.8, *(float(row[2]) for row in rows), 1.57]
         self.assertLessEqual(max(abs(right - left) for left, right in zip(angles, angles[1:])), 0.35)
+
+    def test_pair_confirmation_accepts_two_of_three_fresh_views(self) -> None:
+        rows = [
+            {
+                "frame_sha256": str(index),
+                "image_valid": True,
+                "producer_advanced": True,
+                "tp_predicted": index != 1,
+                "sap_predicted": True,
+            }
+            for index in range(3)
+        ]
+        self.assertTrue(
+            pair_confirmation_requirement_met(
+                rows,
+                required_count=3,
+                minimum_positive_count=2,
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -77,6 +77,7 @@ from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan impo
     ScanConfig,
     ScanEvidence,
     ScanState,
+    pair_confirmation_requirement_met,
     staged_orientation_targets,
 )
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_multiview import (  # noqa: E402
@@ -1002,21 +1003,17 @@ def main() -> int:
                             }
                         )
                 semantic_fresh_pass = bool(
-                    len(semantic_confirmations)
-                    == len(scan_spec["confirmation_dither_offsets"])
-                    and len(
-                        {row["frame_sha256"] for row in semantic_confirmations}
+                    pair_confirmation_requirement_met(
+                        semantic_confirmations,
+                        required_count=len(scan_spec["confirmation_dither_offsets"]),
+                        minimum_positive_count=int(
+                            scan_spec[
+                                "minimum_actor_positive_fresh_confirmations"
+                            ]
+                        ),
                     )
-                    == len(semantic_confirmations)
                     and all(
                         row["frame_sha256"] != selected_pair_view["frame_sha256"]
-                        for row in semantic_confirmations
-                    )
-                    and all(
-                        row["image_valid"]
-                        and row["producer_advanced"]
-                        and row["tp_predicted"]
-                        and row["sap_predicted"]
                         for row in semantic_confirmations
                     )
                     and selected_semantic_pair is not None
@@ -1035,6 +1032,9 @@ def main() -> int:
                     ),
                     "scan_frame_count": len(semantic_frames),
                     "fresh_confirmations": semantic_confirmations,
+                    "minimum_actor_positive_fresh_confirmations": int(
+                        scan_spec["minimum_actor_positive_fresh_confirmations"]
+                    ),
                     "fresh_confirmation_passed": semantic_fresh_pass,
                 }
                 if not semantic_fresh_pass:

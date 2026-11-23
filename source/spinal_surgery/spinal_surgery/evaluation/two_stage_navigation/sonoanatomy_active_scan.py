@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -88,6 +88,25 @@ def staged_orientation_targets(
         intermediate[2] = current[2] + difference * index / step_count
         result.append(intermediate)
     return tuple(result)
+
+
+def pair_confirmation_requirement_met(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    required_count: int,
+    minimum_positive_count: int,
+) -> bool:
+    """Require fresh valid acquisitions and a bounded TP-and-SAP count."""
+
+    if required_count < 1 or not 1 <= minimum_positive_count <= required_count:
+        raise ValueError("invalid SAP/TP fresh-confirmation requirement")
+    return bool(
+        len(rows) == required_count
+        and len({str(row["frame_sha256"]) for row in rows}) == len(rows)
+        and all(bool(row["image_valid"] and row["producer_advanced"]) for row in rows)
+        and sum(bool(row["tp_predicted"] and row["sap_predicted"]) for row in rows)
+        >= minimum_positive_count
+    )
 
 
 class ClinicianSweepController:

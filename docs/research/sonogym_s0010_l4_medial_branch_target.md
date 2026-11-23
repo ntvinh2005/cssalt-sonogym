@@ -1046,7 +1046,7 @@ TP-and-SAP ultrasound evidence.
 | L4 checkpoint | job `52485680`; SHA-256 `e8f03ce7dac42329f716ff8f63b0dbe8da50f5fd55d067475f3fb3eef5e35cb3` |
 | L5 checkpoint | job `52485680`; SHA-256 `d5688fd3bc8e1fd6703e2c96bc3a310e017ee508ede32c53dcce9ea3f875e1ca` |
 | opened replay | job `52488270`; capture job `52482280` |
-| fresh protocol | `s0010_mbb_single_anatomy_poc_protocol_v4.yaml`; SHA-256 `67df9e01ddcb85fc161532b03ab55c305b0fbfee9fef2a03a1ec8c876824aff8` |
+| fresh protocol | `s0010_mbb_single_anatomy_poc_protocol_v4.yaml`; SHA-256 `c35b04f1820d9b9495fd174d277a19481c5448fbd13600a2b0ce28a6a3b6dd39` |
 
 All captures used one NVIDIA L4 and four CPUs. Dataset assembly, replay, and
 evaluation were CPU-only. The hard-negative source added 19 TP-negative L4
