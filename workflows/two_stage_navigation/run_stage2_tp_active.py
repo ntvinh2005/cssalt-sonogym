@@ -79,6 +79,7 @@ from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan impo
     ScanState,
     pair_confirmation_requirement_met,
     staged_orientation_targets,
+    tp_handoff_crosscheck_requirement_met,
 )
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_multiview import (  # noqa: E402
     MultiviewConfig,
@@ -342,21 +343,30 @@ def main() -> int:
             nonlocal total_actions
             if video is not None:
                 video.set_phase(phase)
-            trajectory = move_proportional_target(
-                env, target, target,
-                maximum_steps=int(motion["maximum_steps_per_move"]),
-                maximum_position_error_mm=position_tolerance,
-                maximum_orientation_error_deg=angle_tolerance,
-                ratio=tuple(motion["controller_ratio"]),
-                allow_angle_ceiling_saturation=False,
-                step_callback=None if video is None else video.capture,
-            )
-            total_actions += len(trajectory)
+            trajectory: list[dict[str, Any]] = []
+            try:
+                try:
+                    move_proportional_target(
+                        env, target, target,
+                        maximum_steps=int(motion["maximum_steps_per_move"]),
+                        maximum_position_error_mm=position_tolerance,
+                        maximum_orientation_error_deg=angle_tolerance,
+                        ratio=tuple(motion["controller_ratio"]),
+                        allow_angle_ceiling_saturation=False,
+                        trajectory_sink=trajectory,
+                        step_callback=None if video is None else video.capture,
+                    )
+                finally:
+                    total_actions += len(trajectory)
+                    for row in trajectory:
+                        row["phase"] = phase
+                    action_rows.extend(trajectory)
+            except Exception:
+                if total_actions > int(motion["maximum_total_action_steps"]):
+                    raise RuntimeError("action budget exceeded")
+                raise
             if total_actions > int(motion["maximum_total_action_steps"]):
                 raise RuntimeError("action budget exceeded")
-            for row in trajectory:
-                row["phase"] = phase
-            action_rows.extend(trajectory)
             return trajectory
 
         def stage_orientation_change(target: np.ndarray, phase: str) -> None:
@@ -373,13 +383,27 @@ def main() -> int:
                 target,
                 maximum_step_rad=maximum_step,
             )
-            for index, intermediate in enumerate(intermediates, start=1):
-                move(
-                    intermediate,
-                    f"{phase}:orientation_stage_{index}_of_{len(intermediates)}",
-                    float(motion["coarse_position_tolerance_mm"]),
-                    float(motion["coarse_orientation_tolerance_deg"]),
+            maximum_attempts = int(
+                protocol.get("sonoanatomy_scan", {}).get(
+                    "maximum_orientation_stage_attempts", 1
                 )
+            )
+            if maximum_attempts < 1:
+                raise ValueError("orientation stage attempts must be positive")
+            for index, intermediate in enumerate(intermediates, start=1):
+                for attempt in range(1, maximum_attempts + 1):
+                    try:
+                        move(
+                            intermediate,
+                            f"{phase}:orientation_stage_{index}_of_{len(intermediates)}"
+                            f":attempt_{attempt}_of_{maximum_attempts}",
+                            float(motion["coarse_position_tolerance_mm"]),
+                            float(motion["coarse_orientation_tolerance_deg"]),
+                        )
+                        break
+                    except TimeoutError:
+                        if attempt == maximum_attempts:
+                            raise
 
         def acquire(target_pose: np.ndarray, target_name: str, phase: str, position_tolerance: float, angle_tolerance: float) -> TargetView:
             nonlocal previous_producer, local_coordinates
@@ -533,6 +557,24 @@ def main() -> int:
             search["confirmation_dither_offsets"], label_resolution_mm=label_resolution,
             position_tolerance_mm=float(motion["confirmation_position_tolerance_mm"]),
         )
+        if sonoanatomy_models:
+            scan_spec = protocol["sonoanatomy_scan"]
+            freshness_retries = int(scan_spec.get("maximum_freshness_retries", 0))
+            if freshness_retries not in {0, 1}:
+                raise ValueError("semantic freshness retry count must be zero or one")
+            if freshness_retries:
+                validate_confirmation_motion(
+                    [scan_spec["freshness_retry_dither_offset_index"]],
+                    label_resolution_mm=label_resolution,
+                    position_tolerance_mm=float(motion["fine_position_tolerance_mm"]),
+                )
+            validate_confirmation_motion(
+                scan_spec["confirmation_dither_offsets"],
+                label_resolution_mm=label_resolution,
+                position_tolerance_mm=float(
+                    motion["confirmation_position_tolerance_mm"]
+                ),
+            )
         target_to_level = {
             "L4_RIGHT_TP_SURFACE_CORE": "L4",
             "L5_RIGHT_TP_SURFACE_CORE": "L5",
@@ -639,6 +681,50 @@ def main() -> int:
                 and decision.selected is not None
                 and all(row.frame_sha256 != decision.selected.frame_sha256 for row in confirmations)
             )
+            semantic_tp_confirmations: list[dict[str, Any]] = []
+            semantic_tp_crosscheck_pass = False
+            if sonoanatomy_models and decision.selected is not None:
+                level = target_to_level[target_name]
+                handoff_semantic_model = sonoanatomy_models[level]
+                confirmation_probabilities = segmentation_probabilities(
+                    handoff_semantic_model["model"],
+                    np.asarray([images[row.frame_sequence] for row in confirmations]),
+                )
+                for row, probability in zip(
+                    confirmations, confirmation_probabilities
+                ):
+                    presence = predicted_presence(
+                        probability, handoff_semantic_model["thresholds"]
+                    )
+                    semantic_tp_confirmations.append(
+                        {
+                            "frame_sequence": row.frame_sequence,
+                            "frame_sha256": row.frame_sha256,
+                            "tp_predicted": bool(presence["tp_predicted"]),
+                            "tp_predicted_pixels": int(
+                                presence["tp_predicted_pixels"]
+                            ),
+                        }
+                    )
+                semantic_tp_crosscheck_pass = tp_handoff_crosscheck_requirement_met(
+                    [
+                        {
+                            "frame_sequence": row.frame_sequence,
+                            "frame_sha256": row.frame_sha256,
+                            "probability": row.probability,
+                            "image_valid": row.image_valid,
+                            "producer_advanced": row.producer_advanced,
+                        }
+                        for row in confirmations
+                    ],
+                    semantic_tp_confirmations,
+                    required_count=required_fresh_count,
+                    legacy_probability_threshold=float(model["threshold"]),
+                    selected_frame_sha256=decision.selected.frame_sha256,
+                )
+            semantic_scan_handoff_pass = bool(
+                fresh_pass or semantic_tp_crosscheck_pass
+            )
             target_result = {
                 "target_name": target_name,
                 "stage1_level": target_to_level[target_name],
@@ -655,9 +741,20 @@ def main() -> int:
                 "fresh_confirmation_probabilities": [row.probability for row in confirmations],
                 "minimum_actor_positive_fresh_confirmations": minimum_actor_positive_count,
                 "fresh_confirmation_passed": fresh_pass,
+                "semantic_tp_handoff_crosscheck": {
+                    "confirmations": semantic_tp_confirmations,
+                    "required_semantic_positive_count": required_fresh_count,
+                    "passed": semantic_tp_crosscheck_pass,
+                    "unlocks_scanning_only": True,
+                },
+                "semantic_scan_handoff_passed": semantic_scan_handoff_pass,
                 "return_errors": return_errors,
             }
-            if sonoanatomy_models and fresh_pass and decision.selected is not None:
+            if (
+                sonoanatomy_models
+                and semantic_scan_handoff_pass
+                and decision.selected is not None
+            ):
                 level = target_to_level[target_name]
                 semantic_model = sonoanatomy_models[level]
                 scan_spec = protocol["sonoanatomy_scan"]
@@ -686,27 +783,66 @@ def main() -> int:
                     *,
                     state_name: str,
                     trajectory_id: str,
-                ) -> tuple[TargetView, dict[str, Any]]:
+                ) -> tuple[TargetView, dict[str, Any] | None]:
                     phase = f"{target_name}:sonoanatomy:{state_name}"
                     stage_orientation_change(scan_pose, phase)
-                    scan_view = acquire(
-                        scan_pose,
-                        target_name,
-                        phase,
-                        float(motion["fine_position_tolerance_mm"]),
-                        float(motion["fine_orientation_tolerance_deg"]),
+                    maximum_retries = int(
+                        scan_spec.get("maximum_freshness_retries", 0)
                     )
+                    retry_offset = np.asarray(
+                        scan_spec.get(
+                            "freshness_retry_dither_offset_index", [0.0, 0.0, 0.0]
+                        ),
+                        dtype=np.float64,
+                    )
+                    retry_count = 0
+                    while True:
+                        scan_view = acquire(
+                            scan_pose,
+                            target_name,
+                            phase,
+                            float(motion["fine_position_tolerance_mm"]),
+                            float(motion["fine_orientation_tolerance_deg"]),
+                        )
+                        public = public_rows[-1]
+                        public.update(
+                            {
+                                "scan_state": state_name,
+                                "trajectory_id": trajectory_id,
+                                "freshness_retry_count": retry_count,
+                            }
+                        )
+                        eligible = bool(
+                            scan_view.image_valid
+                            and scan_view.producer_advanced
+                            and public["contact_ok"]
+                        )
+                        if eligible:
+                            break
+                        assert_no_privileged_fields(public)
+                        retryable_stale_frame = bool(
+                            not scan_view.producer_advanced and public["contact_ok"]
+                        )
+                        if not retryable_stale_frame or retry_count >= maximum_retries:
+                            return scan_view, None
+                        retry_count += 1
+                        dither_pose = scan_pose + retry_offset
+                        retry_motion = move(
+                            dither_pose,
+                            f"{phase}:freshness_retry_dither_{retry_count}",
+                            float(motion["fine_position_tolerance_mm"]),
+                            float(motion["fine_orientation_tolerance_deg"]),
+                        )
+                        if not retry_motion:
+                            return scan_view, None
                     probability = segmentation_probabilities(
                         semantic_model["model"], np.asarray([images[-1]])
                     )[0]
                     presence = predicted_presence(
                         probability, semantic_model["thresholds"]
                     )
-                    public = public_rows[-1]
                     public.update(
                         {
-                            "scan_state": state_name,
-                            "trajectory_id": trajectory_id,
                             "tp_predicted": bool(presence["tp_predicted"]),
                             "sap_predicted": bool(presence["sap_predicted"]),
                             "other_bone_predicted": bool(
@@ -774,6 +910,14 @@ def main() -> int:
                         state_name=current_state.value,
                         trajectory_id=trajectory_id,
                     )
+                    if presence is None:
+                        presence = {
+                            "tp_predicted": False,
+                            "sap_predicted": False,
+                            "other_bone_predicted": False,
+                            "tp_predicted_pixels": 0,
+                            "sap_predicted_pixels": 0,
+                        }
                     controller.observe(
                         ScanEvidence(
                             frame_sequence=scan_view.frame_sequence,
@@ -1041,6 +1185,11 @@ def main() -> int:
                     target_result["decision"] = "ABSTAIN"
                     target_result["decision_reason"] = (
                         "SAP_TP_FRESH_CONFIRMATION_FAILED"
+                    )
+                elif semantic_tp_crosscheck_pass:
+                    target_result["decision"] = "ACCEPT"
+                    target_result["decision_reason"] = (
+                        "SUPPORTED_SAP_TP_TARGET_VIEW_AFTER_TP_CROSSCHECK"
                     )
             elif sonoanatomy_models:
                 target_result["sonoanatomy"] = {

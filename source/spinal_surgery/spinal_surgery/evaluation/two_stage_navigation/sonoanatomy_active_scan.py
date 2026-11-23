@@ -109,6 +109,48 @@ def pair_confirmation_requirement_met(
     )
 
 
+def tp_handoff_crosscheck_requirement_met(
+    legacy_rows: Sequence[Mapping[str, Any]],
+    semantic_rows: Sequence[Mapping[str, Any]],
+    *,
+    required_count: int,
+    legacy_probability_threshold: float,
+    selected_frame_sha256: str,
+) -> bool:
+    """Allow scanning only when frozen TP evidence repairs a legacy detector miss."""
+
+    if required_count < 1 or not 0.0 <= legacy_probability_threshold <= 1.0:
+        raise ValueError("invalid TP handoff cross-check requirement")
+    legacy_identities = {
+        (int(row["frame_sequence"]), str(row["frame_sha256"]))
+        for row in legacy_rows
+    }
+    semantic_identities = {
+        (int(row["frame_sequence"]), str(row["frame_sha256"]))
+        for row in semantic_rows
+    }
+    return bool(
+        len(legacy_rows) == required_count
+        and len(semantic_rows) == required_count
+        and len(legacy_identities) == required_count
+        and legacy_identities == semantic_identities
+        and all(
+            bool(row["image_valid"] and row["producer_advanced"])
+            for row in legacy_rows
+        )
+        and all(
+            str(row["frame_sha256"]) != selected_frame_sha256
+            for row in legacy_rows
+        )
+        and sum(
+            float(row["probability"]) >= legacy_probability_threshold
+            for row in legacy_rows
+        )
+        >= 1
+        and all(bool(row["tp_predicted"]) for row in semantic_rows)
+    )
+
+
 class ClinicianSweepController:
     """Choose scan poses from fresh ultrasound evidence and executed motion history."""
 

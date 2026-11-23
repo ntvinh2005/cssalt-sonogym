@@ -11,6 +11,7 @@ from two_stage_navigation.sonoanatomy_active_scan import (
     ScanState,
     pair_confirmation_requirement_met,
     staged_orientation_targets,
+    tp_handoff_crosscheck_requirement_met,
 )
 
 
@@ -102,6 +103,57 @@ class ClinicianSweepControllerTests(unittest.TestCase):
                 rows,
                 required_count=3,
                 minimum_positive_count=2,
+            )
+        )
+
+    def test_tp_crosscheck_only_unlocks_matching_fresh_confirmations(self) -> None:
+        legacy = [
+            {
+                "frame_sequence": index,
+                "frame_sha256": str(index),
+                "probability": probability,
+                "image_valid": True,
+                "producer_advanced": True,
+            }
+            for index, probability in enumerate((0.8, 0.1, 0.2))
+        ]
+        semantic = [
+            {
+                "frame_sequence": index,
+                "frame_sha256": str(index),
+                "tp_predicted": True,
+            }
+            for index in range(3)
+        ]
+        self.assertTrue(
+            tp_handoff_crosscheck_requirement_met(
+                legacy,
+                semantic,
+                required_count=3,
+                legacy_probability_threshold=0.75,
+                selected_frame_sha256="selected",
+            )
+        )
+        stale = [dict(row) for row in legacy]
+        stale[1]["producer_advanced"] = False
+        self.assertFalse(
+            tp_handoff_crosscheck_requirement_met(
+                stale,
+                semantic,
+                required_count=3,
+                legacy_probability_threshold=0.75,
+                selected_frame_sha256="selected",
+            )
+        )
+        mismatched = [dict(row) for row in semantic]
+        mismatched[2]["frame_sha256"] = "different"
+        self.assertFalse(
+            tp_handoff_crosscheck_requirement_met(
+                legacy,
+                mismatched,
+                required_count=3,
+                legacy_probability_threshold=0.75,
+                selected_frame_sha256="selected",
             )
         )
 
