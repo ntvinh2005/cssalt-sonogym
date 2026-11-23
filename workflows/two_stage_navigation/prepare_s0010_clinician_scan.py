@@ -122,11 +122,12 @@ def cranial_caudal_transition(
             line.append((pose, evaluator(pose)))
     if len(line) < 7:
         raise ValueError("cranial-caudal line is too short")
-    differences = [
-        abs(int(line[index + 1][1]["tp_first_visible_pixels"]) - int(line[index][1]["tp_first_visible_pixels"]))
+    decreases = [
+        int(line[index][1]["tp_first_visible_pixels"])
+        - int(line[index + 1][1]["tp_first_visible_pixels"])
         for index in range(len(line) - 1)
     ]
-    boundary = int(np.argmax(differences))
+    boundary = int(np.argmax(decreases))
     start = min(max(boundary - 2, 0), len(line) - 5)
     forward = [line[index][0] for index in range(start, start + 5)]
     return forward + [forward[3], forward[2], forward[1]]
