@@ -189,6 +189,7 @@ def main() -> int:
         "s0010_sonoanatomy_dataset_v1",
         "s0010_sonoanatomy_dataset_v2",
         "s0010_sonoanatomy_dataset_v3",
+        "s0010_sonoanatomy_dataset_v4",
     }:
         raise ValueError("unexpected dataset protocol")
     if args.output_dir.exists():
