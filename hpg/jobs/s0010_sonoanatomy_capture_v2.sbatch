@@ -22,7 +22,8 @@ source "$SONOGYM_PROJECT_DIR/hpg/jobs/common.sh"
 
 PROTOCOL="$SONOANATOMY_CAPTURE_PROTOCOL"
 PROTOCOL_SEAL="${PROTOCOL%.yaml}.sha256"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_sonoanatomy_capture_v2/$SLURM_JOB_ID"
+OUTPUT_NAMESPACE="${SONOANATOMY_CAPTURE_NAMESPACE:-s0010_sonoanatomy_capture_v2}"
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/$OUTPUT_NAMESPACE/$SLURM_JOB_ID"
 export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/source/spinal_surgery:$SONOGYM_PROJECT_DIR/source/spinal_surgery/spinal_surgery/evaluation:$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation:$SONOGYM_PROJECT_DIR:${PYTHONPATH:-}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export MPLCONFIGDIR="$SONOGYM_CACHE_DIR/matplotlib"
@@ -41,27 +42,29 @@ nvidia-smi --query-gpu=timestamp,name,driver_version,utilization.gpu,memory.used
 TELEMETRY_PID=$!
 trap 'kill "$TELEMETRY_PID" 2>/dev/null || true' EXIT
 
-for level in l4 l5; do
-  for session_index in 00 01 02 03; do
-    session_id="s0010sonodevv2${level}_${session_index}"
-    session_dir="$RUN_DIR/sessions/$session_id"
-    mkdir -p "$session_dir"
-    "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/collect_stage2_dataset.py" \
-      --protocol "$PROTOCOL" --session-id "$session_id" --output-dir "$session_dir" \
-      --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" --headless --device cuda:0 \
-      > "$session_dir/launcher.log" 2>&1
-    "$PYTHON" -c 'import json,sys; summary=json.load(open(sys.argv[1])); raise SystemExit(0 if summary.get("status") == "PASSED" else 2)' \
-      "$session_dir/summary.json"
-    "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/verify_exact_pose_capture.py" \
-      --protocol "$PROTOCOL" --session-dir "$session_dir" \
-      --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" \
-      --output "$session_dir/verification_report.json" \
-      > "$session_dir/verifier.log" 2>&1
-    "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/validate_actor_6dof_capture.py" \
-      --protocol "$PROTOCOL" --run-root "$RUN_DIR" --session-id "$session_id" \
-      --output "$session_dir/actor_6dof_validation.json" \
-      > "$session_dir/actor_6dof_validator.log" 2>&1
-  done
+mapfile -t SESSION_IDS < <(
+  "$PYTHON" -c 'import sys,yaml; p=yaml.safe_load(open(sys.argv[1])); print("\n".join(str(row["session_id"]) for row in p["sessions"]))' \
+    "$PROTOCOL"
+)
+[[ "${#SESSION_IDS[@]}" -gt 0 ]] || exit 2
+for session_id in "${SESSION_IDS[@]}"; do
+  session_dir="$RUN_DIR/sessions/$session_id"
+  mkdir -p "$session_dir"
+  "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/collect_stage2_dataset.py" \
+    --protocol "$PROTOCOL" --session-id "$session_id" --output-dir "$session_dir" \
+    --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" --headless --device cuda:0 \
+    > "$session_dir/launcher.log" 2>&1
+  "$PYTHON" -c 'import json,sys; summary=json.load(open(sys.argv[1])); raise SystemExit(0 if summary.get("status") == "PASSED" else 2)' \
+    "$session_dir/summary.json"
+  "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/verify_exact_pose_capture.py" \
+    --protocol "$PROTOCOL" --session-dir "$session_dir" \
+    --assets-data-dir "$SONOGYM_ASSETS_DATA_DIR" \
+    --output "$session_dir/verification_report.json" \
+    > "$session_dir/verifier.log" 2>&1
+  "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/validate_actor_6dof_capture.py" \
+    --protocol "$PROTOCOL" --run-root "$RUN_DIR" --session-id "$session_id" \
+    --output "$session_dir/actor_6dof_validation.json" \
+    > "$session_dir/actor_6dof_validator.log" 2>&1
 done
 
 kill "$TELEMETRY_PID" 2>/dev/null || true
