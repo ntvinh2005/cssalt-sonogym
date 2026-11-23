@@ -1,5 +1,29 @@
 # Project notation
 
+### Clinician-inspired lumbar ultrasound scanning
+- **Kind:** method
+- **Definition:** A simulator-only sequence that uses longitudinal, transverse, cranial-caudal and physically different supporting acquisitions to identify lumbar bony landmarks from clean ultrasound and actor-visible robot motion; privileged anatomy may design or evaluate an opened feasibility capture but is excluded from actor decisions.
+- **Intuition:** It tests whether controlled anatomical transitions provide information that isolated images do not, without implementing an invasive procedure.
+- **Source:** approved by user, 2026-11-22; ASRA, *Ultrasound-Guided Lumbar Medial Branch and Intra-Articular Facet Injections* (2019).
+
+### Longitudinal scanning
+- **Kind:** method
+- **Definition:** Probe acquisition with the ultrasound image plane aligned with the lumbar long axis while the probe is translated from midline toward lateral posterior elements.
+- **Intuition:** The observed bony interfaces are expected to progress from spinous processes to articular pillars and then transverse processes.
+- **Source:** approved by user, 2026-11-22; ASRA (2019).
+
+### Transverse scanning
+- **Kind:** method
+- **Definition:** Probe acquisition with the ultrasound image plane rotated toward the lumbar cross axis at a declared vertebral level, preserving the actual robot orientation limit and its deviation from an exact orthogonal view.
+- **Intuition:** It exposes depth and step-off relationships among posterior bony structures without pretending the simulator reaches an unavailable orientation.
+- **Source:** approved by user, 2026-11-22; ASRA (2019).
+
+### Cranial-caudal transition
+- **Kind:** method
+- **Definition:** A forward and reverse probe translation along the lumbar cranial-caudal direction that records the disappearance and reappearance of an image-supported TP interface while preserving contact and acquisition freshness.
+- **Intuition:** Direction-dependent change can support a TP boundary hypothesis more strongly than one static cortical appearance.
+- **Source:** approved by user, 2026-11-22; ASRA (2019).
+
 ### SPATIAL_GEOMETRY_VALIDATED
 - **Kind:** object
 - **Definition:** The spatial-reconstruction verdict used when an actor-accessible calibrated probe transform reproduces saved native physical coordinates within the frozen coordinate-error gate and mapped cortical candidates pass the declared bone-surface consistency controls.
