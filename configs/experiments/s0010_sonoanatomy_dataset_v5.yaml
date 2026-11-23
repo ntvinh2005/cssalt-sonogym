@@ -24,14 +24,6 @@ sources:
     root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sonoanatomy_hard_negative_capture_v1/${SONOANATOMY_HARD_CAPTURE_JOB_ID}
     session_ids: [s0010sonohardv1l4_00, s0010sonohardv1l4_01, s0010sonohardv1l4_02]
   - level: L4
-    role: opened_active_scan_development_52492727
-    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52492727/stage2
-    session_layout: direct_children
-    verification: completed_stage2_summary
-    frame_target_level: L4
-    session_id_namespace: job_52492727_l4
-    session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
-  - level: L4
     role: opened_active_scan_development_52494467
     root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52494467/stage2
     session_layout: direct_children
@@ -60,14 +52,6 @@ sources:
     role: opened_tp_hard_negative_development
     root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_sonoanatomy_hard_negative_capture_v1/${SONOANATOMY_HARD_CAPTURE_JOB_ID}
     session_ids: [s0010sonohardv1l5_00, s0010sonohardv1l5_01, s0010sonohardv1l5_02]
-  - level: L5
-    role: opened_active_scan_development_52492727
-    root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52492727/stage2
-    session_layout: direct_children
-    verification: completed_stage2_summary
-    frame_target_level: L5
-    session_id_namespace: job_52492727_l5
-    session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
   - level: L5
     role: opened_active_scan_development_52494467
     root: ${SONOGYM_OUTPUT_DIR}/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v4/52494467/stage2
