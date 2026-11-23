@@ -7,6 +7,7 @@ import unittest
 
 from prepare_s0010_sonoanatomy_dataset import (
     capture_verification_passed,
+    frame_is_fresh_valid,
     selected_session_directories,
 )
 
@@ -56,6 +57,23 @@ class SonoanatomyDatasetTests(unittest.TestCase):
             self.assertTrue(
                 capture_verification_passed(session, "completed_stage2_summary")
             )
+
+    def test_active_training_frame_must_be_fresh_valid_and_executed(self) -> None:
+        frame = {
+            "image_valid": True,
+            "producer_advanced": True,
+            "contact_ok": True,
+            "action_step_count": 1,
+        }
+        self.assertTrue(frame_is_fresh_valid(frame))
+        for field, invalid in (
+            ("image_valid", False),
+            ("producer_advanced", False),
+            ("contact_ok", False),
+            ("action_step_count", 0),
+        ):
+            changed = {**frame, field: invalid}
+            self.assertFalse(frame_is_fresh_valid(changed), field)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,8 @@ sources:
     session_layout: direct_children
     verification: completed_stage2_summary
     frame_target_level: L4
+    require_fresh_valid_frames: true
+    duplicate_policy: skip
     session_id_namespace: job_52494467_l4
     session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
   - level: L5
@@ -58,6 +60,8 @@ sources:
     session_layout: direct_children
     verification: completed_stage2_summary
     frame_target_level: L5
+    require_fresh_valid_frames: true
+    duplicate_policy: skip
     session_id_namespace: job_52494467_l5
     session_ids: [mbbpoc_v4_00, mbbpoc_v4_01, mbbpoc_v4_02, mbbpoc_v4_03]
 readiness:

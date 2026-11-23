@@ -147,6 +147,15 @@ def capture_verification_passed(session: Path, mode: str) -> bool:
     raise ValueError(f"unsupported capture verification mode: {mode}")
 
 
+def frame_is_fresh_valid(frame: dict[str, Any]) -> bool:
+    return bool(
+        frame.get("image_valid", False)
+        and frame.get("producer_advanced", False)
+        and frame.get("contact_ok", False)
+        and int(frame.get("action_step_count", 0)) > 0
+    )
+
+
 def label_overlay(
     output: Path,
     image: np.ndarray,
@@ -254,6 +263,8 @@ def main() -> int:
     labels_out: list[np.ndarray] = []
     rows: list[dict[str, Any]] = []
     seen_hashes: set[str] = set()
+    skipped_invalid_frame_count = 0
+    skipped_duplicate_frame_count = 0
     review_candidates: dict[str, list[tuple[int, np.ndarray, VisibleInterfaceResult, str]]] = {
         "L4": [],
         "L5": [],
@@ -269,6 +280,12 @@ def main() -> int:
         verification_mode = str(source.get("verification", "verification_report"))
         frame_target_level = source.get("frame_target_level")
         session_namespace = str(source.get("session_id_namespace", ""))
+        require_fresh_valid_frames = bool(
+            source.get("require_fresh_valid_frames", False)
+        )
+        duplicate_policy = str(source.get("duplicate_policy", "error"))
+        if duplicate_policy not in {"error", "skip"}:
+            raise ValueError(f"unsupported duplicate policy: {duplicate_policy}")
         for session in selected_session_directories(
             root, requested_sessions, layout=layout
         ):
@@ -305,11 +322,17 @@ def main() -> int:
                     )
                 ):
                     continue
+                if require_fresh_valid_frames and not frame_is_fresh_valid(frame):
+                    skipped_invalid_frame_count += 1
+                    continue
                 image = np.asarray(image, dtype=np.float32)
                 frame_hash = str(frame["frame_sha256"])
                 if ultrasound_sha256(image) != frame_hash:
                     raise ValueError(f"image hash mismatch: {session.name}:{index}")
                 if frame_hash in seen_hashes:
+                    if duplicate_policy == "skip":
+                        skipped_duplicate_frame_count += 1
+                        continue
                     raise ValueError(f"duplicate image across sources: {frame_hash}")
                 seen_hashes.add(frame_hash)
                 result = visible_interface_labels(
@@ -375,6 +398,8 @@ def main() -> int:
         "semantic_status": "provisional_model_derived_simulator_labels",
         "frame_count": len(rows),
         "unique_frame_hash_count": len(seen_hashes),
+        "skipped_invalid_frame_count": skipped_invalid_frame_count,
+        "skipped_duplicate_frame_count": skipped_duplicate_frame_count,
         "levels": summaries,
         "input_hashes": {
             "config": sha256(args.config),
