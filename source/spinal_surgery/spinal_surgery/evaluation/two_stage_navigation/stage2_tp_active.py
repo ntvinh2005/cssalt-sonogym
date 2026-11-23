@@ -42,6 +42,30 @@ def proxy_confirmation_requirement_met(
     )
 
 
+def actor_confirmation_requirement_met(
+    views: Sequence["TargetView"],
+    *,
+    probability_threshold: float,
+    required_count: int,
+    minimum_positive_count: int,
+) -> bool:
+    """Require fresh eligible views and a bounded count above the actor threshold."""
+
+    if (
+        required_count < 1
+        or not 1 <= minimum_positive_count <= required_count
+        or not math.isfinite(probability_threshold)
+    ):
+        raise ValueError("invalid actor fresh-confirmation requirement")
+    return bool(
+        len(views) == required_count
+        and len({row.frame_sha256 for row in views}) == len(views)
+        and all(row.eligible for row in views)
+        and sum(row.probability >= probability_threshold for row in views)
+        >= minimum_positive_count
+    )
+
+
 @dataclass(frozen=True)
 class TargetView:
     """One actor-visible observation summarized for target-specific selection."""

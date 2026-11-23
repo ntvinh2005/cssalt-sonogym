@@ -67,6 +67,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_active_pilot import (
 from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  # noqa: E402
     POC_PROTOCOL_IDS,
     TargetView,
+    actor_confirmation_requirement_met,
     group_a_target_handoff_pose,
     score_target_image,
     select_target_view,
@@ -620,10 +621,20 @@ def main() -> int:
                             "orientation_deg": math.degrees(abs(float(wrap_to_pi(realized[2] - selected_pose[2])))),
                         }
                     )
+            required_fresh_count = int(search["required_fresh_confirmation_count"])
+            minimum_actor_positive_count = int(
+                search.get(
+                    "minimum_actor_positive_fresh_confirmations",
+                    required_fresh_count,
+                )
+            )
             fresh_pass = bool(
-                len(confirmations) == int(search["required_fresh_confirmation_count"])
-                and len({row.frame_sha256 for row in confirmations}) == len(confirmations)
-                and all(row.eligible and row.probability >= float(model["threshold"]) for row in confirmations)
+                actor_confirmation_requirement_met(
+                    confirmations,
+                    probability_threshold=float(model["threshold"]),
+                    required_count=required_fresh_count,
+                    minimum_positive_count=minimum_actor_positive_count,
+                )
                 and decision.selected is not None
                 and all(row.frame_sha256 != decision.selected.frame_sha256 for row in confirmations)
             )
@@ -641,6 +652,7 @@ def main() -> int:
                 "supporting_viewpoint_count": decision.distinct_viewpoint_count,
                 "fresh_confirmation_frame_sequences": [row.frame_sequence for row in confirmations],
                 "fresh_confirmation_probabilities": [row.probability for row in confirmations],
+                "minimum_actor_positive_fresh_confirmations": minimum_actor_positive_count,
                 "fresh_confirmation_passed": fresh_pass,
                 "return_errors": return_errors,
             }

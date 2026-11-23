@@ -69,6 +69,7 @@ search:
     - [-0.75, 0.0, 0.0]
     - [0.0, 0.75, 0.0]
   required_fresh_confirmation_count: 3
+  minimum_actor_positive_fresh_confirmations: 2
 sonoanatomy_scan:
   longitudinal_angle_rad: 1.5707963267948966
   transverse_angle_rad: 2.95

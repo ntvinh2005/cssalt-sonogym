@@ -13,6 +13,7 @@ sys.path.insert(0, str(EVALUATION_ROOT))
 from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     POC_PROTOCOL_IDS,
     TargetView,
+    actor_confirmation_requirement_met,
     group_a_target_handoff_pose,
     proxy_confirmation_requirement_met,
     select_target_view,
@@ -181,6 +182,21 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
             proxy_confirmation_requirement_met(
                 ["PROXY_POSITIVE"], required_count=2, minimum_positive_count=3
             )
+
+    def test_actor_confirmation_allows_one_bounded_negative_view(self) -> None:
+        rows = [
+            view(0, probability=0.9, pose=(0.0, 0.0, 2.8)),
+            view(1, probability=0.3, pose=(1.0, 0.0, 2.8)),
+            view(2, probability=0.8, pose=(2.0, 0.0, 2.8)),
+        ]
+        self.assertTrue(
+            actor_confirmation_requirement_met(
+                rows,
+                probability_threshold=0.5,
+                required_count=3,
+                minimum_positive_count=2,
+            )
+        )
 
 
 if __name__ == "__main__":
