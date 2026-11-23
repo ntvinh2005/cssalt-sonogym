@@ -138,6 +138,7 @@ def expected_change(scan_state: str) -> str:
         "TRANSVERSE_TP_HANDOFF_FALLBACK": "Expected: transverse TP evidence",
         "TRANSVERSE_CRANIAL_CAUDAL_SWEEP": "Expected: reversible shadow/deep-window change",
         "ACTIVE_RESCAN": "Expected: distinguish TP/SAP from competing bone",
+        "ACTIVE_COMPETING_PAIR_RESCAN": "Expected: distinguish competing TP/SAP hypotheses",
         "FRESH_ULTRASOUND_CONFIRMATION": "Expected: fresh repeatable TP/SAP evidence",
     }.get(scan_state, "Expected: actor-directed target-view refinement")
 

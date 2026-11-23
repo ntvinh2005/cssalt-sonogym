@@ -575,6 +575,36 @@ def main() -> int:
                     motion["confirmation_position_tolerance_mm"]
                 ),
             )
+            competing_pair_offsets = scan_spec.get(
+                "competing_pair_rescan_offsets_index", []
+            )
+            maximum_competing_pair_anchors = int(
+                scan_spec.get("maximum_competing_pair_rescan_anchors", 0)
+            )
+            if float(scan_spec["minimum_score_margin"]) > 0.0:
+                if not competing_pair_offsets or maximum_competing_pair_anchors < 1:
+                    raise ValueError(
+                        "competing-pair rescanning requires offsets and an anchor budget"
+                    )
+                for offset in competing_pair_offsets:
+                    delta = np.asarray(offset, dtype=np.float64)
+                    if delta.shape != (3,) or not np.all(np.isfinite(delta)):
+                        raise ValueError(
+                            "competing-pair rescan offsets must be finite 3-vectors"
+                        )
+                    position_mm = float(
+                        np.linalg.norm(delta[:2]) * label_resolution
+                    )
+                    orientation_deg = math.degrees(abs(float(delta[2])))
+                    if (
+                        position_mm
+                        <= float(motion["fine_position_tolerance_mm"])
+                        and orientation_deg
+                        <= float(motion["fine_orientation_tolerance_deg"])
+                    ):
+                        raise ValueError(
+                            "competing-pair rescan offset must exceed a fine-motion tolerance"
+                        )
         target_to_level = {
             "L4_RIGHT_TP_SURFACE_CORE": "L4",
             "L5_RIGHT_TP_SURFACE_CORE": "L5",
@@ -968,6 +998,8 @@ def main() -> int:
                 sap_candidates = [
                     row for row in semantic_frames if row["sap_predicted"]
                 ]
+                active_trajectory = f"{target_name}:active_rescan"
+                seen_rescan_poses: set[tuple[float, ...]] = set()
                 if tp_candidates and sap_candidates:
                     strongest = [
                         max(
@@ -994,8 +1026,6 @@ def main() -> int:
                         if key not in seen_anchor_poses:
                             unique_anchors.append(np.asarray(row["pose_index"], dtype=np.float64))
                             seen_anchor_poses.add(key)
-                    active_trajectory = f"{target_name}:active_rescan"
-                    seen_rescan_poses = set()
                     for anchor in unique_anchors:
                         for offset in scan_spec["active_rescan_offsets_index"]:
                             pose = anchor + np.asarray(offset, dtype=np.float64)
@@ -1009,8 +1039,6 @@ def main() -> int:
                                 trajectory_id=active_trajectory,
                             )
 
-                trajectory_decisions = []
-                accepted_trajectories = []
                 multiview_config = MultiviewConfig(
                     association_radius_mm=float(scan_spec["association_radius_mm"]),
                     minimum_supporting_frames_per_structure=int(
@@ -1018,34 +1046,136 @@ def main() -> int:
                     ),
                     minimum_score_margin=float(scan_spec["minimum_score_margin"]),
                 )
-                for trajectory_id, semantic_rows in observations_by_trajectory.items():
-                    clusters = cluster_observations(
-                        semantic_rows,
-                        association_radius_mm=multiview_config.association_radius_mm,
-                    )
-                    pair = decide_tp_sap_pair(clusters, config=multiview_config)
-                    pair_payload = {
-                        "status": pair.status,
-                        "reason": pair.reason,
-                        "selected": (
-                            None if pair.selected is None else asdict(pair.selected)
-                        ),
-                        "hypothesis_count": len(pair.hypotheses),
-                    }
-                    trajectory_decisions.append(
-                        {
-                            "trajectory_id": trajectory_id,
-                            "pair_decision": pair_payload,
-                            "semantic_observations": [
-                                asdict(row) for row in semantic_rows
-                            ],
-                            "semantic_clusters": [asdict(row) for row in clusters],
-                        }
-                    )
-                    if pair.status == "ACCEPT" and pair.selected is not None:
-                        accepted_trajectories.append(
-                            (pair.selected.score, trajectory_id, pair_payload)
+
+                def evaluate_trajectories() -> tuple[
+                    list[dict[str, Any]],
+                    list[tuple[float, str, dict[str, Any]]],
+                    dict[str, tuple[Any, Any]],
+                ]:
+                    decisions = []
+                    accepted = []
+                    states = {}
+                    for trajectory_id, semantic_rows in observations_by_trajectory.items():
+                        clusters = cluster_observations(
+                            semantic_rows,
+                            association_radius_mm=multiview_config.association_radius_mm,
                         )
+                        pair = decide_tp_sap_pair(
+                            clusters, config=multiview_config
+                        )
+                        states[trajectory_id] = (clusters, pair)
+                        pair_payload = {
+                            "status": pair.status,
+                            "reason": pair.reason,
+                            "selected": (
+                                None
+                                if pair.selected is None
+                                else asdict(pair.selected)
+                            ),
+                            "hypothesis_count": len(pair.hypotheses),
+                        }
+                        decisions.append(
+                            {
+                                "trajectory_id": trajectory_id,
+                                "pair_decision": pair_payload,
+                                "semantic_observations": [
+                                    asdict(row) for row in semantic_rows
+                                ],
+                                "semantic_clusters": [
+                                    asdict(row) for row in clusters
+                                ],
+                            }
+                        )
+                        if pair.status == "ACCEPT" and pair.selected is not None:
+                            accepted.append(
+                                (pair.selected.score, trajectory_id, pair_payload)
+                            )
+                    return decisions, accepted, states
+
+                (
+                    trajectory_decisions,
+                    accepted_trajectories,
+                    trajectory_states,
+                ) = evaluate_trajectories()
+                competing_pair_rescan_executed = False
+                active_state = trajectory_states.get(active_trajectory)
+                if active_state is not None:
+                    active_clusters, active_pair = active_state
+                    if (
+                        active_pair.reason == "COMPETING_PAIR_HYPOTHESES"
+                        and len(active_pair.hypotheses) >= 2
+                    ):
+                        competing_pair_rescan_executed = True
+                        by_sequence = {
+                            int(row["frame_sequence"]): row
+                            for row in semantic_frames
+                            if row["trajectory_id"] == active_trajectory
+                        }
+                        competing_pair_anchors = []
+                        for hypothesis in active_pair.hypotheses[:2]:
+                            for semantic_class, cluster_index in (
+                                ("TP", hypothesis.tp_cluster_index),
+                                ("SAP", hypothesis.sap_cluster_index),
+                            ):
+                                cluster = active_clusters[cluster_index]
+                                candidates = [
+                                    by_sequence[frame]
+                                    for frame in cluster.supporting_frames
+                                    if frame in by_sequence
+                                ]
+                                if not candidates:
+                                    continue
+                                pixel_key = (
+                                    "tp_predicted_pixels"
+                                    if semantic_class == "TP"
+                                    else "sap_predicted_pixels"
+                                )
+                                competing_pair_anchors.append(
+                                    max(
+                                        candidates,
+                                        key=lambda row: (
+                                            int(row[pixel_key]),
+                                            -int(row["frame_sequence"]),
+                                        ),
+                                    )
+                                )
+                        unique_competing_pair_anchors = []
+                        seen_competing_pair_poses = set()
+                        for row in competing_pair_anchors:
+                            key = tuple(
+                                round(float(value), 3)
+                                for value in row["pose_index"]
+                            )
+                            if key in seen_competing_pair_poses:
+                                continue
+                            seen_competing_pair_poses.add(key)
+                            unique_competing_pair_anchors.append(
+                                np.asarray(row["pose_index"], dtype=np.float64)
+                            )
+                        maximum_anchors = int(
+                            scan_spec.get("maximum_competing_pair_rescan_anchors", 4)
+                        )
+                        for anchor in unique_competing_pair_anchors[:maximum_anchors]:
+                            for offset in scan_spec.get(
+                                "competing_pair_rescan_offsets_index", []
+                            ):
+                                pose = anchor + np.asarray(offset, dtype=np.float64)
+                                key = tuple(
+                                    round(float(value), 3) for value in pose
+                                )
+                                if key in seen_rescan_poses:
+                                    continue
+                                seen_rescan_poses.add(key)
+                                acquire_semantic(
+                                    pose,
+                                    state_name="ACTIVE_COMPETING_PAIR_RESCAN",
+                                    trajectory_id=active_trajectory,
+                                )
+                        (
+                            trajectory_decisions,
+                            accepted_trajectories,
+                            trajectory_states,
+                        ) = evaluate_trajectories()
                 selected_semantic_trajectory = None
                 selected_semantic_pair = None
                 if accepted_trajectories:
@@ -1166,6 +1296,9 @@ def main() -> int:
                     "checkpoint_sha256": semantic_model["sha256"],
                     "controller_transition_evidence": controller.transition_evidence(),
                     "fallback_transverse_executed": fallback_transverse_executed,
+                    "competing_pair_rescan_executed": (
+                        competing_pair_rescan_executed
+                    ),
                     "trajectory_decisions": trajectory_decisions,
                     "selected_trajectory_id": selected_semantic_trajectory,
                     "selected_pair_decision": selected_semantic_pair,
