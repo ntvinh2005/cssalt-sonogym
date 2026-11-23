@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any, Mapping
+
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -67,6 +71,61 @@ def normalized_ultrasound(image: torch.Tensor) -> torch.Tensor:
     low = torch.quantile(flattened, 0.05, dim=1)[:, None, None]
     high = torch.quantile(flattened, 0.95, dim=1)[:, None, None]
     return torch.clamp((image - low) / torch.clamp(high - low, min=1.0e-6), 0.0, 1.0)
+
+
+def load_segmentation_checkpoint(
+    path: str | Path,
+    *,
+    expected_level: str | None = None,
+) -> tuple[SmallUNet, dict[str, Any]]:
+    """Load a frozen clean-ultrasound model and validate its actor contract."""
+
+    bundle = torch.load(Path(path), map_location="cpu", weights_only=False)
+    if bundle.get("schema") != "s0010-sonoanatomy-unet-v1":
+        raise ValueError(f"unexpected checkpoint schema: {path}")
+    if bundle.get("input_contract") != "clean_ultrasound_only":
+        raise ValueError(f"unexpected input contract: {path}")
+    if expected_level is not None and bundle.get("level") != expected_level:
+        raise ValueError(f"checkpoint level mismatch: {path}")
+    model = SmallUNet(base_channels=int(bundle["base_channels"]))
+    model.load_state_dict(bundle["state_dict"])
+    model.eval()
+    return model, bundle
+
+
+@torch.no_grad()
+def segmentation_probabilities(model: SmallUNet, images: np.ndarray) -> np.ndarray:
+    """Return class probabilities for a batch of actor-visible ultrasound images."""
+
+    values = torch.from_numpy(np.asarray(images, dtype=np.float32))
+    normalized = normalized_ultrasound(values)[:, None]
+    return torch.softmax(model(normalized), dim=1).cpu().numpy()
+
+
+def predicted_presence(
+    probabilities: np.ndarray,
+    thresholds: Mapping[str, Mapping[str, float | int]],
+) -> dict[str, bool | int]:
+    """Apply frozen exclusive-mask thresholds to one probability map."""
+
+    probability = np.asarray(probabilities)
+    if probability.ndim != 3 or probability.shape[0] != 4:
+        raise ValueError("probabilities must be 4 x H x W")
+    result: dict[str, bool | int] = {}
+    winner = np.argmax(probability, axis=0)
+    for class_id, name in ((1, "TP"), (2, "SAP"), (3, "OTHER_BONE")):
+        specification = thresholds[name]
+        pixels = int(
+            np.count_nonzero(
+                (probability[class_id] >= float(specification["threshold"]))
+                & (winner == class_id)
+            )
+        )
+        result[f"{name.lower()}_predicted_pixels"] = pixels
+        result[f"{name.lower()}_predicted"] = bool(
+            pixels >= int(specification["minimum_pixels"])
+        )
+    return result
 
 
 def interface_loss(

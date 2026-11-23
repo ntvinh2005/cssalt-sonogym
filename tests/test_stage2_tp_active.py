@@ -156,6 +156,7 @@ class TargetSelectionTests(unittest.TestCase):
 class ProxyConfirmationEvaluationTests(unittest.TestCase):
     def test_v3_protocol_is_shared_by_actor_and_evaluator(self) -> None:
         self.assertIn("sonogym-s0010-mbb-single-anatomy-poc-v3", POC_PROTOCOL_IDS)
+        self.assertIn("sonogym-s0010-mbb-single-anatomy-poc-v4", POC_PROTOCOL_IDS)
 
     def test_two_of_three_positive_confirmations_pass(self) -> None:
         self.assertTrue(

@@ -10,6 +10,7 @@ from two_stage_navigation.sonoanatomy_segmentation import (
     interface_loss,
     negative_presence_loss,
     normalized_ultrasound,
+    predicted_presence,
 )
 from workflows.two_stage_navigation.train_s0010_sonoanatomy_segmentation import (
     FRAME_MINIMUM_PIXELS,
@@ -56,6 +57,23 @@ class SonoanatomySegmentationTests(unittest.TestCase):
         self.assertGreaterEqual(float(normalized.min()), 0.0)
         self.assertLessEqual(float(normalized.max()), 1.0)
         self.assertTrue(torch.allclose(normalized[0], normalized[1]))
+
+    def test_predicted_presence_uses_exclusive_class_winner(self) -> None:
+        probabilities = np.zeros((4, 3, 3), dtype=np.float32)
+        probabilities[1, 1, 1] = 0.8
+        probabilities[2, 1, 1] = 0.9
+        probabilities[1, 2, 2] = 0.8
+        thresholds = {
+            name: {"threshold": 0.5, "minimum_pixels": 1}
+            for name in ("TP", "SAP", "OTHER_BONE")
+        }
+
+        result = predicted_presence(probabilities, thresholds)
+
+        self.assertEqual(result["tp_predicted_pixels"], 1)
+        self.assertEqual(result["sap_predicted_pixels"], 1)
+        self.assertTrue(result["tp_predicted"])
+        self.assertTrue(result["sap_predicted"])
 
     def test_pair_metrics_require_both_tp_and_sap(self) -> None:
         probabilities = np.zeros((2, 4, 4, 4), dtype=np.float32)

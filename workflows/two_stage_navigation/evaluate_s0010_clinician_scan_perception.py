@@ -13,7 +13,6 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 from scipy import ndimage
-import torch
 import yaml
 
 from two_stage_navigation.contracts import (
@@ -30,7 +29,9 @@ from two_stage_navigation.sonoanatomy_multiview import (
 )
 from two_stage_navigation.sonoanatomy_segmentation import (
     SmallUNet,
-    normalized_ultrasound,
+    load_segmentation_checkpoint,
+    predicted_presence,
+    segmentation_probabilities,
 )
 
 
@@ -107,42 +108,11 @@ def read_dataset_manifest(
 
 
 def load_model(path: Path) -> tuple[SmallUNet, dict[str, Any]]:
-    bundle = torch.load(path, map_location="cpu", weights_only=False)
-    if bundle.get("schema") != "s0010-sonoanatomy-unet-v1":
-        raise ValueError(f"unexpected checkpoint schema: {path}")
-    if bundle.get("input_contract") != "clean_ultrasound_only":
-        raise ValueError(f"unexpected input contract: {path}")
-    model = SmallUNet(base_channels=int(bundle["base_channels"]))
-    model.load_state_dict(bundle["state_dict"])
-    model.eval()
-    return model, bundle
+    return load_segmentation_checkpoint(path)
 
 
-@torch.no_grad()
 def predict(model: SmallUNet, images: np.ndarray) -> np.ndarray:
-    values = torch.from_numpy(np.asarray(images, dtype=np.float32))
-    normalized = normalized_ultrasound(values)[:, None]
-    return torch.softmax(model(normalized), dim=1).cpu().numpy()
-
-
-def predicted_presence(
-    probabilities: np.ndarray,
-    thresholds: Mapping[str, Mapping[str, float | int]],
-) -> dict[str, bool | int]:
-    result: dict[str, bool | int] = {}
-    winner = np.argmax(probabilities, axis=0)
-    for class_id, name in ((1, "TP"), (2, "SAP"), (3, "OTHER_BONE")):
-        pixels = int(
-            np.count_nonzero(
-                (probabilities[class_id] >= float(thresholds[name]["threshold"]))
-                & (winner == class_id)
-            )
-        )
-        result[f"{name.lower()}_predicted_pixels"] = pixels
-        result[f"{name.lower()}_predicted"] = bool(
-            pixels >= int(thresholds[name]["minimum_pixels"])
-        )
-    return result
+    return segmentation_probabilities(model, images)
 
 
 def observations_for(

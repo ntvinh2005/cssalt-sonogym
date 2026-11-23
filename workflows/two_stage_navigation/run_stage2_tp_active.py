@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import hashlib
 import importlib.util
 import json
@@ -69,6 +70,24 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     group_a_target_handoff_pose,
     score_target_image,
     select_target_view,
+)
+from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan import (  # noqa: E402
+    ClinicianSweepController,
+    ScanConfig,
+    ScanEvidence,
+    ScanState,
+)
+from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_multiview import (  # noqa: E402
+    MultiviewConfig,
+    SemanticObservation,
+    cluster_observations,
+    decide_tp_sap_pair,
+    semantic_observations,
+)
+from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_segmentation import (  # noqa: E402
+    load_segmentation_checkpoint,
+    predicted_presence,
+    segmentation_probabilities,
 )
 from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (  # noqa: E402
     plane_from_full_pose,
@@ -262,6 +281,20 @@ def main() -> int:
         }
         if models["L4_RIGHT_TP_SURFACE_CORE"]["patch_spec"] != models["L5_RIGHT_TP_SURFACE_CORE"]["patch_spec"]:
             raise RuntimeError("L4 and L5 preprocessing contracts differ")
+        sonoanatomy_models: dict[str, dict[str, Any]] = {}
+        for level, specification in model_specs.get("sonoanatomy", {}).items():
+            path = Path(specification["path"])
+            if sha256(path) != specification["sha256"]:
+                raise RuntimeError(f"{level} sonoanatomy model checksum mismatch")
+            model, bundle = load_segmentation_checkpoint(path, expected_level=level)
+            sonoanatomy_models[level] = {
+                "model": model,
+                "thresholds": bundle["thresholds"],
+                "path": path,
+                "sha256": specification["sha256"],
+            }
+        if sonoanatomy_models and set(sonoanatomy_models) != {"L4", "L5"}:
+            raise RuntimeError("sonoanatomy scanning requires both L4 and L5 checkpoints")
 
         env_cfg = parse_env_cfg(protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1)
         env_cfg.seed = int(session_spec["seed"])
@@ -343,9 +376,12 @@ def main() -> int:
             producer_advanced = producer > previous_producer
             previous_producer = producer
             transition_valid = transition_is_valid(trajectory)
-            image_valid = bool(
-                transition_valid and producer_advanced and surface_proxy_ok(unwrapped)
+            contact_ok = bool(
+                surface_proxy_ok(unwrapped)
                 and not bool(unwrapped.US_slicer.no_collide[0].item())
+            )
+            image_valid = bool(
+                transition_valid and producer_advanced and contact_ok
                 and float(np.std(image)) > 1e-8
             )
             model = models[target_name]
@@ -393,6 +429,7 @@ def main() -> int:
                 "proposal_count": proposal_count,
                 "transition_valid": transition_valid,
                 "image_valid": image_valid,
+                "contact_ok": contact_ok,
                 "producer_advanced": producer_advanced,
                 "action_step_count": len(trajectory),
                 "actor_base_to_ee_position_m": actor_position.tolist(),
@@ -584,6 +621,311 @@ def main() -> int:
                 "fresh_confirmation_passed": fresh_pass,
                 "return_errors": return_errors,
             }
+            if sonoanatomy_models and fresh_pass and decision.selected is not None:
+                level = target_to_level[target_name]
+                semantic_model = sonoanatomy_models[level]
+                scan_spec = protocol["sonoanatomy_scan"]
+                scan_config = ScanConfig(
+                    longitudinal_angle_rad=float(scan_spec["longitudinal_angle_rad"]),
+                    transverse_angle_rad=float(scan_spec["transverse_angle_rad"]),
+                    translation_step_index=float(scan_spec["translation_step_index"]),
+                    reference_offsets_index=tuple(
+                        float(value) for value in scan_spec["reference_offsets_index"]
+                    ),
+                    maximum_lateral_steps=int(scan_spec["maximum_lateral_steps"]),
+                    maximum_medial_steps=int(scan_spec["maximum_medial_steps"]),
+                    transverse_offsets_index=tuple(
+                        float(value) for value in scan_spec["transverse_offsets_index"]
+                    ),
+                )
+                controller = ClinicianSweepController(
+                    decision.selected.pose_index,
+                    scan_config,
+                )
+                semantic_frames: list[dict[str, Any]] = []
+                observations_by_trajectory: dict[str, list[SemanticObservation]] = {}
+
+                while controller.state not in {
+                    ScanState.SAP_TP_IDENTITY_INFERENCE,
+                    ScanState.ABSTAIN,
+                }:
+                    scan_pose = controller.next_pose()
+                    if scan_pose is None:
+                        break
+                    current_state = controller.state
+                    trajectory_id = (
+                        f"{target_name}:longitudinal"
+                        if current_state
+                        in {
+                            ScanState.ACQUIRE_REFERENCE_TP_REGION,
+                            ScanState.LONGITUDINAL_LATERAL_SURVEY,
+                            ScanState.REVERSE_MEDIAL_SURVEY,
+                        }
+                        else f"{target_name}:transverse"
+                    )
+                    scan_view = acquire(
+                        scan_pose,
+                        target_name,
+                        f"{target_name}:sonoanatomy:{current_state.value}",
+                        float(motion["fine_position_tolerance_mm"]),
+                        float(motion["fine_orientation_tolerance_deg"]),
+                    )
+                    probability = segmentation_probabilities(
+                        semantic_model["model"], np.asarray([images[-1]])
+                    )[0]
+                    presence = predicted_presence(
+                        probability, semantic_model["thresholds"]
+                    )
+                    public = public_rows[-1]
+                    public.update(
+                        {
+                            "scan_state": current_state.value,
+                            "trajectory_id": trajectory_id,
+                            "tp_predicted": bool(presence["tp_predicted"]),
+                            "sap_predicted": bool(presence["sap_predicted"]),
+                            "other_bone_predicted": bool(
+                                presence["other_bone_predicted"]
+                            ),
+                            "tp_predicted_pixels": int(
+                                presence["tp_predicted_pixels"]
+                            ),
+                            "sap_predicted_pixels": int(
+                                presence["sap_predicted_pixels"]
+                            ),
+                            "other_bone_predicted_pixels": int(
+                                presence["other_bone_predicted_pixels"]
+                            ),
+                        }
+                    )
+                    assert_no_privileged_fields(public)
+                    frame_observations = semantic_observations(
+                        probability,
+                        thresholds=semantic_model["thresholds"],
+                        end_effector_position_m=public[
+                            "actor_base_to_ee_position_m"
+                        ],
+                        rotation_columns=np.asarray(
+                            public["actor_base_to_ee_rotation_columns"],
+                            dtype=np.float64,
+                        ),
+                        frame_sequence=scan_view.frame_sequence,
+                        frame_sha256=scan_view.frame_sha256,
+                    )
+                    observations_by_trajectory.setdefault(trajectory_id, []).extend(
+                        frame_observations
+                    )
+                    semantic_frame = {
+                        "frame_sequence": scan_view.frame_sequence,
+                        "frame_sha256": scan_view.frame_sha256,
+                        "pose_index": list(scan_view.pose_index),
+                        "trajectory_id": trajectory_id,
+                        "scan_state": current_state.value,
+                        **presence,
+                    }
+                    semantic_frames.append(semantic_frame)
+                    controller.observe(
+                        ScanEvidence(
+                            frame_sequence=scan_view.frame_sequence,
+                            pose_index=scan_view.pose_index,
+                            tp_predicted=bool(presence["tp_predicted"]),
+                            sap_predicted=bool(presence["sap_predicted"]),
+                            other_bone_predicted=bool(
+                                presence["other_bone_predicted"]
+                            ),
+                            tp_predicted_pixels=int(
+                                presence["tp_predicted_pixels"]
+                            ),
+                            sap_predicted_pixels=int(
+                                presence["sap_predicted_pixels"]
+                            ),
+                            image_valid=scan_view.image_valid,
+                            contact_ok=bool(public["contact_ok"]),
+                            producer_advanced=scan_view.producer_advanced,
+                        )
+                    )
+
+                trajectory_decisions = []
+                accepted_trajectories = []
+                multiview_config = MultiviewConfig(
+                    association_radius_mm=float(scan_spec["association_radius_mm"]),
+                    minimum_supporting_frames_per_structure=int(
+                        scan_spec["minimum_supporting_frames_per_structure"]
+                    ),
+                    minimum_score_margin=float(scan_spec["minimum_score_margin"]),
+                )
+                for trajectory_id, semantic_rows in observations_by_trajectory.items():
+                    clusters = cluster_observations(
+                        semantic_rows,
+                        association_radius_mm=multiview_config.association_radius_mm,
+                    )
+                    pair = decide_tp_sap_pair(clusters, config=multiview_config)
+                    pair_payload = {
+                        "status": pair.status,
+                        "reason": pair.reason,
+                        "selected": (
+                            None if pair.selected is None else asdict(pair.selected)
+                        ),
+                        "hypothesis_count": len(pair.hypotheses),
+                    }
+                    trajectory_decisions.append(
+                        {
+                            "trajectory_id": trajectory_id,
+                            "pair_decision": pair_payload,
+                            "semantic_clusters": [asdict(row) for row in clusters],
+                        }
+                    )
+                    if pair.status == "ACCEPT" and pair.selected is not None:
+                        accepted_trajectories.append(
+                            (pair.selected.score, trajectory_id, pair_payload)
+                        )
+                selected_semantic_trajectory = None
+                selected_semantic_pair = None
+                if accepted_trajectories:
+                    _, selected_semantic_trajectory, selected_semantic_pair = max(
+                        accepted_trajectories,
+                        key=lambda row: (row[0], row[1]),
+                    )
+                pair_view_candidates = [
+                    row
+                    for row in semantic_frames
+                    if row["trajectory_id"] == selected_semantic_trajectory
+                    and row["tp_predicted"]
+                    and row["sap_predicted"]
+                ]
+                selected_pair_view = (
+                    max(
+                        pair_view_candidates,
+                        key=lambda row: (
+                            min(
+                                int(row["tp_predicted_pixels"]),
+                                int(row["sap_predicted_pixels"]),
+                            ),
+                            -int(row["frame_sequence"]),
+                        ),
+                    )
+                    if pair_view_candidates
+                    else None
+                )
+                semantic_confirmations = []
+                if selected_pair_view is not None:
+                    selected_pair_pose = np.asarray(
+                        selected_pair_view["pose_index"], dtype=np.float64
+                    )
+                    for index, offset in enumerate(
+                        scan_spec["confirmation_dither_offsets"]
+                    ):
+                        dither = selected_pair_pose + np.asarray(offset, dtype=np.float64)
+                        move(
+                            dither,
+                            f"{target_name}:sonoanatomy_confirmation_dither_{index + 1}",
+                            float(motion["confirmation_position_tolerance_mm"]),
+                            float(motion["confirmation_orientation_tolerance_deg"]),
+                        )
+                        confirmed = acquire(
+                            selected_pair_pose,
+                            target_name,
+                            f"{target_name}:sonoanatomy_fresh_confirmation_{index + 1}",
+                            float(motion["confirmation_position_tolerance_mm"]),
+                            float(motion["confirmation_orientation_tolerance_deg"]),
+                        )
+                        probability = segmentation_probabilities(
+                            semantic_model["model"], np.asarray([images[-1]])
+                        )[0]
+                        presence = predicted_presence(
+                            probability, semantic_model["thresholds"]
+                        )
+                        public_rows[-1].update(
+                            {
+                                "scan_state": "FRESH_ULTRASOUND_CONFIRMATION",
+                                "trajectory_id": f"{target_name}:confirmation",
+                                "tp_predicted": bool(presence["tp_predicted"]),
+                                "sap_predicted": bool(presence["sap_predicted"]),
+                                "other_bone_predicted": bool(
+                                    presence["other_bone_predicted"]
+                                ),
+                                "tp_predicted_pixels": int(
+                                    presence["tp_predicted_pixels"]
+                                ),
+                                "sap_predicted_pixels": int(
+                                    presence["sap_predicted_pixels"]
+                                ),
+                                "other_bone_predicted_pixels": int(
+                                    presence["other_bone_predicted_pixels"]
+                                ),
+                            }
+                        )
+                        assert_no_privileged_fields(public_rows[-1])
+                        realized = np.asarray(confirmed.pose_index, dtype=np.float64)
+                        semantic_confirmations.append(
+                            {
+                                "frame_sequence": confirmed.frame_sequence,
+                                "frame_sha256": confirmed.frame_sha256,
+                                "image_valid": confirmed.image_valid,
+                                "producer_advanced": confirmed.producer_advanced,
+                                "return_position_error_mm": float(
+                                    np.linalg.norm(realized[:2] - selected_pair_pose[:2])
+                                    * label_resolution
+                                ),
+                                "return_orientation_error_deg": math.degrees(
+                                    abs(
+                                        float(
+                                            wrap_to_pi(
+                                                realized[2] - selected_pair_pose[2]
+                                            )
+                                        )
+                                    )
+                                ),
+                                **presence,
+                            }
+                        )
+                semantic_fresh_pass = bool(
+                    len(semantic_confirmations)
+                    == len(scan_spec["confirmation_dither_offsets"])
+                    and len(
+                        {row["frame_sha256"] for row in semantic_confirmations}
+                    )
+                    == len(semantic_confirmations)
+                    and all(
+                        row["frame_sha256"] != selected_pair_view["frame_sha256"]
+                        for row in semantic_confirmations
+                    )
+                    and all(
+                        row["image_valid"]
+                        and row["producer_advanced"]
+                        and row["tp_predicted"]
+                        and row["sap_predicted"]
+                        for row in semantic_confirmations
+                    )
+                    and selected_semantic_pair is not None
+                )
+                target_result["sonoanatomy"] = {
+                    "checkpoint_sha256": semantic_model["sha256"],
+                    "controller_transition_evidence": controller.transition_evidence(),
+                    "trajectory_decisions": trajectory_decisions,
+                    "selected_trajectory_id": selected_semantic_trajectory,
+                    "selected_pair_decision": selected_semantic_pair,
+                    "selected_pair_frame_sequence": (
+                        None
+                        if selected_pair_view is None
+                        else selected_pair_view["frame_sequence"]
+                    ),
+                    "scan_frame_count": len(semantic_frames),
+                    "fresh_confirmations": semantic_confirmations,
+                    "fresh_confirmation_passed": semantic_fresh_pass,
+                }
+                if not semantic_fresh_pass:
+                    target_result["decision"] = "ABSTAIN"
+                    target_result["decision_reason"] = (
+                        "SAP_TP_FRESH_CONFIRMATION_FAILED"
+                    )
+            elif sonoanatomy_models:
+                target_result["sonoanatomy"] = {
+                    "scan_frame_count": 0,
+                    "fresh_confirmation_passed": False,
+                    "reason": "TP_HANDOFF_NOT_CONFIRMED",
+                }
+                target_result["decision"] = "ABSTAIN"
+                target_result["decision_reason"] = "TP_HANDOFF_NOT_CONFIRMED"
             assert_no_privileged_fields(target_result)
             target_results.append(target_result)
 
