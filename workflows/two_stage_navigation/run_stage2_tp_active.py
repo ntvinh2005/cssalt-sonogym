@@ -73,6 +73,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
+    tp_refinement_is_required,
 )
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan import (  # noqa: E402
     ClinicianSweepController,
@@ -1804,6 +1805,7 @@ def main() -> int:
                     landmark_confirmations = list(
                         dedicated_tp_confirmation_rows
                     )
+                    tp_refinement_records: list[dict[str, Any]] = []
                     pending_reacquisition_observations = {}
                     for semantic_class in ("TP", "SAP"):
                         identity = f"RIGHT_{level}_{semantic_class}"
@@ -2030,11 +2032,64 @@ def main() -> int:
                                 refinement_offsets = confirmation_spec.get(
                                     "tp_refinement_offsets_index", []
                                 )
+                                refinement_required = tp_refinement_is_required(
+                                    confirmation_views,
+                                    minimum_predicted_count=int(
+                                        confirmation_spec.get(
+                                            "tp_refinement_minimum_predicted_count",
+                                            required_fresh_count,
+                                        )
+                                    ),
+                                    large_interface_pixel_count=int(
+                                        confirmation_spec.get(
+                                            "tp_refinement_large_interface_pixels",
+                                            2**31 - 1,
+                                        )
+                                    ),
+                                )
                                 refinement_center = select_tp_refinement_anchor(
                                     confirmation_views,
                                     public_rows,
                                 )
-                                if refinement_offsets and refinement_center is not None:
+                                tp_refinement_records.append(
+                                    {
+                                        "source_frame_sequence": source_sequence,
+                                        "required": refinement_required,
+                                        "initial_predicted_count": sum(
+                                            bool(row["predicted"])
+                                            for row in confirmation_views
+                                        ),
+                                        "initial_maximum_interface_pixels": max(
+                                            (
+                                                int(observation["pixel_count"])
+                                                for row in confirmation_views
+                                                for observation in row[
+                                                    "semantic_observations"
+                                                ]
+                                            ),
+                                            default=0,
+                                        ),
+                                        "center_frame_sequence": (
+                                            None
+                                            if refinement_center is None
+                                            else int(
+                                                refinement_center[
+                                                    "frame_sequence"
+                                                ]
+                                            )
+                                        ),
+                                        "executed": bool(
+                                            refinement_required
+                                            and refinement_offsets
+                                            and refinement_center is not None
+                                        ),
+                                    }
+                                )
+                                if (
+                                    refinement_required
+                                    and refinement_offsets
+                                    and refinement_center is not None
+                                ):
                                     refinement_pose = np.asarray(
                                         refinement_center["executed_pose_index"],
                                         dtype=np.float64,
@@ -2165,6 +2220,7 @@ def main() -> int:
                                 len(final_tp_reacquisition)
                                 == required_fresh_count
                             ),
+                            "tp_refinement_records": tp_refinement_records,
                         }
                     )
                     if independent_fresh_pass:

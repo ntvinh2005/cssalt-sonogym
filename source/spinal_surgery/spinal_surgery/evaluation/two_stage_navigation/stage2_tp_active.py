@@ -37,6 +37,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r6",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r7",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r8",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r9",
     }
 )
 
@@ -120,6 +121,39 @@ def select_tp_refinement_anchor(
     if not candidates:
         return None
     return max(candidates, key=lambda item: item[0])[1]
+
+
+def tp_refinement_is_required(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    minimum_predicted_count: int,
+    large_interface_pixel_count: int,
+) -> bool:
+    """Trigger one bounded TP refinement only when current evidence is unstable."""
+
+    if minimum_predicted_count < 1 or large_interface_pixel_count < 1:
+        raise ValueError("invalid TP refinement trigger")
+    predicted = [
+        row
+        for row in rows
+        if bool(row.get("predicted"))
+        and bool(row.get("image_valid"))
+        and bool(row.get("producer_advanced"))
+        and bool(row.get("fresh_relative_to_source"))
+        and row.get("semantic_observations")
+    ]
+    maximum_pixels = max(
+        (
+            int(observation.get("pixel_count", 0))
+            for row in predicted
+            for observation in row["semantic_observations"]
+        ),
+        default=0,
+    )
+    return bool(
+        len(predicted) < minimum_predicted_count
+        or maximum_pixels >= large_interface_pixel_count
+    )
 
 
 def select_tp_reacquisition_confirmations(

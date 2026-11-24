@@ -19,6 +19,7 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
+    tp_refinement_is_required,
 )
 
 
@@ -187,6 +188,10 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
             "sonogym-s0010-mbb-single-anatomy-poc-v6r8",
             POC_PROTOCOL_IDS,
         )
+        self.assertIn(
+            "sonogym-s0010-mbb-single-anatomy-poc-v6r9",
+            POC_PROTOCOL_IDS,
+        )
 
     def test_two_of_three_positive_confirmations_pass(self) -> None:
         self.assertTrue(
@@ -262,6 +267,40 @@ class TpReacquisitionSelectionTests(unittest.TestCase):
         )
         self.assertIsNotNone(anchor)
         self.assertEqual(anchor["frame_sequence"], 1)
+
+    def test_refinement_runs_when_too_few_views_are_positive(self) -> None:
+        rows = [
+            self.row(0, pixels=80),
+            self.row(1, pixels=0, predicted=False),
+            self.row(2, pixels=0, predicted=False),
+        ]
+        self.assertTrue(
+            tp_refinement_is_required(
+                rows,
+                minimum_predicted_count=3,
+                large_interface_pixel_count=180,
+            )
+        )
+
+    def test_refinement_runs_for_large_interface(self) -> None:
+        rows = [self.row(sequence, pixels=200) for sequence in range(3)]
+        self.assertTrue(
+            tp_refinement_is_required(
+                rows,
+                minimum_predicted_count=3,
+                large_interface_pixel_count=180,
+            )
+        )
+
+    def test_refinement_skips_stable_compact_evidence(self) -> None:
+        rows = [self.row(sequence, pixels=120) for sequence in range(3)]
+        self.assertFalse(
+            tp_refinement_is_required(
+                rows,
+                minimum_predicted_count=3,
+                large_interface_pixel_count=180,
+            )
+        )
 
     def test_final_selection_uses_complete_refinement_bundle(self) -> None:
         public = [{"target_probability": 0.8} for _ in range(5)]
