@@ -1,5 +1,87 @@
 # Setup status
 
+## 2026-11-24. Stage 2 L5 TP reacquisition and independent confirmation on s0010
+
+`workflows/two_stage_navigation/run_stage2_tp_active.py` runs the ultrasound
+actor. `evaluate_stage2_tp_active.py` scores each sealed run, and
+`evaluate_s0010_mbb_poc.py` aggregates the four independent runs.
+
+**Criterion.** Verify two mutually distinct fresh views of the selected L5 TP
+on the opened seed. The independent Stage 2 protocol requires eight successful
+integrated target attempts across four starts, pooled frame precision of at
+least 75%, and clear-negative false acceptance of at most 10%.
+
+### Method
+
+- For a singleton L5 TP view, use the selected source to associate observations
+  in 3D. Count two mutually distinct fresh views when they pass the existing
+  distance, pose separation and freshness checks. The source does not add a
+  supporting view in this case.
+- The matched development run reuses the v6r17 seed. The independent run uses
+  the same frozen U-Net checkpoints, scanning policy and evaluation thresholds
+  on four unused reset seeds and four realized start poses on `s0010`.
+
+### Setup
+
+| Run | Protocol | Execution revision | Seeds |
+|---|---|---|---|
+| Matched development, `52624141` | v6r18 | `d0f88064f4c4a4cc627b00a530a5dc416bfd95d5` | `2026120200` |
+| Independent confirmation, `52626449` | v6r19 | `ed1ab888f585e10b395329ec7990f2dd9898d1d6` | `2026120400` through `2026120403` |
+
+Both jobs requested four CPUs, one NVIDIA L4 and 30 GB under `anest-dept`.
+Use `v6r18` with `00:20:00` and `v6r19` with `00:45:00` at the respective
+execution revisions.
+
+```bash
+SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v6r17/52620037/context/machine-config.env \
+POC_PROTOCOL_VERSION="$version" \
+sbatch --account=anest-dept --partition=hpg-turin --cpus-per-task=4 \
+  --gres=gpu:l4:1 --mem=30G --time="$limit" --job-name="sg_unet_$version" \
+  --output=slurm-%j.out hpg/jobs/s0010_mbb_single_anatomy_poc_v6r3.sbatch
+```
+
+### Results
+
+- **Matched development passed the association check.** L5 TP moved from zero
+  counted fresh views in v6r17 to two in v6r18. Frames 128 and 180 both support
+  the correct TP and retain frame 120 as the source. Both semantic pairs were
+  correct. Zero of two integrated target attempts passed.
+- **Independent confirmation failed Stage 2.** Both jobs completed with exit
+  `0:0` and passed 76 tests each. The independent run evaluated all four starts
+  and all eight targets, with no sessions dropped.
+
+| Independent start | Correct semantic L4 pair | Correct semantic L5 pair | Integrated L4 / L5 |
+|---|---|---|---|
+| 00 | Yes | Yes | Fail / Fail |
+| 01 | Yes | No, TP 1 / 2 | Fail / Fail |
+| 02 | No, SAP 1 / 7 | No, TP 1 / 2 | Fail / Fail |
+| 03 | Yes | Yes | Fail / Pass |
+
+Pooled frame precision was 82 / 97 (84.54%) and clear-negative false
+acceptance was 15 / 352 (4.26%). Actor accepted eight pairs, of which three
+failed semantic identity. One of eight targets and zero of four full sessions
+passed the integrated evaluation.
+
+### Reading it
+
+- The new singleton-reacquisition path supported the matched development
+  result. All four independent L5 TP outputs used the existing path.
+- Seven of eight independent target attempts had zero proxy-positive TP
+  returns. The successful L5 attempt had two of three.
+- Offline scoring of valid v6r18 frames that had TP proposals found
+  proxy-positive views in 16 of 63 L4 images and nine of 54 L5 images.
+  Use this opened run to diagnose view selection and reacquisition.
+- Stage 2 remains incomplete. The independent sessions are sealed evaluation
+  evidence on fixed anatomy `s0010`.
+
+### Files
+
+| File | Contents |
+|---|---|
+| `experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v6r18.yaml` | Matched development configuration and checkpoint identities |
+| `experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v6r19.yaml` and adjacent `.sha256` | Independent configuration and checksum |
+| `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v6r19/52626449/results/end_to_end_report.json` | Independent aggregate and per-target reports |
+
 ## 2026-11-20: corrected fresh capture supports provisional L4/L5 pseudo-SAP surface visibility
 
 GPU job `52120622` completed `0:0` in 90 seconds at revision `acbc28d` with one NVIDIA L4, four CPUs and 30 GB requested memory. It acquired 12 fresh, distinct observations in two reset sessions; all 12 passed exact native-map/full-pose replay, with maximum coordinate error `3.6943e-05` volume index.
