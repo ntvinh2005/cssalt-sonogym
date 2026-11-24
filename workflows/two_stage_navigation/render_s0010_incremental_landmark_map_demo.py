@@ -7,11 +7,16 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 import cv2
 import numpy as np
 import yaml
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from workflows.two_stage_navigation.build_s0010_clinician_scan_review import (
     CANVAS_SIZE,

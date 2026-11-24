@@ -1476,6 +1476,9 @@ def main() -> int:
                         hypothesis = map_before_confirmation["landmarks"][
                             identity
                         ]
+                        hypothesis_position = np.asarray(
+                            hypothesis["position_mm"], dtype=np.float64
+                        )
                         support_rows = list(
                             hypothesis["supporting_observations"]
                         )[:maximum_poses]
@@ -1500,68 +1503,101 @@ def main() -> int:
                                 ],
                                 dtype=np.float64,
                             )
-                            move(
-                                anchor_pose + dither_offset,
-                                f"{target_name}:{semantic_class.lower()}_landmark_confirmation_dither_{support_index + 1}",
-                                float(
-                                    motion[
-                                        "confirmation_position_tolerance_mm"
-                                    ]
-                                ),
-                                float(
-                                    motion[
-                                        "confirmation_orientation_tolerance_deg"
-                                    ]
-                                ),
-                            )
                             confirmation_trajectory = (
                                 f"{target_name}:landmark_confirmation"
                             )
-                            confirmed, presence = acquire_semantic(
-                                anchor_pose,
-                                state_name=(
-                                    f"FRESH_{semantic_class}_LANDMARK_CONFIRMATION"
-                                ),
-                                trajectory_id=confirmation_trajectory,
-                            )
-                            confirmed_observations = [
-                                asdict(row)
-                                for row in observations_by_trajectory.get(
-                                    confirmation_trajectory, []
+                            confirmation_views = []
+                            for confirmation_kind, confirmation_pose in (
+                                ("DISTINCT_DITHER", anchor_pose + dither_offset),
+                                ("PHYSICAL_RETURN", anchor_pose),
+                            ):
+                                confirmed, presence = acquire_semantic(
+                                    confirmation_pose,
+                                    state_name=(
+                                        f"FRESH_{semantic_class}_{confirmation_kind}"
+                                    ),
+                                    trajectory_id=confirmation_trajectory,
                                 )
-                                if row.frame_sequence == confirmed.frame_sequence
-                                and row.semantic_class == semantic_class
-                            ]
-                            predicted = bool(
-                                presence is not None
-                                and presence[
-                                    f"{semantic_class.lower()}_predicted"
+                                typed_observations = [
+                                    row
+                                    for row in observations_by_trajectory.get(
+                                        confirmation_trajectory, []
+                                    )
+                                    if row.frame_sequence
+                                    == confirmed.frame_sequence
+                                    and row.semantic_class == semantic_class
+                                    and np.linalg.norm(
+                                        np.asarray(
+                                            row.coordinate_mm,
+                                            dtype=np.float64,
+                                        )
+                                        - hypothesis_position
+                                    )
+                                    <= landmark_map_config.association_radius_mm
                                 ]
-                                and confirmed_observations
-                            )
-                            landmark_confirmations.append(
-                                {
-                                    "identity": identity,
-                                    "source_frame_sequence": source_sequence,
-                                    "source_frame_sha256": support[
-                                        "frame_sha256"
-                                    ],
-                                    "frame_sequence": confirmed.frame_sequence,
-                                    "frame_sha256": confirmed.frame_sha256,
-                                    "image_valid": confirmed.image_valid,
-                                    "producer_advanced": (
-                                        confirmed.producer_advanced
+                                predicted = bool(
+                                    presence is not None
+                                    and presence[
+                                        f"{semantic_class.lower()}_predicted"
+                                    ]
+                                    and typed_observations
+                                )
+                                if predicted:
+                                    shared_landmark_map.add_observations(
+                                        level, typed_observations
+                                    )
+                                confirmation_views.append(
+                                    {
+                                        "identity": identity,
+                                        "confirmation_kind": confirmation_kind,
+                                        "source_frame_sequence": source_sequence,
+                                        "source_frame_sha256": support[
+                                            "frame_sha256"
+                                        ],
+                                        "frame_sequence": (
+                                            confirmed.frame_sequence
+                                        ),
+                                        "frame_sha256": confirmed.frame_sha256,
+                                        "image_valid": confirmed.image_valid,
+                                        "producer_advanced": (
+                                            confirmed.producer_advanced
+                                        ),
+                                        "predicted": predicted,
+                                        "semantic_observations": [
+                                            asdict(row)
+                                            for row in typed_observations
+                                        ],
+                                        "fresh_relative_to_source": (
+                                            confirmed.frame_sha256
+                                            != support["frame_sha256"]
+                                        ),
+                                    }
+                                )
+                            landmark_confirmations.extend(confirmation_views)
+                            if (
+                                semantic_class == "SAP"
+                                and all(
+                                    row["predicted"]
+                                    for row in confirmation_views
+                                )
+                            ):
+                                confirmed_coordinates = [
+                                    observation["coordinate_mm"]
+                                    for row in confirmation_views
+                                    for observation in row[
+                                        "semantic_observations"
+                                    ]
+                                ]
+                                shared_landmark_map.set_actor_anchor(
+                                    identity,
+                                    np.mean(
+                                        np.asarray(
+                                            confirmed_coordinates,
+                                            dtype=np.float64,
+                                        ),
+                                        axis=0,
                                     ),
-                                    "predicted": predicted,
-                                    "semantic_observations": (
-                                        confirmed_observations
-                                    ),
-                                    "fresh_relative_to_source": (
-                                        confirmed.frame_sha256
-                                        != support["frame_sha256"]
-                                    ),
-                                }
-                            )
+                                )
                     positive_by_identity = {
                         identity: sum(
                             bool(row["predicted"])
@@ -1576,6 +1612,7 @@ def main() -> int:
                             f"RIGHT_{level}_SAP",
                         )
                     }
+                    map_after_confirmation = shared_landmark_map.snapshot()
                     independent_fresh_pass = bool(
                         shared_landmark_map.level_confirmed(level)
                         and all(
@@ -1593,9 +1630,10 @@ def main() -> int:
                                 if landmark_trajectory_decision is None
                                 else asdict(landmark_trajectory_decision)
                             ),
-                            "incremental_landmark_map": (
+                            "incremental_landmark_map_before_confirmation": (
                                 map_before_confirmation
                             ),
+                            "incremental_landmark_map": map_after_confirmation,
                             "fresh_landmark_confirmations": (
                                 landmark_confirmations
                             ),
