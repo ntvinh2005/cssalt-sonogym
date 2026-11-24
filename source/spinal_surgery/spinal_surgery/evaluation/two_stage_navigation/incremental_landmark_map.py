@@ -258,6 +258,7 @@ class IncrementalAnatomicalLandmarkMap:
         reference_frame_hashes: Sequence[str],
         observations: Sequence[SemanticObservation],
         association_radius_mm: float | None = None,
+        preserve_frozen_surface_extent: bool = False,
     ) -> int:
         """Associate fresh revisit evidence with one frozen actor hypothesis.
 
@@ -296,6 +297,19 @@ class IncrementalAnatomicalLandmarkMap:
             and np.allclose(current.position_mm, reference, atol=1e-6)
             and set(current.supporting_frame_hashes) == reference_hashes
         )
+        if preserve_frozen_surface_extent:
+            if not reference_was_confirmed:
+                raise ValueError(
+                    "frozen surface consistency requires the selected confirmed hypothesis"
+                )
+            assert current.maximum_residual_mm is not None
+            association_radius = min(
+                association_radius,
+                max(
+                    current.maximum_residual_mm,
+                    self.config.minimum_view_translation_mm,
+                ),
+            )
 
         historical = self._observations[identity]
         source_keys: set[ObservationKey] = set()
@@ -355,6 +369,41 @@ class IncrementalAnatomicalLandmarkMap:
         else:
             matching.fresh_observation_keys.update(fresh_keys)
         return len(fresh_keys)
+
+    def selected_reacquisition_frame_sequences(
+        self, identity: LandmarkIdentity
+    ) -> tuple[int, ...]:
+        """Return fresh frames that support the currently selected hypothesis.
+
+        A fresh positive is confirmation evidence only when the final selected
+        cluster retains the frozen source hypothesis and the fresh observation
+        itself.  This prevents an unrelated SAP-positive frame, or evidence for
+        a subsequently replaced hypothesis, from confirming the selection.
+        Viewpoint de-duplication is inherited from the selected cluster.
+        """
+
+        hypothesis = self._hypothesis(identity)
+        if hypothesis.position_mm is None:
+            return ()
+        selected_keys = {
+            (
+                row.frame_sequence,
+                row.frame_sha256,
+                row.row,
+                row.column,
+            )
+            for row in hypothesis.supporting_observations
+        }
+        sequences: set[int] = set()
+        for association in self._reacquisition_associations[identity]:
+            if not association.source_observation_keys.issubset(selected_keys):
+                continue
+            sequences.update(
+                key[0]
+                for key in association.fresh_observation_keys
+                if key in selected_keys
+            )
+        return tuple(sorted(sequences))
 
     def _clusters(
         self,

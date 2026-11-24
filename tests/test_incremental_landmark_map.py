@@ -325,6 +325,62 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
         self.assertEqual(hypothesis.status, "CONFIRMED")
         self.assertLess(hypothesis.position_mm[0], 2.0)
 
+    def test_frozen_surface_extent_rejects_revisit_drift(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        mapping.add_observations(
+            "L5",
+            (
+                observation("SAP", 0, (0.0, 0.0, 20.0)),
+                observation("SAP", 1, (1.0, 0.0, 20.0)),
+                observation("SAP", 2, (2.0, 0.0, 20.0)),
+            ),
+        )
+        reference = mapping.landmark("RIGHT_L5_SAP")
+
+        accepted = mapping.add_reacquisition_observations(
+            "L5",
+            "SAP",
+            reference_position_mm=reference.position_mm,
+            reference_frame_hashes=reference.supporting_frame_hashes,
+            observations=(observation("SAP", 3, (4.9, 0.0, 20.0)),),
+            preserve_frozen_surface_extent=True,
+        )
+
+        self.assertEqual(accepted, 0)
+        self.assertEqual(
+            mapping.selected_reacquisition_frame_sequences("RIGHT_L5_SAP"), ()
+        )
+
+    def test_only_selected_distinct_reacquisition_views_count(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        source = (
+            observation("SAP", 0, (0.0, 0.0, 20.0)),
+            observation("SAP", 1, (1.0, 0.0, 20.0)),
+        )
+        mapping.add_observations("L4", source)
+        reference = mapping.landmark("RIGHT_L4_SAP")
+        distinct = observation("SAP", 2, (0.5, 0.0, 20.0))
+        duplicate_view = replace(
+            observation("SAP", 3, (0.6, 0.0, 20.0)),
+            viewpoint_id=distinct.viewpoint_id,
+            viewpoint_position_m=distinct.viewpoint_position_m,
+        )
+        unrelated = observation("SAP", 4, (12.0, 0.0, 20.0))
+
+        mapping.add_reacquisition_observations(
+            "L4",
+            "SAP",
+            reference_position_mm=reference.position_mm,
+            reference_frame_hashes=reference.supporting_frame_hashes,
+            observations=(distinct, duplicate_view),
+            preserve_frozen_surface_extent=True,
+        )
+        mapping.add_observations("L4", (unrelated,))
+
+        self.assertEqual(
+            mapping.selected_reacquisition_frame_sequences("RIGHT_L4_SAP"), (2,)
+        )
+
     def test_inconsistent_relative_geometry_blocks_level_confirmation(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(
             IncrementalLandmarkMapConfig(maximum_sap_tp_distance_mm=20.0)

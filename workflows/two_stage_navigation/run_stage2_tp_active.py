@@ -2226,15 +2226,32 @@ def main() -> int:
                                         else landmark_map_config.association_radius_mm
                                     )
                                 ),
+                                preserve_frozen_surface_extent=unet_only,
                             )
+                    selected_fresh_frames_by_identity = {
+                        identity: set(
+                            shared_landmark_map.selected_reacquisition_frame_sequences(
+                                identity
+                            )
+                        )
+                        for identity in (
+                            f"RIGHT_{level}_TP",
+                            f"RIGHT_{level}_SAP",
+                        )
+                    }
                     positive_by_identity = {
-                        identity: sum(
-                            bool(row["predicted"])
-                            and bool(row["image_valid"])
-                            and bool(row["producer_advanced"])
-                            and bool(row["fresh_relative_to_source"])
-                            for row in landmark_confirmations
-                            if row["identity"] == identity
+                        identity: len(
+                            {
+                                int(row["frame_sequence"])
+                                for row in landmark_confirmations
+                                if row["identity"] == identity
+                                and int(row["frame_sequence"])
+                                in selected_fresh_frames_by_identity[identity]
+                                and bool(row["predicted"])
+                                and bool(row["image_valid"])
+                                and bool(row["producer_advanced"])
+                                and bool(row["fresh_relative_to_source"])
+                            }
                         )
                         for identity in (
                             f"RIGHT_{level}_TP",
