@@ -42,6 +42,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r11",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r12",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r13",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r14",
     }
 )
 
@@ -53,6 +54,35 @@ def perception_mode(protocol: Mapping[str, Any]) -> str:
     if mode not in {"legacy_dual_model", "unet_only"}:
         raise ValueError(f"unsupported Stage 2 perception mode: {mode}")
     return mode
+
+
+def tp_reacquisition_offsets(
+    confirmation_spec: Mapping[str, Any],
+    *,
+    level: str,
+    supporting_view_count: int,
+    minimum_supporting_views: int,
+) -> tuple[tuple[float, float, float], ...]:
+    """Choose the bounded TP rescan without widening the general sweep.
+
+    A single-view L5 TP uses the declared small orientation changes first.
+    Other levels and already-supported hypotheses keep the established local
+    translation plan.
+    """
+
+    key = (
+        "l5_single_view_tp_orientation_offsets_index"
+        if level == "L5" and supporting_view_count < minimum_supporting_views
+        else "tp_local_search_offsets_index"
+    )
+    raw = confirmation_spec.get(key, ())
+    offsets: list[tuple[float, float, float]] = []
+    for row in raw:
+        values = tuple(float(value) for value in row)
+        if len(values) != 3 or not all(math.isfinite(value) for value in values):
+            raise ValueError(f"invalid TP reacquisition offset in {key}")
+        offsets.append(values)
+    return tuple(offsets)
 
 
 def proxy_confirmation_requirement_met(

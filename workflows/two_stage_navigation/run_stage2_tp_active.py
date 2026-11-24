@@ -74,6 +74,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
+    tp_reacquisition_offsets,
     tp_refinement_is_required,
 )
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan import (  # noqa: E402
@@ -1925,8 +1926,15 @@ def main() -> int:
                                     )
                                 ]
                             else:
-                                tp_offsets = confirmation_spec.get(
-                                    "tp_local_search_offsets_index"
+                                tp_offsets = tp_reacquisition_offsets(
+                                    confirmation_spec,
+                                    level=level,
+                                    supporting_view_count=len(
+                                        hypothesis["supporting_viewpoint_ids"]
+                                    ),
+                                    minimum_supporting_views=(
+                                        landmark_map_config.minimum_supporting_views
+                                    ),
                                 )
                                 if tp_offsets:
                                     pose_plan = [

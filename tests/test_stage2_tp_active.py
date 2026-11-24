@@ -20,6 +20,7 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
+    tp_reacquisition_offsets,
     tp_refinement_is_required,
 )
 
@@ -37,6 +38,40 @@ class PerceptionModeTests(unittest.TestCase):
     def test_unknown_mode_fails_closed(self) -> None:
         with self.assertRaisesRegex(ValueError, "unsupported"):
             perception_mode({"perception": {"mode": "unknown"}})
+
+
+class TpReacquisitionOffsetTests(unittest.TestCase):
+    SPEC = {
+        "tp_local_search_offsets_index": [[-1.5, 0.0, 0.0], [1.5, 0.0, 0.0]],
+        "l5_single_view_tp_orientation_offsets_index": [
+            [0.0, 0.0, -0.02],
+            [0.0, 0.0, 0.02],
+        ],
+    }
+
+    def test_single_view_l5_uses_bounded_orientation_rescan(self) -> None:
+        self.assertEqual(
+            tp_reacquisition_offsets(
+                self.SPEC,
+                level="L5",
+                supporting_view_count=1,
+                minimum_supporting_views=2,
+            ),
+            ((0.0, 0.0, -0.02), (0.0, 0.0, 0.02)),
+        )
+
+    def test_supported_l5_and_l4_keep_existing_offsets(self) -> None:
+        expected = ((-1.5, 0.0, 0.0), (1.5, 0.0, 0.0))
+        for level, count in (("L4", 1), ("L5", 2)):
+            self.assertEqual(
+                tp_reacquisition_offsets(
+                    self.SPEC,
+                    level=level,
+                    supporting_view_count=count,
+                    minimum_supporting_views=2,
+                ),
+                expected,
+            )
 
 
 def view(
@@ -215,6 +250,10 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
         )
         self.assertIn(
             "sonogym-s0010-mbb-single-anatomy-poc-v6r13",
+            POC_PROTOCOL_IDS,
+        )
+        self.assertIn(
+            "sonogym-s0010-mbb-single-anatomy-poc-v6r14",
             POC_PROTOCOL_IDS,
         )
 
