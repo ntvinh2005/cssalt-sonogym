@@ -11,14 +11,15 @@ export PYTHONPATH="$SONOGYM_RUNTIME_DIR/envs/stage1-python:$SONOGYM_PROJECT_DIR/
 export MPLCONFIGDIR="${TMPDIR:-/tmp}/sonogym-matplotlib-${SLURM_JOB_ID}"
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 
-PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v6r3.yaml"
+POC_PROTOCOL_VERSION="${POC_PROTOCOL_VERSION:-v6r3}"
+PROTOCOL="$SONOGYM_PROJECT_DIR/experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_${POC_PROTOCOL_VERSION}.yaml"
 STAGE1_SOURCE="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v5r2/52505715/stage1/results"
 GEOMETRY_ROOT="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_right_sap_tp_correction/51779234"
-RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v6r3/$SLURM_JOB_ID"
+RUN_DIR="$SONOGYM_OUTPUT_DIR/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_${POC_PROTOCOL_VERSION}/$SLURM_JOB_ID"
 mkdir -p "$RUN_DIR"/{context,metrics,results,review,stage1/results,stage2}
 capture_run_context "$RUN_DIR"
 cp "$PROTOCOL" "${PROTOCOL%.yaml}.sha256" "$RUN_DIR/context/"
-(cd "$RUN_DIR/context" && sha256sum -c s0010_mbb_single_anatomy_poc_protocol_v6r3.sha256)
+(cd "$RUN_DIR/context" && sha256sum -c "s0010_mbb_single_anatomy_poc_protocol_${POC_PROTOCOL_VERSION}.sha256")
 
 (cd "$STAGE1_SOURCE" && sha256sum -c actor_results.sha256 evaluation_report.sha256)
 cp "$STAGE1_SOURCE/actor_results.json" "$STAGE1_SOURCE/actor_results.sha256" \
