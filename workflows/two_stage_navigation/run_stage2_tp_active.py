@@ -790,24 +790,37 @@ def main() -> int:
                 best_pool, key=lambda row: (row.probability, -row.frame_sequence)
             )
             best_pose = np.asarray(best.pose_index, dtype=np.float64)
+            fine_views: list[TargetView] = []
             for pose in offset_poses(best_pose, search["fine_offsets"]):
-                views.append(acquire(
+                fine_view = acquire(
                     pose, target_name, f"{target_name}:fine",
                     float(motion["fine_position_tolerance_mm"]),
                     float(motion["fine_orientation_tolerance_deg"]),
-                ))
-            best = max(views, key=lambda row: (row.probability, -row.frame_sequence))
+                )
+                views.append(fine_view)
+                fine_views.append(fine_view)
+            active_branch_views = uncertainty_rescan_views + fine_views
+            refinement_pool = active_branch_views if uncertainty_positive else views
+            best = max(
+                refinement_pool,
+                key=lambda row: (row.probability, -row.frame_sequence),
+            )
             best_pose = np.asarray(best.pose_index, dtype=np.float64)
+            micro_views: list[TargetView] = []
             for pose in offset_poses(best_pose, search["micro_offsets"]):
-                views.append(acquire(
+                micro_view = acquire(
                     pose, target_name, f"{target_name}:micro",
                     float(motion["micro_position_tolerance_mm"]),
                     float(motion["micro_orientation_tolerance_deg"]),
-                ))
+                )
+                views.append(micro_view)
+                micro_views.append(micro_view)
             model = models[target_name]
             rule = protocol["decision"]
+            active_branch_views.extend(micro_views)
+            decision_views = active_branch_views if uncertainty_positive else views
             decision = select_target_view(
-                views, target=target_name,
+                decision_views, target=target_name,
                 probability_threshold=float(model["threshold"]),
                 required_support=int(rule["required_supporting_viewpoints"]),
                 neighborhood_translation_mm=float(rule["maximum_neighbor_translation_mm"]),
@@ -816,6 +829,22 @@ def main() -> int:
                 minimum_view_angle_deg=float(rule["minimum_view_angle_deg"]),
                 label_resolution_mm=label_resolution,
             )
+            if decision.status != "ACCEPT" and uncertainty_positive:
+                decision = select_target_view(
+                    views,
+                    target=target_name,
+                    probability_threshold=float(model["threshold"]),
+                    required_support=int(rule["required_supporting_viewpoints"]),
+                    neighborhood_translation_mm=float(
+                        rule["maximum_neighbor_translation_mm"]
+                    ),
+                    neighborhood_angle_deg=float(rule["maximum_neighbor_angle_deg"]),
+                    minimum_view_translation_mm=float(
+                        rule["minimum_view_translation_mm"]
+                    ),
+                    minimum_view_angle_deg=float(rule["minimum_view_angle_deg"]),
+                    label_resolution_mm=label_resolution,
+                )
             confirmations: list[TargetView] = []
             return_errors: list[dict[str, float]] = []
             if decision.status == "ACCEPT" and decision.selected is not None:
