@@ -74,6 +74,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
+    tp_soft_evidence_score,
     tp_reacquisition_offsets,
     tp_refinement_is_required,
 )
@@ -479,11 +480,13 @@ def main() -> int:
             actor_quaternion = tensor_row(snapshot["actor_base_to_ee_quat"])
             actor_rotation = rotation_columns_from_quaternion_wxyz(actor_quaternion)
             model = models[target_name]
+            tp_soft_score = None
             if unet_only:
                 level = target_name.split("_", 1)[0]
                 semantic_probability = segmentation_probabilities(
                     sonoanatomy_models[level]["model"], np.asarray([image])
                 )[0]
+                tp_soft_score = tp_soft_evidence_score(semantic_probability)
                 tp_observations = [
                     row
                     for row in semantic_observations(
@@ -553,6 +556,7 @@ def main() -> int:
                 "proposal_column": view.proposal_column,
                 "proposal_track_id": view.proposal_track_id,
                 "proposal_count": proposal_count,
+                "tp_soft_evidence_score": tp_soft_score,
                 "transition_valid": transition_valid,
                 "image_valid": image_valid,
                 "contact_ok": contact_ok,
@@ -731,7 +735,60 @@ def main() -> int:
                 raise RuntimeError("coarse search produced invalid or stale evidence")
             if len({row.frame_sha256 for row in coarse_views}) != len(coarse_views):
                 raise RuntimeError("coarse search produced duplicate images")
-            best = max(views, key=lambda row: (row.probability, -row.frame_sequence))
+            uncertainty_spec = protocol.get("uncertainty_guided_tp_rescan", {})
+            uncertainty_rescan_frames: list[int] = []
+            uncertainty_rescan_views: list[TargetView] = []
+            if (
+                unet_only
+                and bool(uncertainty_spec.get("enabled", False))
+                and target_to_level[target_name]
+                in set(uncertainty_spec.get("levels", []))
+            ):
+                candidates = sorted(
+                    (
+                        row
+                        for row in coarse_views
+                        if row.proposal_column is None
+                        and public_rows[row.frame_sequence].get(
+                            "tp_soft_evidence_score"
+                        )
+                        is not None
+                    ),
+                    key=lambda row: (
+                        -float(
+                            public_rows[row.frame_sequence][
+                                "tp_soft_evidence_score"
+                            ]
+                        ),
+                        row.frame_sequence,
+                    ),
+                )[: int(uncertainty_spec.get("maximum_candidates", 1))]
+                for candidate_index, candidate in enumerate(candidates, start=1):
+                    center = np.asarray(candidate.pose_index, dtype=np.float64)
+                    for offset_index, offset in enumerate(
+                        uncertainty_spec.get("offsets_index", [[0.0, 0.0, 0.0]]),
+                        start=1,
+                    ):
+                        revisited = acquire(
+                            center + np.asarray(offset, dtype=np.float64),
+                            target_name,
+                            f"{target_name}:uncertainty_rescan_"
+                            f"{candidate_index}_{offset_index}",
+                            float(motion["fine_position_tolerance_mm"]),
+                            float(motion["fine_orientation_tolerance_deg"]),
+                        )
+                        views.append(revisited)
+                        uncertainty_rescan_views.append(revisited)
+                        uncertainty_rescan_frames.append(revisited.frame_sequence)
+            uncertainty_positive = [
+                row
+                for row in uncertainty_rescan_views
+                if row.probability >= float(models[target_name]["threshold"])
+            ]
+            best_pool = uncertainty_positive or views
+            best = max(
+                best_pool, key=lambda row: (row.probability, -row.frame_sequence)
+            )
             best_pose = np.asarray(best.pose_index, dtype=np.float64)
             for pose in offset_poses(best_pose, search["fine_offsets"]):
                 views.append(acquire(
@@ -1018,6 +1075,7 @@ def main() -> int:
                 "tp_handoff_recovery_executed": (
                     tp_handoff_recovery_executed
                 ),
+                "uncertainty_rescan_frame_sequences": uncertainty_rescan_frames,
                 "return_errors": return_errors,
             }
             if (

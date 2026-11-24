@@ -44,6 +44,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r13",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r14",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r15",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r16",
     }
 )
 
@@ -55,6 +56,22 @@ def perception_mode(protocol: Mapping[str, Any]) -> str:
     if mode not in {"legacy_dual_model", "unet_only"}:
         raise ValueError(f"unsupported Stage 2 perception mode: {mode}")
     return mode
+
+
+def tp_soft_evidence_score(
+    probabilities: np.ndarray, *, top_k_pixels: int = 20
+) -> float:
+    """Rank actor-visible TP near-misses without changing acceptance masks."""
+
+    probability = np.asarray(probabilities, dtype=np.float64)
+    if probability.ndim != 3 or probability.shape[0] != 4:
+        raise ValueError("probabilities must be 4 x H x W")
+    if top_k_pixels < 1:
+        raise ValueError("top_k_pixels must be positive")
+    values = probability[1].ravel()
+    count = min(top_k_pixels, values.size)
+    strongest = np.partition(values, values.size - count)[-count:]
+    return float(np.mean(strongest))
 
 
 def tp_reacquisition_offsets(

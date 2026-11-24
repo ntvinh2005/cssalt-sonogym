@@ -20,6 +20,7 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
+    tp_soft_evidence_score,
     tp_reacquisition_offsets,
     tp_refinement_is_required,
 )
@@ -72,6 +73,19 @@ class TpReacquisitionOffsetTests(unittest.TestCase):
                 ),
                 expected,
             )
+
+
+class TpSoftEvidenceTests(unittest.TestCase):
+    def test_score_uses_tp_top_pixels_without_changing_mask(self) -> None:
+        probabilities = np.zeros((4, 2, 3), dtype=np.float64)
+        probabilities[1] = [[0.1, 0.8, 0.2], [0.7, 0.3, 0.6]]
+        self.assertAlmostEqual(
+            tp_soft_evidence_score(probabilities, top_k_pixels=2), 0.75
+        )
+
+    def test_invalid_top_k_fails_closed(self) -> None:
+        with self.assertRaisesRegex(ValueError, "positive"):
+            tp_soft_evidence_score(np.zeros((4, 2, 2)), top_k_pixels=0)
 
 
 def view(
@@ -258,6 +272,10 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
         )
         self.assertIn(
             "sonogym-s0010-mbb-single-anatomy-poc-v6r15",
+            POC_PROTOCOL_IDS,
+        )
+        self.assertIn(
+            "sonogym-s0010-mbb-single-anatomy-poc-v6r16",
             POC_PROTOCOL_IDS,
         )
 
