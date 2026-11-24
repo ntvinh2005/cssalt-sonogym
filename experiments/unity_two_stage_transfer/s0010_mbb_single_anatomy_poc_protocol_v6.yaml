@@ -4,7 +4,7 @@ purpose: >-
   Evaluate independent RIGHT L4/L5 SAP and TP confirmation from distinct
   ultrasound poses in one actor-owned 3D map, without a same-frame pair gate.
 source:
-  implementation_commit: c5be3378f909664acbe9d5e36e95879217df660b
+  implementation_commit: 710a19462c08b3279601c1d9fa51d6cd392ef6b8
   opened_incremental_map_development_job: 52505715
   opened_active_scan_job: 52494467
   dataset_job: 52497655
@@ -114,6 +114,7 @@ landmark_map:
   minimum_hypothesis_score_margin: 0.01
   minimum_sap_tp_distance_mm: 1.0
   maximum_sap_tp_distance_mm: 30.0
+  maximum_tp_anchor_distance_mm: 10.0
 landmark_map_confirmation:
   poses_per_landmark: 2
   minimum_positive_fresh_returns_per_landmark: 1
