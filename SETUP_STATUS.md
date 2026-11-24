@@ -1,5 +1,22 @@
 # Setup status
 
+## 2026-11-24. Independent simple anatomical mapping on s0010
+
+Branch `experiment/simple-landmark-mapping` compares the simple mapper with
+existing association on the same 816 valid v6r19 frames. The comparison and
+fresh experiments use the unchanged U-Net checkpoints from job `52498821`.
+
+| Experiment | Result | Job |
+|---|---|---|
+| Oracle, U-Net simple and U-Net existing | 2/4, 3/4 and 0/4 complete maps, respectively | `52640447` |
+| Fixed two-plane sweep | 50/50 valid frames. Both TPs map correctly. Both SAPs remain candidates. | `52641957` |
+
+The measured advantage is for spatial association on the recorded frames.
+The new trajectory shows both scan families and reveals inadequate SAP support
+on one development seed. Stage 2 completion remains unestablished. The
+[experiment report](docs/research/sonogym_s0010_simple_landmark_mapping.md)
+contains reproducible commands, per-landmark results and artifact paths.
+
 ## 2026-11-24. Stage 2 return viewpoints and landmark confirmation
 
 `run_stage2_tp_active.py` selects return viewpoints from the shared map.

@@ -769,3 +769,24 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Definition:** V3 verdict indicating that a model prediction cannot be mapped reliably into the existing simulator anatomy.
 - **Intuition:** It separates inference availability from physical-coordinate validity.
 - **Source:** approved by user, 2026-11-20.
+
+### Simple anatomical landmark mapping
+
+- **Kind:** method
+- **Definition:** A fixed longitudinal and transverse ultrasound survey followed by complete-link clustering of projected visible-interface component representatives, separately for each RIGHT L4/L5 TP and SAP hypothesis. Distinct pose support is counted after spatial clustering. A medoid is the supporting representative with the smallest sum of distances to the other supporting representatives.
+- **Intuition:** Multiple distinct views can support one surface location. A structure spanning several clusters can retain competing locations.
+- **Source:** Approved experiment request, 2026-11-24. `simple_landmark_mapping.py:simple_map`.
+
+### Anatomical mapping status
+
+- **Kind:** object
+- **Definition:** `NOT_OBSERVED` denotes no eligible observation. `CANDIDATE` denotes a selected cluster with insufficient distinct-view support. `AMBIGUOUS` denotes unresolved vertebral level or a competitor with equal distinct-view support and confidence within the declared margin. `MAPPED` denotes sufficient support for the selected cluster under the actor's rules. The experiment's evaluator scores separate anatomical correctness by strict majority of selected views within the declared image-distance gate.
+- **Intuition:** Map acceptance and evaluator-derived identity are separate measurements.
+- **Source:** Approved experiment request, 2026-11-24. `simple_landmark_mapping.py:simple_map` and `run_simple_landmark_mapping.py:score_map`.
+
+### Distance to the visible interface
+
+- **Kind:** metric
+- **Definition:** Euclidean distance in millimeters from the selected map position to the nearest publicly calibrated 3D pixel labeled as a first-hit, image-supported provisional right-side cortical interface of the same landmark in the session.
+- **Intuition:** It measures proximity to the observed surface sampled during the session. A distance of zero is expected for an oracle medoid drawn from those same visible pixels.
+- **Source:** Approved experiment request, 2026-11-24. `run_simple_landmark_mapping.py:score_map`.
