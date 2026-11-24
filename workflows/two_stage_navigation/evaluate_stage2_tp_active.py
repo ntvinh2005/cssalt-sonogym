@@ -152,6 +152,24 @@ def proposal_from_frame(frame: dict[str, Any]) -> PatchProposal | None:
     )
 
 
+def selected_proxy_or_full_independent_recovery(
+    selected_state: str,
+    confirmation_states: list[str],
+    *,
+    independent_map_mode: bool,
+) -> bool:
+    """Require a positive selected view or an entirely positive fresh recovery."""
+
+    return bool(
+        selected_state == "PROXY_POSITIVE"
+        or (
+            independent_map_mode
+            and confirmation_states
+            and all(state == "PROXY_POSITIVE" for state in confirmation_states)
+        )
+    )
+
+
 def save_overlay(
     path: Path,
     image: np.ndarray,
@@ -582,10 +600,22 @@ def main() -> int:
         positive_confirmation_count = sum(
             row["proxy_state"] == "PROXY_POSITIVE" for row in confirmations
         )
+        independent_map_mode = bool(
+            target.get("sonoanatomy", {}).get("confirmation_mode")
+            == "INDEPENDENT_LANDMARK_FRESH_RETURN"
+        )
+        selected_or_fully_recovered = bool(
+            selected is not None
+            and selected_proxy_or_full_independent_recovery(
+                str(selected["proxy_state"]),
+                [str(row["proxy_state"]) for row in confirmations],
+                independent_map_mode=independent_map_mode,
+            )
+        )
         proxy_pass = bool(
             target["decision"] == "ACCEPT"
             and selected is not None
-            and selected["proxy_state"] == "PROXY_POSITIVE"
+            and selected_or_fully_recovered
             and proxy_confirmation_requirement_met(
                 [row["proxy_state"] for row in confirmations],
                 required_count=required_confirmation_count,
@@ -601,10 +631,6 @@ def main() -> int:
         semantic_pair_success = None
         if "sonoanatomy" in target:
             sonoanatomy = target["sonoanatomy"]
-            independent_map_mode = (
-                sonoanatomy.get("confirmation_mode")
-                == "INDEPENDENT_LANDMARK_FRESH_RETURN"
-            )
             if independent_map_mode:
                 semantic_identity = incremental_map_identity(
                     sonoanatomy,

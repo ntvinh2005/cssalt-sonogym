@@ -9,12 +9,36 @@ from workflows.two_stage_navigation.evaluate_stage2_tp_active import (
     incremental_map_identity,
     proposal_from_frame,
     proxy_state,
+    selected_proxy_or_full_independent_recovery,
     semantic_pair_identity,
 )
 from two_stage_navigation.tp_surface_core_dataset import PatchProposal
 
 
 class Stage2SapTpEvaluatorTests(unittest.TestCase):
+    def test_independent_map_can_recover_ambiguous_initial_tp_view(self) -> None:
+        self.assertTrue(
+            selected_proxy_or_full_independent_recovery(
+                "PROXY_AMBIGUOUS",
+                ["PROXY_POSITIVE", "PROXY_POSITIVE", "PROXY_POSITIVE"],
+                independent_map_mode=True,
+            )
+        )
+        self.assertFalse(
+            selected_proxy_or_full_independent_recovery(
+                "PROXY_AMBIGUOUS",
+                ["PROXY_POSITIVE", "PROXY_AMBIGUOUS", "PROXY_POSITIVE"],
+                independent_map_mode=True,
+            )
+        )
+        self.assertFalse(
+            selected_proxy_or_full_independent_recovery(
+                "PROXY_AMBIGUOUS",
+                ["PROXY_POSITIVE", "PROXY_POSITIVE", "PROXY_POSITIVE"],
+                independent_map_mode=False,
+            )
+        )
+
     def test_incremental_map_identity_uses_separate_tp_and_sap_frames(self) -> None:
         labels = {
             index: np.zeros((12, 12), dtype=np.uint8) for index in range(4)

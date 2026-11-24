@@ -55,6 +55,7 @@ class IncrementalLandmarkMapConfig:
     maximum_sap_tp_distance_mm: float = 30.0
     maximum_tp_anchor_distance_mm: float = 10.0
     minimum_supporting_view_advantage: int = 2
+    minimum_preferred_sap_supporting_views: int = 3
 
     def __post_init__(self) -> None:
         positive = (
@@ -67,6 +68,7 @@ class IncrementalLandmarkMapConfig:
             self.maximum_sap_tp_distance_mm,
             self.maximum_tp_anchor_distance_mm,
             self.minimum_supporting_view_advantage,
+            self.minimum_preferred_sap_supporting_views,
         )
         if not all(math.isfinite(float(value)) and float(value) > 0.0 for value in positive):
             raise ValueError("landmark-map positive settings must be finite")
@@ -255,6 +257,7 @@ class IncrementalAnatomicalLandmarkMap:
         reference_position_mm: Sequence[float],
         reference_frame_hashes: Sequence[str],
         observations: Sequence[SemanticObservation],
+        association_radius_mm: float | None = None,
     ) -> int:
         """Associate fresh revisit evidence with one frozen actor hypothesis.
 
@@ -264,6 +267,22 @@ class IncrementalAnatomicalLandmarkMap:
         """
 
         identity = _identity(level, semantic_class)
+        association_radius = (
+            self.config.association_radius_mm
+            if association_radius_mm is None
+            else float(association_radius_mm)
+        )
+        maximum_radius = (
+            self.config.maximum_tp_anchor_distance_mm
+            if semantic_class == "TP"
+            else self.config.association_radius_mm
+        )
+        if (
+            not math.isfinite(association_radius)
+            or association_radius <= 0.0
+            or association_radius > maximum_radius
+        ):
+            raise ValueError("reacquisition association radius is outside its actor gate")
         reference = np.asarray(reference_position_mm, dtype=np.float64)
         if reference.shape != (3,) or not np.all(np.isfinite(reference)):
             raise ValueError("reacquisition reference must contain three finite values")
@@ -301,7 +320,7 @@ class IncrementalAnatomicalLandmarkMap:
             distance = float(
                 np.linalg.norm(np.asarray(observation.coordinate_mm) - reference)
             )
-            if distance > self.config.association_radius_mm:
+            if distance > association_radius:
                 continue
             frame_key = (observation.frame_sequence, observation.frame_sha256)
             previous = accepted_by_frame.get(frame_key)
@@ -471,6 +490,17 @@ class IncrementalAnatomicalLandmarkMap:
             ),
             key=lambda row: (-row[0], -len(row[4].supporting_frames), row[1], row[3]),
         )
+        preferred_sap_available = False
+        if identity.endswith("_SAP"):
+            preferred = [
+                row
+                for row in ranked
+                if len(row[4].supporting_frames)
+                >= self.config.minimum_preferred_sap_supporting_views
+            ]
+            if preferred:
+                preferred_sap_available = True
+                ranked = preferred + [row for row in ranked if row not in preferred]
         anchor = self._anchors.get(identity)
         if anchor is not None:
             anchor_coordinate = np.asarray(anchor, dtype=np.float64)
@@ -566,6 +596,11 @@ class IncrementalAnatomicalLandmarkMap:
             row
             for row in ranked[1:]
             if len(row[4].supporting_frames) >= self.config.minimum_supporting_views
+            and (
+                not preferred_sap_available
+                or len(row[4].supporting_frames)
+                >= self.config.minimum_preferred_sap_supporting_views
+            )
         ]
         close_competitor = bool(
             competing

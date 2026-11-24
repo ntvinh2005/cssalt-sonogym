@@ -808,6 +808,7 @@ def main() -> int:
                 level = target_to_level[target_name]
                 semantic_model = sonoanatomy_models[level]
                 level_actor_anchors = {}
+                dedicated_tp_confirmation_rows: list[dict[str, Any]] = []
                 if shared_landmark_map is not None:
                     selected_public = public_rows[
                         int(decision.selected.frame_sequence)
@@ -853,6 +854,148 @@ def main() -> int:
                     shared_landmark_map.set_actor_anchor(
                         tp_identity, tp_anchor
                     )
+                    dedicated_views = [decision.selected, *confirmations]
+                    dedicated_probabilities = segmentation_probabilities(
+                        semantic_model["model"],
+                        np.asarray(
+                            [images[row.frame_sequence] for row in dedicated_views]
+                        ),
+                    )
+                    dedicated_observations: list[
+                        tuple[TargetView, SemanticObservation]
+                    ] = []
+                    for dedicated_view, probability in zip(
+                        dedicated_views, dedicated_probabilities
+                    ):
+                        if (
+                            not dedicated_view.image_valid
+                            or not dedicated_view.producer_advanced
+                            or dedicated_view.probability
+                            < float(model["threshold"])
+                        ):
+                            continue
+                        public = public_rows[dedicated_view.frame_sequence]
+                        candidates = [
+                            row
+                            for row in semantic_observations(
+                                probability,
+                                thresholds=semantic_model["thresholds"],
+                                end_effector_position_m=public[
+                                    "actor_base_to_ee_position_m"
+                                ],
+                                rotation_columns=np.asarray(
+                                    public["actor_base_to_ee_rotation_columns"],
+                                    dtype=np.float64,
+                                ),
+                                frame_sequence=dedicated_view.frame_sequence,
+                                frame_sha256=dedicated_view.frame_sha256,
+                            )
+                            if row.semantic_class == "TP"
+                        ]
+                        if not candidates:
+                            continue
+                        proposal_row = float(public["proposal_row"])
+                        proposal_column = float(public["proposal_column"])
+                        selected_observation = min(
+                            candidates,
+                            key=lambda row: (
+                                math.hypot(
+                                    row.row - proposal_row,
+                                    row.column - proposal_column,
+                                ),
+                                -row.pixel_count,
+                                -row.confidence,
+                            ),
+                        )
+                        dedicated_observations.append(
+                            (dedicated_view, selected_observation)
+                        )
+                    source = next(
+                        (
+                            row
+                            for row in dedicated_observations
+                            if row[0].frame_sequence
+                            == decision.selected.frame_sequence
+                        ),
+                        None,
+                    )
+                    if source is not None:
+                        shared_landmark_map.add_observations(
+                            level, [source[1]]
+                        )
+                        fresh_dedicated = [
+                            row
+                            for row in dedicated_observations
+                            if row[0].frame_sequence
+                            != decision.selected.frame_sequence
+                        ]
+                        if fresh_dedicated:
+                            shared_landmark_map.add_reacquisition_observations(
+                                level,
+                                "TP",
+                                reference_position_mm=source[1].coordinate_mm,
+                                reference_frame_hashes=[
+                                    source[1].frame_sha256
+                                ],
+                                observations=[row[1] for row in fresh_dedicated],
+                                association_radius_mm=(
+                                    landmark_map_config.maximum_tp_anchor_distance_mm
+                                ),
+                            )
+                        selected_pose = np.asarray(
+                            decision.selected.pose_index, dtype=np.float64
+                        )
+                        return_error_by_sequence = {
+                            row.frame_sequence: error
+                            for row, error in zip(confirmations, return_errors)
+                        }
+                        for fresh_view, observation in fresh_dedicated:
+                            error = return_error_by_sequence[
+                                fresh_view.frame_sequence
+                            ]
+                            dedicated_tp_confirmation_rows.append(
+                                {
+                                    "identity": tp_identity,
+                                    "confirmation_kind": (
+                                        "DEDICATED_TP_FRESH_CONFIRMATION"
+                                    ),
+                                    "source_frame_sequence": (
+                                        decision.selected.frame_sequence
+                                    ),
+                                    "source_frame_sha256": (
+                                        decision.selected.frame_sha256
+                                    ),
+                                    "source_executed_pose_index": (
+                                        selected_pose.tolist()
+                                    ),
+                                    "requested_pose_index": (
+                                        selected_pose.tolist()
+                                    ),
+                                    "frame_sequence": fresh_view.frame_sequence,
+                                    "frame_sha256": fresh_view.frame_sha256,
+                                    "image_valid": fresh_view.image_valid,
+                                    "producer_advanced": (
+                                        fresh_view.producer_advanced
+                                    ),
+                                    "executed_pose_index": list(
+                                        fresh_view.pose_index
+                                    ),
+                                    "return_position_error_mm": float(
+                                        error["position_mm"]
+                                    ),
+                                    "return_orientation_error_deg": float(
+                                        error["orientation_deg"]
+                                    ),
+                                    "predicted": True,
+                                    "semantic_observations": [
+                                        asdict(observation)
+                                    ],
+                                    "fresh_relative_to_source": (
+                                        fresh_view.frame_sha256
+                                        != decision.selected.frame_sha256
+                                    ),
+                                }
+                            )
                 scan_spec = protocol["sonoanatomy_scan"]
                 scan_config = ScanConfig(
                     longitudinal_angle_rad=float(scan_spec["longitudinal_angle_rad"]),
@@ -1450,7 +1593,12 @@ def main() -> int:
                     )
                     if selected_rows:
                         shared_landmark_map.add_observations(
-                            level, selected_rows
+                            level,
+                            [
+                                row
+                                for row in selected_rows
+                                if row.semantic_class == "SAP"
+                            ],
                         )
                     map_before_confirmation = shared_landmark_map.snapshot()
                     confirmation_spec = protocol["landmark_map_confirmation"]
@@ -1470,9 +1618,13 @@ def main() -> int:
                         int(row["frame_sequence"]): row
                         for row in semantic_frames
                     }
-                    landmark_confirmations = []
+                    landmark_confirmations = list(
+                        dedicated_tp_confirmation_rows
+                    )
                     pending_reacquisition_observations = {}
                     for semantic_class in ("TP", "SAP"):
+                        if semantic_class == "TP":
+                            continue
                         identity = f"RIGHT_{level}_{semantic_class}"
                         hypothesis = map_before_confirmation["landmarks"][
                             identity

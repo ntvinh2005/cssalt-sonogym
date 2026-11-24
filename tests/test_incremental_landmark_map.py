@@ -160,6 +160,28 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
         self.assertEqual(len(hypothesis.supporting_frame_sequences), 4)
         self.assertLess(hypothesis.position_mm[0], 2.0)
 
+    def test_sap_prefers_three_pose_support_over_compact_two_pose_cluster(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(
+            IncrementalLandmarkMapConfig(
+                minimum_preferred_sap_supporting_views=3
+            )
+        )
+        mapping.add_observations(
+            "L4",
+            (
+                replace(observation("SAP", 0, (0.0, 0.0, 20.0)), confidence=0.99),
+                replace(observation("SAP", 1, (0.1, 0.0, 20.0)), confidence=0.99),
+                observation("SAP", 2, (8.0, 0.0, 20.0)),
+                observation("SAP", 3, (10.0, 0.0, 20.0)),
+                observation("SAP", 4, (12.0, 0.0, 20.0)),
+            ),
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L4_SAP")
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertEqual(len(hypothesis.supporting_frame_sequences), 3)
+        self.assertGreater(hypothesis.position_mm[0], 5.0)
+
     def test_fresh_reacquisition_extends_frozen_surface_hypothesis(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
         source = (
@@ -233,6 +255,44 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
         hypothesis = mapping.landmark("RIGHT_L5_TP")
         self.assertEqual(hypothesis.status, "CONFIRMED")
         self.assertEqual(len(hypothesis.supporting_frame_sequences), 2)
+
+    def test_tp_detector_reacquisition_can_span_the_frozen_anchor_gate(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        mapping.set_actor_anchor("RIGHT_L5_TP", (0.0, 0.0, 20.0))
+        source = observation("TP", 0, (0.0, 0.0, 20.0))
+        mapping.add_observations("L5", (source,))
+
+        accepted = mapping.add_reacquisition_observations(
+            "L5",
+            "TP",
+            reference_position_mm=source.coordinate_mm,
+            reference_frame_hashes=(source.frame_sha256,),
+            observations=(
+                observation("TP", 1, (7.0, 0.0, 20.0)),
+                observation("TP", 2, (8.0, 0.0, 20.0)),
+            ),
+            association_radius_mm=10.0,
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L5_TP")
+        self.assertEqual(accepted, 2)
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertEqual(len(hypothesis.supporting_frame_sequences), 3)
+
+    def test_sap_reacquisition_cannot_expand_beyond_surface_radius(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        source = observation("SAP", 0, (0.0, 0.0, 20.0))
+        mapping.add_observations("L4", (source,))
+
+        with self.assertRaisesRegex(ValueError, "outside its actor gate"):
+            mapping.add_reacquisition_observations(
+                "L4",
+                "SAP",
+                reference_position_mm=source.coordinate_mm,
+                reference_frame_hashes=(source.frame_sha256,),
+                observations=(observation("SAP", 1, (8.0, 0.0, 20.0)),),
+                association_radius_mm=10.0,
+            )
 
     def test_reacquisition_keeps_frozen_historical_hypothesis_selected(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(
