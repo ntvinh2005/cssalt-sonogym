@@ -772,6 +772,154 @@ def main() -> int:
                     legacy_probability_threshold=float(model["threshold"]),
                     selected_frame_sha256=decision.selected.frame_sha256,
                 )
+            tp_handoff_recovery_executed = False
+            if (
+                sonoanatomy_models
+                and decision.selected is not None
+                and not (fresh_pass or semantic_tp_crosscheck_pass)
+                and "landmark_map_confirmation" in protocol
+            ):
+                tp_handoff_recovery_executed = True
+                level = target_to_level[target_name]
+                handoff_semantic_model = sonoanatomy_models[level]
+                selected_pose = np.asarray(
+                    decision.selected.pose_index, dtype=np.float64
+                )
+                recovery_rows = []
+                for index, offset in enumerate(
+                    protocol["landmark_map_confirmation"].get(
+                        "tp_local_search_offsets_index", []
+                    )
+                ):
+                    requested_pose = selected_pose + np.asarray(
+                        offset, dtype=np.float64
+                    )
+                    recovered = acquire(
+                        requested_pose,
+                        target_name,
+                        f"{target_name}:tp_handoff_recovery_{index + 1}",
+                        float(motion["fine_position_tolerance_mm"]),
+                        float(motion["fine_orientation_tolerance_deg"]),
+                    )
+                    probability = segmentation_probabilities(
+                        handoff_semantic_model["model"],
+                        np.asarray([images[recovered.frame_sequence]]),
+                    )[0]
+                    presence = predicted_presence(
+                        probability, handoff_semantic_model["thresholds"]
+                    )
+                    public_rows[recovered.frame_sequence].update(
+                        {
+                            "scan_state": "TP_HANDOFF_RECOVERY",
+                            "trajectory_id": (
+                                f"{target_name}:tp_handoff_recovery"
+                            ),
+                            "tp_predicted": bool(presence["tp_predicted"]),
+                            "sap_predicted": bool(presence["sap_predicted"]),
+                            "other_bone_predicted": bool(
+                                presence["other_bone_predicted"]
+                            ),
+                            "tp_predicted_pixels": int(
+                                presence["tp_predicted_pixels"]
+                            ),
+                            "sap_predicted_pixels": int(
+                                presence["sap_predicted_pixels"]
+                            ),
+                            "other_bone_predicted_pixels": int(
+                                presence["other_bone_predicted_pixels"]
+                            ),
+                        }
+                    )
+                    assert_no_privileged_fields(
+                        public_rows[recovered.frame_sequence]
+                    )
+                    realized = np.asarray(recovered.pose_index, dtype=np.float64)
+                    recovery_rows.append(
+                        {
+                            "view": recovered,
+                            "semantic": {
+                                "frame_sequence": recovered.frame_sequence,
+                                "frame_sha256": recovered.frame_sha256,
+                                "tp_predicted": bool(
+                                    presence["tp_predicted"]
+                                ),
+                                "tp_predicted_pixels": int(
+                                    presence["tp_predicted_pixels"]
+                                ),
+                            },
+                            "return_error": {
+                                "position_mm": float(
+                                    np.linalg.norm(
+                                        realized[:2] - requested_pose[:2]
+                                    )
+                                    * label_resolution
+                                ),
+                                "orientation_deg": math.degrees(
+                                    abs(
+                                        float(
+                                            wrap_to_pi(
+                                                realized[2]
+                                                - requested_pose[2]
+                                            )
+                                        )
+                                    )
+                                ),
+                            },
+                        }
+                    )
+                semantic_positive_recovery = [
+                    row
+                    for row in recovery_rows
+                    if row["semantic"]["tp_predicted"]
+                    and row["view"].image_valid
+                    and row["view"].producer_advanced
+                    and row["view"].frame_sha256
+                    != decision.selected.frame_sha256
+                ]
+                selected_recovery = sorted(
+                    semantic_positive_recovery,
+                    key=lambda row: (
+                        -row["view"].probability,
+                        -row["semantic"]["tp_predicted_pixels"],
+                        row["view"].frame_sequence,
+                    ),
+                )[:required_fresh_count]
+                if len(selected_recovery) == required_fresh_count:
+                    confirmations = [row["view"] for row in selected_recovery]
+                    semantic_tp_confirmations = [
+                        row["semantic"] for row in selected_recovery
+                    ]
+                    return_errors = [
+                        row["return_error"] for row in selected_recovery
+                    ]
+                    fresh_pass = actor_confirmation_requirement_met(
+                        confirmations,
+                        probability_threshold=float(model["threshold"]),
+                        required_count=required_fresh_count,
+                        minimum_positive_count=minimum_actor_positive_count,
+                    )
+                    semantic_tp_crosscheck_pass = (
+                        tp_handoff_crosscheck_requirement_met(
+                            [
+                                {
+                                    "frame_sequence": row.frame_sequence,
+                                    "frame_sha256": row.frame_sha256,
+                                    "probability": row.probability,
+                                    "image_valid": row.image_valid,
+                                    "producer_advanced": row.producer_advanced,
+                                }
+                                for row in confirmations
+                            ],
+                            semantic_tp_confirmations,
+                            required_count=required_fresh_count,
+                            legacy_probability_threshold=float(
+                                model["threshold"]
+                            ),
+                            selected_frame_sha256=(
+                                decision.selected.frame_sha256
+                            ),
+                        )
+                    )
             semantic_scan_handoff_pass = bool(
                 fresh_pass or semantic_tp_crosscheck_pass
             )
@@ -798,6 +946,9 @@ def main() -> int:
                     "unlocks_scanning_only": True,
                 },
                 "semantic_scan_handoff_passed": semantic_scan_handoff_pass,
+                "tp_handoff_recovery_executed": (
+                    tp_handoff_recovery_executed
+                ),
                 "return_errors": return_errors,
             }
             if (
