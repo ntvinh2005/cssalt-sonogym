@@ -1574,30 +1574,6 @@ def main() -> int:
                                     }
                                 )
                             landmark_confirmations.extend(confirmation_views)
-                            if (
-                                semantic_class == "SAP"
-                                and all(
-                                    row["predicted"]
-                                    for row in confirmation_views
-                                )
-                            ):
-                                confirmed_coordinates = [
-                                    observation["coordinate_mm"]
-                                    for row in confirmation_views
-                                    for observation in row[
-                                        "semantic_observations"
-                                    ]
-                                ]
-                                shared_landmark_map.set_actor_anchor(
-                                    identity,
-                                    np.mean(
-                                        np.asarray(
-                                            confirmed_coordinates,
-                                            dtype=np.float64,
-                                        ),
-                                        axis=0,
-                                    ),
-                                )
                     positive_by_identity = {
                         identity: sum(
                             bool(row["predicted"])
