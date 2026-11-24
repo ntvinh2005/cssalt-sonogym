@@ -94,7 +94,7 @@ def choose_frames(masks, route, frames, valid):
     return chosen
 
 
-def actor_figure(output, session, images, frames, valid, masks, data, mapping):
+def actor_figure(output, session, images, frames, valid, masks, data, mapping, *, title=OFFLINE):
     route = data["level_hypotheses_by_frame"]
     selected = choose_frames(masks, route, frames, valid)
     figure = plt.figure(figsize=(15, 8), facecolor="#ffffff", layout="constrained")
@@ -109,7 +109,7 @@ def actor_figure(output, session, images, frames, valid, masks, data, mapping):
         axis.imshow(overlay(images[sequence], masks[level][sequence]))
         axis.set_title(f"{level} · {plane} · frame {sequence}", fontsize=10)
         axis.set_axis_off()
-    figure.suptitle(f"{OFFLINE}\n{session} · TP yellow  |  SAP magenta  |  Other bone green", fontsize=14)
+    figure.suptitle(f"{title}\n{session} · TP cyan  |  SAP magenta  |  Other bone green", fontsize=14)
     figure.savefig(output, dpi=150)
     plt.close(figure)
 
@@ -162,7 +162,7 @@ def replay(output, overview, images, frames, valid, masks, route):
                 panel[130:396, 760:1258] = cv2.resize(inset, (498, 266), interpolation=cv2.INTER_AREA)
             x, z, angle = frame["executed_relative_pose_index"]
             text(panel, f"Executed x={x:.1f}  z={z:.1f}  angle={angle:.2f} rad", 32, 488)
-            text(panel, "TP yellow  |  SAP magenta  |  Other bone green", 32, 550)
+            text(panel, "TP cyan  |  SAP magenta  |  Other bone green", 32, 550)
             if len(levels) == 2:
                 text(panel, "Both vertebral levels remain possible for this view", 32, 595)
             text(panel, "Map and trajectory at right summarize the complete recorded session", 32, 664)
@@ -206,6 +206,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--fresh-session", type=Path)
     args = parser.parse_args()
     result = load(args.results / "comparison.json")
     args.output.mkdir(parents=True, exist_ok=False)
@@ -234,6 +235,23 @@ def main():
                 "path": video_path.name,
                 **replay(video_path, actor_path, images, frames, valid, masks, data["level_hypotheses_by_frame"]),
             }
+    if args.fresh_session and (args.fresh_session / "actor_result.json").is_file():
+        fresh = args.fresh_session
+        data = load(fresh / "actor_result.json")
+        if data["landmarks"] and data["valid_frame_count"]:
+            frames = [json.loads(line) for line in (fresh / "public/frames.jsonl").read_text().splitlines()]
+            with np.load(fresh / "public/ultrasound.npz") as archive:
+                images = archive["ultrasound"]
+            with np.load(fresh / "public/unet_masks.npz") as archive:
+                masks = dict(archive)
+            valid = [row["frame_sequence"] for row in frames if row["image_valid"]]
+            data["level_hypotheses_by_frame"] = {
+                str(seq): frames[seq]["level_hypotheses"] for seq in valid
+            }
+            fresh_path = args.output / "fresh_s0010_00_actor_map.png"
+            actor_figure(fresh_path, fresh.name, images, frames, valid, masks, data, data["landmarks"],
+                         title=data["label"])
+            manifest["fresh_map"] = fresh_path.name
     summary = args.output / "comparison.png"
     comparison_figure(summary, result)
     manifest["comparison"] = summary.name
