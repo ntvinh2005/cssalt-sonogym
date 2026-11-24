@@ -278,6 +278,18 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Intuition:** It records what ultrasound and executed motion actually support without converting a single detection into a 3-D anatomical claim.
 - **Source:** approved by user, 2026-11-16.
 
+### Stage 2A
+- **Kind:** method
+- **Definition:** RIGHT L4/L5 TP and SAP localization in a shared actor-owned 3D map. Each successful level requires correct TP and SAP identities under the simulator evaluator, independent viewpoints, spatial consistency, fresh reacquisition of both final hypotheses, and resolution of competing identities.
+- **Intuition:** It evaluates the anatomical map and the observations that actually supported it.
+- **Source:** approved by user, 2026-11-24, Stage 2 decision and viewpoint-selection task.
+
+### Stage 2B
+- **Kind:** method
+- **Definition:** Localization of a separately defined bony target region from anatomically validated Stage 2A landmark evidence.
+- **Intuition:** It requires a target-region definition and evaluation beyond the historical TP-core view benchmark.
+- **Source:** approved by user, 2026-11-24, Stage 2 decision and viewpoint-selection task.
+
 ### MBB target-region interface
 - **Kind:** method
 - **Definition:** A branch-specific mapping from independently supported SAP/TP landmark estimates to a bounded bony-landmark-derived surrogate region; it remains undefined and returns `BLOCKED_GROUND_TRUTH` until the anatomical mapping and uncertainty coverage are independently validated.

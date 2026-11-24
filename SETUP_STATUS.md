@@ -1,5 +1,87 @@
 # Setup status
 
+## 2026-11-24. Stage 2 return viewpoints and landmark confirmation
+
+`run_stage2_tp_active.py` selects return viewpoints from the shared map.
+`evaluate_stage2_tp_active.py` scores the credited observations and the
+historical TP-core benchmark.
+
+**Criterion.** On the matched development seed, require correct TP and SAP
+identities and fresh returns linked to the final hypotheses for each
+[Stage 2A](docs/notation.md#stage-2a) pass. The historical TP-core benchmark
+retains the sealed v6r18 geometry, thresholds and three-return requirement.
+
+### Method
+
+- Rank eligible supporting observations by distance to the reconstructed
+  landmark. Break ties by confidence, then frame sequence.
+- Match credited observations by frame sequence, image hash and component
+  coordinates. Use those observations for semantic confirmation and the
+  historical TP-core returns. Keep prior results under their original schema.
+- Reconsider competing hypotheses after a revisit using the existing score
+  margin. Previous map confirmation cannot override a close competitor.
+
+### Setup
+
+| Setting | Value |
+|---|---|
+| Baseline | v6r18, job `52624141` |
+| Revised | v6r20, job `52637428`, revision `f914de9fef5a7ccc87f25e138e2c75f7cd473511` |
+| Matched inputs | `s0010`, seed `2026120200`, Stage 1 map `cf7_00`, v6r18 U-Net checkpoints and motion budget |
+| Revisions | 76 tests passed in v6r18, 80 in v6r20. One development session per version and zero sessions dropped. |
+
+```bash
+SONOGYM_CONFIG_FILE=/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v6r18/52624141/context/machine-config.env \
+POC_PROTOCOL_VERSION=v6r20 \
+sbatch --account=anest-dept --partition=hpg-turin --cpus-per-task=4 \
+  --gres=gpu:l4:1 --mem=30G --time=00:15:00 --job-name=sg_unet_v6r20 \
+  --output=slurm-%j.out hpg/jobs/s0010_mbb_single_anatomy_poc_v6r3.sbatch
+```
+
+### Results
+
+| Matched comparison | v6r18 | v6r20 |
+|---|---:|---:|
+| Correct L4 TP / SAP supporting observations | 3/3 and 4/5 | 3/3 and 4/5 |
+| Correct L5 TP / SAP supporting observations | 2/2 and 5/8 | 2/2 and 5/5 |
+| Correct fresh observations among those credited | 7/8, offline exact match | 4/4 |
+| Correct accepted anatomical pairs | 2/2 | 1/2 |
+| Wrong accepted pairs / abstentions | 0/2 and 0/2 | 0/2 and 1/2 |
+| TP-core-positive returns / views reported | 0/6 | 0/1 |
+| Integrated targets | 0/2 | 0/2 |
+| Robot action steps / actor elapsed seconds | 8952 / 307.244 | 9069 / 304.485 |
+
+**Verdict. Stage 2A passed for RIGHT L5 and failed for RIGHT L4 in the revised
+development run. Both historical TP-core evaluations failed. Stage 2B remains
+unimplemented and Stage 2 remains incomplete.** Slurm completed `0:0` in
+7 minutes 46 seconds. Both rendered MP4s decoded 189/189 frames at 5 fps.
+
+### Reading it
+
+- All 25 TP-core-positive v6r18 images had U-Net proposals. Six coarse views
+  were not entered into the map. The 19 sweep observations were outside the
+  existing 4 mm association radius around the selected TP. No positive view
+  was chosen for return. Confidence, mask size and 3D proximity each failed
+  to find a proxy-positive view within that radius.
+- The L4 TP hypothesis changed from frames 39/40 to 41/74/77 on reacquisition.
+  Returns from the earlier hypothesis did not count. L4 SAP had a close
+  competitor and a correct credited return. The actor abstained for L4.
+- L5 credited TP frame 181 and SAP frames 183 and 185. All three were correct.
+- Replaying three v6r19 failures using the recorded observations still selected
+  the incorrect hypotheses. Session 01 L5 included a fresh false TP prediction
+  in frame 188. Session 02 L4 retained a SAP hypothesis with 1/7 correct
+  observations and two competitors. Session 02 L5 included a TP observation
+  3.162 pixels from the provisional interface, beyond the 3-pixel gate.
+
+### Files
+
+| File | Contents |
+|---|---|
+| `experiments/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_protocol_v6r20.yaml` and adjacent `.sha256` | Exact revised parameters and checksum |
+| `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v6r20/52637428/results/end_to_end_report.json` | Separate Stage 2A, TP-core and integrated outcomes |
+| `/blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/outputs/unity_two_stage_transfer/s0010_mbb_single_anatomy_poc_v6r20/52637428/stage2/mbbpoc_v6r20_00/results/actor_result.json` | Sealed four-landmark map and credited evidence |
+| `artifacts/s0010_stage2_v6r20_job52637428/manifest.json` | Video paths, checksums and sealed map |
+
 ## 2026-11-24. Stage 2 L5 TP reacquisition and independent confirmation on s0010
 
 `workflows/two_stage_navigation/run_stage2_tp_active.py` runs the ultrasound
