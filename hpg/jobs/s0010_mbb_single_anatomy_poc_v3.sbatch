@@ -46,7 +46,7 @@ fi
 if [[ "$TP_TEST_RC" -eq 0 && "$ACTIVE_TEST_RC" -eq 0 && "$MBB_TEST_RC" -eq 0 ]]; then
     "$PYTHON" -m unittest -q tests.test_sonoanatomy_active_scan \
         tests.test_sonoanatomy_multiview tests.test_sonoanatomy_segmentation \
-        tests.test_stage2_sap_tp_evaluator \
+        tests.test_stage2_sap_tp_evaluator tests.test_incremental_landmark_map \
         > "$RUN_DIR/results/tests-sap-tp-active.log" 2>&1
     SAP_TP_TEST_RC=$?
 else

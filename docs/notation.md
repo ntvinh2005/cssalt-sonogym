@@ -1,5 +1,11 @@
 # Project notation
 
+### Incremental multiview anatomical landmark mapping
+- **Kind:** method
+- **Definition:** An actor-owned persistent map that associates fresh pose-synchronized ultrasound observations of RIGHT L4/L5 SAP and TP with spatial hypotheses in one common 3D frame, confirms each landmark from distinct probe poses, uses relative SAP-TP geometry to reject inconsistent associations, and never requires SAP and TP to be visible in the same image.
+- **Intuition:** It reconstructs a shared anatomical relationship from purposeful probe exploration instead of treating one paired ultrasound frame as the target.
+- **Source:** approved by user, 2026-11-23; `incremental_landmark_map.py:IncrementalAnatomicalLandmarkMap`.
+
 ### Clinician-inspired lumbar ultrasound scanning
 - **Kind:** method
 - **Definition:** A simulator-only sequence that uses longitudinal, transverse, cranial-caudal and physically different supporting acquisitions to identify lumbar bony landmarks from clean ultrasound and actor-visible robot motion; privileged anatomy may design or evaluate an opened feasibility capture but is excluded from actor decisions.

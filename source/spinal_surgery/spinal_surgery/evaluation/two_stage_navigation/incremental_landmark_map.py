@@ -1,0 +1,393 @@
+"""Actor-owned incremental 3D map for the fixed-s0010 Stage 2 landmarks.
+
+The map consumes only semantic observations derived from clean ultrasound and
+the synchronized executed probe pose.  Anatomical level is supplied by the
+frozen Stage 1 handoff.  No evaluator geometry is used here.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+import math
+from typing import Literal, Mapping, Sequence
+
+import numpy as np
+
+from .sonoanatomy_multiview import (
+    SemanticCluster,
+    SemanticObservation,
+    cluster_observations,
+)
+
+
+LandmarkIdentity = Literal[
+    "RIGHT_L4_TP",
+    "RIGHT_L4_SAP",
+    "RIGHT_L5_TP",
+    "RIGHT_L5_SAP",
+]
+LandmarkStatus = Literal[
+    "NOT_OBSERVED",
+    "CANDIDATE",
+    "AMBIGUOUS",
+    "CONFIRMED",
+    "REJECTED",
+]
+
+LANDMARK_IDENTITIES: tuple[LandmarkIdentity, ...] = (
+    "RIGHT_L4_TP",
+    "RIGHT_L4_SAP",
+    "RIGHT_L5_TP",
+    "RIGHT_L5_SAP",
+)
+
+
+@dataclass(frozen=True)
+class IncrementalLandmarkMapConfig:
+    association_radius_mm: float = 4.0
+    minimum_supporting_views: int = 2
+    minimum_view_translation_mm: float = 2.0
+    minimum_view_rotation_deg: float = 1.0
+    minimum_semantic_confidence: float = 0.5
+    maximum_rms_uncertainty_mm: float = 4.0
+    minimum_hypothesis_score_margin: float = 0.01
+    minimum_sap_tp_distance_mm: float = 1.0
+    maximum_sap_tp_distance_mm: float = 30.0
+
+    def __post_init__(self) -> None:
+        positive = (
+            self.association_radius_mm,
+            self.minimum_supporting_views,
+            self.minimum_view_translation_mm,
+            self.minimum_view_rotation_deg,
+            self.maximum_rms_uncertainty_mm,
+            self.minimum_sap_tp_distance_mm,
+            self.maximum_sap_tp_distance_mm,
+        )
+        if not all(math.isfinite(float(value)) and float(value) > 0.0 for value in positive):
+            raise ValueError("landmark-map positive settings must be finite")
+        if not 0.0 <= self.minimum_semantic_confidence <= 1.0:
+            raise ValueError("semantic confidence must lie in [0, 1]")
+        if self.minimum_hypothesis_score_margin < 0.0:
+            raise ValueError("hypothesis score margin must be nonnegative")
+        if self.minimum_sap_tp_distance_mm >= self.maximum_sap_tp_distance_mm:
+            raise ValueError("SAP/TP distance interval is empty")
+
+
+@dataclass(frozen=True)
+class LandmarkSupportObservation:
+    frame_sequence: int
+    frame_sha256: str
+    viewpoint_id: str
+    row: float
+    column: float
+    coordinate_mm: tuple[float, float, float]
+    confidence: float
+
+
+@dataclass(frozen=True)
+class LandmarkHypothesis:
+    identity: LandmarkIdentity
+    status: LandmarkStatus
+    position_mm: tuple[float, float, float] | None
+    rms_uncertainty_mm: float | None
+    maximum_residual_mm: float | None
+    semantic_confidence: float
+    hypothesis_score: float
+    supporting_frame_sequences: tuple[int, ...]
+    supporting_frame_hashes: tuple[str, ...]
+    supporting_viewpoint_ids: tuple[str, ...]
+    supporting_observations: tuple[LandmarkSupportObservation, ...]
+    observation_count: int
+    competing_hypothesis_count: int
+    reason: str
+    level_source: str = "FROZEN_STAGE1_HANDOFF"
+
+
+@dataclass(frozen=True)
+class LandmarkRelation:
+    level: Literal["L4", "L5"]
+    status: Literal["INCOMPLETE", "CONSISTENT", "INCONSISTENT"]
+    sap_tp_distance_mm: float | None
+    reason: str
+
+
+@dataclass(frozen=True)
+class LandmarkTrajectoryDecision:
+    status: Literal["ACCEPT", "ABSTAIN"]
+    trajectory_id: str | None
+    confirmed_landmark_count: int
+    relation_status: Literal["INCOMPLETE", "CONSISTENT", "INCONSISTENT"]
+    score: float
+    reason: str
+
+
+def _identity(level: str, semantic_class: str) -> LandmarkIdentity:
+    value = f"RIGHT_{level}_{semantic_class}"
+    if value not in LANDMARK_IDENTITIES:
+        raise ValueError(f"unsupported landmark identity: {value}")
+    return value  # type: ignore[return-value]
+
+
+def _cluster_quality(
+    cluster: SemanticCluster,
+    observations: Sequence[SemanticObservation],
+    config: IncrementalLandmarkMapConfig,
+) -> tuple[float, float, float]:
+    coordinates = np.asarray(
+        [observations[index].coordinate_mm for index in cluster.observation_indices],
+        dtype=np.float64,
+    )
+    centroid = np.asarray(cluster.centroid_mm, dtype=np.float64)
+    residuals = np.linalg.norm(coordinates - centroid, axis=1)
+    rms = float(np.sqrt(np.mean(np.square(residuals))))
+    maximum = float(np.max(residuals))
+    support = min(
+        len(cluster.supporting_frames) / float(config.minimum_supporting_views),
+        1.0,
+    )
+    compactness = max(0.0, 1.0 - rms / config.maximum_rms_uncertainty_mm)
+    score = float(0.55 * cluster.confidence + 0.25 * support + 0.20 * compactness)
+    return score, rms, maximum
+
+
+class IncrementalAnatomicalLandmarkMap:
+    """Persistent shared map for RIGHT L4/L5 SAP and TP hypotheses."""
+
+    def __init__(self, config: IncrementalLandmarkMapConfig) -> None:
+        self.config = config
+        self._observations: dict[LandmarkIdentity, list[SemanticObservation]] = {
+            identity: [] for identity in LANDMARK_IDENTITIES
+        }
+        self._rejections: dict[LandmarkIdentity, str] = {}
+
+    def add_observations(
+        self,
+        level: Literal["L4", "L5"],
+        observations: Sequence[SemanticObservation],
+    ) -> None:
+        """Add fresh actor observations associated with a Stage 1 level."""
+
+        for observation in observations:
+            if observation.semantic_class not in {"TP", "SAP"}:
+                continue
+            identity = _identity(level, observation.semantic_class)
+            key = (observation.frame_sequence, observation.frame_sha256, observation.row, observation.column)
+            existing = {
+                (row.frame_sequence, row.frame_sha256, row.row, row.column)
+                for row in self._observations[identity]
+            }
+            if key not in existing:
+                self._observations[identity].append(observation)
+
+    def reject(self, identity: LandmarkIdentity, reason: str) -> None:
+        if not reason:
+            raise ValueError("rejection reason is required")
+        self._rejections[identity] = reason
+
+    def observations(self, identity: LandmarkIdentity) -> tuple[SemanticObservation, ...]:
+        return tuple(self._observations[identity])
+
+    def _hypothesis(self, identity: LandmarkIdentity) -> LandmarkHypothesis:
+        observations = self._observations[identity]
+        if identity in self._rejections:
+            return LandmarkHypothesis(
+                identity=identity,
+                status="REJECTED",
+                position_mm=None,
+                rms_uncertainty_mm=None,
+                maximum_residual_mm=None,
+                semantic_confidence=0.0,
+                hypothesis_score=0.0,
+                supporting_frame_sequences=(),
+                supporting_frame_hashes=(),
+                supporting_viewpoint_ids=(),
+                supporting_observations=(),
+                observation_count=len(observations),
+                competing_hypothesis_count=0,
+                reason=self._rejections[identity],
+            )
+        if not observations:
+            return LandmarkHypothesis(
+                identity=identity,
+                status="NOT_OBSERVED",
+                position_mm=None,
+                rms_uncertainty_mm=None,
+                maximum_residual_mm=None,
+                semantic_confidence=0.0,
+                hypothesis_score=0.0,
+                supporting_frame_sequences=(),
+                supporting_frame_hashes=(),
+                supporting_viewpoint_ids=(),
+                supporting_observations=(),
+                observation_count=0,
+                competing_hypothesis_count=0,
+                reason="NO_SEMANTIC_OBSERVATION",
+            )
+        clusters = cluster_observations(
+            observations,
+            association_radius_mm=self.config.association_radius_mm,
+            minimum_view_translation_mm=self.config.minimum_view_translation_mm,
+            minimum_view_rotation_deg=self.config.minimum_view_rotation_deg,
+        )
+        ranked = sorted(
+            (
+                (*_cluster_quality(cluster, observations, self.config), index, cluster)
+                for index, cluster in enumerate(clusters)
+            ),
+            key=lambda row: (-row[0], -len(row[4].supporting_frames), row[1], row[3]),
+        )
+        score, rms, maximum, _, selected = ranked[0]
+        support = len(selected.supporting_frames)
+        eligible = bool(
+            support >= self.config.minimum_supporting_views
+            and selected.confidence >= self.config.minimum_semantic_confidence
+            and rms <= self.config.maximum_rms_uncertainty_mm
+        )
+        competing = [
+            row
+            for row in ranked[1:]
+            if len(row[4].supporting_frames) >= self.config.minimum_supporting_views
+        ]
+        close_competitor = bool(
+            competing
+            and score - competing[0][0] < self.config.minimum_hypothesis_score_margin
+        )
+        if selected.confidence < self.config.minimum_semantic_confidence:
+            status: LandmarkStatus = "REJECTED"
+            reason = "SEMANTIC_CONFIDENCE_BELOW_GATE"
+        elif close_competitor:
+            status = "AMBIGUOUS"
+            reason = "COMPETING_SPATIAL_HYPOTHESES"
+        elif eligible:
+            status = "CONFIRMED"
+            reason = "INDEPENDENT_DISTINCT_POSE_SUPPORT"
+        elif support >= self.config.minimum_supporting_views:
+            status = "AMBIGUOUS"
+            reason = "SPATIAL_UNCERTAINTY_ABOVE_GATE"
+        else:
+            status = "CANDIDATE"
+            reason = "ADDITIONAL_DISTINCT_POSE_REQUIRED"
+        members = [observations[index] for index in selected.observation_indices]
+        return LandmarkHypothesis(
+            identity=identity,
+            status=status,
+            position_mm=tuple(float(value) for value in selected.centroid_mm),
+            rms_uncertainty_mm=rms,
+            maximum_residual_mm=maximum,
+            semantic_confidence=float(selected.confidence),
+            hypothesis_score=score,
+            supporting_frame_sequences=tuple(row.frame_sequence for row in members),
+            supporting_frame_hashes=tuple(row.frame_sha256 for row in members),
+            supporting_viewpoint_ids=tuple(row.viewpoint_id for row in members),
+            supporting_observations=tuple(
+                LandmarkSupportObservation(
+                    frame_sequence=row.frame_sequence,
+                    frame_sha256=row.frame_sha256,
+                    viewpoint_id=row.viewpoint_id,
+                    row=row.row,
+                    column=row.column,
+                    coordinate_mm=row.coordinate_mm,
+                    confidence=row.confidence,
+                )
+                for row in members
+            ),
+            observation_count=len(observations),
+            competing_hypothesis_count=len(competing),
+            reason=reason,
+        )
+
+    def landmark(self, identity: LandmarkIdentity) -> LandmarkHypothesis:
+        return self._hypothesis(identity)
+
+    def relation(self, level: Literal["L4", "L5"]) -> LandmarkRelation:
+        tp = self._hypothesis(_identity(level, "TP"))
+        sap = self._hypothesis(_identity(level, "SAP"))
+        if tp.status != "CONFIRMED" or sap.status != "CONFIRMED":
+            return LandmarkRelation(level, "INCOMPLETE", None, "LANDMARKS_NOT_BOTH_CONFIRMED")
+        assert tp.position_mm is not None and sap.position_mm is not None
+        distance = float(
+            np.linalg.norm(np.asarray(tp.position_mm) - np.asarray(sap.position_mm))
+        )
+        if not self.config.minimum_sap_tp_distance_mm <= distance <= self.config.maximum_sap_tp_distance_mm:
+            return LandmarkRelation(level, "INCONSISTENT", distance, "SAP_TP_DISTANCE_OUTSIDE_GATE")
+        return LandmarkRelation(level, "CONSISTENT", distance, "CONFIRMED_IN_SHARED_3D_MAP")
+
+    def level_confirmed(self, level: Literal["L4", "L5"]) -> bool:
+        return self.relation(level).status == "CONSISTENT"
+
+    def complete(self) -> bool:
+        return all(self._hypothesis(identity).status == "CONFIRMED" for identity in LANDMARK_IDENTITIES) and all(
+            self.relation(level).status == "CONSISTENT" for level in ("L4", "L5")
+        )
+
+    def snapshot(self) -> dict[str, object]:
+        return {
+            "schema": "sonogym-incremental-anatomical-landmark-map-v1",
+            "coordinate_frame": "ACTOR_BASE_WORLD_MM",
+            "actor_owned": True,
+            "config": asdict(self.config),
+            "landmarks": {
+                identity: asdict(self._hypothesis(identity))
+                for identity in LANDMARK_IDENTITIES
+            },
+            "relations": {
+                level: asdict(self.relation(level)) for level in ("L4", "L5")
+            },
+            "complete": self.complete(),
+        }
+
+
+def select_landmark_trajectory(
+    level: Literal["L4", "L5"],
+    observations_by_trajectory: Mapping[str, Sequence[SemanticObservation]],
+    config: IncrementalLandmarkMapConfig,
+) -> LandmarkTrajectoryDecision:
+    """Select the motion trajectory with the strongest independent landmarks."""
+
+    ranked = []
+    for trajectory_id, observations in observations_by_trajectory.items():
+        mapping = IncrementalAnatomicalLandmarkMap(config)
+        mapping.add_observations(level, observations)
+        tp = mapping.landmark(_identity(level, "TP"))
+        sap = mapping.landmark(_identity(level, "SAP"))
+        relation = mapping.relation(level)
+        confirmed = sum(row.status == "CONFIRMED" for row in (tp, sap))
+        score = float(tp.hypothesis_score + sap.hypothesis_score)
+        support = len(tp.supporting_frame_sequences) + len(sap.supporting_frame_sequences)
+        ranked.append(
+            (
+                int(relation.status == "CONSISTENT"),
+                confirmed,
+                score,
+                support,
+                trajectory_id,
+                relation,
+            )
+        )
+    if not ranked:
+        return LandmarkTrajectoryDecision(
+            "ABSTAIN", None, 0, "INCOMPLETE", 0.0, "NO_SEMANTIC_TRAJECTORY"
+        )
+    best = max(ranked, key=lambda row: row[:5])
+    if best[1] == 0:
+        return LandmarkTrajectoryDecision(
+            "ABSTAIN",
+            None,
+            0,
+            best[5].status,
+            best[2],
+            "NO_INDEPENDENT_LANDMARK_CONFIRMED",
+        )
+    return LandmarkTrajectoryDecision(
+        "ACCEPT",
+        best[4],
+        best[1],
+        best[5].status,
+        best[2],
+        (
+            "BOTH_LANDMARKS_AND_RELATION_SUPPORTED"
+            if best[5].status == "CONSISTENT"
+            else "PARTIAL_LANDMARK_SUPPORT_REQUIRES_RESCAN"
+        ),
+    )

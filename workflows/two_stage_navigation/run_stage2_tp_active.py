@@ -88,6 +88,11 @@ from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_multiview import
     decide_tp_sap_pair,
     semantic_observations,
 )
+from spinal_surgery.evaluation.two_stage_navigation.incremental_landmark_map import (  # noqa: E402
+    IncrementalAnatomicalLandmarkMap,
+    IncrementalLandmarkMapConfig,
+    select_landmark_trajectory,
+)
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_segmentation import (  # noqa: E402
     load_segmentation_checkpoint,
     predicted_presence,
@@ -299,6 +304,15 @@ def main() -> int:
             }
         if sonoanatomy_models and set(sonoanatomy_models) != {"L4", "L5"}:
             raise RuntimeError("sonoanatomy scanning requires both L4 and L5 checkpoints")
+        landmark_map_config = None
+        shared_landmark_map = None
+        if "landmark_map" in protocol:
+            landmark_map_config = IncrementalLandmarkMapConfig(
+                **protocol["landmark_map"]
+            )
+            shared_landmark_map = IncrementalAnatomicalLandmarkMap(
+                landmark_map_config
+            )
 
         env_cfg = parse_env_cfg(protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1)
         env_cfg.seed = int(session_spec["seed"])
@@ -1018,23 +1032,28 @@ def main() -> int:
                 ]
                 active_trajectory = f"{target_name}:active_rescan"
                 seen_rescan_poses: set[tuple[float, ...]] = set()
-                if tp_candidates and sap_candidates:
-                    strongest = [
-                        max(
-                            tp_candidates,
-                            key=lambda row: (
-                                int(row["tp_predicted_pixels"]),
-                                -int(row["frame_sequence"]),
-                            ),
-                        ),
-                        max(
-                            sap_candidates,
-                            key=lambda row: (
-                                int(row["sap_predicted_pixels"]),
-                                -int(row["frame_sequence"]),
-                            ),
-                        ),
-                    ]
+                if tp_candidates or sap_candidates:
+                    strongest = []
+                    if tp_candidates:
+                        strongest.append(
+                            max(
+                                tp_candidates,
+                                key=lambda row: (
+                                    int(row["tp_predicted_pixels"]),
+                                    -int(row["frame_sequence"]),
+                                ),
+                            )
+                        )
+                    if sap_candidates:
+                        strongest.append(
+                            max(
+                                sap_candidates,
+                                key=lambda row: (
+                                    int(row["sap_predicted_pixels"]),
+                                    -int(row["frame_sequence"]),
+                                ),
+                            )
+                        )
                     unique_anchors = []
                     seen_anchor_poses = set()
                     for row in strongest:
@@ -1196,7 +1215,38 @@ def main() -> int:
                         ) = evaluate_trajectories()
                 selected_semantic_trajectory = None
                 selected_semantic_pair = None
-                if accepted_trajectories:
+                landmark_trajectory_decision = None
+                if (
+                    shared_landmark_map is not None
+                    and landmark_map_config is not None
+                ):
+                    landmark_trajectory_decision = select_landmark_trajectory(
+                        level,
+                        observations_by_trajectory,
+                        landmark_map_config,
+                    )
+                    selected_semantic_trajectory = (
+                        landmark_trajectory_decision.trajectory_id
+                    )
+                    if selected_semantic_trajectory is not None:
+                        selected_state = trajectory_states.get(
+                            selected_semantic_trajectory
+                        )
+                        if selected_state is not None:
+                            selected_pair = selected_state[1]
+                            selected_semantic_pair = {
+                                "status": selected_pair.status,
+                                "reason": selected_pair.reason,
+                                "selected": (
+                                    None
+                                    if selected_pair.selected is None
+                                    else asdict(selected_pair.selected)
+                                ),
+                                "hypothesis_count": len(
+                                    selected_pair.hypotheses
+                                ),
+                            }
+                elif accepted_trajectories:
                     _, selected_semantic_trajectory, selected_semantic_pair = max(
                         accepted_trajectories,
                         key=lambda row: (row[0], row[1]),
@@ -1204,7 +1254,8 @@ def main() -> int:
                 pair_view_candidates = [
                     row
                     for row in semantic_frames
-                    if row["trajectory_id"] == selected_semantic_trajectory
+                    if shared_landmark_map is None
+                    and row["trajectory_id"] == selected_semantic_trajectory
                     and row["tp_predicted"]
                     and row["sap_predicted"]
                 ]
@@ -1342,6 +1393,189 @@ def main() -> int:
                     target_result["decision_reason"] = (
                         "SUPPORTED_SAP_TP_TARGET_VIEW_AFTER_TP_CROSSCHECK"
                     )
+                if (
+                    shared_landmark_map is not None
+                    and landmark_map_config is not None
+                ):
+                    selected_rows = observations_by_trajectory.get(
+                        selected_semantic_trajectory or "", []
+                    )
+                    if selected_rows:
+                        shared_landmark_map.add_observations(
+                            level, selected_rows
+                        )
+                    map_before_confirmation = shared_landmark_map.snapshot()
+                    confirmation_spec = protocol["landmark_map_confirmation"]
+                    maximum_poses = int(
+                        confirmation_spec["poses_per_landmark"]
+                    )
+                    minimum_positive = int(
+                        confirmation_spec[
+                            "minimum_positive_fresh_returns_per_landmark"
+                        ]
+                    )
+                    if not 1 <= minimum_positive <= maximum_poses:
+                        raise ValueError(
+                            "invalid independent landmark confirmation count"
+                        )
+                    semantic_frames_by_sequence = {
+                        int(row["frame_sequence"]): row
+                        for row in semantic_frames
+                    }
+                    landmark_confirmations = []
+                    for semantic_class in ("TP", "SAP"):
+                        identity = f"RIGHT_{level}_{semantic_class}"
+                        hypothesis = map_before_confirmation["landmarks"][
+                            identity
+                        ]
+                        support_rows = list(
+                            hypothesis["supporting_observations"]
+                        )[:maximum_poses]
+                        for support_index, support in enumerate(support_rows):
+                            source_sequence = int(support["frame_sequence"])
+                            source_frame = semantic_frames_by_sequence.get(
+                                source_sequence
+                            )
+                            if source_frame is None:
+                                continue
+                            anchor_pose = np.asarray(
+                                source_frame["pose_index"], dtype=np.float64
+                            )
+                            dither_offset = np.asarray(
+                                scan_spec["confirmation_dither_offsets"][
+                                    support_index
+                                    % len(
+                                        scan_spec[
+                                            "confirmation_dither_offsets"
+                                        ]
+                                    )
+                                ],
+                                dtype=np.float64,
+                            )
+                            outbound = move(
+                                anchor_pose + dither_offset,
+                                f"{target_name}:{semantic_class.lower()}_landmark_confirmation_dither_{support_index + 1}",
+                                float(
+                                    motion[
+                                        "confirmation_position_tolerance_mm"
+                                    ]
+                                ),
+                                float(
+                                    motion[
+                                        "confirmation_orientation_tolerance_deg"
+                                    ]
+                                ),
+                            )
+                            if not outbound:
+                                raise RuntimeError(
+                                    "landmark confirmation dither produced no action"
+                                )
+                            confirmation_trajectory = (
+                                f"{target_name}:landmark_confirmation"
+                            )
+                            confirmed, presence = acquire_semantic(
+                                anchor_pose,
+                                state_name=(
+                                    f"FRESH_{semantic_class}_LANDMARK_CONFIRMATION"
+                                ),
+                                trajectory_id=confirmation_trajectory,
+                            )
+                            confirmed_observations = [
+                                asdict(row)
+                                for row in observations_by_trajectory.get(
+                                    confirmation_trajectory, []
+                                )
+                                if row.frame_sequence == confirmed.frame_sequence
+                                and row.semantic_class == semantic_class
+                            ]
+                            predicted = bool(
+                                presence is not None
+                                and presence[
+                                    f"{semantic_class.lower()}_predicted"
+                                ]
+                                and confirmed_observations
+                            )
+                            landmark_confirmations.append(
+                                {
+                                    "identity": identity,
+                                    "source_frame_sequence": source_sequence,
+                                    "source_frame_sha256": support[
+                                        "frame_sha256"
+                                    ],
+                                    "frame_sequence": confirmed.frame_sequence,
+                                    "frame_sha256": confirmed.frame_sha256,
+                                    "image_valid": confirmed.image_valid,
+                                    "producer_advanced": (
+                                        confirmed.producer_advanced
+                                    ),
+                                    "predicted": predicted,
+                                    "semantic_observations": (
+                                        confirmed_observations
+                                    ),
+                                    "fresh_relative_to_source": (
+                                        confirmed.frame_sha256
+                                        != support["frame_sha256"]
+                                    ),
+                                }
+                            )
+                    positive_by_identity = {
+                        identity: sum(
+                            bool(row["predicted"])
+                            and bool(row["image_valid"])
+                            and bool(row["producer_advanced"])
+                            and bool(row["fresh_relative_to_source"])
+                            for row in landmark_confirmations
+                            if row["identity"] == identity
+                        )
+                        for identity in (
+                            f"RIGHT_{level}_TP",
+                            f"RIGHT_{level}_SAP",
+                        )
+                    }
+                    independent_fresh_pass = bool(
+                        shared_landmark_map.level_confirmed(level)
+                        and all(
+                            count >= minimum_positive
+                            for count in positive_by_identity.values()
+                        )
+                    )
+                    target_result["sonoanatomy"].update(
+                        {
+                            "confirmation_mode": (
+                                "INDEPENDENT_LANDMARK_FRESH_RETURN"
+                            ),
+                            "landmark_trajectory_decision": (
+                                None
+                                if landmark_trajectory_decision is None
+                                else asdict(landmark_trajectory_decision)
+                            ),
+                            "incremental_landmark_map": (
+                                map_before_confirmation
+                            ),
+                            "fresh_landmark_confirmations": (
+                                landmark_confirmations
+                            ),
+                            "positive_fresh_returns_by_identity": (
+                                positive_by_identity
+                            ),
+                            "minimum_positive_fresh_returns_per_landmark": (
+                                minimum_positive
+                            ),
+                            "fresh_confirmation_passed": (
+                                independent_fresh_pass
+                            ),
+                        }
+                    )
+                    if independent_fresh_pass:
+                        target_result["decision"] = "ACCEPT"
+                        target_result["decision_reason"] = (
+                            "INDEPENDENT_LANDMARKS_CONFIRMED_IN_SHARED_MAP"
+                        )
+                    else:
+                        target_result["decision"] = "ABSTAIN"
+                        target_result["decision_reason"] = (
+                            "INCREMENTAL_LANDMARK_MAP_CONFIRMATION_FAILED"
+                        )
             elif sonoanatomy_models:
                 target_result["sonoanatomy"] = {
                     "scan_frame_count": 0,
@@ -1375,6 +1609,11 @@ def main() -> int:
             "seed": int(session_spec["seed"]),
             "outcome": "TARGET_VIEWS_CONFIRMED" if all(row["decision"] == "ACCEPT" for row in target_results) else "ABSTAIN",
             "targets": target_results,
+            "incremental_landmark_map": (
+                None
+                if shared_landmark_map is None
+                else shared_landmark_map.snapshot()
+            ),
             "frame_count": len(public_rows),
             "distinct_frame_hash_count": len({row["frame_sha256"] for row in public_rows}),
             "action_step_count": total_actions,

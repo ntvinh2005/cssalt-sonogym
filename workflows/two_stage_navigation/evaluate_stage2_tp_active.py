@@ -123,6 +123,12 @@ def proxy_state(
         uncertain_columns=active["uncertain_columns"],
         patch_spec=UNITY_REFERENCE_PATCH_SPEC,
     )
+    nearest = diagnostics.get("nearest_core_distance_feature_cells")
+    if isinstance(nearest, float) and not np.isfinite(nearest):
+        # No projected core point is represented by the explicit zero support
+        # counts.  JSON has no portable infinity value, so keep the absence
+        # machine-readable instead of crashing the entire sealed evaluator.
+        diagnostics["nearest_core_distance_feature_cells"] = None
     other = L5_CLASS if target == L4_CLASS else L4_CLASS
     if any(value > 0 for value in uncertain.values()) or (counts[target] > 0 and counts[other] > 0):
         state = "PROXY_AMBIGUOUS"
@@ -299,6 +305,68 @@ def semantic_pair_identity(
     }
 
 
+def incremental_map_identity(
+    sonoanatomy: dict[str, Any],
+    labels_by_frame: dict[int, np.ndarray],
+    *,
+    level: str,
+    maximum_distance_pixels: float,
+) -> dict[str, Any]:
+    """Evaluate independently selected TP and SAP map observations."""
+
+    snapshot = sonoanatomy.get("incremental_landmark_map") or {}
+    landmarks = snapshot.get("landmarks", {})
+    structures = {}
+    for name, class_id in (("TP", int(TP_INTERFACE)), ("SAP", int(SAP_INTERFACE))):
+        identity = f"RIGHT_{level}_{name}"
+        hypothesis = landmarks.get(identity) or {}
+        observations = hypothesis.get("supporting_observations", [])
+        distances = []
+        correct = []
+        for observation in observations:
+            sequence = int(observation["frame_sequence"])
+            label = labels_by_frame[sequence]
+            target = label == class_id
+            if np.any(target):
+                distance = ndimage.distance_transform_edt(~target)
+                row = int(
+                    np.clip(round(float(observation["row"])), 0, target.shape[0] - 1)
+                )
+                column = int(
+                    np.clip(
+                        round(float(observation["column"])),
+                        0,
+                        target.shape[1] - 1,
+                    )
+                )
+                value = float(distance[row, column])
+            else:
+                value = None
+            distances.append(value)
+            correct.append(value is not None and value <= maximum_distance_pixels)
+        structures[name] = {
+            "identity": identity,
+            "actor_status": hypothesis.get("status", "NOT_OBSERVED"),
+            "correct_observation_count": int(sum(correct)),
+            "observation_count": len(correct),
+            "majority_correct": bool(correct and sum(correct) > len(correct) / 2.0),
+            "distances_pixels": distances,
+        }
+    accepted = all(
+        structures[name]["actor_status"] == "CONFIRMED" for name in ("TP", "SAP")
+    )
+    return {
+        "accepted": accepted,
+        "pair_correct": bool(
+            accepted
+            and structures["TP"]["majority_correct"]
+            and structures["SAP"]["majority_correct"]
+        ),
+        "maximum_distance_pixels": maximum_distance_pixels,
+        "structures": structures,
+    }
+
+
 def binary_pair_metrics(truth: list[bool], prediction: list[bool]) -> dict[str, Any]:
     tp = sum(left and right for left, right in zip(truth, prediction))
     fp = sum(not left and right for left, right in zip(truth, prediction))
@@ -409,6 +477,13 @@ def main() -> int:
         int(sequence)
         for target in actor["targets"]
         for sequence in target["fresh_confirmation_frame_sequences"]
+    )
+    inspected.update(
+        int(row["frame_sequence"])
+        for target in actor["targets"]
+        for row in target.get("sonoanatomy", {}).get(
+            "fresh_landmark_confirmations", []
+        )
     )
     for sequence in sorted(inspected):
         frame = frames[sequence]
@@ -526,26 +601,95 @@ def main() -> int:
         semantic_pair_success = None
         if "sonoanatomy" in target:
             sonoanatomy = target["sonoanatomy"]
-            semantic_identity = semantic_pair_identity(
-                sonoanatomy,
-                semantic_labels,
-                maximum_distance_pixels=float(
-                    protocol["evaluator"][
-                        "maximum_semantic_interface_distance_pixels"
-                    ]
-                ),
+            independent_map_mode = (
+                sonoanatomy.get("confirmation_mode")
+                == "INDEPENDENT_LANDMARK_FRESH_RETURN"
             )
-            for confirmation in sonoanatomy.get("fresh_confirmations", []):
-                sequence = int(confirmation["frame_sequence"])
-                label = semantic_labels[sequence]
-                semantic_confirmation_rows.append(
-                    {
-                        "frame_sequence": sequence,
-                        "frame_sha256": confirmation["frame_sha256"],
-                        "tp_supported": bool(np.any(label == TP_INTERFACE)),
-                        "sap_supported": bool(np.any(label == SAP_INTERFACE)),
-                    }
+            if independent_map_mode:
+                semantic_identity = incremental_map_identity(
+                    sonoanatomy,
+                    semantic_labels,
+                    level=str(target["stage1_level"]),
+                    maximum_distance_pixels=float(
+                        protocol["evaluator"][
+                            "maximum_semantic_interface_distance_pixels"
+                        ]
+                    ),
                 )
+                for confirmation in sonoanatomy.get(
+                    "fresh_landmark_confirmations", []
+                ):
+                    sequence = int(confirmation["frame_sequence"])
+                    label = semantic_labels[sequence]
+                    identity = str(confirmation["identity"])
+                    class_id = (
+                        TP_INTERFACE if identity.endswith("_TP") else SAP_INTERFACE
+                    )
+                    target_mask = label == class_id
+                    observation_support = []
+                    for observation in confirmation.get(
+                        "semantic_observations", []
+                    ):
+                        if np.any(target_mask):
+                            distance = ndimage.distance_transform_edt(
+                                ~target_mask
+                            )
+                            row = int(
+                                np.clip(
+                                    round(float(observation["row"])),
+                                    0,
+                                    target_mask.shape[0] - 1,
+                                )
+                            )
+                            column = int(
+                                np.clip(
+                                    round(float(observation["column"])),
+                                    0,
+                                    target_mask.shape[1] - 1,
+                                )
+                            )
+                            observation_support.append(
+                                float(distance[row, column])
+                                <= float(
+                                    protocol["evaluator"][
+                                        "maximum_semantic_interface_distance_pixels"
+                                    ]
+                                )
+                            )
+                        else:
+                            observation_support.append(False)
+                    semantic_confirmation_rows.append(
+                        {
+                            "identity": identity,
+                            "frame_sequence": sequence,
+                            "frame_sha256": confirmation["frame_sha256"],
+                            "identity_supported": bool(
+                                any(observation_support)
+                            ),
+                            "observation_support": observation_support,
+                        }
+                    )
+            else:
+                semantic_identity = semantic_pair_identity(
+                    sonoanatomy,
+                    semantic_labels,
+                    maximum_distance_pixels=float(
+                        protocol["evaluator"][
+                            "maximum_semantic_interface_distance_pixels"
+                        ]
+                    ),
+                )
+                for confirmation in sonoanatomy.get("fresh_confirmations", []):
+                    sequence = int(confirmation["frame_sequence"])
+                    label = semantic_labels[sequence]
+                    semantic_confirmation_rows.append(
+                        {
+                            "frame_sequence": sequence,
+                            "frame_sha256": confirmation["frame_sha256"],
+                            "tp_supported": bool(np.any(label == TP_INTERFACE)),
+                            "sap_supported": bool(np.any(label == SAP_INTERFACE)),
+                        }
+                    )
             current_semantic_frames = [
                 row
                 for row in frames
@@ -567,21 +711,53 @@ def main() -> int:
                     for row in current_semantic_frames
                 ],
             )
-            semantic_pair_success = bool(
-                target["decision"] == "ACCEPT"
-                and semantic_identity["pair_correct"]
-                and len(semantic_confirmation_rows)
-                == len(protocol["sonoanatomy_scan"]["confirmation_dither_offsets"])
-                and sum(
-                    row["tp_supported"] and row["sap_supported"]
-                    for row in semantic_confirmation_rows
-                )
-                >= int(
-                    protocol["evaluator"][
-                        "minimum_proxy_positive_semantic_confirmations"
+            if independent_map_mode:
+                minimum_independent = int(
+                    protocol["landmark_map_confirmation"][
+                        "minimum_positive_fresh_returns_per_landmark"
                     ]
                 )
-            )
+                positive_by_identity = {
+                    identity: sum(
+                        bool(row["identity_supported"])
+                        for row in semantic_confirmation_rows
+                        if row["identity"] == identity
+                    )
+                    for identity in (
+                        f"RIGHT_{target['stage1_level']}_TP",
+                        f"RIGHT_{target['stage1_level']}_SAP",
+                    )
+                }
+                semantic_pair_success = bool(
+                    target["decision"] == "ACCEPT"
+                    and semantic_identity["pair_correct"]
+                    and all(
+                        count >= minimum_independent
+                        for count in positive_by_identity.values()
+                    )
+                )
+            else:
+                minimum_independent = None
+                positive_by_identity = None
+                semantic_pair_success = bool(
+                    target["decision"] == "ACCEPT"
+                    and semantic_identity["pair_correct"]
+                    and len(semantic_confirmation_rows)
+                    == len(
+                        protocol["sonoanatomy_scan"][
+                            "confirmation_dither_offsets"
+                        ]
+                    )
+                    and sum(
+                        row["tp_supported"] and row["sap_supported"]
+                        for row in semantic_confirmation_rows
+                    )
+                    >= int(
+                        protocol["evaluator"][
+                            "minimum_proxy_positive_semantic_confirmations"
+                        ]
+                    )
+                )
         integrated_success = bool(
             proxy_pass
             and (semantic_pair_success is None or semantic_pair_success)
@@ -599,8 +775,15 @@ def main() -> int:
                 "semantic_pair_identity": semantic_identity,
                 "semantic_fresh_confirmations": semantic_confirmation_rows,
                 "semantic_positive_fresh_confirmation_count": sum(
-                    row["tp_supported"] and row["sap_supported"]
+                    bool(row.get("tp_supported", False))
+                    and bool(row.get("sap_supported", False))
                     for row in semantic_confirmation_rows
+                ),
+                "semantic_positive_fresh_returns_by_identity": (
+                    positive_by_identity
+                ),
+                "minimum_positive_fresh_returns_per_landmark": (
+                    minimum_independent
                 ),
                 "minimum_proxy_positive_semantic_confirmations": int(
                     protocol["evaluator"].get(
