@@ -59,6 +59,13 @@ if [[ "$TEST_RC" -eq 0 ]]; then
             > "$session_dir/actor.log" 2>&1
         actor_rc=$?
         if [[ "$actor_rc" -eq 0 ]]; then
+            if [[ ! -s "$session_dir/results/actor_result.json" || ! -s "$session_dir/results/actor_result.json.sha256" ]]; then
+                actor_rc=98
+            elif ! (cd "$session_dir/results" && sha256sum -c actor_result.json.sha256); then
+                actor_rc=97
+            fi
+        fi
+        if [[ "$actor_rc" -eq 0 ]]; then
             "$PYTHON" "$SONOGYM_PROJECT_DIR/workflows/two_stage_navigation/evaluate_stage2_tp_active.py" \
                 --protocol "$PROTOCOL" --run-dir "$session_dir" \
                 --geometry-root "$GEOMETRY_ROOT" \

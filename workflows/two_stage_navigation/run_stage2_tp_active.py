@@ -696,13 +696,11 @@ def main() -> int:
                 selected_pose = np.asarray(decision.selected.pose_index, dtype=np.float64)
                 for index, offset in enumerate(search["confirmation_dither_offsets"]):
                     dither = selected_pose + np.asarray(offset, dtype=np.float64)
-                    outbound = move(
+                    move(
                         dither, f"{target_name}:confirmation_dither_{index + 1}",
                         float(motion["confirmation_position_tolerance_mm"]),
                         float(motion["confirmation_orientation_tolerance_deg"]),
                     )
-                    if not outbound:
-                        raise RuntimeError("confirmation dither produced no action")
                     confirmed = acquire(
                         selected_pose, target_name, f"{target_name}:fresh_confirmation_{index + 1}",
                         float(motion["confirmation_position_tolerance_mm"]),
@@ -1502,7 +1500,7 @@ def main() -> int:
                                 ],
                                 dtype=np.float64,
                             )
-                            outbound = move(
+                            move(
                                 anchor_pose + dither_offset,
                                 f"{target_name}:{semantic_class.lower()}_landmark_confirmation_dither_{support_index + 1}",
                                 float(
@@ -1516,10 +1514,6 @@ def main() -> int:
                                     ]
                                 ),
                             )
-                            if not outbound:
-                                raise RuntimeError(
-                                    "landmark confirmation dither produced no action"
-                                )
                             confirmation_trajectory = (
                                 f"{target_name}:landmark_confirmation"
                             )
