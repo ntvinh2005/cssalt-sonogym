@@ -36,6 +36,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r5",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r6",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r7",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r8",
     }
 )
 
@@ -75,6 +76,107 @@ def actor_confirmation_requirement_met(
         and sum(row.probability >= probability_threshold for row in views)
         >= minimum_positive_count
     )
+
+
+def select_tp_refinement_anchor(
+    rows: Sequence[Mapping[str, Any]],
+    public_rows: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    """Choose one bounded TP search center from actor-visible evidence.
+
+    The selected row must already be linked to the historical TP hypothesis.
+    A large, confident semantic interface is preferred over a single detector
+    score spike.  The caller may search around this pose once, but must not
+    recursively promote refinement predictions into new anchors.
+    """
+
+    candidates: list[tuple[tuple[float, ...], Mapping[str, Any]]] = []
+    for row in rows:
+        frame_sequence = int(row.get("frame_sequence", -1))
+        observations = row.get("semantic_observations", ())
+        if (
+            not bool(row.get("predicted"))
+            or not bool(row.get("image_valid"))
+            or not bool(row.get("producer_advanced"))
+            or not bool(row.get("fresh_relative_to_source"))
+            or frame_sequence < 0
+            or frame_sequence >= len(public_rows)
+            or not observations
+        ):
+            continue
+        probability = float(public_rows[frame_sequence].get("target_probability", 0.0))
+        if not math.isfinite(probability):
+            continue
+        pixel_count = max(float(item.get("pixel_count", 0.0)) for item in observations)
+        confidence = max(float(item.get("confidence", 0.0)) for item in observations)
+        if pixel_count <= 0.0 or not math.isfinite(confidence):
+            continue
+        candidates.append(
+            (
+                (pixel_count, probability, confidence, -float(frame_sequence)),
+                row,
+            )
+        )
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def select_tp_reacquisition_confirmations(
+    rows: Sequence[Mapping[str, Any]],
+    public_rows: Sequence[Mapping[str, Any]],
+    *,
+    required_count: int,
+    probability_threshold: float,
+) -> list[Mapping[str, Any]]:
+    """Select stable fresh TP confirmations without evaluator information."""
+
+    if required_count < 1 or not 0.0 <= probability_threshold <= 1.0:
+        raise ValueError("invalid TP reacquisition confirmation requirement")
+    eligible: list[tuple[tuple[float, ...], Mapping[str, Any]]] = []
+    seen_hashes: set[str] = set()
+    for row in rows:
+        frame_sequence = int(row.get("frame_sequence", -1))
+        frame_hash = str(row.get("frame_sha256", ""))
+        observations = row.get("semantic_observations", ())
+        if (
+            not bool(row.get("predicted"))
+            or not bool(row.get("image_valid"))
+            or not bool(row.get("producer_advanced"))
+            or not bool(row.get("fresh_relative_to_source"))
+            or frame_sequence < 0
+            or frame_sequence >= len(public_rows)
+            or not observations
+            or not frame_hash
+            or frame_hash in seen_hashes
+        ):
+            continue
+        probability = float(public_rows[frame_sequence].get("target_probability", 0.0))
+        if not math.isfinite(probability) or probability < probability_threshold:
+            continue
+        pixel_count = max(float(item.get("pixel_count", 0.0)) for item in observations)
+        confidence = max(float(item.get("confidence", 0.0)) for item in observations)
+        if pixel_count <= 0.0 or not math.isfinite(confidence):
+            continue
+        seen_hashes.add(frame_hash)
+        eligible.append(
+            (
+                (pixel_count, probability, confidence, -float(frame_sequence)),
+                row,
+            )
+        )
+    refinement = [
+        item
+        for item in eligible
+        if str(item[1].get("confirmation_kind", "")).startswith("REFINEMENT_")
+    ]
+    pool = refinement if len(refinement) >= required_count else eligible
+    return [
+        row
+        for _, row in sorted(pool, key=lambda item: item[0], reverse=True)[
+            :required_count
+        ]
+    ]
 
 
 @dataclass(frozen=True)

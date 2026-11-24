@@ -70,6 +70,8 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     actor_confirmation_requirement_met,
     group_a_target_handoff_pose,
     score_target_image,
+    select_tp_reacquisition_confirmations,
+    select_tp_refinement_anchor,
     select_target_view,
 )
 from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan import (  # noqa: E402
@@ -1867,7 +1869,12 @@ def main() -> int:
                                     ]
                                 else:
                                     pose_plan = [("PHYSICAL_RETURN", anchor_pose)]
-                            for confirmation_kind, confirmation_pose in pose_plan:
+                            def acquire_landmark_confirmation(
+                                confirmation_kind: str,
+                                confirmation_pose: np.ndarray,
+                                *,
+                                refinement_center: dict[str, Any] | None = None,
+                            ) -> tuple[dict[str, Any], list[SemanticObservation]]:
                                 confirmed, presence = acquire_semantic(
                                     confirmation_pose,
                                     state_name=(
@@ -1939,67 +1946,117 @@ def main() -> int:
                                     ]
                                     and typed_observations
                                 )
-                                if predicted:
-                                    pending_reacquisition_observations.setdefault(
-                                        identity, []
-                                    ).extend(typed_observations)
-                                confirmation_views.append(
-                                    {
-                                        "identity": identity,
-                                        "confirmation_kind": confirmation_kind,
-                                        "source_frame_sequence": source_sequence,
-                                        "source_frame_sha256": support[
-                                            "frame_sha256"
-                                        ],
-                                        "source_executed_pose_index": (
-                                            anchor_pose.tolist()
-                                        ),
-                                        "requested_pose_index": (
-                                            confirmation_pose.tolist()
-                                        ),
-                                        "frame_sequence": (
-                                            confirmed.frame_sequence
-                                        ),
-                                        "frame_sha256": confirmed.frame_sha256,
-                                        "image_valid": confirmed.image_valid,
-                                        "producer_advanced": (
-                                            confirmed.producer_advanced
-                                        ),
-                                        "executed_pose_index": list(
-                                            confirmed.pose_index
-                                        ),
-                                        "return_position_error_mm": float(
-                                            np.linalg.norm(
-                                                np.asarray(
-                                                    confirmed.pose_index[:2]
-                                                )
-                                                - confirmation_pose[:2]
+                                result = {
+                                    "identity": identity,
+                                    "confirmation_kind": confirmation_kind,
+                                    "source_frame_sequence": source_sequence,
+                                    "source_frame_sha256": support[
+                                        "frame_sha256"
+                                    ],
+                                    "source_executed_pose_index": (
+                                        anchor_pose.tolist()
+                                    ),
+                                    "requested_pose_index": (
+                                        confirmation_pose.tolist()
+                                    ),
+                                    "frame_sequence": confirmed.frame_sequence,
+                                    "frame_sha256": confirmed.frame_sha256,
+                                    "image_valid": confirmed.image_valid,
+                                    "producer_advanced": (
+                                        confirmed.producer_advanced
+                                    ),
+                                    "executed_pose_index": list(
+                                        confirmed.pose_index
+                                    ),
+                                    "return_position_error_mm": float(
+                                        np.linalg.norm(
+                                            np.asarray(
+                                                confirmed.pose_index[:2]
                                             )
-                                            * label_resolution
-                                        ),
-                                        "return_orientation_error_deg": (
-                                            math.degrees(
-                                                abs(
-                                                    float(
-                                                        wrap_to_pi(
-                                                            confirmed.pose_index[2]
-                                                            - confirmation_pose[2]
-                                                        )
+                                            - confirmation_pose[:2]
+                                        )
+                                        * label_resolution
+                                    ),
+                                    "return_orientation_error_deg": (
+                                        math.degrees(
+                                            abs(
+                                                float(
+                                                    wrap_to_pi(
+                                                        confirmed.pose_index[2]
+                                                        - confirmation_pose[2]
                                                     )
                                                 )
                                             )
-                                        ),
-                                        "predicted": predicted,
-                                        "semantic_observations": [
-                                            asdict(row)
-                                            for row in typed_observations
-                                        ],
-                                        "fresh_relative_to_source": (
-                                            confirmed.frame_sha256
-                                            != support["frame_sha256"]
-                                        ),
-                                    }
+                                        )
+                                    ),
+                                    "predicted": predicted,
+                                    "semantic_observations": [
+                                        asdict(row) for row in typed_observations
+                                    ],
+                                    "fresh_relative_to_source": (
+                                        confirmed.frame_sha256
+                                        != support["frame_sha256"]
+                                    ),
+                                }
+                                if refinement_center is not None:
+                                    result.update(
+                                        {
+                                            "refinement_center_frame_sequence": int(
+                                                refinement_center["frame_sequence"]
+                                            ),
+                                            "refinement_center_executed_pose_index": list(
+                                                refinement_center[
+                                                    "executed_pose_index"
+                                                ]
+                                            ),
+                                            "refinement_recursive": False,
+                                        }
+                                    )
+                                return result, typed_observations
+
+                            for confirmation_kind, confirmation_pose in pose_plan:
+                                confirmation, typed_observations = (
+                                    acquire_landmark_confirmation(
+                                        confirmation_kind,
+                                        confirmation_pose,
+                                    )
                                 )
+                                if confirmation["predicted"]:
+                                    pending_reacquisition_observations.setdefault(
+                                        identity, []
+                                    ).extend(typed_observations)
+                                confirmation_views.append(confirmation)
+                            if semantic_class == "TP":
+                                refinement_offsets = confirmation_spec.get(
+                                    "tp_refinement_offsets_index", []
+                                )
+                                refinement_center = select_tp_refinement_anchor(
+                                    confirmation_views,
+                                    public_rows,
+                                )
+                                if refinement_offsets and refinement_center is not None:
+                                    refinement_pose = np.asarray(
+                                        refinement_center["executed_pose_index"],
+                                        dtype=np.float64,
+                                    )
+                                    for index, offset in enumerate(
+                                        refinement_offsets
+                                    ):
+                                        confirmation, typed_observations = (
+                                            acquire_landmark_confirmation(
+                                                f"REFINEMENT_{index + 1}",
+                                                refinement_pose
+                                                + np.asarray(
+                                                    offset, dtype=np.float64
+                                                ),
+                                                refinement_center=refinement_center,
+                                            )
+                                        )
+                                        if confirmation["predicted"]:
+                                            pending_reacquisition_observations.setdefault(
+                                                identity, []
+                                            ).extend(typed_observations)
+                                        confirmation_views.append(confirmation)
                             landmark_confirmations.extend(confirmation_views)
                         pending = pending_reacquisition_observations.get(
                             identity, []
@@ -2041,34 +2098,18 @@ def main() -> int:
                             for count in positive_by_identity.values()
                         )
                     )
-                    final_tp_candidates = sorted(
-                        (
-                            row
-                            for row in landmark_confirmations
-                            if row["identity"] == f"RIGHT_{level}_TP"
-                            and bool(row["predicted"])
-                            and bool(row["image_valid"])
-                            and bool(row["producer_advanced"])
-                            and bool(row["fresh_relative_to_source"])
-                            and float(
-                                public_rows[int(row["frame_sequence"])][
-                                    "target_probability"
-                                ]
-                            )
-                            >= float(model["threshold"])
-                        ),
-                        key=lambda row: (
-                            -float(
-                                public_rows[int(row["frame_sequence"])][
-                                    "target_probability"
-                                ]
-                            ),
-                            int(row["frame_sequence"]),
-                        ),
+                    final_tp_reacquisition = (
+                        select_tp_reacquisition_confirmations(
+                            [
+                                row
+                                for row in landmark_confirmations
+                                if row["identity"] == f"RIGHT_{level}_TP"
+                            ],
+                            public_rows,
+                            required_count=required_fresh_count,
+                            probability_threshold=float(model["threshold"]),
+                        )
                     )
-                    final_tp_reacquisition = final_tp_candidates[
-                        :required_fresh_count
-                    ]
                     if len(final_tp_reacquisition) == required_fresh_count:
                         target_result["fresh_confirmation_frame_sequences"] = [
                             int(row["frame_sequence"])

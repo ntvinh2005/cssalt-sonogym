@@ -16,6 +16,8 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     actor_confirmation_requirement_met,
     group_a_target_handoff_pose,
     proxy_confirmation_requirement_met,
+    select_tp_reacquisition_confirmations,
+    select_tp_refinement_anchor,
     select_target_view,
 )
 
@@ -181,6 +183,10 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
             "sonogym-s0010-mbb-single-anatomy-poc-v6r3",
             POC_PROTOCOL_IDS,
         )
+        self.assertIn(
+            "sonogym-s0010-mbb-single-anatomy-poc-v6r8",
+            POC_PROTOCOL_IDS,
+        )
 
     def test_two_of_three_positive_confirmations_pass(self) -> None:
         self.assertTrue(
@@ -219,6 +225,80 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
                 required_count=3,
                 minimum_positive_count=2,
             )
+        )
+
+
+class TpReacquisitionSelectionTests(unittest.TestCase):
+    @staticmethod
+    def row(
+        sequence: int,
+        *,
+        pixels: int,
+        kind: str = "LOCAL_SEARCH_1",
+        predicted: bool = True,
+    ) -> dict[str, object]:
+        return {
+            "confirmation_kind": kind,
+            "frame_sequence": sequence,
+            "frame_sha256": f"{sequence:064x}",
+            "image_valid": True,
+            "producer_advanced": True,
+            "fresh_relative_to_source": True,
+            "predicted": predicted,
+            "executed_pose_index": [float(sequence), 0.0, 2.8],
+            "semantic_observations": [
+                {"pixel_count": pixels, "confidence": 0.9}
+            ],
+        }
+
+    def test_refinement_anchor_prefers_supported_interface_over_score_spike(self) -> None:
+        public = [
+            {"target_probability": 0.95},
+            {"target_probability": 0.75},
+        ]
+        anchor = select_tp_refinement_anchor(
+            [self.row(0, pixels=12), self.row(1, pixels=80)],
+            public,
+        )
+        self.assertIsNotNone(anchor)
+        self.assertEqual(anchor["frame_sequence"], 1)
+
+    def test_final_selection_uses_complete_refinement_bundle(self) -> None:
+        public = [{"target_probability": 0.8} for _ in range(5)]
+        rows = [
+            self.row(0, pixels=200),
+            self.row(1, pixels=80, kind="REFINEMENT_1"),
+            self.row(2, pixels=90, kind="REFINEMENT_2"),
+            self.row(3, pixels=100, kind="REFINEMENT_3"),
+            self.row(4, pixels=120, kind="REFINEMENT_4", predicted=False),
+        ]
+        selected = select_tp_reacquisition_confirmations(
+            rows,
+            public,
+            required_count=3,
+            probability_threshold=0.5,
+        )
+        self.assertEqual(
+            [row["frame_sequence"] for row in selected],
+            [3, 2, 1],
+        )
+
+    def test_final_selection_falls_back_when_refinement_is_incomplete(self) -> None:
+        public = [{"target_probability": 0.8} for _ in range(3)]
+        rows = [
+            self.row(0, pixels=70),
+            self.row(1, pixels=90, kind="REFINEMENT_1"),
+            self.row(2, pixels=80),
+        ]
+        selected = select_tp_reacquisition_confirmations(
+            rows,
+            public,
+            required_count=3,
+            probability_threshold=0.5,
+        )
+        self.assertEqual(
+            [row["frame_sequence"] for row in selected],
+            [1, 2, 0],
         )
 
 
