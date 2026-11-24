@@ -54,6 +54,7 @@ class IncrementalLandmarkMapConfig:
     minimum_sap_tp_distance_mm: float = 1.0
     maximum_sap_tp_distance_mm: float = 30.0
     maximum_tp_anchor_distance_mm: float = 10.0
+    minimum_supporting_view_advantage: int = 2
 
     def __post_init__(self) -> None:
         positive = (
@@ -65,6 +66,7 @@ class IncrementalLandmarkMapConfig:
             self.minimum_sap_tp_distance_mm,
             self.maximum_sap_tp_distance_mm,
             self.maximum_tp_anchor_distance_mm,
+            self.minimum_supporting_view_advantage,
         )
         if not all(math.isfinite(float(value)) and float(value) > 0.0 for value in positive):
             raise ValueError("landmark-map positive settings must be finite")
@@ -169,6 +171,8 @@ class IncrementalAnatomicalLandmarkMap:
         identity: LandmarkIdentity,
         coordinate_mm: Sequence[float],
     ) -> None:
+        if not identity.endswith("_TP"):
+            raise ValueError("only independently confirmed TP may anchor the map")
         coordinate = np.asarray(coordinate_mm, dtype=np.float64)
         if coordinate.shape != (3,) or not np.all(np.isfinite(coordinate)):
             raise ValueError("actor anchor must contain three finite coordinates")
@@ -266,6 +270,27 @@ class IncrementalAnatomicalLandmarkMap:
                     row[3],
                 ),
             )
+        elif len(ranked) > 1:
+            top_score = ranked[0][0]
+            close = [
+                row
+                for row in ranked
+                if top_score - row[0] < self.config.minimum_hypothesis_score_margin
+            ]
+            by_support = sorted(
+                close,
+                key=lambda row: (-len(row[4].supporting_frames), -row[0], row[3]),
+            )
+            if (
+                len(by_support) > 1
+                and len(by_support[0][4].supporting_frames)
+                >= len(by_support[1][4].supporting_frames)
+                + self.config.minimum_supporting_view_advantage
+            ):
+                selected_row = by_support[0]
+                ranked = [selected_row] + [
+                    row for row in ranked if row is not selected_row
+                ]
         score, rms, maximum, _, selected = ranked[0]
         support = len(selected.supporting_frames)
         eligible = bool(
@@ -296,6 +321,9 @@ class IncrementalAnatomicalLandmarkMap:
         close_competitor = bool(
             competing
             and score - competing[0][0] < self.config.minimum_hypothesis_score_margin
+            and support
+            < len(competing[0][4].supporting_frames)
+            + self.config.minimum_supporting_view_advantage
         )
         if (
             anchor_distance is not None

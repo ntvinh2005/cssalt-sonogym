@@ -28,6 +28,11 @@ def observation(kind: str, frame: int, coordinate: tuple[float, float, float]) -
 
 
 class IncrementalLandmarkMapTests(unittest.TestCase):
+    def test_sap_prediction_cannot_anchor_itself(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        with self.assertRaisesRegex(ValueError, "only independently confirmed TP"):
+            mapping.set_actor_anchor("RIGHT_L4_SAP", (0.0, 0.0, 20.0))
+
     def test_tp_anchor_resolves_competing_supported_clusters(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(
             IncrementalLandmarkMapConfig(minimum_hypothesis_score_margin=0.05)
@@ -133,6 +138,27 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
         )
 
         self.assertEqual(mapping.landmark("RIGHT_L4_TP").status, "AMBIGUOUS")
+
+    def test_two_additional_motion_views_resolve_close_competitor(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(
+            IncrementalLandmarkMapConfig(minimum_hypothesis_score_margin=0.05)
+        )
+        mapping.add_observations(
+            "L4",
+            (
+                observation("SAP", 0, (0.0, 0.0, 20.0)),
+                observation("SAP", 1, (0.5, 0.0, 20.0)),
+                observation("SAP", 2, (0.2, 0.0, 20.0)),
+                observation("SAP", 3, (0.3, 0.0, 20.0)),
+                observation("SAP", 4, (12.0, 0.0, 20.0)),
+                observation("SAP", 5, (12.5, 0.0, 20.0)),
+            ),
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L4_SAP")
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertEqual(len(hypothesis.supporting_frame_sequences), 4)
+        self.assertLess(hypothesis.position_mm[0], 2.0)
 
     def test_inconsistent_relative_geometry_blocks_level_confirmation(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(

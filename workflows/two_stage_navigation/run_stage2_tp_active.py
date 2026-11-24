@@ -1481,7 +1481,7 @@ def main() -> int:
                         )
                         support_rows = list(
                             hypothesis["supporting_observations"]
-                        )[:maximum_poses]
+                        )[: (1 if semantic_class == "SAP" else maximum_poses)]
                         for support_index, support in enumerate(support_rows):
                             source_sequence = int(support["frame_sequence"])
                             source_frame = semantic_frames_by_sequence.get(
@@ -1492,25 +1492,27 @@ def main() -> int:
                             anchor_pose = np.asarray(
                                 source_frame["pose_index"], dtype=np.float64
                             )
-                            dither_offset = np.asarray(
-                                scan_spec["confirmation_dither_offsets"][
-                                    support_index
-                                    % len(
-                                        scan_spec[
-                                            "confirmation_dither_offsets"
-                                        ]
-                                    )
-                                ],
-                                dtype=np.float64,
-                            )
                             confirmation_trajectory = (
                                 f"{target_name}:landmark_confirmation"
                             )
                             confirmation_views = []
-                            for confirmation_kind, confirmation_pose in (
-                                ("DISTINCT_DITHER", anchor_pose + dither_offset),
-                                ("PHYSICAL_RETURN", anchor_pose),
-                            ):
+                            if semantic_class == "SAP":
+                                pose_plan = [
+                                    (
+                                        f"LOCAL_SEARCH_{index + 1}",
+                                        anchor_pose
+                                        + np.asarray(offset, dtype=np.float64),
+                                    )
+                                    for index, offset in enumerate(
+                                        confirmation_spec.get(
+                                            "sap_local_search_offsets_index",
+                                            [[0.0, 0.0, 0.0]],
+                                        )
+                                    )
+                                ]
+                            else:
+                                pose_plan = [("PHYSICAL_RETURN", anchor_pose)]
+                            for confirmation_kind, confirmation_pose in pose_plan:
                                 confirmed, presence = acquire_semantic(
                                     confirmation_pose,
                                     state_name=(
@@ -1554,6 +1556,12 @@ def main() -> int:
                                         "source_frame_sha256": support[
                                             "frame_sha256"
                                         ],
+                                        "source_executed_pose_index": (
+                                            anchor_pose.tolist()
+                                        ),
+                                        "requested_pose_index": (
+                                            confirmation_pose.tolist()
+                                        ),
                                         "frame_sequence": (
                                             confirmed.frame_sequence
                                         ),
