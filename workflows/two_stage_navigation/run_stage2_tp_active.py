@@ -875,6 +875,36 @@ def main() -> int:
                         ):
                             continue
                         public = public_rows[dedicated_view.frame_sequence]
+                        presence = predicted_presence(
+                            probability, semantic_model["thresholds"]
+                        )
+                        public.update(
+                            {
+                                "scan_state": "DEDICATED_TP_EVIDENCE",
+                                "trajectory_id": (
+                                    f"{target_name}:dedicated_tp_evidence"
+                                ),
+                                "tp_predicted": bool(
+                                    presence["tp_predicted"]
+                                ),
+                                "sap_predicted": bool(
+                                    presence["sap_predicted"]
+                                ),
+                                "other_bone_predicted": bool(
+                                    presence["other_bone_predicted"]
+                                ),
+                                "tp_predicted_pixels": int(
+                                    presence["tp_predicted_pixels"]
+                                ),
+                                "sap_predicted_pixels": int(
+                                    presence["sap_predicted_pixels"]
+                                ),
+                                "other_bone_predicted_pixels": int(
+                                    presence["other_bone_predicted_pixels"]
+                                ),
+                            }
+                        )
+                        assert_no_privileged_fields(public)
                         candidates = [
                             row
                             for row in semantic_observations(
