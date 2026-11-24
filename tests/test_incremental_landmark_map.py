@@ -28,6 +28,25 @@ def observation(kind: str, frame: int, coordinate: tuple[float, float, float]) -
 
 
 class IncrementalLandmarkMapTests(unittest.TestCase):
+    def test_tp_anchor_resolves_competing_supported_clusters(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(
+            IncrementalLandmarkMapConfig(minimum_hypothesis_score_margin=0.05)
+        )
+        mapping.set_actor_anchor("RIGHT_L4_TP", (0.0, 0.0, 20.0))
+        mapping.add_observations(
+            "L4",
+            (
+                observation("TP", 0, (0.0, 0.0, 20.0)),
+                observation("TP", 1, (0.5, 0.0, 20.0)),
+                observation("TP", 2, (12.0, 0.0, 20.0)),
+                observation("TP", 3, (12.5, 0.0, 20.0)),
+            ),
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L4_TP")
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertLess(hypothesis.position_mm[0], 2.0)
+
     def test_trajectory_selection_does_not_require_same_frame_pair(self) -> None:
         decision = select_landmark_trajectory(
             "L4",

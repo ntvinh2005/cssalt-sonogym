@@ -243,6 +243,10 @@ def main() -> int:
     if not all(writer.isOpened() for writer in writers.values()):
         raise RuntimeError("cannot create demo video")
     mapping = IncrementalAnatomicalLandmarkMap(map_config)
+    for identity, coordinate in (
+        actor.get("incremental_landmark_map") or {}
+    ).get("actor_anchors_mm", {}).items():
+        mapping.set_actor_anchor(identity, coordinate)
     frame_count = 0
     previous_frame = None
     try:

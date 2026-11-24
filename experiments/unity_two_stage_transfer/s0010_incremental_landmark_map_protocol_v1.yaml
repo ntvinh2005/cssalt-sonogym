@@ -23,6 +23,7 @@ landmark_map:
   minimum_hypothesis_score_margin: 0.01
   minimum_sap_tp_distance_mm: 1.0
   maximum_sap_tp_distance_mm: 30.0
+  maximum_tp_anchor_distance_mm: 10.0
 acceptance:
   required_landmarks:
     - RIGHT_L4_TP

@@ -103,6 +103,9 @@ from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry im
     rotation_columns_from_quaternion_wxyz,
     sample_label_image,
 )
+from spinal_surgery.evaluation.two_stage_navigation.ultrasound_spatial_map import (  # noqa: E402
+    calibrated_image_coordinates_mm,
+)
 
 from stage2_sim import (  # noqa: E402
     current_realized_pose,
@@ -806,6 +809,52 @@ def main() -> int:
             ):
                 level = target_to_level[target_name]
                 semantic_model = sonoanatomy_models[level]
+                level_actor_anchors = {}
+                if shared_landmark_map is not None:
+                    selected_public = public_rows[
+                        int(decision.selected.frame_sequence)
+                    ]
+                    selected_rotation = np.asarray(
+                        selected_public[
+                            "actor_base_to_ee_rotation_columns"
+                        ],
+                        dtype=np.float64,
+                    )
+                    actor_coordinates = calibrated_image_coordinates_mm(
+                        end_effector_position_m=selected_public[
+                            "actor_base_to_ee_position_m"
+                        ],
+                        rotation_columns=selected_rotation,
+                        width=images[decision.selected.frame_sequence].shape[1],
+                        depth=images[decision.selected.frame_sequence].shape[0],
+                        pixel_resolution_mm=float(
+                            protocol["geometry"][
+                                "ultrasound_pixel_resolution_mm"
+                            ]
+                        ),
+                        image_origin_height_mm=133.0,
+                        home_up_axis=selected_rotation[:, 2],
+                    )
+                    anchor_row = int(
+                        np.clip(
+                            round(float(decision.selected.proposal_row)),
+                            0,
+                            actor_coordinates.shape[0] - 1,
+                        )
+                    )
+                    anchor_column = int(
+                        np.clip(
+                            round(float(decision.selected.proposal_column)),
+                            0,
+                            actor_coordinates.shape[1] - 1,
+                        )
+                    )
+                    tp_identity = f"RIGHT_{level}_TP"
+                    tp_anchor = actor_coordinates[anchor_row, anchor_column]
+                    level_actor_anchors[tp_identity] = tp_anchor
+                    shared_landmark_map.set_actor_anchor(
+                        tp_identity, tp_anchor
+                    )
                 scan_spec = protocol["sonoanatomy_scan"]
                 scan_config = ScanConfig(
                     longitudinal_angle_rad=float(scan_spec["longitudinal_angle_rad"]),
@@ -1224,6 +1273,7 @@ def main() -> int:
                         level,
                         observations_by_trajectory,
                         landmark_map_config,
+                        anchors=level_actor_anchors,
                     )
                     selected_semantic_trajectory = (
                         landmark_trajectory_decision.trajectory_id

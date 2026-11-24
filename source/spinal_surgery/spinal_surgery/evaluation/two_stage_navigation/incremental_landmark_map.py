@@ -53,6 +53,7 @@ class IncrementalLandmarkMapConfig:
     minimum_hypothesis_score_margin: float = 0.01
     minimum_sap_tp_distance_mm: float = 1.0
     maximum_sap_tp_distance_mm: float = 30.0
+    maximum_tp_anchor_distance_mm: float = 10.0
 
     def __post_init__(self) -> None:
         positive = (
@@ -63,6 +64,7 @@ class IncrementalLandmarkMapConfig:
             self.maximum_rms_uncertainty_mm,
             self.minimum_sap_tp_distance_mm,
             self.maximum_sap_tp_distance_mm,
+            self.maximum_tp_anchor_distance_mm,
         )
         if not all(math.isfinite(float(value)) and float(value) > 0.0 for value in positive):
             raise ValueError("landmark-map positive settings must be finite")
@@ -160,6 +162,17 @@ class IncrementalAnatomicalLandmarkMap:
             identity: [] for identity in LANDMARK_IDENTITIES
         }
         self._rejections: dict[LandmarkIdentity, str] = {}
+        self._anchors: dict[LandmarkIdentity, tuple[float, float, float]] = {}
+
+    def set_actor_anchor(
+        self,
+        identity: LandmarkIdentity,
+        coordinate_mm: Sequence[float],
+    ) -> None:
+        coordinate = np.asarray(coordinate_mm, dtype=np.float64)
+        if coordinate.shape != (3,) or not np.all(np.isfinite(coordinate)):
+            raise ValueError("actor anchor must contain three finite coordinates")
+        self._anchors[identity] = tuple(float(value) for value in coordinate)
 
     def add_observations(
         self,
@@ -237,6 +250,22 @@ class IncrementalAnatomicalLandmarkMap:
             ),
             key=lambda row: (-row[0], -len(row[4].supporting_frames), row[1], row[3]),
         )
+        anchor = self._anchors.get(identity)
+        if anchor is not None:
+            anchor_coordinate = np.asarray(anchor, dtype=np.float64)
+            ranked = sorted(
+                ranked,
+                key=lambda row: (
+                    float(
+                        np.linalg.norm(
+                            np.asarray(row[4].centroid_mm) - anchor_coordinate
+                        )
+                    ),
+                    -row[0],
+                    -len(row[4].supporting_frames),
+                    row[3],
+                ),
+            )
         score, rms, maximum, _, selected = ranked[0]
         support = len(selected.supporting_frames)
         eligible = bool(
@@ -244,6 +273,21 @@ class IncrementalAnatomicalLandmarkMap:
             and selected.confidence >= self.config.minimum_semantic_confidence
             and rms <= self.config.maximum_rms_uncertainty_mm
         )
+        anchor_distance = (
+            None
+            if anchor is None
+            else float(
+                np.linalg.norm(
+                    np.asarray(selected.centroid_mm) - np.asarray(anchor)
+                )
+            )
+        )
+        if anchor_distance is not None:
+            eligible = bool(
+                eligible
+                and anchor_distance
+                <= self.config.maximum_tp_anchor_distance_mm
+            )
         competing = [
             row
             for row in ranked[1:]
@@ -253,15 +297,25 @@ class IncrementalAnatomicalLandmarkMap:
             competing
             and score - competing[0][0] < self.config.minimum_hypothesis_score_margin
         )
-        if selected.confidence < self.config.minimum_semantic_confidence:
+        if (
+            anchor_distance is not None
+            and anchor_distance > self.config.maximum_tp_anchor_distance_mm
+        ):
+            status: LandmarkStatus = "REJECTED"
+            reason = "NO_SPATIAL_CLUSTER_NEAR_ACTOR_TP_ANCHOR"
+        elif selected.confidence < self.config.minimum_semantic_confidence:
             status: LandmarkStatus = "REJECTED"
             reason = "SEMANTIC_CONFIDENCE_BELOW_GATE"
-        elif close_competitor:
+        elif close_competitor and anchor is None:
             status = "AMBIGUOUS"
             reason = "COMPETING_SPATIAL_HYPOTHESES"
         elif eligible:
             status = "CONFIRMED"
-            reason = "INDEPENDENT_DISTINCT_POSE_SUPPORT"
+            reason = (
+                "INDEPENDENT_SUPPORT_CONSISTENT_WITH_ACTOR_TP_ANCHOR"
+                if anchor is not None
+                else "INDEPENDENT_DISTINCT_POSE_SUPPORT"
+            )
         elif support >= self.config.minimum_supporting_views:
             status = "AMBIGUOUS"
             reason = "SPATIAL_UNCERTAINTY_ABOVE_GATE"
@@ -334,6 +388,7 @@ class IncrementalAnatomicalLandmarkMap:
             "relations": {
                 level: asdict(self.relation(level)) for level in ("L4", "L5")
             },
+            "actor_anchors_mm": dict(self._anchors),
             "complete": self.complete(),
         }
 
@@ -342,12 +397,16 @@ def select_landmark_trajectory(
     level: Literal["L4", "L5"],
     observations_by_trajectory: Mapping[str, Sequence[SemanticObservation]],
     config: IncrementalLandmarkMapConfig,
+    *,
+    anchors: Mapping[LandmarkIdentity, Sequence[float]] | None = None,
 ) -> LandmarkTrajectoryDecision:
     """Select the motion trajectory with the strongest independent landmarks."""
 
     ranked = []
     for trajectory_id, observations in observations_by_trajectory.items():
         mapping = IncrementalAnatomicalLandmarkMap(config)
+        for identity, coordinate in (anchors or {}).items():
+            mapping.set_actor_anchor(identity, coordinate)
         mapping.add_observations(level, observations)
         tp = mapping.landmark(_identity(level, "TP"))
         sap = mapping.landmark(_identity(level, "SAP"))
