@@ -59,6 +59,7 @@ class IncrementalLandmarkMapConfig:
     minimum_supporting_view_advantage: int = 2
     minimum_preferred_sap_supporting_views: int = 3
     l5_tp_pairwise_reacquisition: bool = False
+    canonical_evidence: bool = False
 
     def __post_init__(self) -> None:
         positive = (
@@ -316,7 +317,12 @@ class IncrementalAnatomicalLandmarkMap:
 
         historical = self._observations[identity]
         source_keys: set[ObservationKey] = set()
-        for frame_hash in sorted(reference_hashes):
+        if self.config.canonical_evidence and reference_matches_selected:
+            source_keys = {
+                (row.frame_sequence, row.frame_sha256, row.row, row.column)
+                for row in current.supporting_observations
+            }
+        for frame_hash in sorted(reference_hashes - {key[1] for key in source_keys}):
             candidates = [
                 row for row in historical if row.frame_sha256 == frame_hash
             ]
@@ -346,6 +352,8 @@ class IncrementalAnatomicalLandmarkMap:
             ):
                 accepted_by_frame[frame_key] = observation
 
+        if self.config.canonical_evidence:
+            self.add_observations(level, observations)
         if not accepted_by_frame:
             return 0
         self.add_observations(level, tuple(accepted_by_frame.values()))
@@ -373,10 +381,10 @@ class IncrementalAnatomicalLandmarkMap:
             matching.fresh_observation_keys.update(fresh_keys)
         return len(fresh_keys)
 
-    def selected_reacquisition_frame_sequences(
+    def selected_reacquisition_observation_keys(
         self, identity: LandmarkIdentity
-    ) -> tuple[int, ...]:
-        """Return fresh frames that support the currently selected hypothesis.
+    ) -> set[ObservationKey]:
+        """Return fresh observations that support the currently selected hypothesis.
 
         A fresh positive is confirmation evidence only when the final selected
         cluster retains the frozen source hypothesis and the fresh observation
@@ -387,7 +395,7 @@ class IncrementalAnatomicalLandmarkMap:
 
         hypothesis = self._hypothesis(identity)
         if hypothesis.position_mm is None:
-            return ()
+            return set()
         selected_keys = {
             (
                 row.frame_sequence,
@@ -397,17 +405,24 @@ class IncrementalAnatomicalLandmarkMap:
             )
             for row in hypothesis.supporting_observations
         }
-        sequences: set[int] = set()
+        keys: set[ObservationKey] = set()
         reference_keys = selected_keys.union(hypothesis.reacquisition_reference_keys)
         for association in self._reacquisition_associations[identity]:
             if not association.source_observation_keys.issubset(reference_keys):
                 continue
-            sequences.update(
-                key[0]
+            keys.update(
+                key
                 for key in association.fresh_observation_keys
                 if key in selected_keys
             )
-        return tuple(sorted(sequences))
+        return keys
+
+    def selected_reacquisition_frame_sequences(
+        self, identity: LandmarkIdentity
+    ) -> tuple[int, ...]:
+        return tuple(sorted({
+            key[0] for key in self.selected_reacquisition_observation_keys(identity)
+        }))
 
     def _clusters(
         self,
@@ -517,7 +532,11 @@ class IncrementalAnatomicalLandmarkMap:
             clusters = [
                 cluster
                 for cluster in clusters
-                if not associated_indices.intersection(cluster.observation_indices)
+                if not (
+                    associated_indices.issuperset(cluster.observation_indices)
+                    if self.config.canonical_evidence
+                    else associated_indices.intersection(cluster.observation_indices)
+                )
             ]
             coordinates = np.asarray(
                 [observations[index].coordinate_mm for index in accepted]
@@ -618,7 +637,7 @@ class IncrementalAnatomicalLandmarkMap:
                     row[3],
                 ),
             )
-        elif len(ranked) > 1:
+        elif len(ranked) > 1 and not self.config.canonical_evidence:
             top_score = ranked[0][0]
             close = [
                 row
@@ -641,7 +660,7 @@ class IncrementalAnatomicalLandmarkMap:
                 ]
         associations = self._reacquisition_associations[identity]
         selected_linked_confirmed_reference = False
-        if associations:
+        if associations and not self.config.canonical_evidence:
             observation_keys = [_observation_key(row) for row in observations]
 
             def linked_to_frozen_reference(
@@ -698,17 +717,21 @@ class IncrementalAnatomicalLandmarkMap:
             for row in ranked[1:]
             if len(row[4].supporting_frames) >= self.config.minimum_supporting_views
             and (
-                not preferred_sap_available
+                self.config.canonical_evidence
+                or not preferred_sap_available
                 or len(row[4].supporting_frames)
                 >= self.config.minimum_preferred_sap_supporting_views
             )
         ]
-        close_competitor = bool(
-            competing
-            and score - competing[0][0] < self.config.minimum_hypothesis_score_margin
-            and support
-            < len(competing[0][4].supporting_frames)
-            + self.config.minimum_supporting_view_advantage
+        checked_competitors = competing if self.config.canonical_evidence else competing[:1]
+        close_competitor = any(
+            score - row[0] < self.config.minimum_hypothesis_score_margin
+            and (
+                self.config.canonical_evidence
+                or support < len(row[4].supporting_frames)
+                + self.config.minimum_supporting_view_advantage
+            )
+            for row in checked_competitors
         )
         if (
             anchor_distance is not None

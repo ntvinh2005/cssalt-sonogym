@@ -48,6 +48,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r17",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r18",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r19",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r20",
     }
 )
 
@@ -218,6 +219,78 @@ def tp_refinement_is_required(
         len(predicted) < minimum_predicted_count
         or maximum_pixels >= large_interface_pixel_count
     )
+
+
+def observation_evidence_key(row: Mapping[str, Any]) -> tuple[int, str, float, float]:
+    return (
+        int(row["frame_sequence"]), str(row["frame_sha256"]),
+        float(row["row"]), float(row["column"]),
+    )
+
+
+def valid_evidence_frame(frame: Mapping[str, Any], sequence: int, frame_hash: str) -> bool:
+    return (
+        frame["frame_sequence"] == sequence
+        and frame["frame_sha256"] == frame_hash
+        and all(frame.get(field, False) for field in (
+            "transition_valid", "image_valid", "contact_ok", "producer_advanced"
+        ))
+    )
+
+
+def select_landmark_return_sources(
+    hypothesis: Mapping[str, Any],
+    public_rows: Sequence[Mapping[str, Any]],
+    *,
+    maximum_poses: int,
+) -> list[Mapping[str, Any]]:
+    """Return the valid independent observations closest to the reconstructed landmark."""
+    if hypothesis["position_mm"] is None:
+        return []
+    center = np.asarray(hypothesis["position_mm"])
+    return sorted(
+        (
+            row for row in hypothesis["supporting_observations"]
+            if valid_evidence_frame(
+                public_rows[row["frame_sequence"]], row["frame_sequence"], row["frame_sha256"]
+            )
+        ),
+        key=lambda row: (
+            float(np.linalg.norm(np.asarray(row["coordinate_mm"]) - center)),
+            -row["confidence"],
+            row["frame_sequence"],
+        ),
+    )[:maximum_poses]
+
+
+def canonical_landmark_confirmations(
+    attempts: Sequence[Mapping[str, Any]],
+    public_rows: Sequence[Mapping[str, Any]],
+    *,
+    identity: str,
+    evidence_keys: set[tuple[int, str, float, float]],
+) -> list[dict[str, Any]]:
+    """Retain only the exact observations credited by the final hypothesis."""
+    result = {}
+    for attempt in attempts:
+        if attempt["identity"] != identity or not all(attempt.get(field, False) for field in (
+            "predicted", "image_valid", "producer_advanced", "fresh_relative_to_source"
+        )):
+            continue
+        sequence = int(attempt["frame_sequence"])
+        frame_hash = str(attempt["frame_sha256"])
+        if not valid_evidence_frame(public_rows[sequence], sequence, frame_hash):
+            continue
+        observations = [
+            row for row in attempt["semantic_observations"]
+            if row["frame_sequence"] == sequence
+            and row["frame_sha256"] == frame_hash
+            and row["semantic_class"] == identity.rsplit("_", 1)[1]
+            and observation_evidence_key(row) in evidence_keys
+        ]
+        if observations:
+            result.setdefault(sequence, {**attempt, "semantic_observations": observations})
+    return list(result.values())
 
 
 def select_tp_reacquisition_confirmations(

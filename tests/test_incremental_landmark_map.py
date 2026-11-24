@@ -29,6 +29,33 @@ def observation(kind: str, frame: int, coordinate: tuple[float, float, float]) -
 
 
 class IncrementalLandmarkMapTests(unittest.TestCase):
+    def test_confirmed_reference_can_become_ambiguous(self) -> None:
+        for canonical in (False, True):
+            with self.subTest(canonical=canonical):
+                mapping = IncrementalAnatomicalLandmarkMap(
+                    IncrementalLandmarkMapConfig(canonical_evidence=canonical)
+                )
+                initial = (
+                    observation("TP", 0, (0.0, 0.0, 0.0)),
+                    observation("TP", 1, (0.1, 0.0, 0.0)),
+                )
+                mapping.add_observations("L5", initial)
+                frozen = mapping.landmark("RIGHT_L5_TP")
+                self.assertEqual(frozen.status, "CONFIRMED")
+                mapping.add_reacquisition_observations(
+                    "L5", "TP",
+                    reference_position_mm=frozen.position_mm,
+                    reference_frame_hashes=frozen.supporting_frame_hashes,
+                    observations=(
+                        observation("TP", 2, (0.05, 0.0, 0.0)),
+                        observation("TP", 3, (9.0, 0.0, 0.0)),
+                        observation("TP", 4, (9.1, 0.0, 0.0)),
+                    ),
+                    preserve_frozen_surface_extent=True,
+                )
+                revised = mapping.landmark("RIGHT_L5_TP")
+                self.assertEqual(revised.status, "AMBIGUOUS" if canonical else "CONFIRMED")
+
     def test_l5_tp_fresh_views_can_confirm_without_counting_source(self) -> None:
         def revisit(frame: int, angle_deg: float, x: float) -> SemanticObservation:
             angle = math.radians(angle_deg)

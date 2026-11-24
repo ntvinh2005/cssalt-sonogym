@@ -10,12 +10,46 @@ from workflows.two_stage_navigation.evaluate_stage2_tp_active import (
     proposal_from_frame,
     proxy_state,
     selected_proxy_or_full_independent_recovery,
+    semantic_fresh_confirmation_rows,
     semantic_pair_identity,
 )
 from two_stage_navigation.tp_surface_core_dataset import PatchProposal
 
 
 class Stage2SapTpEvaluatorTests(unittest.TestCase):
+    def test_correct_but_uncredited_component_cannot_confirm_landmark(self) -> None:
+        frame = dict(frame_sequence=0, frame_sha256="frame", image_valid=True,
+                     producer_advanced=True, transition_valid=True, contact_ok=True)
+        predicted = [
+            dict(frame_sequence=0, frame_sha256="frame", row=r, column=2,
+                 semantic_class="TP")
+            for r in (2, 8)
+        ]
+        attempt = dict(
+            identity="RIGHT_L4_TP", frame_sequence=0, frame_sha256="frame",
+            predicted=True, image_valid=True, producer_advanced=True,
+            fresh_relative_to_source=True, semantic_observations=predicted,
+        )
+        labels = {0: np.zeros((12, 12), dtype=np.uint8)}
+        labels[0][2, 2] = 1
+        data = {
+            "fresh_landmark_confirmations": [attempt],
+            "incremental_landmark_map": {"landmarks": {
+                "RIGHT_L4_TP": {
+                    "supporting_observations": [predicted[1]],
+                    "fresh_confirmations": [attempt],
+                },
+                "RIGHT_L4_SAP": {"supporting_observations": [], "fresh_confirmations": []},
+            }},
+        }
+        for canonical in (False, True):
+            result = semantic_fresh_confirmation_rows(
+                data, labels, [frame], level="L4", maximum_distance_pixels=3.0,
+                canonical_evidence=canonical,
+            )
+            self.assertEqual(result[0]["identity_supported"], not canonical)
+            self.assertEqual(result[0]["observation_support"], [False] if canonical else [True, False])
+
     def test_independent_map_can_recover_ambiguous_initial_tp_view(self) -> None:
         self.assertTrue(
             selected_proxy_or_full_independent_recovery(

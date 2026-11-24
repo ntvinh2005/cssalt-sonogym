@@ -14,10 +14,13 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     POC_PROTOCOL_IDS,
     TargetView,
     actor_confirmation_requirement_met,
+    canonical_landmark_confirmations,
     group_a_target_handoff_pose,
     perception_mode,
+    observation_evidence_key,
     proxy_confirmation_requirement_met,
     select_tp_reacquisition_confirmations,
+    select_landmark_return_sources,
     select_tp_refinement_anchor,
     select_target_view,
     tp_soft_evidence_score,
@@ -27,6 +30,55 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
 
 
 TARGET = "L4_RIGHT_TP_SURFACE_CORE"
+
+
+class CanonicalEvidenceTests(unittest.TestCase):
+    def test_return_sources_rank_centroid_consistency_then_confidence(self) -> None:
+        frames = [
+            dict(frame_sequence=i, frame_sha256=str(i), image_valid=i != 2,
+                 transition_valid=True, producer_advanced=True, contact_ok=True)
+            for i in range(3)
+        ]
+        support = [
+            dict(frame_sequence=i, frame_sha256=str(i), coordinate_mm=(x, 0, 0),
+                 confidence=confidence, evaluator_score=10 - i)
+            for i, x, confidence in ((0, 1.0, 0.99), (1, 0.5, 0.8), (2, 0.0, 1.0))
+        ]
+        result = select_landmark_return_sources(
+            {"supporting_observations": support, "position_mm": (0, 0, 0)},
+            frames, maximum_poses=2,
+        )
+        self.assertEqual([row["frame_sequence"] for row in result], [1, 0])
+
+    def test_historical_tp_returns_can_only_use_exact_canonical_observations(self) -> None:
+        frames = [
+            dict(frame_sequence=i, frame_sha256=str(i), image_valid=True,
+                 transition_valid=True, producer_advanced=True, contact_ok=True,
+                 target_probability=0.99)
+            for i in range(2)
+        ]
+        attempts = []
+        for i in range(2):
+            observations = [
+                dict(frame_sequence=i, frame_sha256=str(i), row=r, column=1,
+                     semantic_class="TP", confidence=0.99, pixel_count=10)
+                for r in (0, 2)
+            ]
+            attempts.append(dict(
+                identity="RIGHT_L5_TP", frame_sequence=i, frame_sha256=str(i),
+                predicted=True, image_valid=True, producer_advanced=True,
+                fresh_relative_to_source=True, semantic_observations=observations,
+            ))
+        credited = attempts[1]["semantic_observations"][1]
+        canonical = canonical_landmark_confirmations(
+            attempts, frames, identity="RIGHT_L5_TP",
+            evidence_keys={observation_evidence_key(credited)},
+        )
+        selected = select_tp_reacquisition_confirmations(
+            canonical, frames, required_count=3, probability_threshold=0.8
+        )
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0]["semantic_observations"], [credited])
 
 
 class PerceptionModeTests(unittest.TestCase):

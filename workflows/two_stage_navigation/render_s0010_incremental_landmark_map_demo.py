@@ -79,6 +79,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--map-protocol", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--fps", type=float, default=5.0)
+    parser.add_argument("--historical-fallback", action="store_true")
     return parser.parse_args()
 
 
@@ -115,7 +116,12 @@ def map_panel(
     mapping: IncrementalAnatomicalLandmarkMap,
     frame: dict[str, Any],
     all_coordinates: list[np.ndarray],
+    *,
+    snapshot: dict[str, Any] | None = None,
+    return_text: str = "",
 ) -> np.ndarray:
+    if snapshot is None:
+        snapshot = mapping.snapshot()
     panel = np.full((PANEL_HEIGHT, PANEL_WIDTH, 3), 18, dtype=np.uint8)
     add_title(panel, "3 | Shared actor-owned 3D landmark map")
     plot_left, plot_top, plot_right, plot_bottom = 24, 65, 360, 330
@@ -137,10 +143,10 @@ def map_panel(
             observations = mapping.observations(identity)
             for observation in observations:
                 cv2.circle(panel, project(observation.coordinate_mm), 2, color, -1)
-            hypothesis = mapping.landmark(identity)
-            if hypothesis.position_mm is not None:
-                point = project(hypothesis.position_mm)
-                marker = 9 if hypothesis.status == "CONFIRMED" else 6
+            hypothesis = snapshot["landmarks"][identity]
+            if hypothesis["position_mm"] is not None:
+                point = project(hypothesis["position_mm"])
+                marker = 9 if hypothesis["status"] == "CONFIRMED" else 6
                 cv2.drawMarker(
                     panel,
                     point,
@@ -150,7 +156,6 @@ def map_panel(
                     2,
                     cv2.LINE_AA,
                 )
-    snapshot = mapping.snapshot()
     labels = {
         "RIGHT_L4_TP": "L4 TP",
         "RIGHT_L4_SAP": "L4 SAP",
@@ -163,20 +168,22 @@ def map_panel(
         uncertainty_text = "N/A" if uncertainty is None else f"{float(uncertainty):.2f}"
         put_text_at(
             panel,
-            f"{labels[identity]}: {row['status']}  views={len(row['supporting_frame_sequences'])}  "
-            f"uncertainty={uncertainty_text} mm",
+            f"{labels[identity]} {row['status']}  n={len(row['supporting_frame_sequences'])}",
             380,
             78 + index * 38,
             scale=0.40,
             color=COLORS[identity],
         )
+        put_text_at(panel, f"RMS {uncertainty_text} mm", 380, 94 + index * 38, scale=0.39)
     put_text_at(
         panel,
-        f"state={frame.get('scan_state', 'TP_VIEW_SEARCH')}  frame={frame['frame_sequence']}",
+        f"#{frame['frame_sequence']} {frame.get('scan_state', 'TP_VIEW_SEARCH')}",
         380,
         260,
         scale=0.40,
     )
+    if return_text:
+        put_text_at(panel, return_text, 380, 278, scale=0.39)
     put_text_at(
         panel,
         f"L4={snapshot['relations']['L4']['status']}  "
@@ -233,6 +240,62 @@ def main() -> int:
         robot_frame_count=int(robot.get(cv2.CAP_PROP_FRAME_COUNT)),
     )
     observations, all_coordinates = selected_observations(actor)
+    canonical = map_config.canonical_evidence
+    sealed_map = actor.get("incremental_landmark_map") or {}
+    map_events = {}
+    return_texts = {}
+    if canonical:
+        for target in actor["targets"]:
+            scan = target.get("sonoanatomy", {})
+            before = scan.get("incremental_landmark_map_before_confirmation")
+            after = scan.get("incremental_landmark_map")
+            if before is None or after is None:
+                continue
+            attempts = scan["fresh_landmark_confirmations"]
+            credited = {
+                (identity, row["frame_sequence"])
+                for identity, landmark in after["landmarks"].items()
+                for row in landmark.get("fresh_confirmations", [])
+            }
+            local_attempts = [
+                row["frame_sequence"] for row in attempts
+                if row["confirmation_kind"] != "DEDICATED_TP_FRESH_CONFIRMATION"
+            ]
+            if local_attempts:
+                map_events[min(local_attempts) - 1] = before
+                map_events[max(local_attempts)] = after
+            for row in attempts:
+                used = (row["identity"], row["frame_sequence"]) in credited
+                return_texts[row["frame_sequence"]] = (
+                    f"return #{row['source_frame_sequence']}  credited={'YES' if used else 'NO'}"
+                )
+        map_events[len(frames) - 1] = sealed_map
+        for identity, landmark in sealed_map["landmarks"].items():
+            _, level, kind = identity.split("_")
+            for row in landmark["supporting_observations"]:
+                sequence = row["frame_sequence"]
+                public = frames[sequence]
+                values = observations.setdefault(sequence, [])
+                if any(
+                    obs.semantic_class == kind and obs.row == row["row"] and obs.column == row["column"]
+                    for _, obs in values
+                ):
+                    continue
+                observation = SemanticObservation(
+                    semantic_class=kind,
+                    frame_sequence=sequence,
+                    frame_sha256=row["frame_sha256"],
+                    viewpoint_id=row["viewpoint_id"],
+                    row=row["row"],
+                    column=row["column"],
+                    coordinate_mm=tuple(row["coordinate_mm"]),
+                    confidence=row["confidence"],
+                    viewpoint_position_m=tuple(public["actor_base_to_ee_position_m"]),
+                    viewpoint_rotation_columns=tuple(map(tuple, public["actor_base_to_ee_rotation_columns"])),
+                    pixel_count=0,
+                )
+                values.append((level, observation))
+                all_coordinates.append(np.asarray(row["coordinate_mm"]))
     target_reports = {row["target_name"]: row for row in evaluator["target_reports"]}
     inspected = evaluator_lookup(evaluator)
     full_path = args.output_dir / "s0010_incremental_landmark_map_actual_execution_full.mp4"
@@ -254,6 +317,7 @@ def main() -> int:
         mapping.set_actor_anchor(identity, coordinate)
     frame_count = 0
     previous_frame = None
+    recorded_snapshot = mapping.snapshot() if canonical else None
     try:
         for frame, image, label, robot_index in zip(
             frames, images, labels, robot_indices
@@ -278,7 +342,14 @@ def main() -> int:
                     ),
                 )
             )
-            map_view = map_panel(mapping, frame, all_coordinates)
+            recorded_snapshot = map_events.get(sequence, recorded_snapshot)
+            map_view = map_panel(
+                mapping, frame, all_coordinates,
+                snapshot=recorded_snapshot,
+                return_text=return_texts.get(sequence, ""),
+            )
+            if args.historical_fallback:
+                put_text_at(map_view, "HISTORICAL REPLAY", 24, 53, scale=0.56)
             target_report = target_reports[frame["target_name"]]
             for blinded, writer in writers.items():
                 bottom = np.hstack(
@@ -301,10 +372,13 @@ def main() -> int:
         robot.release()
         for writer in writers.values():
             writer.release()
-    final_map = mapping.snapshot()
+    final_map = sealed_map if canonical else mapping.snapshot()
     manifest = {
         "schema": "sonogym-s0010-incremental-landmark-map-demo-v1",
-        "scientific_status": "OPENED_DEVELOPMENT_ACTUAL_EXECUTION_REPLAY",
+        "scientific_status": (
+            "HISTORICAL_REPLAY_FALLBACK" if args.historical_fallback
+            else "OPENED_DEVELOPMENT_ACTUAL_EXECUTION_REPLAY"
+        ),
         "independent_confirmation": False,
         "session_id": actor["session_id"],
         "source_session": str(args.session_dir.resolve()),

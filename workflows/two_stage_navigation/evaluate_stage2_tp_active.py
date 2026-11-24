@@ -31,6 +31,8 @@ from two_stage_navigation.stage2_mbb_landmarks import (
 )
 from two_stage_navigation.stage2_tp_active import (
     POC_PROTOCOL_IDS,
+    canonical_landmark_confirmations,
+    observation_evidence_key,
     proxy_confirmation_requirement_met,
 )
 from two_stage_navigation.sonoanatomy_labels import (
@@ -402,9 +404,62 @@ def binary_pair_metrics(truth: list[bool], prediction: list[bool]) -> dict[str, 
     }
 
 
+def semantic_fresh_confirmation_rows(
+    sonoanatomy: dict[str, Any],
+    labels_by_frame: dict[int, np.ndarray],
+    frames: list[dict[str, Any]],
+    *,
+    level: str,
+    maximum_distance_pixels: float,
+    canonical_evidence: bool,
+) -> list[dict[str, Any]]:
+    if canonical_evidence:
+        landmarks = sonoanatomy["incremental_landmark_map"]["landmarks"]
+        attempts = []
+        for kind in ("TP", "SAP"):
+            identity = f"RIGHT_{level}_{kind}"
+            landmark = landmarks[identity]
+            attempts.extend(canonical_landmark_confirmations(
+                landmark["fresh_confirmations"],
+                frames,
+                identity=identity,
+                evidence_keys={
+                    observation_evidence_key(row) for row in landmark["supporting_observations"]
+                },
+            ))
+    else:
+        attempts = sonoanatomy.get("fresh_landmark_confirmations", [])
+    results = []
+    for confirmation in attempts:
+        sequence = int(confirmation["frame_sequence"])
+        identity = str(confirmation["identity"])
+        class_id = TP_INTERFACE if identity.endswith("_TP") else SAP_INTERFACE
+        target_mask = labels_by_frame[sequence] == class_id
+        distance = ndimage.distance_transform_edt(~target_mask) if np.any(target_mask) else None
+        observation_support = []
+        for observation in confirmation.get("semantic_observations", []):
+            row = int(np.clip(round(float(observation["row"])), 0, target_mask.shape[0] - 1))
+            column = int(np.clip(round(float(observation["column"])), 0, target_mask.shape[1] - 1))
+            observation_support.append(
+                bool(distance is not None and distance[row, column] <= maximum_distance_pixels)
+            )
+        results.append({
+            "identity": identity,
+            "frame_sequence": sequence,
+            "frame_sha256": confirmation["frame_sha256"],
+            "identity_supported": bool(
+                observation_support
+                and (all(observation_support) if canonical_evidence else any(observation_support))
+            ),
+            "observation_support": observation_support,
+        })
+    return results
+
+
 def main() -> int:
     args = parse_args()
     protocol = yaml.safe_load(args.protocol.read_text())
+    canonical_evidence = bool(protocol.get("landmark_map", {}).get("canonical_evidence", False))
     if protocol.get("protocol_id") not in POC_PROTOCOL_IDS:
         raise RuntimeError("unexpected protocol")
     expected_protocol = args.protocol.with_suffix(".sha256").read_text().split()[0]
@@ -503,8 +558,26 @@ def main() -> int:
             "fresh_landmark_confirmations", []
         )
     )
+    canonical_tp_returns = {}
+    if canonical_evidence:
+        for target in actor["targets"]:
+            identity = f"RIGHT_{target['stage1_level']}_TP"
+            landmarks = target.get("sonoanatomy", {}).get("incremental_landmark_map", {}).get("landmarks", {})
+            credited = {
+                row["frame_sequence"]: row["semantic_observations"][0]
+                for row in landmarks.get(identity, {}).get("fresh_confirmations", [])
+            }
+            for sequence in target["fresh_confirmation_frame_sequences"]:
+                canonical_tp_returns[sequence] = credited[sequence]
     for sequence in sorted(inspected):
         frame = frames[sequence]
+        if sequence in canonical_tp_returns:
+            observation = canonical_tp_returns[sequence]
+            frame = {
+                **frame,
+                "proposal_row": observation["row"],
+                "proposal_column": observation["column"],
+            }
         pose = poses[sequence]
         plane = plane_from_full_pose(
             end_effector_position_m=np.asarray(pose["human_to_ee_position_m"]),
@@ -612,9 +685,8 @@ def main() -> int:
                 independent_map_mode=independent_map_mode,
             )
         )
-        proxy_pass = bool(
-            target["decision"] == "ACCEPT"
-            and selected is not None
+        proxy_evidence_pass = bool(
+            selected is not None
             and selected_or_fully_recovered
             and proxy_confirmation_requirement_met(
                 [row["proxy_state"] for row in confirmations],
@@ -625,6 +697,7 @@ def main() -> int:
             and float(np.mean(errors))
             <= float(protocol["evaluator"]["maximum_tp_interface_localization_error_mm"])
         )
+        proxy_pass = target["decision"] == "ACCEPT" and proxy_evidence_pass
         semantic_identity = None
         semantic_confirmation_rows = []
         semantic_frame_metrics = None
@@ -642,59 +715,16 @@ def main() -> int:
                         ]
                     ),
                 )
-                for confirmation in sonoanatomy.get(
-                    "fresh_landmark_confirmations", []
-                ):
-                    sequence = int(confirmation["frame_sequence"])
-                    label = semantic_labels[sequence]
-                    identity = str(confirmation["identity"])
-                    class_id = (
-                        TP_INTERFACE if identity.endswith("_TP") else SAP_INTERFACE
-                    )
-                    target_mask = label == class_id
-                    observation_support = []
-                    for observation in confirmation.get(
-                        "semantic_observations", []
-                    ):
-                        if np.any(target_mask):
-                            distance = ndimage.distance_transform_edt(
-                                ~target_mask
-                            )
-                            row = int(
-                                np.clip(
-                                    round(float(observation["row"])),
-                                    0,
-                                    target_mask.shape[0] - 1,
-                                )
-                            )
-                            column = int(
-                                np.clip(
-                                    round(float(observation["column"])),
-                                    0,
-                                    target_mask.shape[1] - 1,
-                                )
-                            )
-                            observation_support.append(
-                                float(distance[row, column])
-                                <= float(
-                                    protocol["evaluator"][
-                                        "maximum_semantic_interface_distance_pixels"
-                                    ]
-                                )
-                            )
-                        else:
-                            observation_support.append(False)
-                    semantic_confirmation_rows.append(
-                        {
-                            "identity": identity,
-                            "frame_sequence": sequence,
-                            "frame_sha256": confirmation["frame_sha256"],
-                            "identity_supported": bool(
-                                any(observation_support)
-                            ),
-                            "observation_support": observation_support,
-                        }
-                    )
+                semantic_confirmation_rows = semantic_fresh_confirmation_rows(
+                    sonoanatomy,
+                    semantic_labels,
+                    frames,
+                    level=str(target["stage1_level"]),
+                    maximum_distance_pixels=float(
+                        protocol["evaluator"]["maximum_semantic_interface_distance_pixels"]
+                    ),
+                    canonical_evidence=canonical_evidence,
+                )
             else:
                 semantic_identity = semantic_pair_identity(
                     sonoanatomy,
@@ -824,6 +854,11 @@ def main() -> int:
                 "maximum_localization_error_mm": None if not errors else float(np.max(errors)),
             }
         )
+        if canonical_evidence:
+            target_reports[-1].update(
+                stage2a_landmark_mapping_success=bool(semantic_pair_success),
+                historical_tp_core_success=proxy_evidence_pass,
+            )
 
     successful_levels = {
         str(row["target_name"])[:2]
@@ -855,7 +890,10 @@ def main() -> int:
         row["integrated_target_success"] for row in target_reports
     )
     report = {
-        "schema": "sonogym-s0010-mbb-poc-evaluation-v1",
+        "schema": (
+            "sonogym-s0010-mbb-poc-evaluation-v2"
+            if canonical_evidence else "sonogym-s0010-mbb-poc-evaluation-v1"
+        ),
         "protocol_sha256": expected_protocol,
         "actor_result_sha256": expected_actor,
         "session_id": actor["session_id"],
@@ -880,6 +918,12 @@ def main() -> int:
             for name, row in geometries.items()
         },
     }
+    if canonical_evidence:
+        report.update(
+            stage2a_landmark_mapping_success=report["both_sap_tp_pairs_successful"],
+            historical_tp_core_success=all(row["historical_tp_core_success"] for row in target_reports),
+            stage2b_target_region_localization="NOT_IMPLEMENTED",
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n")
     args.output.with_suffix(".json.sha256").write_text(

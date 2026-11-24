@@ -168,6 +168,17 @@ def main() -> int:
         ),
         "historical_stage2_confirmation": "CONFIRMATION_NO_GO",
     }
+    if protocol.get("landmark_map", {}).get("canonical_evidence", False):
+        report["stage2"].update(
+            stage2a_successful_targets=sum(row["stage2a_landmark_mapping_success"] for row in target_rows),
+            historical_tp_core_successful_targets=sum(row["historical_tp_core_success"] for row in target_rows),
+            wrong_accepted_anatomical_pairs=sum(
+                row["actor_decision"] == "ACCEPT"
+                and not (row.get("semantic_pair_identity") or {}).get("pair_correct", False)
+                for row in target_rows
+            ),
+            stage2b_target_region_localization="NOT_IMPLEMENTED",
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n")
     print(json.dumps({"milestone_verdict": report["milestone_verdict"], "target_successes": target_successes}))

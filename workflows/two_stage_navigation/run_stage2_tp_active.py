@@ -68,9 +68,11 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     POC_PROTOCOL_IDS,
     TargetView,
     actor_confirmation_requirement_met,
+    canonical_landmark_confirmations,
     group_a_target_handoff_pose,
     score_target_image,
     perception_mode,
+    select_landmark_return_sources,
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
@@ -267,6 +269,7 @@ def main() -> int:
     pose_rows: list[dict[str, Any]] = []
     action_rows: list[dict[str, Any]] = []
     target_results: list[dict[str, Any]] = []
+    canonical_landmarks: dict[str, Any] = {}
     local_coordinates: np.ndarray | None = None
     try:
         actor_path = Path(args.phase1_actor_result).resolve()
@@ -276,6 +279,9 @@ def main() -> int:
         model_specs = protocol["models"]
         active_perception_mode = perception_mode(protocol)
         unet_only = active_perception_mode == "unet_only"
+        canonical_evidence = unet_only and bool(
+            protocol.get("landmark_map", {}).get("canonical_evidence", False)
+        )
         sonoanatomy_models: dict[str, dict[str, Any]] = {}
         for level, specification in model_specs.get("sonoanatomy", {}).items():
             path = Path(specification["path"])
@@ -1971,15 +1977,30 @@ def main() -> int:
                         hypothesis_position = np.asarray(
                             hypothesis["position_mm"], dtype=np.float64
                         )
-                        support_rows = list(
-                            hypothesis["supporting_observations"]
-                        )[: (1 if semantic_class == "SAP" else maximum_poses)]
+                        association_radius = (
+                            landmark_map_config.maximum_tp_anchor_distance_mm
+                            if not unet_only and semantic_class == "TP"
+                            else landmark_map_config.association_radius_mm
+                        )
+                        pose_count = 1 if semantic_class == "SAP" else maximum_poses
+                        support_rows = (
+                            select_landmark_return_sources(
+                                hypothesis, public_rows, maximum_poses=pose_count
+                            )
+                            if canonical_evidence
+                            else list(hypothesis["supporting_observations"])[:pose_count]
+                        )
                         for support_index, support in enumerate(support_rows):
                             source_sequence = int(support["frame_sequence"])
                             source_frame = semantic_frames_by_sequence.get(
                                 source_sequence
                             )
-                            if source_frame is None:
+                            if canonical_evidence:
+                                anchor_pose = np.asarray(
+                                    public_rows[source_sequence]["executed_relative_pose_index"],
+                                    dtype=np.float64,
+                                )
+                            elif source_frame is None:
                                 if (
                                     semantic_class != "TP"
                                     or source_sequence
@@ -2055,21 +2076,11 @@ def main() -> int:
                                     if row.frame_sequence
                                     == confirmed.frame_sequence
                                     and row.semantic_class == semantic_class
-                                    and np.linalg.norm(
-                                        np.asarray(
-                                            row.coordinate_mm,
-                                            dtype=np.float64,
-                                        )
-                                        - hypothesis_position
-                                    )
-                                    <= (
-                                        landmark_map_config.association_radius_mm
-                                        if unet_only
-                                        else (
-                                            landmark_map_config.maximum_tp_anchor_distance_mm
-                                            if semantic_class == "TP"
-                                            else landmark_map_config.association_radius_mm
-                                        )
+                                    and (
+                                        canonical_evidence
+                                        or np.linalg.norm(
+                                            np.asarray(row.coordinate_mm) - hypothesis_position
+                                        ) <= association_radius
                                     )
                                 ]
                                 if semantic_class == "TP":
@@ -2190,7 +2201,10 @@ def main() -> int:
                                         confirmation_pose,
                                     )
                                 )
-                                if confirmation["predicted"]:
+                                if confirmation["predicted"] and (
+                                    not canonical_evidence
+                                    or confirmation["fresh_relative_to_source"]
+                                ):
                                     pending_reacquisition_observations.setdefault(
                                         identity, []
                                     ).extend(typed_observations)
@@ -2294,6 +2308,10 @@ def main() -> int:
                                         if (
                                             confirmation["predicted"]
                                             and map_update_eligible
+                                            and (
+                                                not canonical_evidence
+                                                or confirmation["fresh_relative_to_source"]
+                                            )
                                         ):
                                             pending_reacquisition_observations.setdefault(
                                                 identity, []
@@ -2312,48 +2330,54 @@ def main() -> int:
                                     "supporting_frame_hashes"
                                 ],
                                 observations=pending,
-                                association_radius_mm=(
-                                    landmark_map_config.association_radius_mm
-                                    if unet_only
-                                    else (
-                                        landmark_map_config.maximum_tp_anchor_distance_mm
-                                        if semantic_class == "TP"
-                                        else landmark_map_config.association_radius_mm
-                                    )
-                                ),
+                                association_radius_mm=association_radius,
                                 preserve_frozen_surface_extent=unet_only,
                             )
-                    selected_fresh_frames_by_identity = {
-                        identity: set(
-                            shared_landmark_map.selected_reacquisition_frame_sequences(
-                                identity
+                    identities = (f"RIGHT_{level}_TP", f"RIGHT_{level}_SAP")
+                    map_after_confirmation = shared_landmark_map.snapshot()
+                    positive_by_identity = {}
+                    if canonical_evidence:
+                        for identity in identities:
+                            landmark = map_after_confirmation["landmarks"][identity]
+                            fresh = canonical_landmark_confirmations(
+                                landmark_confirmations,
+                                public_rows,
+                                identity=identity,
+                                evidence_keys=shared_landmark_map.selected_reacquisition_observation_keys(
+                                    identity
+                                ),
                             )
-                        )
-                        for identity in (
-                            f"RIGHT_{level}_TP",
-                            f"RIGHT_{level}_SAP",
-                        )
-                    }
-                    positive_by_identity = {
-                        identity: len(
-                            {
+                            landmark["fresh_confirmations"] = fresh
+                            for support in landmark["supporting_observations"]:
+                                frame = public_rows[support["frame_sequence"]]
+                                for field in (
+                                    "executed_relative_pose_index",
+                                    "actor_base_to_ee_position_m",
+                                    "actor_base_to_ee_rotation_columns",
+                                    "acquisition_id",
+                                ):
+                                    support[field] = frame[field]
+                            positive_by_identity[identity] = len(fresh)
+                            canonical_landmarks[identity] = landmark
+                        tp_returns = canonical_landmarks[identities[0]]["fresh_confirmations"]
+                    else:
+                        for identity in identities:
+                            selected_frames = set(
+                                shared_landmark_map.selected_reacquisition_frame_sequences(identity)
+                            )
+                            positive_by_identity[identity] = len({
                                 int(row["frame_sequence"])
                                 for row in landmark_confirmations
                                 if row["identity"] == identity
-                                and int(row["frame_sequence"])
-                                in selected_fresh_frames_by_identity[identity]
+                                and int(row["frame_sequence"]) in selected_frames
                                 and bool(row["predicted"])
                                 and bool(row["image_valid"])
                                 and bool(row["producer_advanced"])
                                 and bool(row["fresh_relative_to_source"])
-                            }
-                        )
-                        for identity in (
-                            f"RIGHT_{level}_TP",
-                            f"RIGHT_{level}_SAP",
-                        )
-                    }
-                    map_after_confirmation = shared_landmark_map.snapshot()
+                            })
+                        tp_returns = [
+                            row for row in landmark_confirmations if row["identity"] == identities[0]
+                        ]
                     independent_fresh_pass = bool(
                         shared_landmark_map.level_confirmed(level)
                         and all(
@@ -2363,17 +2387,13 @@ def main() -> int:
                     )
                     final_tp_reacquisition = (
                         select_tp_reacquisition_confirmations(
-                            [
-                                row
-                                for row in landmark_confirmations
-                                if row["identity"] == f"RIGHT_{level}_TP"
-                            ],
+                            tp_returns,
                             public_rows,
                             required_count=required_fresh_count,
                             probability_threshold=float(model["threshold"]),
                         )
                     )
-                    if len(final_tp_reacquisition) == required_fresh_count:
+                    if canonical_evidence or len(final_tp_reacquisition) == required_fresh_count:
                         target_result["fresh_confirmation_frame_sequences"] = [
                             int(row["frame_sequence"])
                             for row in final_tp_reacquisition
@@ -2386,7 +2406,9 @@ def main() -> int:
                             )
                             for row in final_tp_reacquisition
                         ]
-                        target_result["fresh_confirmation_passed"] = True
+                        target_result["fresh_confirmation_passed"] = (
+                            len(final_tp_reacquisition) == required_fresh_count
+                        )
                         target_result["return_errors"] = [
                             {
                                 "position_mm": float(
@@ -2449,6 +2471,11 @@ def main() -> int:
                 }
                 target_result["decision"] = "ABSTAIN"
                 target_result["decision_reason"] = "TP_HANDOFF_NOT_CONFIRMED"
+                if canonical_evidence:
+                    target_result["fresh_confirmation_frame_sequences"] = []
+                    target_result["fresh_confirmation_probabilities"] = []
+                    target_result["fresh_confirmation_passed"] = False
+                    target_result["return_errors"] = []
             assert_no_privileged_fields(target_result)
             target_results.append(target_result)
 
@@ -2488,6 +2515,8 @@ def main() -> int:
             "extra_trees_loaded": not unet_only,
             "tp_anchor_dependency": not unet_only,
         }
+        if canonical_landmarks:
+            actor_result["incremental_landmark_map"]["landmarks"].update(canonical_landmarks)
         assert_no_privileged_fields(actor_result)
         write_json(result_dir / "actor_result.json", actor_result)
         actor_seal = sha256(result_dir / "actor_result.json")
