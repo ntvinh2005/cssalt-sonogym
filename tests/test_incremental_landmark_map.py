@@ -160,6 +160,68 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
         self.assertEqual(len(hypothesis.supporting_frame_sequences), 4)
         self.assertLess(hypothesis.position_mm[0], 2.0)
 
+    def test_fresh_reacquisition_extends_frozen_surface_hypothesis(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        source = (
+            observation("SAP", 0, (0.0, 0.0, 20.0)),
+            observation("SAP", 1, (0.5, 0.0, 20.0)),
+        )
+        mapping.add_observations("L4", source)
+        reference = mapping.landmark("RIGHT_L4_SAP")
+        fresh = (
+            observation("SAP", 2, (-3.0, 0.0, 20.0)),
+            observation("SAP", 3, (3.0, 0.0, 20.0)),
+        )
+
+        accepted = mapping.add_reacquisition_observations(
+            "L4",
+            "SAP",
+            reference_position_mm=reference.position_mm,
+            reference_frame_hashes=reference.supporting_frame_hashes,
+            observations=fresh,
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L4_SAP")
+        self.assertEqual(accepted, 2)
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertEqual(len(hypothesis.supporting_frame_sequences), 4)
+
+    def test_reacquisition_outside_frozen_radius_is_not_associated(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        source = (
+            observation("SAP", 0, (0.0, 0.0, 20.0)),
+            observation("SAP", 1, (0.5, 0.0, 20.0)),
+        )
+        mapping.add_observations("L4", source)
+        reference = mapping.landmark("RIGHT_L4_SAP")
+
+        accepted = mapping.add_reacquisition_observations(
+            "L4",
+            "SAP",
+            reference_position_mm=reference.position_mm,
+            reference_frame_hashes=reference.supporting_frame_hashes,
+            observations=(observation("SAP", 2, (8.0, 0.0, 20.0)),),
+        )
+
+        self.assertEqual(accepted, 0)
+        self.assertEqual(mapping.landmark("RIGHT_L4_SAP").observation_count, 2)
+
+    def test_single_fresh_tp_cluster_does_not_replace_supported_anchor_cluster(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        mapping.set_actor_anchor("RIGHT_L5_TP", (0.0, 0.0, 20.0))
+        mapping.add_observations(
+            "L5",
+            (
+                observation("TP", 0, (4.0, 0.0, 20.0)),
+                observation("TP", 1, (4.5, 0.0, 20.0)),
+                observation("TP", 2, (0.1, 0.0, 20.0)),
+            ),
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L5_TP")
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertEqual(len(hypothesis.supporting_frame_sequences), 2)
+
     def test_inconsistent_relative_geometry_blocks_level_confirmation(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(
             IncrementalLandmarkMapConfig(maximum_sap_tp_distance_mm=20.0)

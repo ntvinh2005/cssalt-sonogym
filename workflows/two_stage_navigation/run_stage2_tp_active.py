@@ -1471,6 +1471,7 @@ def main() -> int:
                         for row in semantic_frames
                     }
                     landmark_confirmations = []
+                    pending_reacquisition_observations = {}
                     for semantic_class in ("TP", "SAP"):
                         identity = f"RIGHT_{level}_{semantic_class}"
                         hypothesis = map_before_confirmation["landmarks"][
@@ -1545,9 +1546,9 @@ def main() -> int:
                                     and typed_observations
                                 )
                                 if predicted:
-                                    shared_landmark_map.add_observations(
-                                        level, typed_observations
-                                    )
+                                    pending_reacquisition_observations.setdefault(
+                                        identity, []
+                                    ).extend(typed_observations)
                                 confirmation_views.append(
                                     {
                                         "identity": identity,
@@ -1582,6 +1583,19 @@ def main() -> int:
                                     }
                                 )
                             landmark_confirmations.extend(confirmation_views)
+                        pending = pending_reacquisition_observations.get(
+                            identity, []
+                        )
+                        if pending:
+                            shared_landmark_map.add_reacquisition_observations(
+                                level,
+                                semantic_class,
+                                reference_position_mm=hypothesis["position_mm"],
+                                reference_frame_hashes=hypothesis[
+                                    "supporting_frame_hashes"
+                                ],
+                                observations=pending,
+                            )
                     positive_by_identity = {
                         identity: sum(
                             bool(row["predicted"])

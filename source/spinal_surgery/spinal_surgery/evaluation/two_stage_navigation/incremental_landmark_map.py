@@ -126,6 +126,18 @@ class LandmarkTrajectoryDecision:
     reason: str
 
 
+ObservationKey = tuple[int, str, float, float]
+
+
+@dataclass
+class _ReacquisitionAssociation:
+    """Actor-visible link from a frozen hypothesis to fresh revisit evidence."""
+
+    reference_position_mm: tuple[float, float, float]
+    source_observation_keys: set[ObservationKey]
+    fresh_observation_keys: set[ObservationKey]
+
+
 def _identity(level: str, semantic_class: str) -> LandmarkIdentity:
     value = f"RIGHT_{level}_{semantic_class}"
     if value not in LANDMARK_IDENTITIES:
@@ -155,6 +167,40 @@ def _cluster_quality(
     return score, rms, maximum
 
 
+def _observation_key(observation: SemanticObservation) -> ObservationKey:
+    return (
+        observation.frame_sequence,
+        observation.frame_sha256,
+        observation.row,
+        observation.column,
+    )
+
+
+def _viewpoints_are_distinct(
+    left: SemanticObservation,
+    right: SemanticObservation,
+    config: IncrementalLandmarkMapConfig,
+) -> bool:
+    translation_mm = 1000.0 * float(
+        np.linalg.norm(
+            np.asarray(left.viewpoint_position_m)
+            - np.asarray(right.viewpoint_position_m)
+        )
+    )
+    left_rotation = np.asarray(left.viewpoint_rotation_columns)
+    right_rotation = np.asarray(right.viewpoint_rotation_columns)
+    cosine = np.clip(
+        (np.trace(left_rotation.T @ right_rotation) - 1.0) / 2.0,
+        -1.0,
+        1.0,
+    )
+    rotation_deg = math.degrees(math.acos(float(cosine)))
+    return bool(
+        translation_mm >= config.minimum_view_translation_mm
+        or rotation_deg >= config.minimum_view_rotation_deg
+    )
+
+
 class IncrementalAnatomicalLandmarkMap:
     """Persistent shared map for RIGHT L4/L5 SAP and TP hypotheses."""
 
@@ -165,6 +211,9 @@ class IncrementalAnatomicalLandmarkMap:
         }
         self._rejections: dict[LandmarkIdentity, str] = {}
         self._anchors: dict[LandmarkIdentity, tuple[float, float, float]] = {}
+        self._reacquisition_associations: dict[
+            LandmarkIdentity, list[_ReacquisitionAssociation]
+        ] = {identity: [] for identity in LANDMARK_IDENTITIES}
 
     def set_actor_anchor(
         self,
@@ -196,6 +245,170 @@ class IncrementalAnatomicalLandmarkMap:
             }
             if key not in existing:
                 self._observations[identity].append(observation)
+
+    def add_reacquisition_observations(
+        self,
+        level: Literal["L4", "L5"],
+        semantic_class: Literal["TP", "SAP"],
+        *,
+        reference_position_mm: Sequence[float],
+        reference_frame_hashes: Sequence[str],
+        observations: Sequence[SemanticObservation],
+    ) -> int:
+        """Associate fresh revisit evidence with one frozen actor hypothesis.
+
+        The reference must already exist in the actor map.  Fresh predictions
+        outside the frozen association radius are ignored, and the reference
+        is never moved or promoted to an actor anchor by this operation.
+        """
+
+        identity = _identity(level, semantic_class)
+        reference = np.asarray(reference_position_mm, dtype=np.float64)
+        if reference.shape != (3,) or not np.all(np.isfinite(reference)):
+            raise ValueError("reacquisition reference must contain three finite values")
+        reference_hashes = set(reference_frame_hashes)
+        if not reference_hashes:
+            raise ValueError("reacquisition requires historical supporting frames")
+
+        historical = self._observations[identity]
+        source_keys: set[ObservationKey] = set()
+        for frame_hash in sorted(reference_hashes):
+            candidates = [
+                row for row in historical if row.frame_sha256 == frame_hash
+            ]
+            if not candidates:
+                raise ValueError("reacquisition source is absent from the actor map")
+            closest = min(
+                candidates,
+                key=lambda row: float(
+                    np.linalg.norm(np.asarray(row.coordinate_mm) - reference)
+                ),
+            )
+            source_keys.add(_observation_key(closest))
+
+        accepted_by_frame: dict[tuple[int, str], SemanticObservation] = {}
+        for observation in observations:
+            if observation.semantic_class != semantic_class:
+                raise ValueError("reacquisition semantic class does not match")
+            distance = float(
+                np.linalg.norm(np.asarray(observation.coordinate_mm) - reference)
+            )
+            if distance > self.config.association_radius_mm:
+                continue
+            frame_key = (observation.frame_sequence, observation.frame_sha256)
+            previous = accepted_by_frame.get(frame_key)
+            if previous is None or distance < float(
+                np.linalg.norm(np.asarray(previous.coordinate_mm) - reference)
+            ):
+                accepted_by_frame[frame_key] = observation
+
+        if not accepted_by_frame:
+            return 0
+        self.add_observations(level, tuple(accepted_by_frame.values()))
+        fresh_keys = {_observation_key(row) for row in accepted_by_frame.values()}
+        associations = self._reacquisition_associations[identity]
+        matching = next(
+            (
+                row
+                for row in associations
+                if row.source_observation_keys == source_keys
+                and np.allclose(row.reference_position_mm, reference, atol=1e-6)
+            ),
+            None,
+        )
+        if matching is None:
+            associations.append(
+                _ReacquisitionAssociation(
+                    reference_position_mm=tuple(float(value) for value in reference),
+                    source_observation_keys=source_keys,
+                    fresh_observation_keys=fresh_keys,
+                )
+            )
+        else:
+            matching.fresh_observation_keys.update(fresh_keys)
+        return len(fresh_keys)
+
+    def _clusters(
+        self,
+        identity: LandmarkIdentity,
+        observations: Sequence[SemanticObservation],
+    ) -> tuple[SemanticCluster, ...]:
+        clusters = list(
+            cluster_observations(
+                observations,
+                association_radius_mm=self.config.association_radius_mm,
+                minimum_view_translation_mm=self.config.minimum_view_translation_mm,
+                minimum_view_rotation_deg=self.config.minimum_view_rotation_deg,
+            )
+        )
+        key_to_index = {
+            _observation_key(observation): index
+            for index, observation in enumerate(observations)
+        }
+        for association in self._reacquisition_associations[identity]:
+            source_indices = [
+                key_to_index[key]
+                for key in association.source_observation_keys
+                if key in key_to_index
+            ]
+            fresh_indices = [
+                key_to_index[key]
+                for key in association.fresh_observation_keys
+                if key in key_to_index
+            ]
+            accepted = list(source_indices)
+            reference = np.asarray(association.reference_position_mm)
+            for index in sorted(
+                fresh_indices,
+                key=lambda item: (
+                    float(
+                        np.linalg.norm(
+                            np.asarray(observations[item].coordinate_mm) - reference
+                        )
+                    ),
+                    -observations[item].confidence,
+                    observations[item].frame_sequence,
+                ),
+            ):
+                observation = observations[index]
+                if any(
+                    observation.frame_sequence == observations[item].frame_sequence
+                    or observation.frame_sha256 == observations[item].frame_sha256
+                    or observation.viewpoint_id == observations[item].viewpoint_id
+                    or not _viewpoints_are_distinct(
+                        observation, observations[item], self.config
+                    )
+                    for item in accepted
+                ):
+                    continue
+                accepted.append(index)
+            associated_indices = set(source_indices + fresh_indices)
+            if len(accepted) < 2:
+                continue
+            clusters = [
+                cluster
+                for cluster in clusters
+                if not associated_indices.intersection(cluster.observation_indices)
+            ]
+            coordinates = np.asarray(
+                [observations[index].coordinate_mm for index in accepted]
+            )
+            clusters.append(
+                SemanticCluster(
+                    semantic_class=observations[accepted[0]].semantic_class,
+                    observation_indices=tuple(accepted),
+                    supporting_frames=tuple(
+                        sorted({observations[index].frame_sequence for index in accepted})
+                    ),
+                    centroid_mm=tuple(
+                        float(value) for value in np.mean(coordinates, axis=0)
+                    ),
+                    confidence=float(
+                        np.mean([observations[index].confidence for index in accepted])
+                    ),
+                )
+            )
+        return tuple(clusters)
 
     def reject(self, identity: LandmarkIdentity, reason: str) -> None:
         if not reason:
@@ -241,12 +454,7 @@ class IncrementalAnatomicalLandmarkMap:
                 competing_hypothesis_count=0,
                 reason="NO_SEMANTIC_OBSERVATION",
             )
-        clusters = cluster_observations(
-            observations,
-            association_radius_mm=self.config.association_radius_mm,
-            minimum_view_translation_mm=self.config.minimum_view_translation_mm,
-            minimum_view_rotation_deg=self.config.minimum_view_rotation_deg,
-        )
+        clusters = self._clusters(identity, observations)
         ranked = sorted(
             (
                 (*_cluster_quality(cluster, observations, self.config), index, cluster)
@@ -260,6 +468,18 @@ class IncrementalAnatomicalLandmarkMap:
             ranked = sorted(
                 ranked,
                 key=lambda row: (
+                    int(
+                        float(
+                            np.linalg.norm(
+                                np.asarray(row[4].centroid_mm) - anchor_coordinate
+                            )
+                        )
+                        > self.config.maximum_tp_anchor_distance_mm
+                    ),
+                    int(
+                        len(row[4].supporting_frames)
+                        < self.config.minimum_supporting_views
+                    ),
                     float(
                         np.linalg.norm(
                             np.asarray(row[4].centroid_mm) - anchor_coordinate
@@ -417,6 +637,10 @@ class IncrementalAnatomicalLandmarkMap:
                 level: asdict(self.relation(level)) for level in ("L4", "L5")
             },
             "actor_anchors_mm": dict(self._anchors),
+            "reacquisition_association_count": {
+                identity: len(self._reacquisition_associations[identity])
+                for identity in LANDMARK_IDENTITIES
+            },
             "complete": self.complete(),
         }
 
