@@ -351,6 +351,27 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
             mapping.selected_reacquisition_frame_sequences("RIGHT_L5_SAP"), ()
         )
 
+    def test_frozen_candidate_hypothesis_can_be_reacquired(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
+        source = observation("SAP", 0, (0.0, 0.0, 20.0))
+        mapping.add_observations("L5", (source,))
+        reference = mapping.landmark("RIGHT_L5_SAP")
+        self.assertEqual(reference.status, "CANDIDATE")
+
+        accepted = mapping.add_reacquisition_observations(
+            "L5",
+            "SAP",
+            reference_position_mm=reference.position_mm,
+            reference_frame_hashes=reference.supporting_frame_hashes,
+            observations=(observation("SAP", 1, (1.0, 0.0, 20.0)),),
+            preserve_frozen_surface_extent=True,
+        )
+
+        self.assertEqual(accepted, 1)
+        self.assertEqual(
+            mapping.selected_reacquisition_frame_sequences("RIGHT_L5_SAP"), (1,)
+        )
+
     def test_only_selected_distinct_reacquisition_views_count(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
         source = (

@@ -291,16 +291,18 @@ class IncrementalAnatomicalLandmarkMap:
         if not reference_hashes:
             raise ValueError("reacquisition requires historical supporting frames")
         current = self._hypothesis(identity)
-        reference_was_confirmed = bool(
-            current.status == "CONFIRMED"
-            and current.position_mm is not None
+        reference_matches_selected = bool(
+            current.position_mm is not None
             and np.allclose(current.position_mm, reference, atol=1e-6)
             and set(current.supporting_frame_hashes) == reference_hashes
         )
+        reference_was_confirmed = bool(
+            current.status == "CONFIRMED" and reference_matches_selected
+        )
         if preserve_frozen_surface_extent:
-            if not reference_was_confirmed:
+            if not reference_matches_selected:
                 raise ValueError(
-                    "frozen surface consistency requires the selected confirmed hypothesis"
+                    "frozen surface consistency requires the selected hypothesis"
                 )
             assert current.maximum_residual_mm is not None
             association_radius = min(
