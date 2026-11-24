@@ -634,7 +634,7 @@ def main() -> int:
             "L4_RIGHT_TP_SURFACE_CORE": "L4",
             "L5_RIGHT_TP_SURFACE_CORE": "L5",
         }
-        for target_name in protocol["targets"]:
+        for target_index, target_name in enumerate(protocol["targets"]):
             handoff = group_a_target_handoff_pose(
                 actor, session_id=args.stage1_session_id,
                 target_level=target_to_level[target_name],
@@ -642,6 +642,15 @@ def main() -> int:
                 label_resolution_mm=label_resolution,
                 stage2_angle_rad=float(protocol["geometry"]["stage2_angle_rad"]),
             )
+            if target_index > 0 and bool(
+                protocol.get("level_transition_handoff_settle", False)
+            ):
+                move(
+                    handoff,
+                    f"{target_name}:level_transition_handoff_settle",
+                    float(motion["coarse_position_tolerance_mm"]),
+                    float(motion["coarse_orientation_tolerance_deg"]),
+                )
             views: list[TargetView] = []
             for pose in offset_poses(
                 handoff,
@@ -2097,17 +2106,33 @@ def main() -> int:
                                     for index, offset in enumerate(
                                         refinement_offsets
                                     ):
+                                        offset_array = np.asarray(
+                                            offset, dtype=np.float64
+                                        )
                                         confirmation, typed_observations = (
                                             acquire_landmark_confirmation(
                                                 f"REFINEMENT_{index + 1}",
                                                 refinement_pose
-                                                + np.asarray(
-                                                    offset, dtype=np.float64
-                                                ),
+                                                + offset_array,
                                                 refinement_center=refinement_center,
                                             )
                                         )
-                                        if confirmation["predicted"]:
+                                        map_update_eligible = bool(
+                                            np.any(np.abs(offset_array) > 1e-12)
+                                            or bool(
+                                                confirmation_spec.get(
+                                                    "tp_refinement_zero_offset_updates_map",
+                                                    False,
+                                                )
+                                            )
+                                        )
+                                        confirmation["map_update_eligible"] = (
+                                            map_update_eligible
+                                        )
+                                        if (
+                                            confirmation["predicted"]
+                                            and map_update_eligible
+                                        ):
                                             pending_reacquisition_observations.setdefault(
                                                 identity, []
                                             ).extend(typed_observations)

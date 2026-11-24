@@ -192,6 +192,10 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
             "sonogym-s0010-mbb-single-anatomy-poc-v6r9",
             POC_PROTOCOL_IDS,
         )
+        self.assertIn(
+            "sonogym-s0010-mbb-single-anatomy-poc-v6r10",
+            POC_PROTOCOL_IDS,
+        )
 
     def test_two_of_three_positive_confirmations_pass(self) -> None:
         self.assertTrue(
@@ -337,7 +341,29 @@ class TpReacquisitionSelectionTests(unittest.TestCase):
         )
         self.assertEqual(
             [row["frame_sequence"] for row in selected],
-            [1, 2, 0],
+            [0, 1, 2],
+        )
+
+    def test_incomplete_refinement_falls_back_to_detector_probability(self) -> None:
+        public = [
+            {"target_probability": 0.95},
+            {"target_probability": 0.70},
+            {"target_probability": 0.80},
+        ]
+        rows = [
+            self.row(0, pixels=10),
+            self.row(1, pixels=200, kind="REFINEMENT_1"),
+            self.row(2, pixels=20),
+        ]
+        selected = select_tp_reacquisition_confirmations(
+            rows,
+            public,
+            required_count=3,
+            probability_threshold=0.5,
+        )
+        self.assertEqual(
+            [row["frame_sequence"] for row in selected],
+            [0, 2, 1],
         )
 
 

@@ -38,6 +38,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r7",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r8",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r9",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r10",
     }
 )
 
@@ -204,13 +205,17 @@ def select_tp_reacquisition_confirmations(
         for item in eligible
         if str(item[1].get("confirmation_kind", "")).startswith("REFINEMENT_")
     ]
-    pool = refinement if len(refinement) >= required_count else eligible
-    return [
-        row
-        for _, row in sorted(pool, key=lambda item: item[0], reverse=True)[
-            :required_count
-        ]
-    ]
+    if len(refinement) >= required_count:
+        ranked = sorted(refinement, key=lambda item: item[0], reverse=True)
+    else:
+        ranked = sorted(
+            eligible,
+            key=lambda item: (
+                -item[0][1],
+                int(item[1]["frame_sequence"]),
+            ),
+        )
+    return [row for _, row in ranked[:required_count]]
 
 
 @dataclass(frozen=True)
