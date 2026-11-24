@@ -40,8 +40,18 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r9",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r10",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r11",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r12",
     }
 )
+
+
+def perception_mode(protocol: Mapping[str, Any]) -> str:
+    """Return the declared Stage 2 perception path."""
+
+    mode = str(protocol.get("perception", {}).get("mode", "legacy_dual_model"))
+    if mode not in {"legacy_dual_model", "unet_only"}:
+        raise ValueError(f"unsupported Stage 2 perception mode: {mode}")
+    return mode
 
 
 def proxy_confirmation_requirement_met(

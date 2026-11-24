@@ -70,6 +70,7 @@ from spinal_surgery.evaluation.two_stage_navigation.stage2_tp_active import (  #
     actor_confirmation_requirement_met,
     group_a_target_handoff_pose,
     score_target_image,
+    perception_mode,
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
     select_target_view,
@@ -270,32 +271,9 @@ def main() -> int:
         actor_hash = validate_seal(actor_path)
         actor = json.loads(actor_path.read_text())
 
-        load_feature_pickle_support()
         model_specs = protocol["models"]
-        l4_path = Path(model_specs["l4"]["path"])
-        l5_path = Path(model_specs["l5"]["path"])
-        if sha256(l4_path) != model_specs["l4"]["sha256"]:
-            raise RuntimeError("L4 model checksum mismatch")
-        if sha256(l5_path) != model_specs["l5"]["sha256"]:
-            raise RuntimeError("L5 model checksum mismatch")
-        l4_bundle = joblib.load(l4_path)
-        l5_bundle = joblib.load(l5_path)
-        models = {
-            "L4_RIGHT_TP_SURFACE_CORE": {
-                "estimator": l4_bundle["estimator"],
-                "class_id": 1,
-                "threshold": float(l4_bundle["threshold"]),
-                "patch_spec": patch_spec(l4_bundle["patch_spec"]),
-            },
-            "L5_RIGHT_TP_SURFACE_CORE": {
-                "estimator": l5_bundle["estimator"],
-                "class_id": 2,
-                "threshold": float(l5_bundle["thresholds"][2]),
-                "patch_spec": patch_spec(l5_bundle["patch_spec"]),
-            },
-        }
-        if models["L4_RIGHT_TP_SURFACE_CORE"]["patch_spec"] != models["L5_RIGHT_TP_SURFACE_CORE"]["patch_spec"]:
-            raise RuntimeError("L4 and L5 preprocessing contracts differ")
+        active_perception_mode = perception_mode(protocol)
+        unet_only = active_perception_mode == "unet_only"
         sonoanatomy_models: dict[str, dict[str, Any]] = {}
         for level, specification in model_specs.get("sonoanatomy", {}).items():
             path = Path(specification["path"])
@@ -310,6 +288,46 @@ def main() -> int:
             }
         if sonoanatomy_models and set(sonoanatomy_models) != {"L4", "L5"}:
             raise RuntimeError("sonoanatomy scanning requires both L4 and L5 checkpoints")
+        if unet_only:
+            if set(model_specs) != {"sonoanatomy"}:
+                raise RuntimeError("U-Net-only mode forbids legacy TP model specifications")
+            models = {
+                f"{level}_RIGHT_TP_SURFACE_CORE": {
+                    "threshold": float(
+                        sonoanatomy_models[level]["thresholds"]["TP"]["threshold"]
+                    )
+                }
+                for level in ("L4", "L5")
+            }
+        else:
+            load_feature_pickle_support()
+            l4_path = Path(model_specs["l4"]["path"])
+            l5_path = Path(model_specs["l5"]["path"])
+            if sha256(l4_path) != model_specs["l4"]["sha256"]:
+                raise RuntimeError("L4 model checksum mismatch")
+            if sha256(l5_path) != model_specs["l5"]["sha256"]:
+                raise RuntimeError("L5 model checksum mismatch")
+            l4_bundle = joblib.load(l4_path)
+            l5_bundle = joblib.load(l5_path)
+            models = {
+                "L4_RIGHT_TP_SURFACE_CORE": {
+                    "estimator": l4_bundle["estimator"],
+                    "class_id": 1,
+                    "threshold": float(l4_bundle["threshold"]),
+                    "patch_spec": patch_spec(l4_bundle["patch_spec"]),
+                },
+                "L5_RIGHT_TP_SURFACE_CORE": {
+                    "estimator": l5_bundle["estimator"],
+                    "class_id": 2,
+                    "threshold": float(l5_bundle["thresholds"][2]),
+                    "patch_spec": patch_spec(l5_bundle["patch_spec"]),
+                },
+            }
+            if (
+                models["L4_RIGHT_TP_SURFACE_CORE"]["patch_spec"]
+                != models["L5_RIGHT_TP_SURFACE_CORE"]["patch_spec"]
+            ):
+                raise RuntimeError("L4 and L5 preprocessing contracts differ")
         landmark_map_config = None
         shared_landmark_map = None
         if "landmark_map" in protocol:
@@ -453,18 +471,51 @@ def main() -> int:
                 transition_valid and producer_advanced and contact_ok
                 and float(np.std(image)) > 1e-8
             )
-            model = models[target_name]
-            probability, proposal, proposal_count = score_target_image(
-                image, target=target_name, estimator=model["estimator"],
-                class_id=int(model["class_id"]), patch_spec=model["patch_spec"],
-                column_stride_pixels=int(protocol["perception"]["proposal_column_stride_pixels"]),
-            )
             realized = current_realized_pose(unwrapped).copy()
             sequence = len(public_rows)
             frame_hash = ultrasound_sha256(image)
             actor_position = tensor_row(snapshot["actor_base_to_ee_pos"])
             actor_quaternion = tensor_row(snapshot["actor_base_to_ee_quat"])
             actor_rotation = rotation_columns_from_quaternion_wxyz(actor_quaternion)
+            model = models[target_name]
+            if unet_only:
+                level = target_name.split("_", 1)[0]
+                semantic_probability = segmentation_probabilities(
+                    sonoanatomy_models[level]["model"], np.asarray([image])
+                )[0]
+                tp_observations = [
+                    row
+                    for row in semantic_observations(
+                        semantic_probability,
+                        thresholds=sonoanatomy_models[level]["thresholds"],
+                        end_effector_position_m=actor_position,
+                        rotation_columns=actor_rotation,
+                        frame_sequence=sequence,
+                        frame_sha256=frame_hash,
+                    )
+                    if row.semantic_class == "TP"
+                ]
+                proposal = (
+                    max(
+                        tp_observations,
+                        key=lambda row: (row.pixel_count, row.confidence),
+                    )
+                    if tp_observations
+                    else None
+                )
+                probability = 0.0 if proposal is None else float(proposal.confidence)
+                proposal_count = len(tp_observations)
+            else:
+                probability, proposal, proposal_count = score_target_image(
+                    image,
+                    target=target_name,
+                    estimator=model["estimator"],
+                    class_id=int(model["class_id"]),
+                    patch_spec=model["patch_spec"],
+                    column_stride_pixels=int(
+                        protocol["perception"]["proposal_column_stride_pixels"]
+                    ),
+                )
             view = TargetView(
                 target=target_name,
                 frame_sequence=sequence,
@@ -474,7 +525,11 @@ def main() -> int:
                 probability=probability,
                 proposal_row=None if proposal is None else float(proposal.row),
                 proposal_column=None if proposal is None else float(proposal.column),
-                proposal_track_id=None if proposal is None else proposal.track_id,
+                proposal_track_id=(
+                    None
+                    if proposal is None
+                    else getattr(proposal, "track_id", "unet_tp_component")
+                ),
                 transition_valid=transition_valid,
                 image_valid=image_valid,
                 producer_advanced=producer_advanced,
@@ -492,6 +547,7 @@ def main() -> int:
                 "executed_relative_pose_index": [float(value) for value in realized],
                 "target_probability": probability,
                 "target_threshold": float(model["threshold"]),
+                "perception_mode": active_perception_mode,
                 "proposal_row": view.proposal_row,
                 "proposal_column": view.proposal_column,
                 "proposal_track_id": view.proposal_track_id,
@@ -1013,10 +1069,11 @@ def main() -> int:
                     )
                     tp_identity = f"RIGHT_{level}_TP"
                     tp_anchor = actor_coordinates[anchor_row, anchor_column]
-                    level_actor_anchors[tp_identity] = tp_anchor
-                    shared_landmark_map.set_actor_anchor(
-                        tp_identity, tp_anchor
-                    )
+                    if not unet_only:
+                        level_actor_anchors[tp_identity] = tp_anchor
+                        shared_landmark_map.set_actor_anchor(
+                            tp_identity, tp_anchor
+                        )
                     dedicated_views = [decision.selected, *confirmations]
                     dedicated_probabilities = segmentation_probabilities(
                         semantic_model["model"],
@@ -1132,7 +1189,9 @@ def main() -> int:
                                 ],
                                 observations=[row[1] for row in fresh_dedicated],
                                 association_radius_mm=(
-                                    landmark_map_config.maximum_tp_anchor_distance_mm
+                                    landmark_map_config.association_radius_mm
+                                    if unet_only
+                                    else landmark_map_config.maximum_tp_anchor_distance_mm
                                 ),
                             )
                         selected_pose = np.asarray(
@@ -1909,9 +1968,13 @@ def main() -> int:
                                         - hypothesis_position
                                     )
                                     <= (
-                                        landmark_map_config.maximum_tp_anchor_distance_mm
-                                        if semantic_class == "TP"
-                                        else landmark_map_config.association_radius_mm
+                                        landmark_map_config.association_radius_mm
+                                        if unet_only
+                                        else (
+                                            landmark_map_config.maximum_tp_anchor_distance_mm
+                                            if semantic_class == "TP"
+                                            else landmark_map_config.association_radius_mm
+                                        )
                                     )
                                 ]
                                 if semantic_class == "TP":
@@ -2041,7 +2104,10 @@ def main() -> int:
                                 refinement_offsets = confirmation_spec.get(
                                     "tp_refinement_offsets_index", []
                                 )
-                                refinement_required = tp_refinement_is_required(
+                                refinement_required = (
+                                    False
+                                    if unet_only
+                                    else tp_refinement_is_required(
                                     confirmation_views,
                                     minimum_predicted_count=int(
                                         confirmation_spec.get(
@@ -2055,6 +2121,7 @@ def main() -> int:
                                             2**31 - 1,
                                         )
                                     ),
+                                    )
                                 )
                                 refinement_center = select_tp_refinement_anchor(
                                     confirmation_views,
@@ -2151,9 +2218,13 @@ def main() -> int:
                                 ],
                                 observations=pending,
                                 association_radius_mm=(
-                                    landmark_map_config.maximum_tp_anchor_distance_mm
-                                    if semantic_class == "TP"
-                                    else landmark_map_config.association_radius_mm
+                                    landmark_map_config.association_radius_mm
+                                    if unet_only
+                                    else (
+                                        landmark_map_config.maximum_tp_anchor_distance_mm
+                                        if semantic_class == "TP"
+                                        else landmark_map_config.association_radius_mm
+                                    )
                                 ),
                             )
                     positive_by_identity = {
@@ -2301,6 +2372,9 @@ def main() -> int:
             "action_step_count": total_actions,
             "model_training_performed": False,
             "geometry_used_by_actor": False,
+            "perception_mode": active_perception_mode,
+            "extra_trees_loaded": not unet_only,
+            "tp_anchor_dependency": not unet_only,
         }
         assert_no_privileged_fields(actor_result)
         write_json(result_dir / "actor_result.json", actor_result)

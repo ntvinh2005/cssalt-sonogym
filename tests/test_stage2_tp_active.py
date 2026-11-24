@@ -15,6 +15,7 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
     TargetView,
     actor_confirmation_requirement_met,
     group_a_target_handoff_pose,
+    perception_mode,
     proxy_confirmation_requirement_met,
     select_tp_reacquisition_confirmations,
     select_tp_refinement_anchor,
@@ -24,6 +25,18 @@ from two_stage_navigation.stage2_tp_active import (  # noqa: E402
 
 
 TARGET = "L4_RIGHT_TP_SURFACE_CORE"
+
+
+class PerceptionModeTests(unittest.TestCase):
+    def test_unet_only_mode_is_explicit(self) -> None:
+        self.assertEqual(
+            perception_mode({"perception": {"mode": "unet_only"}}),
+            "unet_only",
+        )
+
+    def test_unknown_mode_fails_closed(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unsupported"):
+            perception_mode({"perception": {"mode": "unknown"}})
 
 
 def view(
