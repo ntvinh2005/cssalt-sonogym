@@ -46,6 +46,7 @@ POC_PROTOCOL_IDS = frozenset(
         "sonogym-s0010-mbb-single-anatomy-poc-v6r15",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r16",
         "sonogym-s0010-mbb-single-anatomy-poc-v6r17",
+        "sonogym-s0010-mbb-single-anatomy-poc-v6r18",
     }
 )
 

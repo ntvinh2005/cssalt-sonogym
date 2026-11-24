@@ -42,6 +42,7 @@ class SemanticCluster:
     supporting_frames: tuple[int, ...]
     centroid_mm: tuple[float, float, float]
     confidence: float
+    reference_indices: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)

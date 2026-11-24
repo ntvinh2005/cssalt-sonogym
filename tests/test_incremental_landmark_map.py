@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import math
 import unittest
 
 from two_stage_navigation.incremental_landmark_map import (
@@ -28,6 +29,44 @@ def observation(kind: str, frame: int, coordinate: tuple[float, float, float]) -
 
 
 class IncrementalLandmarkMapTests(unittest.TestCase):
+    def test_l5_tp_fresh_views_can_confirm_without_counting_source(self) -> None:
+        def revisit(frame: int, angle_deg: float, x: float) -> SemanticObservation:
+            angle = math.radians(angle_deg)
+            c, s = math.cos(angle), math.sin(angle)
+            return replace(
+                observation("TP", frame, (x, 0.0, 20.0)),
+                viewpoint_position_m=(0.0, 0.0, 0.0),
+                viewpoint_rotation_columns=((c, -s, 0.0), (s, c, 0.0), (0.0, 0.0, 1.0)),
+            )
+
+        source = revisit(0, 0.0, 0.0)
+        left = revisit(1, -0.8, -0.2)
+        right = revisit(2, 0.8, 0.3)
+        duplicate = replace(right, frame_sequence=3)
+        distant = revisit(4, 4.0, 2.5)
+        for fresh, expected in (
+            ((left, right, duplicate), (1, 2)),
+            ((left, distant), ()),
+            ((left, replace(right, viewpoint_rotation_columns=left.viewpoint_rotation_columns)), ()),
+        ):
+            with self.subTest(fresh=fresh):
+                mapping = IncrementalAnatomicalLandmarkMap(
+                    IncrementalLandmarkMapConfig(l5_tp_pairwise_reacquisition=True)
+                )
+                mapping.add_observations("L5", (source,))
+                mapping.add_reacquisition_observations(
+                    "L5",
+                    "TP",
+                    reference_position_mm=source.coordinate_mm,
+                    reference_frame_hashes=(source.frame_sha256,),
+                    observations=fresh,
+                    preserve_frozen_surface_extent=True,
+                )
+                landmark = mapping.landmark("RIGHT_L5_TP")
+                self.assertEqual(landmark.status, "CONFIRMED" if expected else "CANDIDATE")
+                self.assertEqual(set(landmark.supporting_frame_sequences), set(expected or (0,)))
+                self.assertEqual(mapping.selected_reacquisition_frame_sequences("RIGHT_L5_TP"), expected)
+
     def test_sap_prediction_cannot_anchor_itself(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
         with self.assertRaisesRegex(ValueError, "only independently confirmed TP"):

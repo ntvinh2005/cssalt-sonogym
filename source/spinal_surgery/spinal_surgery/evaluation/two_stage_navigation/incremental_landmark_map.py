@@ -7,7 +7,7 @@ frozen Stage 1 handoff.  No evaluator geometry is used here.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import math
 from typing import Literal, Mapping, Sequence
 
@@ -41,6 +41,8 @@ LANDMARK_IDENTITIES: tuple[LandmarkIdentity, ...] = (
     "RIGHT_L5_SAP",
 )
 
+ObservationKey = tuple[int, str, float, float]
+
 
 @dataclass(frozen=True)
 class IncrementalLandmarkMapConfig:
@@ -56,6 +58,7 @@ class IncrementalLandmarkMapConfig:
     maximum_tp_anchor_distance_mm: float = 10.0
     minimum_supporting_view_advantage: int = 2
     minimum_preferred_sap_supporting_views: int = 3
+    l5_tp_pairwise_reacquisition: bool = False
 
     def __post_init__(self) -> None:
         positive = (
@@ -108,6 +111,7 @@ class LandmarkHypothesis:
     competing_hypothesis_count: int
     reason: str
     level_source: str = "FROZEN_STAGE1_HANDOFF"
+    reacquisition_reference_keys: tuple[ObservationKey, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -126,9 +130,6 @@ class LandmarkTrajectoryDecision:
     relation_status: Literal["INCOMPLETE", "CONSISTENT", "INCONSISTENT"]
     score: float
     reason: str
-
-
-ObservationKey = tuple[int, str, float, float]
 
 
 @dataclass
@@ -397,8 +398,9 @@ class IncrementalAnatomicalLandmarkMap:
             for row in hypothesis.supporting_observations
         }
         sequences: set[int] = set()
+        reference_keys = selected_keys.union(hypothesis.reacquisition_reference_keys)
         for association in self._reacquisition_associations[identity]:
-            if not association.source_observation_keys.issubset(selected_keys):
+            if not association.source_observation_keys.issubset(reference_keys):
                 continue
             sequences.update(
                 key[0]
@@ -463,6 +465,54 @@ class IncrementalAnatomicalLandmarkMap:
                 accepted.append(index)
             associated_indices = set(source_indices + fresh_indices)
             if len(accepted) < 2:
+                if (
+                    self.config.l5_tp_pairwise_reacquisition
+                    and identity == "RIGHT_L5_TP"
+                    and identity not in self._anchors
+                    and len(source_indices) == 1
+                ):
+                    source = observations[source_indices[0]]
+                    # A singleton source contributes identity and position, but
+                    # only mutually distinct fresh views contribute support.
+                    radius = min(
+                        self.config.association_radius_mm,
+                        self.config.minimum_view_translation_mm,
+                    )
+                    linked_fresh = [
+                        index
+                        for index in sorted(fresh_indices)
+                        if observations[index].frame_sequence != source.frame_sequence
+                        and observations[index].frame_sha256 != source.frame_sha256
+                        and observations[index].viewpoint_id != source.viewpoint_id
+                        and np.linalg.norm(
+                            np.asarray(observations[index].coordinate_mm) - reference
+                        ) <= radius
+                    ]
+                    fresh_clusters = cluster_observations(
+                        [observations[index] for index in linked_fresh],
+                        association_radius_mm=self.config.association_radius_mm,
+                        minimum_view_translation_mm=self.config.minimum_view_translation_mm,
+                        minimum_view_rotation_deg=self.config.minimum_view_rotation_deg,
+                    )
+                    supported = [
+                        replace(
+                            cluster,
+                            observation_indices=tuple(
+                                linked_fresh[index] for index in cluster.observation_indices
+                            ),
+                            reference_indices=tuple(source_indices),
+                        )
+                        for cluster in fresh_clusters
+                        if len(cluster.supporting_frames)
+                        >= max(2, self.config.minimum_supporting_views)
+                    ]
+                    if supported:
+                        linked = set(source_indices + linked_fresh)
+                        clusters = [
+                            cluster for cluster in clusters
+                            if not linked.issuperset(cluster.observation_indices)
+                        ]
+                        clusters.extend(supported)
                 continue
             clusters = [
                 cluster
@@ -599,7 +649,7 @@ class IncrementalAnatomicalLandmarkMap:
             ) -> bool:
                 member_keys = {
                     observation_keys[index]
-                    for index in row[4].observation_indices
+                    for index in row[4].observation_indices + row[4].reference_indices
                 }
                 return any(
                     association.source_observation_keys.issubset(member_keys)
@@ -716,6 +766,10 @@ class IncrementalAnatomicalLandmarkMap:
             observation_count=len(observations),
             competing_hypothesis_count=len(competing),
             reason=reason,
+            reacquisition_reference_keys=tuple(
+                _observation_key(observations[index])
+                for index in selected.reference_indices
+            ),
         )
 
     def landmark(self, identity: LandmarkIdentity) -> LandmarkHypothesis:
