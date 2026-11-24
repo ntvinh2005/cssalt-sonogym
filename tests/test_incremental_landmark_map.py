@@ -206,7 +206,7 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
         self.assertEqual(accepted, 0)
         self.assertEqual(mapping.landmark("RIGHT_L4_SAP").observation_count, 2)
 
-    def test_single_fresh_tp_cluster_does_not_replace_supported_anchor_cluster(self) -> None:
+    def test_anchor_candidate_is_confirmed_by_linked_fresh_motion_view(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(IncrementalLandmarkMapConfig())
         mapping.set_actor_anchor("RIGHT_L5_TP", (0.0, 0.0, 20.0))
         mapping.add_observations(
@@ -218,9 +218,52 @@ class IncrementalLandmarkMapTests(unittest.TestCase):
             ),
         )
 
+        candidate = mapping.landmark("RIGHT_L5_TP")
+        self.assertEqual(candidate.status, "CANDIDATE")
+        self.assertEqual(candidate.supporting_frame_sequences, (2,))
+
+        mapping.add_reacquisition_observations(
+            "L5",
+            "TP",
+            reference_position_mm=candidate.position_mm,
+            reference_frame_hashes=candidate.supporting_frame_hashes,
+            observations=(observation("TP", 3, (0.2, 0.0, 20.0)),),
+        )
+
         hypothesis = mapping.landmark("RIGHT_L5_TP")
         self.assertEqual(hypothesis.status, "CONFIRMED")
         self.assertEqual(len(hypothesis.supporting_frame_sequences), 2)
+
+    def test_reacquisition_keeps_frozen_historical_hypothesis_selected(self) -> None:
+        mapping = IncrementalAnatomicalLandmarkMap(
+            IncrementalLandmarkMapConfig(minimum_hypothesis_score_margin=0.01)
+        )
+        mapping.add_observations(
+            "L4",
+            (
+                replace(observation("SAP", 0, (0.0, 0.0, 20.0)), confidence=0.99),
+                replace(observation("SAP", 1, (0.5, 0.0, 20.0)), confidence=0.99),
+                observation("SAP", 2, (8.0, 0.0, 20.0)),
+                observation("SAP", 3, (8.5, 0.0, 20.0)),
+            ),
+        )
+        reference = mapping.landmark("RIGHT_L4_SAP")
+        mapping.add_reacquisition_observations(
+            "L4",
+            "SAP",
+            reference_position_mm=reference.position_mm,
+            reference_frame_hashes=reference.supporting_frame_hashes,
+            observations=(
+                replace(
+                    observation("SAP", 4, (0.2, 0.0, 20.0)),
+                    confidence=0.5,
+                ),
+            ),
+        )
+
+        hypothesis = mapping.landmark("RIGHT_L4_SAP")
+        self.assertEqual(hypothesis.status, "CONFIRMED")
+        self.assertLess(hypothesis.position_mm[0], 2.0)
 
     def test_inconsistent_relative_geometry_blocks_level_confirmation(self) -> None:
         mapping = IncrementalAnatomicalLandmarkMap(

@@ -1512,7 +1512,20 @@ def main() -> int:
                                     )
                                 ]
                             else:
-                                pose_plan = [("PHYSICAL_RETURN", anchor_pose)]
+                                tp_offsets = confirmation_spec.get(
+                                    "tp_local_search_offsets_index"
+                                )
+                                if tp_offsets:
+                                    pose_plan = [
+                                        (
+                                            f"LOCAL_SEARCH_{index + 1}",
+                                            anchor_pose
+                                            + np.asarray(offset, dtype=np.float64),
+                                        )
+                                        for index, offset in enumerate(tp_offsets)
+                                    ]
+                                else:
+                                    pose_plan = [("PHYSICAL_RETURN", anchor_pose)]
                             for confirmation_kind, confirmation_pose in pose_plan:
                                 confirmed, presence = acquire_semantic(
                                     confirmation_pose,
@@ -1571,6 +1584,30 @@ def main() -> int:
                                         "producer_advanced": (
                                             confirmed.producer_advanced
                                         ),
+                                        "executed_pose_index": list(
+                                            confirmed.pose_index
+                                        ),
+                                        "return_position_error_mm": float(
+                                            np.linalg.norm(
+                                                np.asarray(
+                                                    confirmed.pose_index[:2]
+                                                )
+                                                - confirmation_pose[:2]
+                                            )
+                                            * label_resolution
+                                        ),
+                                        "return_orientation_error_deg": (
+                                            math.degrees(
+                                                abs(
+                                                    float(
+                                                        wrap_to_pi(
+                                                            confirmed.pose_index[2]
+                                                            - confirmation_pose[2]
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        ),
                                         "predicted": predicted,
                                         "semantic_observations": [
                                             asdict(row)
@@ -1618,6 +1655,59 @@ def main() -> int:
                             for count in positive_by_identity.values()
                         )
                     )
+                    final_tp_candidates = sorted(
+                        (
+                            row
+                            for row in landmark_confirmations
+                            if row["identity"] == f"RIGHT_{level}_TP"
+                            and bool(row["predicted"])
+                            and bool(row["image_valid"])
+                            and bool(row["producer_advanced"])
+                            and bool(row["fresh_relative_to_source"])
+                            and float(
+                                public_rows[int(row["frame_sequence"])][
+                                    "target_probability"
+                                ]
+                            )
+                            >= float(model["threshold"])
+                        ),
+                        key=lambda row: (
+                            -float(
+                                public_rows[int(row["frame_sequence"])][
+                                    "target_probability"
+                                ]
+                            ),
+                            int(row["frame_sequence"]),
+                        ),
+                    )
+                    final_tp_reacquisition = final_tp_candidates[
+                        :required_fresh_count
+                    ]
+                    if len(final_tp_reacquisition) == required_fresh_count:
+                        target_result["fresh_confirmation_frame_sequences"] = [
+                            int(row["frame_sequence"])
+                            for row in final_tp_reacquisition
+                        ]
+                        target_result["fresh_confirmation_probabilities"] = [
+                            float(
+                                public_rows[int(row["frame_sequence"])][
+                                    "target_probability"
+                                ]
+                            )
+                            for row in final_tp_reacquisition
+                        ]
+                        target_result["fresh_confirmation_passed"] = True
+                        target_result["return_errors"] = [
+                            {
+                                "position_mm": float(
+                                    row["return_position_error_mm"]
+                                ),
+                                "orientation_deg": float(
+                                    row["return_orientation_error_deg"]
+                                ),
+                            }
+                            for row in final_tp_reacquisition
+                        ]
                     target_result["sonoanatomy"].update(
                         {
                             "confirmation_mode": (
@@ -1643,6 +1733,10 @@ def main() -> int:
                             ),
                             "fresh_confirmation_passed": (
                                 independent_fresh_pass
+                            ),
+                            "final_tp_confirmation_from_landmark_reacquisition": (
+                                len(final_tp_reacquisition)
+                                == required_fresh_count
                             ),
                         }
                     )

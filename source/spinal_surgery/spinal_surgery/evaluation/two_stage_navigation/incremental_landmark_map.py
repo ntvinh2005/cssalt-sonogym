@@ -136,6 +136,7 @@ class _ReacquisitionAssociation:
     reference_position_mm: tuple[float, float, float]
     source_observation_keys: set[ObservationKey]
     fresh_observation_keys: set[ObservationKey]
+    reference_was_confirmed: bool
 
 
 def _identity(level: str, semantic_class: str) -> LandmarkIdentity:
@@ -269,6 +270,13 @@ class IncrementalAnatomicalLandmarkMap:
         reference_hashes = set(reference_frame_hashes)
         if not reference_hashes:
             raise ValueError("reacquisition requires historical supporting frames")
+        current = self._hypothesis(identity)
+        reference_was_confirmed = bool(
+            current.status == "CONFIRMED"
+            and current.position_mm is not None
+            and np.allclose(current.position_mm, reference, atol=1e-6)
+            and set(current.supporting_frame_hashes) == reference_hashes
+        )
 
         historical = self._observations[identity]
         source_keys: set[ObservationKey] = set()
@@ -322,6 +330,7 @@ class IncrementalAnatomicalLandmarkMap:
                     reference_position_mm=tuple(float(value) for value in reference),
                     source_observation_keys=source_keys,
                     fresh_observation_keys=fresh_keys,
+                    reference_was_confirmed=reference_was_confirmed,
                 )
             )
         else:
@@ -468,18 +477,6 @@ class IncrementalAnatomicalLandmarkMap:
             ranked = sorted(
                 ranked,
                 key=lambda row: (
-                    int(
-                        float(
-                            np.linalg.norm(
-                                np.asarray(row[4].centroid_mm) - anchor_coordinate
-                            )
-                        )
-                        > self.config.maximum_tp_anchor_distance_mm
-                    ),
-                    int(
-                        len(row[4].supporting_frames)
-                        < self.config.minimum_supporting_views
-                    ),
                     float(
                         np.linalg.norm(
                             np.asarray(row[4].centroid_mm) - anchor_coordinate
@@ -511,6 +508,38 @@ class IncrementalAnatomicalLandmarkMap:
                 ranked = [selected_row] + [
                     row for row in ranked if row is not selected_row
                 ]
+        associations = self._reacquisition_associations[identity]
+        selected_linked_confirmed_reference = False
+        if associations:
+            observation_keys = [_observation_key(row) for row in observations]
+
+            def linked_to_frozen_reference(
+                row: tuple[float, float, float, int, SemanticCluster],
+            ) -> bool:
+                member_keys = {
+                    observation_keys[index]
+                    for index in row[4].observation_indices
+                }
+                return any(
+                    association.source_observation_keys.issubset(member_keys)
+                    for association in associations
+                )
+
+            ranked = sorted(
+                ranked,
+                key=lambda row: int(not linked_to_frozen_reference(row)),
+            )
+            selected_member_keys = {
+                observation_keys[index]
+                for index in ranked[0][4].observation_indices
+            }
+            selected_linked_confirmed_reference = any(
+                association.reference_was_confirmed
+                and association.source_observation_keys.issubset(
+                    selected_member_keys
+                )
+                for association in associations
+            )
         score, rms, maximum, _, selected = ranked[0]
         support = len(selected.supporting_frames)
         eligible = bool(
@@ -554,7 +583,11 @@ class IncrementalAnatomicalLandmarkMap:
         elif selected.confidence < self.config.minimum_semantic_confidence:
             status: LandmarkStatus = "REJECTED"
             reason = "SEMANTIC_CONFIDENCE_BELOW_GATE"
-        elif close_competitor and anchor is None:
+        elif (
+            close_competitor
+            and anchor is None
+            and not selected_linked_confirmed_reference
+        ):
             status = "AMBIGUOUS"
             reason = "COMPETING_SPATIAL_HYPOTHESES"
         elif eligible:
