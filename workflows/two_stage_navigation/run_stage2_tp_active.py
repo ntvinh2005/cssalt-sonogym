@@ -1653,8 +1653,6 @@ def main() -> int:
                     )
                     pending_reacquisition_observations = {}
                     for semantic_class in ("TP", "SAP"):
-                        if semantic_class == "TP":
-                            continue
                         identity = f"RIGHT_{level}_{semantic_class}"
                         hypothesis = map_before_confirmation["landmarks"][
                             identity
@@ -1671,10 +1669,20 @@ def main() -> int:
                                 source_sequence
                             )
                             if source_frame is None:
-                                continue
-                            anchor_pose = np.asarray(
-                                source_frame["pose_index"], dtype=np.float64
-                            )
+                                if (
+                                    semantic_class != "TP"
+                                    or source_sequence
+                                    != decision.selected.frame_sequence
+                                ):
+                                    continue
+                                anchor_pose = np.asarray(
+                                    decision.selected.pose_index,
+                                    dtype=np.float64,
+                                )
+                            else:
+                                anchor_pose = np.asarray(
+                                    source_frame["pose_index"], dtype=np.float64
+                                )
                             confirmation_trajectory = (
                                 f"{target_name}:landmark_confirmation"
                             )
@@ -1716,7 +1724,7 @@ def main() -> int:
                                     ),
                                     trajectory_id=confirmation_trajectory,
                                 )
-                                typed_observations = [
+                                frame_observations = [
                                     row
                                     for row in observations_by_trajectory.get(
                                         confirmation_trajectory, []
@@ -1731,8 +1739,48 @@ def main() -> int:
                                         )
                                         - hypothesis_position
                                     )
-                                    <= landmark_map_config.association_radius_mm
+                                    <= (
+                                        landmark_map_config.maximum_tp_anchor_distance_mm
+                                        if semantic_class == "TP"
+                                        else landmark_map_config.association_radius_mm
+                                    )
                                 ]
+                                if semantic_class == "TP":
+                                    public = public_rows[
+                                        confirmed.frame_sequence
+                                    ]
+                                    proposal_row = public.get("proposal_row")
+                                    proposal_column = public.get(
+                                        "proposal_column"
+                                    )
+                                    if (
+                                        presence is None
+                                        or not presence["tp_predicted"]
+                                        or float(public["target_probability"])
+                                        < float(model["threshold"])
+                                        or proposal_row is None
+                                        or proposal_column is None
+                                        or not frame_observations
+                                    ):
+                                        typed_observations = []
+                                    else:
+                                        typed_observations = [
+                                            min(
+                                                frame_observations,
+                                                key=lambda row: (
+                                                    math.hypot(
+                                                        row.row
+                                                        - float(proposal_row),
+                                                        row.column
+                                                        - float(proposal_column),
+                                                    ),
+                                                    -row.pixel_count,
+                                                    -row.confidence,
+                                                ),
+                                            )
+                                        ]
+                                else:
+                                    typed_observations = frame_observations
                                 predicted = bool(
                                     presence is not None
                                     and presence[
@@ -1814,6 +1862,11 @@ def main() -> int:
                                     "supporting_frame_hashes"
                                 ],
                                 observations=pending,
+                                association_radius_mm=(
+                                    landmark_map_config.maximum_tp_anchor_distance_mm
+                                    if semantic_class == "TP"
+                                    else landmark_map_config.association_radius_mm
+                                ),
                             )
                     positive_by_identity = {
                         identity: sum(
