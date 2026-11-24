@@ -196,6 +196,10 @@ class ProxyConfirmationEvaluationTests(unittest.TestCase):
             "sonogym-s0010-mbb-single-anatomy-poc-v6r10",
             POC_PROTOCOL_IDS,
         )
+        self.assertIn(
+            "sonogym-s0010-mbb-single-anatomy-poc-v6r11",
+            POC_PROTOCOL_IDS,
+        )
 
     def test_two_of_three_positive_confirmations_pass(self) -> None:
         self.assertTrue(
