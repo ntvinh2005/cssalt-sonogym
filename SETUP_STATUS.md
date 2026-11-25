@@ -1,5 +1,14 @@
 # Setup status
 
+## 2026-11-25 UTC. Perception pilot with a shared 2,000-image training set
+
+The fixed 102-waypoint point-mapper replay reached 12/16 correct landmarks,
+one wrong, and 1/4 complete maps with the selected L5 T3 checkpoint. The
+grouped combined holdout showed L5 TP recall increasing from 6/15 to 11/15.
+The frozen readiness gate failed. The four reserved robot confirmation seeds
+remain unused. The [pilot report](docs/research/sonogym_s0010_perception_pilot_2000.md)
+records the training cap, label audit, model comparison, and regressions.
+
 ## 2026-11-25 UTC. Robustness experiments for simple landmark mapping
 
 The density, pose stabilization, L5 fine-tuning and surface association arms
