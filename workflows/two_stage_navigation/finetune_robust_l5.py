@@ -68,9 +68,9 @@ def evaluate(model, images, labels, records, thresholds, device, batch_size):
             "frame_recall": tp / (tp + fn) if tp + fn else None,
             "false_accepts_on_competing_bone_frames": int((competing & predicted).sum()),
             "competing_bone_frames": int(competing.sum()),
-            "cross_field_presence_agreement": [same, len(stability)],
+            "cross_field_presence_agreement": [int(same), len(stability)],
             "cross_field_retained_both_on_visible_pairs": [
-                sum(a and b for a, b in positive_pair), len(positive_pair),
+                int(sum(a and b for a, b in positive_pair)), len(positive_pair),
             ],
         })
     return metrics, masks
@@ -81,6 +81,7 @@ def main():
     for name in ("profile", "protocol", "dataset", "original-dataset", "original-manifest", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--recover-completed-pilot", type=Path)
     args = parser.parse_args()
     profile = yaml.safe_load(args.profile.read_text())["E3"]
     specification = yaml.safe_load(args.protocol.read_text())["models"]["sonoanatomy"]["L5"]
@@ -104,6 +105,39 @@ def main():
     val_images, val_labels = images[triplets(val)], labels[triplets(val)]
     if not len(train) or not len(val) or any(not (val_labels == k).any() for k in (1, 2)):
         write_json(args.output / "training_status.json", {"status": "INSUFFICIENT_SPLIT_SUPPORT"})
+        return
+
+    if args.recover_completed_pilot:
+        source = args.recover_completed_pilot
+        receipt = json.loads((source / "training_manifest.json").read_text())
+        if (receipt["original_checkpoint_sha256"] != sha256(checkpoint)
+                or receipt["validation_records"] != val or receipt["training_records"] != train):
+            raise ValueError("completed pilot does not match the dataset and original checkpoint")
+        target = source / "s0010_l5_sonoanatomy_unet_robust_pilot.pt"
+        tuned, bundle = load_segmentation_checkpoint(target, expected_level="L5")
+        if bundle["thresholds"] != thresholds:
+            raise ValueError("recovered checkpoint has different semantic thresholds")
+        before, before_masks = evaluate(model, val_images, val_labels, val, thresholds, device, profile["batch_size"])
+        after, after_masks = evaluate(tuned.to(device), val_images, val_labels, val, thresholds, device,
+                                      profile["batch_size"])
+        with np.load(source / "validation_predictions.npz") as old:
+            exact = {
+                "baseline": int(np.all(before_masks == old["baseline"], axis=(1, 2)).sum()),
+                "fine_tuned": int(np.all(after_masks == old["fine_tuned"], axis=(1, 2)).sum()),
+            }
+        count = len(receipt["retained_original_train_examples"])
+        log = source.parent / "training.log"
+        history = [float(line.split()[-1]) for line in log.read_text().splitlines() if line.startswith("epoch ")]
+        if len(history) != profile["max_epochs"]:
+            raise ValueError("training log did not record the fixed number of epochs")
+        write_json(args.output / "training_result.json", {
+            "status": "COMPLETED_METRICS_RECOVERED", "checkpoint": str(target),
+            "checkpoint_sha256": sha256(target), "training_count": len(train) + count,
+            "new_training_count": len(train), "original_training_count": count,
+            "validation_count": len(val), "history": history, "original": before, "fine_tuned": after,
+            "selection": "last fixed epoch; no selection on validation",
+            "saved_gpu_masks_reproduced_by_cpu_per_checkpoint": exact,
+        })
         return
 
     with args.original_manifest.open() as f:
