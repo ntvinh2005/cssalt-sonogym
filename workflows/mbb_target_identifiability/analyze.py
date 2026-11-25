@@ -193,7 +193,7 @@ def counterfactual(target, segmentation_path, protected, output):
         outcomes.append({"variant":name,"changed_sap_annotation_voxels":n_change,
                          "sap_mask_voxels":int(change.sum()),"first_visible_semantic_voxels_changed":0,
                          "first_visible_uncertainty_voxels_changed":0,
-                         "minimum_separation_mm":result.minimum_surface_separation_mm, 
+                         "minimum_separation_mm":result.minimum_surface_separation_mm,
                          "comparison_to_reference":midpoint_change(base.midpoint_world_mm,result.midpoint_world_mm,3.0)})
         labels[f"sap_{name}"] = np.argwhere(change)
     comparisons = [{"first":i,"second":j,**midpoint_change(mids[i],mids[j],3.0)}
