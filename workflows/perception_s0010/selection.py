@@ -205,7 +205,7 @@ def main():
             cases.append({"source":str(path),"kind":kind,"status":"capture_failed"})
             continue
         ctx=context(path,protocol,evaluator,kind)
-        fields={lvl:{name:list(infer(model,ctx["images"][ctx["valid"]],args.device,batch_size=1))
+        fields={lvl:{name:list(infer(model,ctx["images"][ctx["valid"]],"cpu",batch_size=1))
                      for name,(model,rules) in models[lvl].items()} for lvl in models}
         entry={"source":str(path),"seed":ctx["actor"]["seed"],"kind":kind,"arms":{},
                "projection":ctx["projection"],"valid":len(ctx["valid"])}

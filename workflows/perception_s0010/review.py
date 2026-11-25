@@ -150,7 +150,7 @@ def draw_map(session, protocol, evaluator, reference_spec, output, device, indep
     demo.TITLE=("FRESH INDEPENDENT ACQUISITION" if independent else "RECORDED DEVELOPMENT SWEEP - PERCEPTION REPLAY")
     paired_masks={}
     for name,model in acts.items():
-        result,masks=replay(ctx,protocol,model,tp_all=True,device=device)
+        result,masks=replay(ctx,protocol,model,tp_all=True,device="cpu")
         paired_masks[name]=masks
         actor=dict(ctx["actor"],observations=result["observations"],
                    ambiguous_observations=result["ambiguous_observations"],landmarks=result["mapping"])
