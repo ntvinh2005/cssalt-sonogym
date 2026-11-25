@@ -1,5 +1,22 @@
 # Setup status
 
+## 2026-11-25 UTC. Independent confirmation of the simple anatomical mapper
+
+The frozen development configuration from job `52694480` was evaluated on
+four unused `s0010` seeds. Stage 1 was reused from actor session `cf7_00`.
+
+| Evaluation | Result | Job |
+|---|---|---|
+| Historical 816-frame replay | Reproduced 15/16 correct, 0 wrong, 3/4 complete | `52699992` |
+| Compatible revised SAP replay | 14/16 correct, 1 wrong, 2/4 complete with historical TP evidence | `52699992` |
+| Independent fresh sweep | **FAIL**, 0/4 complete, 10/16 correct, 2 wrong, 4 unresolved | `52699995` |
+
+All four sessions passed acquisition and projection integrity. L4 SAP was
+unresolved in three actor maps and all four Oracle maps. Both wrong
+landmarks were L5 TP. The
+[confirmation report](docs/research/sonogym_s0010_simple_landmark_independent.md)
+records every session and the separate actor and evaluator artifacts.
+
 ## 2026-11-25 UTC. SAP coverage in the simple anatomical mapper
 
 The targeted sweep added four outer transverse views and assigned SAP levels
