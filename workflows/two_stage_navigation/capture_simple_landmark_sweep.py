@@ -84,6 +84,7 @@ def main():
     )
     protocol = yaml.safe_load(args.protocol.read_text())
     revision_hash = None
+    tp_from_added_waypoints = True
     if args.revision:
         revision_hash = checked_sha256(args.revision, args.revision.with_suffix(".sha256").read_text().split()[0])
         revision = yaml.safe_load(args.revision.read_text())
@@ -94,6 +95,9 @@ def main():
                 or revision["sap_level_assignment"] != "projected_position_with_stage1_reference_bands"
                 or args.record_robot != (args.seed == revision["demo_seed"])):
             raise ValueError("execution does not match the sealed SAP revision")
+        tp_from_added_waypoints = revision.get("tp_evidence_on_added_sap_waypoints", True)
+        if not isinstance(tp_from_added_waypoints, bool):
+            raise ValueError("TP evidence selection must be Boolean")
     stage1 = json.loads(args.stage1_actor.read_text())
     region = stage1_region(stage1, args.stage1_session, protocol)
     models, model_seals = {}, {}
@@ -155,6 +159,7 @@ def main():
             raise RuntimeError("systematic sweep requires conv SonoGym ultrasound")
         limits = sensor.x_z_range.detach().cpu().numpy()
         waypoints = systematic_sweep(region, scan, limits[0], limits[1])
+        original_poses = {pose for _, pose in waypoints}
         position_tolerance = motion["coarse_position_tolerance_mm"]
         orientation_tolerance = motion["coarse_orientation_tolerance_deg"]
         if args.revision:
@@ -207,6 +212,7 @@ def main():
             prior_producer = max(producer, prior_producer)
             image_valid = contact_ok and producer_advanced and transition_valid and float(image.std()) > 1e-8
             levels = region.levels_at(realized[1])
+            tp_eligible = tp_from_added_waypoints or pose in original_poses
             frame = {
                 "session_id": session, "stage1_session_id": args.stage1_session,
                 "waypoint_index": waypoint_index, "phase": plane,
@@ -222,6 +228,8 @@ def main():
                 "requested_relative_pose_index": list(pose),
                 "executed_relative_pose_index": realized.tolist(),
                 "level_hypotheses": levels,
+                "original_waypoint": pose in original_poses,
+                "tp_eligible_for_mapping": tp_eligible,
                 "contact_ok": contact_ok, "producer_advanced": producer_advanced,
                 "transition_valid": transition_valid, "image_valid": image_valid,
             }
@@ -263,7 +271,7 @@ def main():
                     for row in rows:
                         if args.revision and row.semantic_class == "SAP":
                             sap_proposals[level].append(row)
-                        elif level in levels:
+                        elif level in levels and (row.semantic_class != "TP" or tp_eligible):
                             destination[f"RIGHT_{level}_{row.semantic_class}"].append(row)
                 masks[level].append(mask)
         if args.revision:
@@ -320,6 +328,7 @@ def main():
             "ambiguous_observations": {key: [asdict(row) for row in rows] for key, rows in ambiguities.items()},
             "initial_executed_pose_index": initial_pose,
             "revision_sha256": revision_hash, "robot_camera_error": camera_error,
+            "tp_evidence_on_added_sap_waypoints": tp_from_added_waypoints,
             "cranial_coordinate": asdict(calibration) if calibration else None,
             "sap_routing": sap_routing,
             "mapping_seconds": mapping_seconds,

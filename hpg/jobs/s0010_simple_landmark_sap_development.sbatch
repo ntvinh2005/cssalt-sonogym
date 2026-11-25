@@ -27,7 +27,7 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_TH
 export MPLCONFIGDIR="${TMPDIR:-/tmp}/sonogym-simple-sap-$SLURM_JOB_ID"
 
 destination="$SIMPLE_MAPPING_OUTPUT_ROOT/$SLURM_JOB_ID"
-revision=experiments/unity_two_stage_transfer/s0010_simple_landmark_sap_development_v1.yaml
+revision="${SIMPLE_MAPPING_SAP_REVISION:-experiments/unity_two_stage_transfer/s0010_simple_landmark_sap_development_v1.yaml}"
 (cd "$(dirname "$revision")" && sha256sum -c "$(basename "${revision%.yaml}.sha256")")
 capture_run_context "$destination"
 cp "$revision" "${revision%.yaml}.sha256" "$destination/context/"
