@@ -1,5 +1,16 @@
 # Setup status
 
+## 2026-11-25 UTC. Ultrasound-only cortical shape completion
+
+At 5 mm, the regularized fit increased withheld-sample recovery within
+1.5 mm from 169/348 to 242/348 for Oracle-visible input and from 104/348 to
+145/348 for U-Net input. On the actual SAP–TP gap, Oracle returned no fits
+across the five recordings. U-Net produced two regularized nearby cortical
+patches without adding diagnostic-trace coverage. The anatomical reference
+remains unresolved. No reserved seeds were opened.
+
+[Experiment setup and results](docs/research/sonogym_s0010_mbb_ultrasound_shape_completion.md)
+
 ## 2026-11-25. End-to-end observed cortex for the right L4 medial branch
 
 A complete observed-bone replay preserves OTHER_BONE and uncertain interface

@@ -1,0 +1,133 @@
+{
+  "anatomy": "s0010",
+  "recorded_seeds": [
+    2026121700,
+    2026121702,
+    2026121900,
+    2026121901
+  ],
+  "reserved_seeds": [
+    2026121800,
+    2026121801,
+    2026121802,
+    2026121803
+  ],
+  "sources": {
+    "artifact_root": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-end-to-end-210237",
+    "review_archive": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-end-to-end-210237/s0010-mbb-end-to-end-review.tar.gz",
+      "sha256": "eb45b86300e4398cd75be66b3ffa8e68b2a7079418d64bb621e16ea664250873"
+    },
+    "recorded_reconstruction": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-end-to-end-210237/reconstruction/summary.json",
+      "sha256": "3ec15ea0e4e1ba64c1a57ebd34e91a653012d8ab2504886610215ca28e3443f8"
+    },
+    "fresh_reconstruction": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-end-to-end-210237/reconstruction-fresh/summary.json",
+      "sha256": "6560ba1a647736453beaf3f0f638dcd597482fc82acf753b403fc5272c2ae166"
+    },
+    "recording_manifest": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-identifiability-114133/shared/manifest.json",
+      "sha256": "805ad43aba2fc99a26cb586fdee84a6de9cf0bd95dc1857260f6e55c8a4c670c"
+    },
+    "reference_seal": {
+      "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-end-to-end-210237/reference/checksums.sha256",
+      "sha256": "d5400e53660e29ac373492f25ff56169c2a9725ed05b0571d171a729ad5987a2"
+    }
+  },
+  "stage1": "cf7_00",
+  "masks": {
+    "gap_diameters_mm": [
+      2.0,
+      5.0,
+      9.0
+    ],
+    "center_grid_mm": 1.5,
+    "classes": [
+      "RIGHT_L5_TP",
+      "RIGHT_L5_SAP",
+      "OTHER_BONE"
+    ],
+    "max_sites_per_session_per_class": 1,
+    "minimum_hidden_points_for_curator": {
+      "2.0": 3,
+      "5.0": 6,
+      "9.0": 10
+    },
+    "screen_annulus_mm": [
+      4.5,
+      10.0
+    ],
+    "minimum_largest_annulus_sectors": 4,
+    "minimum_largest_annulus_views": 3,
+    "selection": "Select matched Oracle well-observed chart positions with whole-disk holdout eligibility and best visible outer angular support. Learn arm uses the same masks and no Oracle heights. Five-session actual analysis is separate; duplicate prefix excluded from A.",
+    "projection": "Public actor right/superior chart. Remove all points from all views and labels inside each projected disk, including any different depth.",
+    "require_fit_at_mask_center": true,
+    "synthetic_negative_controls": [
+      "14 mm unsupported center",
+      "disjoint flank surfaces",
+      "overlapping conflicting layers",
+      "spatially inconsistent heights",
+      "one repeated viewpoint"
+    ]
+  },
+  "fit": {
+    "grid_mm": 0.5,
+    "height_cell_mm": 0.75,
+    "minimum_cells": 12,
+    "minimum_distinct_views": 3,
+    "maximum_samples": 224,
+    "rms_cell_height_limit_mm": 1.5,
+    "maximum_multilayer_fraction": 0.15,
+    "maximum_robust_plane_residual_mm": 3.0,
+    "maximum_gradient": 1.8,
+    "maximum_support_distance_mm": 4.75,
+    "minimum_fit_fraction": 0.7,
+    "tps_lambda": 0.1,
+    "coordinate_scale_mm": 4.0,
+    "maximum_disagreement_mm": 3.0,
+    "minimum_ensemble_members": 5,
+    "minimum_ensemble_grid_fraction": 0.8,
+    "holdout_view_groups": 3,
+    "rotation_stress_deg": 0.5,
+    "translation_stress_mm": 1.0,
+    "chart_tilt_deg": 4.0,
+    "neighbor_scales": [
+      0.85,
+      1.15
+    ],
+    "lambda_scales": [
+      0.25,
+      4.0
+    ],
+    "chart_perturbation": "Compare at nominal UV locations up to sub-grid deviation after transforming tilted chart heights back. Pose and chart stress values are sensitivity tests, not a stochastic noise distribution.",
+    "require_top_view_removals_supported": true
+  },
+  "actual": {
+    "anchor_radius_mm": 4.0,
+    "support_distance_mm": 4.75,
+    "alternative_anchor_windows_mm": [
+      3.0,
+      4.0,
+      5.0
+    ],
+    "context_radius_mm": 9.5,
+    "minimum_anchor_views": 2,
+    "minimum_gap_mm": 2.0,
+    "maximum_gap_mm": 12.0,
+    "maximum_normal_separation_deg": 82.0,
+    "half_width_mm": 2.5,
+    "missing_sample_uv_mm": 0.9,
+    "other_bone_max_distance_to_flank_mm": 4.75
+  },
+  "evaluation": {
+    "ultrasound_technical_tolerance_mm": 1.5,
+    "outlier_mm": 3.0,
+    "ct_reference_minimum_heldout_fraction": 0.8,
+    "ct_reference_distance_mm": 1.5,
+    "uncertainty_sample_radius_uv_mm": 0.75,
+    "mask_leakage_rule": "Zero points at any depth from withheld coordinates in input; only 2D center and mask shape disclosed. U-Net and Oracle both scored against withheld observed Oracle; score each against its own held-out observations separately.",
+    "anatomical_target_status": "Carry forward frozen NOT_EVALUABLE reference. Diagnostic CT trace and whole L5 cortex are geometric comparisons, not target truth.",
+    "bidirectional_surface_metric": "Report directed nearest-point errors and symmetric equal-direction average of coverage; pool point counts across cases but show accept/abstain counts. No completion has no inferred points for reverse error."
+  }
+}

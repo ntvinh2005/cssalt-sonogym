@@ -790,3 +790,16 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Definition:** Euclidean distance in millimeters from the selected map position to the nearest publicly calibrated 3D pixel labeled as a first-hit, image-supported provisional right-side cortical interface of the same landmark in the session.
 - **Intuition:** It measures proximity to the observed surface sampled during the session. A distance of zero is expected for an oracle medoid drawn from those same visible pixels.
 - **Source:** Approved experiment request, 2026-11-24. `run_simple_landmark_mapping.py:score_map`.
+
+### Local shape completion
+
+- **Kind:** method
+- **Definition:** Estimate a bounded missing cortical surface from nearby ultrasound-supported anatomical observations under an explicit local surface model. Preserve measured points and inferred samples as separate layers.
+- **Source:** approved ultrasound-only shape-completion task, protocol s0010_mbb_shape_completion_v1.
+
+### Completion ensemble range
+
+- **Kind:** metric
+- **Definition:** The maximum minus the minimum supported fitted height at a query location across declared removal, neighborhood, chart, pose and smoothing variants.
+- **Intuition:** A sensitivity diagnostic. Its fraction of withheld heights enclosed is measured separately.
+- **Source:** s0010_mbb_shape_completion_v1 and the controlled held-out surface benchmark.
