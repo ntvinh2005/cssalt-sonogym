@@ -100,10 +100,14 @@ def main():
     for key in ("protocol","profile","data","legacy-dataset","legacy-training","diagnosis","output"):
         parser.add_argument("--"+key,required=True,type=Path)
     parser.add_argument("--device",default="cuda:0")
+    parser.add_argument("--mine-only",action="store_true")
+    parser.add_argument("--mining",type=Path)
     args=parser.parse_args()
     args.output.mkdir(exist_ok=False,parents=True)
     cfg=yaml.safe_load(args.profile.read_text())
     settings=cfg["training"]
+    if args.mine_only and args.mining:
+        parser.error("choose generation or reuse of mining records")
     protocol=yaml.safe_load(args.protocol.read_text())
     spec=protocol["models"]["sonoanatomy"]
     diagnosis=json.loads(args.diagnosis.read_text())
@@ -146,16 +150,25 @@ def main():
         out.mkdir()
         rules=models_for({level:spec[level]})[level][1]
         model,_=models_for({level:spec[level]})[level]
-        probs=list(infer(model,train_new,args.device,settings["batch_size"]))
-        training_metrics,cases=eval_fixed(probs,new_labels[level],train_records,level,rules)
-        del probs
-        mine=[]
-        for i,record in enumerate(train_records):
-            hard_positives=[n for n in cases if cases[n][i]["hard_positive"]]
-            hard_negatives=[n for n in cases if cases[n][i]["hard_negative"]]
-            mine.append({"index":i,"pose_group":record["pose_group"],"positive":hard_positives,"negative":hard_negatives})
-        write_json(out/"mining.json",{"summary":training_metrics,"candidates":mine})
-        make_mining_examples(train_new,new_labels[level],cases,level,out/"mining.png")
+        provenance_seal={"manifest_sha256":sha256(args.data/"manifest.jsonl"),"checkpoint_sha256":spec[level]["sha256"]}
+        if args.mining:
+            mined=json.loads((args.mining/level/"mining.json").read_text())
+            if mined["inputs"]!=provenance_seal:
+                raise ValueError(f"mining inputs do not match {level} training")
+            mine=mined["candidates"]
+        else:
+            probs=list(infer(model,train_new,args.device,settings["batch_size"]))
+            training_metrics,cases=eval_fixed(probs,new_labels[level],train_records,level,rules)
+            del probs
+            mine=[]
+            for i,record in enumerate(train_records):
+                hard_positives=[n for n in cases if cases[n][i]["hard_positive"]]
+                hard_negatives=[n for n in cases if cases[n][i]["hard_negative"]]
+                mine.append({"index":i,"pose_group":record["pose_group"],"positive":hard_positives,"negative":hard_negatives})
+            write_json(out/"mining.json",{"summary":training_metrics,"candidates":mine,"inputs":provenance_seal})
+            make_mining_examples(train_new,new_labels[level],cases,level,out/"mining.png")
+        if args.mine_only:
+            continue
         images_old,labels_old,source_old=original_examples(
             args.legacy_dataset,args.legacy_training,level,forbidden,
             cfg["data"]["legacy_and_split_buffer_mm"]/1000,settings["seed"],
