@@ -17,7 +17,7 @@ from run_s0010_l4_medial_branch_target import load_target_geometry
 from run_simple_landmark_mapping import read_jsonl, sha256, write_json
 from workflows.reconstruction_s0010.dense import IDENTITIES, distinct_pose_matrix, nearest
 from workflows.mbb_target_identifiability.geometry import (
-    crop_geometry, first_bone_voxels, hidden_sap_variants, leave_views, observed_coverage,
+    coverage, crop_geometry, first_bone_voxels, hidden_sap_variants, leave_views, observed_coverage,
     prepare_cloud, reference_coverage, score_region, subset, transform, view_support,
 )
 
