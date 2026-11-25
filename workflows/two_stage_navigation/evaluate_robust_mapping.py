@@ -163,6 +163,8 @@ def main():
     parser.add_argument("--acquisition", type=Path)
     parser.add_argument("--fine-tuned", type=Path)
     parser.add_argument("--extended-tp", action="store_true")
+    parser.add_argument("--surface-on-density", action="store_true")
+    parser.add_argument("--density-only", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     protocol = yaml.safe_load(args.protocol.read_text())
@@ -327,7 +329,8 @@ def main():
                 eligible, ambiguous, calibration = route_sap(proposals, available, frames, region, protocol)
                 obs = dict(filter_rows(actor_obs, available, kind="TP"), **eligible)
                 uncertain = dict(filter_rows(amb, available, kind="TP"), **ambiguous)
-                row = results(tag, size, obs, uncertain, lambda f: f["tp_eligible_for_mapping"], sensitivity=True)
+                row = results(tag, size, obs, uncertain, lambda f: f["tp_eligible_for_mapping"],
+                              do_surface=args.surface_on_density, sensitivity=True)
                 row["sap_craniocaudal_fit"] = asdict(calibration) if calibration is not None else None
                 match = args.reference / f"session_{actor['seed']-2026121700:02d}"
                 if tag == "E1-S" and match.exists():
@@ -345,13 +348,16 @@ def main():
         write_json(args.output / "results.json", report)
         print(category, actor["seed"], "evaluated", flush=True)
 
-    for session in sorted(args.reference.glob("session_*")):
-        audit(session, "E0")
+    if not args.density_only:
+        for session in sorted(args.reference.glob("session_*")):
+            audit(session, "E0")
     if args.acquisition:
         attempts_path = args.acquisition / "attempts.tsv"
         if attempts_path.exists():
             report["acquisition_attempts"] = attempts_path.read_text().splitlines()
         for session in sorted(args.acquisition.glob("E[12]_*")):
+            if args.density_only and not session.name.startswith("E1_"):
+                continue
             if (session / "actor_result.json").exists():
                 audit(session, session.name.split("_")[0])
     write_json(args.output / "results.json", report)
