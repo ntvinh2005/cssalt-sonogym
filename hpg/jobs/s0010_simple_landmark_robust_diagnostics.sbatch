@@ -31,10 +31,8 @@ if [[ -s "$ROBUST_REVIEW/E3-training/training_result.json" ]]; then
         --dataset "$ROBUST_REVIEW/E3-dataset" --training "$ROBUST_REVIEW/E3-training" \
         --protocol "$ROBUST_PROTOCOL" --output "$destination/E3_heldout_L5_mapping.json"
 fi
-video="$ROBUST_REVIEW/demo/revised_systematic_sweep.mp4"
-if [[ -s "$video" ]]; then
-    ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,nb_frames,duration \
-        -of json "$video" > "$destination/video_probe.json"
-    ffmpeg -nostdin -v error -xerror -threads 1 -i "$video" -f null -
-    sha256sum "$video" > "$destination/video.sha256"
+if [[ -s "$ROBUST_REVIEW/demo/revised_systematic_sweep.mp4"
+      && -s "$ROBUST_REVIEW/E3-dataset/dataset.npz" ]]; then
+    "$python" workflows/two_stage_navigation/audit_robust_acquisition.py \
+        --acquisition "$ROBUST_ACQUISITION" --review "$ROBUST_REVIEW" --output "$destination/acquisition_audit.json"
 fi
