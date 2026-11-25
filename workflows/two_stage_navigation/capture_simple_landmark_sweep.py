@@ -31,7 +31,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--evaluator-segmentation", type=Path)
     parser.add_argument("--revision", type=Path)
-    parser.add_argument("--robustness-arm", choices=("E1", "E2"))
+    parser.add_argument("--robustness-arm", choices=("E1", "E1-M", "E2"))
     parser.add_argument("--robustness-profile", type=Path)
     parser.add_argument("--record-robot", action="store_true")
     AppLauncher.add_app_launcher_args(parser)
@@ -80,7 +80,7 @@ def main():
     if bool(args.robustness_profile) != bool(args.robustness_arm) or (args.robustness_arm and not args.revision):
         parser.error("robustness requires a profile, arm and sealed SAP revision")
     robustness = yaml.safe_load(args.robustness_profile.read_text()) if args.robustness_profile else None
-    if robustness and args.seed not in robustness["development_seeds"]:
+    if robustness and args.seed not in robustness.get("capture_seeds", robustness["development_seeds"]):
         parser.error("seed is outside the predeclared development comparison")
 
     started = time.monotonic()
@@ -177,13 +177,16 @@ def main():
                 waypoints, region, scan["reference_offsets_index"],
                 minimum_separation_index=2 * position_tolerance / protocol["geometry"]["label_resolution_mm"],
             )
-        if args.robustness_arm == "E1":
+        if args.robustness_arm in ("E1", "E1-M"):
             density = robustness["E1"]
-            waypoints = append_transverse_lanes(
-                waypoints, region, density["medium_lateral_offsets_index"] + density["dense_lateral_offsets_index"],
-            )
-            if len(waypoints) != density["dense"]:
-                raise ValueError("dense waypoint count differs from the profile")
+            offsets = density["medium_lateral_offsets_index"]
+            length = density["medium"]
+            if args.robustness_arm == "E1":
+                offsets = offsets + density["dense_lateral_offsets_index"]
+                length = density["dense"]
+            waypoints = append_transverse_lanes(waypoints, region, offsets)
+            if len(waypoints) != length:
+                raise ValueError("waypoint count differs from the profile")
         stabilization = robustness["E2"] if args.robustness_arm == "E2" else None
         if stabilization:
             position_tolerance = stabilization["position_tolerance_mm"]

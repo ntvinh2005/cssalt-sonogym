@@ -1,0 +1,56 @@
+anatomy: s0010
+baseline_commit: 50a95118a40e63aedd9216cce7f7bbbe1bb22051
+medium_waypoints_sha256: b325d3c5df65ca17bda3584374d3fd6d784c246ae931b7d63c5629fb45d653e9
+waypoints: 102
+stage1: cf7_00
+development_seeds: [2026121700, 2026121702, 2026121900, 2026121901]
+reserved_confirmation_seeds: [2026121800, 2026121801, 2026121802, 2026121803]
+capture_tp_policy: all_102_waypoints
+coordinate_gate_mm: 0.0015
+interface_gate_px: 3.0
+data:
+  seed: 394200
+  base_field: 394300
+  benchmark_poses: 32
+  benchmark_fields: [394280, 394281]
+  generation_seconds_budget: 1500
+  target_min_images: 5000
+  target_max_images: 10000
+  maximum_realizations_per_pose: 5
+  perturbations_per_base: 14
+  position_sd_mm: 1.25
+  local_out_of_plane_sd_mm: 0.32
+  rotation_sd_degrees: 1.0
+  max_translation_mm: 3.0
+  max_rotation_degrees: 2.5
+  legacy_and_split_buffer_mm: 3.0
+  train_fields: [394300, 394301, 394302, 394303, 394304]
+  unseen_speckle_fields: [394310, 394311]
+  development_geometry_fields: [394300, 394301]
+  combined_test_fields: [394320, 394321, 394322]
+training:
+  seed: 394401
+  epochs: 22
+  minimum_epochs: 14
+  patience: 5
+  learning_rate: 0.00012
+  batch_size: 12
+  weight_decay: 0.0001
+  negative_presence_weight: 0.25
+  sample_fraction_natural_hard_positive_hard_negative: [0.5, 0.25, 0.25]
+  foreground_tversky_false_positive_weight: 0.35
+calibration:
+  precision_floor: 0.85
+  precision_drop_allowed: 0.02
+  extra_false_accept_rate_allowed: 0.02
+  min_positive_calls: 8
+  threshold_candidates: [0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.925, 0.95, 0.975]
+readiness:
+  minimum_development_complete_maps: 3
+  required_development_sessions: 4
+  maximum_development_wrong_landmarks: 0
+  historical_reliable_required_correct: {RIGHT_L4_TP: 4, RIGHT_L5_SAP: 4}
+  combined_test_l5_tp_absolute_recall_gain: 0.10
+  combined_test_max_precision_loss: 0.02
+  combined_test_min_positives: 12
+  max_recall_loss_l4_tp_or_l5_sap: 0.05
