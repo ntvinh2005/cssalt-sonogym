@@ -1,5 +1,14 @@
 # Setup status
 
+## 2026-11-25 UTC. Robustness experiments for simple landmark mapping
+
+The density, pose stabilization, L5 fine-tuning and surface association arms
+were evaluated separately on `s0010`. Medium density gave sufficient geometry
+for two complete Oracle maps. The matched actor results and replay combinations
+remain development evidence. No configuration advanced to the four reserved
+new seeds. See the [robustness report](docs/research/sonogym_s0010_simple_landmark_robustness.md)
+for all splits, checkpoints, per-landmark outcomes and acquisition limits.
+
 ## 2026-11-25 UTC. Independent confirmation of the simple anatomical mapper
 
 The frozen development configuration from job `52694480` was evaluated on
