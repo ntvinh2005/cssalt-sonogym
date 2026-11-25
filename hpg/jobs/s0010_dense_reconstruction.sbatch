@@ -28,12 +28,17 @@ printf 'job_id=%s\nphase=%s\n' "$SLURM_JOB_ID" "$phase" > "$dest/$phase-run.txt"
 git rev-parse HEAD >> "$dest/$phase-run.txt"
 "$py" --version >> "$dest/$phase-run.txt"
 date --iso-8601=seconds >> "$dest/$phase-run.txt"
-if [[ "$phase" == both ]]; then
-    run_phases=(oracle learned)
+if [[ "$phase" == review ]]; then
+    [[ "$(sha256sum "$manifest" | cut -d " " -f 1)" == "$seal" ]]
+    "$py" -m dense_review --manifest "$manifest" --dense "$dest" --output "$dest/figures"
 else
-    run_phases=("$phase")
+    if [[ "$phase" == both ]]; then
+        run_phases=(oracle learned)
+    else
+        run_phases=("$phase")
+    fi
+    for reconstruction_phase in "${run_phases[@]}"; do
+        "$py" -m dense --manifest "$manifest" --manifest-sha256 "$seal" --output "$dest" --phase "$reconstruction_phase"
+    done
 fi
-for reconstruction_phase in "${run_phases[@]}"; do
-    "$py" -m dense --manifest "$manifest" --manifest-sha256 "$seal" --output "$dest" --phase "$reconstruction_phase"
-done
 date --iso-8601=seconds >> "$dest/$phase-run.txt"
