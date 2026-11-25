@@ -1,0 +1,55 @@
+{
+  "anatomy_id": "s0010",
+  "identity": {
+    "nerve": "right L4 medial branch",
+    "reference_vertebra": "L5",
+    "bone_region": "TP root and lateral SAP neck"
+  },
+  "source_manifest": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-identifiability-114133/shared/manifest.json",
+    "sha256": "805ad43aba2fc99a26cb586fdee84a6de9cf0bd95dc1857260f6e55c8a4c670c"
+  },
+  "historical_replay": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-surface-localization-191322/replay-final/results.json",
+    "sha256": "0d7fd090698803af457cb162e9a7b82bd3433079044b78da68d64aab095e8057"
+  },
+  "historical_target_for_diagnostics": {
+    "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/mbb-surface-localization-191322/anatomy/audit.json",
+    "sha256": "13f0ef9b6cfa8bc39e8ed60e152a3ca43bf5a159e68dd578d6365a749fbc64ea"
+  },
+  "development_seeds": [
+    2026121700,
+    2026121702,
+    2026121900,
+    2026121901
+  ],
+  "reserved_independent_seeds": [
+    2026121800,
+    2026121801,
+    2026121802,
+    2026121803
+  ],
+  "reference_policy": "Freeze an ultrasound-independent external cortical reference. Keep all plausible hypotheses. If unresolved, never score historical midpoint proximity as anatomical correctness.",
+  "reference_technical_gate": {
+    "space": "robot base mm with public probe-to-image calibration; reference transformed by evaluator after prediction seal",
+    "distance_statistic": "P95 of each of the two directed nearest distances",
+    "max_p95_mm": 3.0,
+    "max_diameter_mm": 6.0,
+    "across_hypotheses": "all, with each score separately reported",
+    "observed_coverage_distance_mm": 1.5,
+    "historical_diagnostic_roi_radii_mm": [
+      5.0,
+      10.0
+    ],
+    "criterion_scope": "technical for the simulator, no clinical tolerance"
+  },
+  "arms": {
+    "E0": "archived historical TP/SAP only, original localizer, matched recordings",
+    "E1": "complete Oracle-visible bone, new localizer",
+    "E2": "complete learned bone, new localizer",
+    "E3": "optional single matched fresh development run after evaluating missing evidence",
+    "ablation": "new localizer on identical input with only semantic TP/SAP anchors"
+  },
+  "fresh_development_seed_if_justified": 2026121700,
+  "independent_readiness": "Four localized and anatomically evaluable matches in E2, no wrong accepted region, resolved integrity and sufficient time. Held-out seeds closed otherwise."
+}

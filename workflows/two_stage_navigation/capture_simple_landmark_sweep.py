@@ -33,6 +33,8 @@ def main():
     parser.add_argument("--revision", type=Path)
     parser.add_argument("--robustness-arm", choices=("E1", "E1-M", "E2"))
     parser.add_argument("--robustness-profile", type=Path)
+    parser.add_argument("--additional-sweep", type=Path,
+                        help="Sealed Stage 1-relative oblique survey for a matched development run")
     parser.add_argument("--record-robot", action="store_true")
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
@@ -82,6 +84,8 @@ def main():
     robustness = yaml.safe_load(args.robustness_profile.read_text()) if args.robustness_profile else None
     if robustness and args.seed not in robustness.get("capture_seeds", robustness["development_seeds"]):
         parser.error("seed is outside the predeclared development comparison")
+    if args.additional_sweep and args.robustness_arm != "E1-M":
+        parser.error("an additional survey requires the frozen medium sweep")
 
     started = time.monotonic()
     out = args.output
@@ -110,6 +114,17 @@ def main():
             raise ValueError("TP evidence selection must be Boolean")
     stage1 = json.loads(args.stage1_actor.read_text())
     region = stage1_region(stage1, args.stage1_session, protocol)
+    supplement = None
+    supplement_sha = None
+    if args.additional_sweep:
+        supplement_sha = checked_sha256(
+            args.additional_sweep, args.additional_sweep.with_suffix(".sha256").read_text().split()[0],
+        )
+        supplement = json.loads(args.additional_sweep.read_text())
+        if (supplement["seed"] != args.seed or supplement["stage1_actor_sha256"] != stage1_hash or
+                supplement["stage1_session"] != args.stage1_session or
+                supplement["anatomy"] != protocol["scope"]["patient_id"]):
+            raise ValueError("supplement does not match the frozen development context")
     models, model_seals = {}, {}
     for level in LEVELS:
         spec = protocol["models"]["sonoanatomy"][level]
@@ -187,6 +202,10 @@ def main():
             waypoints = append_transverse_lanes(waypoints, region, offsets)
             if len(waypoints) != length:
                 raise ValueError("waypoint count differs from the profile")
+        if supplement is not None:
+            from workflows.mbb_end_to_end.survey import append_oblique
+
+            waypoints = append_oblique(waypoints, region, supplement)
         stabilization = robustness["E2"] if args.robustness_arm == "E2" else None
         if stabilization:
             position_tolerance = stabilization["position_tolerance_mm"]
@@ -207,7 +226,7 @@ def main():
             probes_samples = []
             start_action = len(actions)
             intermediates = ()
-            if plane != prior_plane:
+            if plane != prior_plane or plane == "oblique":
                 intermediates = staged_orientation_targets(
                     current_realized_pose(simulator), target,
                     maximum_step_rad=scan["maximum_orientation_step_rad"],
@@ -405,6 +424,8 @@ def main():
             **({"robustness_arm": args.robustness_arm,
                 "robustness_profile_sha256": hashlib.sha256(args.robustness_profile.read_bytes()).hexdigest()}
                if robustness else {}),
+            **({"additional_sweep_sha256": supplement_sha, "original_waypoint_count": 102}
+               if supplement_sha else {}),
             "landmarks": mapping,
         }
         (out / "actor_result.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")

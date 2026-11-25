@@ -1,0 +1,11 @@
+{
+  "anatomy": "s0010",
+  "seed": 2026121700,
+  "stage1_session": "cf7_00",
+  "stage1_actor_sha256": "1fcfd37760034feaf5eccca586a687713a04181fcb943df293d5b1c213a1f4a8",
+  "original_waypoints_sha256": "b325d3c5df65ca17bda3584374d3fd6d784c246ae931b7d63c5629fb45d653e9",
+  "additional_waypoint_count": 24,
+  "right_offsets_index": [5.0, 11.0, 17.0],
+  "cranial_offsets_index": [0.0, 3.0, 6.0, 9.0],
+  "yaw_radians": [2.60, 2.25]
+}
