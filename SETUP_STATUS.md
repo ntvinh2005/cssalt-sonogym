@@ -1,5 +1,22 @@
 # Setup status
 
+## 2026-11-25 UTC. SAP coverage in the simple anatomical mapper
+
+The targeted sweep added four outer transverse views and assigned SAP levels
+using projected points and Stage 1 references. The same U-Nets, observation
+acceptance thresholds and mapper ran in every profile.
+
+| Evaluation | Result | Job |
+|---|---|---|
+| Original 50-frame routing replay | 3/4 correct, zero wrong. L5 SAP recovered. | `52693340` |
+| First revised three-seed sweep | 8/12 correct, one wrong, no complete maps. L5 SAP correct on all three. | `52693396` |
+| Matched repair with original TP waypoint selection | 4/4 correct, zero wrong, 54/54 valid views. | `52694480` |
+
+The matched repair is an opened development result. The two new seeds were
+run with the first revision. See the
+[SAP experiment report](docs/research/sonogym_s0010_simple_landmark_sap_development.md)
+for the five-frame diagnosis, per-seed evidence and demonstration.
+
 ## 2026-11-24. Independent simple anatomical mapping on s0010
 
 Branch `experiment/simple-landmark-mapping` compares the simple mapper with
