@@ -1,5 +1,18 @@
 # Setup status
 
+## 2026-11-25 UTC. Fixed-budget L5 perception and TP boundary loss
+
+The T4 L5 checkpoint scored 8/8 correct L5 landmarks on the four recorded
+102-waypoint development sweeps with the same 2,000 images as its matched
+control. The original L4 checkpoint left three landmarks unresolved, giving
+13/16 correct, zero wrong, and 1/4 complete maps. T4 also made wrong L5 SAP
+calls in two 54-waypoint sessions and one v6r19 session. The frozen readiness
+gate failed. The four reserved seeds remain unused.
+
+The [fixed-budget report](docs/research/sonogym_s0010_perception_mixed_2000.md)
+records the exact mixed manifests, historical regressions, representative
+diagnostics, and Slurm jobs.
+
 ## 2026-11-25 UTC. Perception pilot with a shared 2,000-image training set
 
 The fixed 102-waypoint point-mapper replay reached 12/16 correct landmarks,
