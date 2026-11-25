@@ -1,5 +1,20 @@
 # Setup status
 
+## 2026-11-25. End-to-end observed cortex for the right L4 medial branch
+
+A complete observed-bone replay preserves OTHER_BONE and uncertain interface
+samples on s0010. The CT-only external L5 trace crosses a lamina-labelled
+portion between the SAP neck and TP root hypotheses. The accepted anatomical
+reference remains unresolved.
+
+The frozen 408-frame Oracle and learned replays produce zero connected
+cortical candidate regions. A single matched development capture with
+102 original waypoints and 24 oblique views obtains 126 valid observations.
+The extra views increase L5 surface support without adding a CT trace match
+or a qualifying bounded route. No reserved seeds were opened.
+
+[Experiment setup and results](docs/research/sonogym_s0010_mbb_end_to_end_localization.md)
+
 ## 2026-11-25. Observed L5 surfaces for the right L4 medial branch reference
 
 The full-L5 CT audit retains the historical nearest-core midpoint as a
