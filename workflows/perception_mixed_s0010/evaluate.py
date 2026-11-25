@@ -251,8 +251,8 @@ def main():
         points.append(diagnostics)
     write_json(args.output/"representatives.json",{"cases":points,
                "observation_metrics":point_metrics(points,protocol["evaluator"]["maximum_semantic_interface_distance_pixels"])})
-    # Preselected recorded acquisition with the target false-acceptance case.
-    session = Path(next(r["source"] for r in cases if r["kind"]=="medium" and r["seed"]==2026121700))
+    # This recording's on-screen flags already match the all-102-waypoint replay.
+    session = Path(next(r["source"] for r in cases if r["kind"]=="medium" and r["seed"]==2026121900))
     draw_map(session,protocol,evaluator,specs[selected],args.output,"cpu")
 
 
