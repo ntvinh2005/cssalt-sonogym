@@ -74,7 +74,7 @@ def context(session, protocol, evaluator, kind):
 def route(row, frame, level, ctx, tp_all):
     if row.semantic_class == "SAP":
         _, candidates = sap_level_at(row.coordinate_mm, ctx["region"], ctx["fit"])
-    elif tp_all or frame["tp_eligible_for_mapping"]:
+    elif tp_all or frame.get("original_waypoint", frame["tp_eligible_for_mapping"]):
         candidates = frame["level_hypotheses"]
     else:
         candidates = ()
@@ -184,7 +184,7 @@ def oracle_map(ctx, protocol, tp_all, *, strict_routing=False):
             if strict_routing:
                 candidates = route(row, frame, level, ctx, tp_all)
             else:
-                candidates = int(row.semantic_class == "SAP" or tp_all or frame["tp_eligible_for_mapping"])
+                candidates = int(row.semantic_class == "SAP" or tp_all or frame.get("original_waypoint", frame["tp_eligible_for_mapping"]))
             if candidates:
                 (obs if candidates == 1 else ambiguous)[identity].append(row)
     result = simple_map(obs, ambiguous, config)

@@ -12,7 +12,7 @@ from scipy.ndimage import label
 from scipy.spatial import cKDTree
 import yaml
 
-from replay import CLASSES, CONVERSION, STRUCTURE, context, infer, models_for, route
+from replay import CLASSES, CONVERSION, STRUCTURE, context, infer, models_for, replay, route
 from run_simple_landmark_mapping import load_evaluator, load_public, read_jsonl, score_map, sha256, unet_observations, write_json
 from two_stage_navigation.incremental_landmark_map import IncrementalLandmarkMapConfig
 from two_stage_navigation.simple_landmark_mapping import extract_observations, simple_map, stage1_region
@@ -178,13 +178,22 @@ def main():
     evaluator=load_evaluator(protocol,CONVERSION)
     models=models_for(fixed)
     groups=[]
+    old_waypoint=[]
+    historical_models=models_for(original)
     for seed in campaign["development_seeds"]:
         p=(args.previous/"acquisition-52710240"/f"E1_{seed}" if seed in campaign["development_seeds"][:2]
            else args.development/str(seed))
         ctx=context(p,protocol,evaluator,"medium")
+        restricted,_=replay(ctx,protocol,historical_models,tp_all=False)
+        if sum(ctx["frames"][i]["original_waypoint"] for i in ctx["valid"]) != 50:
+            raise ValueError("the archived original waypoint mask does not reproduce the 50-frame policy")
+        old_waypoint.append({"seed":seed,"eligible_waypoints":50,"score":restricted["score"],
+                             "complete":restricted["complete"]})
         reference=representative_case(ctx,protocol,models,False)
         peak=representative_case(ctx,protocol,models,True)
         groups.append({"seed":seed,"weighted_center":reference,"maximum_probability":peak})
+    write_json(args.output/"exact_original_50_tp_across_four.json",{"cases":old_waypoint,
+             "policy":"Use archived original_waypoint, irrespective of online TP eligibility flag"})
     write_json(args.output/"representative_sensitivity.json",{
         "scope":"Separate fixed-checkpoint replay; maximum-probability representative was not a selection candidate",
         "cases":groups})
