@@ -1,5 +1,21 @@
 # Setup status
 
+## 2026-11-25. Observed L5 surfaces for the right L4 medial branch reference
+
+The full-L5 CT audit retains the historical nearest-core midpoint as a
+diagnostic. It selects reference decision C pending independent identification
+of the lateral SAP neck and TP root on s0010.
+
+The matched 408-frame replay produces 0/4 regions with Oracle-visible inputs
+and 0/4 with the original L4 and T4 L5 U-Nets. The minimum observed Oracle
+TP–SAP gap is 9.92–10.37 mm, unchanged before eligibility filtering.
+No reserved seeds were used. The four-landmark control and historical
+paired-core evaluator retain their archived outcomes.
+
+The [experiment report](docs/research/sonogym_s0010_mbb_observed_surface.md)
+records the anatomy measurements, technical criteria, replay commands and
+Slurm jobs `52790788`, `52791346`, `52791353` and `52792227`.
+
 ## 2026-11-25 UTC. Fixed-budget L5 perception and TP boundary loss
 
 The T4 L5 checkpoint scored 8/8 correct L5 landmarks on the four recorded
