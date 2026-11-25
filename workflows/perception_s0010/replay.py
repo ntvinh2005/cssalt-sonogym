@@ -140,14 +140,16 @@ def diagnose_probability(prob, rules, truth, predicted, rows, routed, frame, ctx
     return decisions
 
 
-def replay(ctx, protocol, models, *, tp_all, diagnose=False, device="cpu"):
+def replay(ctx, protocol, models, *, tp_all, diagnose=False, device="cpu", probabilities=None):
     observations, ambiguity = defaultdict(list), defaultdict(list)
     diagnostic = []
     masks = {lvl: np.zeros(ctx["images"].shape, np.uint8) for lvl in LEVELS}
     valid = ctx["valid"]
     gate = protocol["evaluator"]["maximum_semantic_interface_distance_pixels"]
     for level, (model, rules) in models.items():
-        for sequence, prob in zip(valid, infer(model, ctx["images"][valid], device, batch_size=1)):
+        predicted = (probabilities[level] if probabilities is not None else
+                     infer(model, ctx["images"][valid], device, batch_size=1))
+        for sequence, prob in zip(valid, predicted):
             frame = ctx["frames"][sequence]
             rows, mask = extract_observations(prob.argmax(0), prob, rules, frame, ctx["coords"][sequence])
             masks[level][sequence] = mask
@@ -168,7 +170,8 @@ def replay(ctx, protocol, models, *, tp_all, diagnose=False, device="cpu"):
     integrity = len(valid) == total and ctx["projection"]["passes"]
     return {"mapping": mapping, "score": score, "valid": len(valid), "integrity": integrity,
             "complete": integrity and score["complete_map"], "diagnostics": diagnostic,
-            "observations": {k: [asdict(r) for r in v] for k, v in observations.items()}}, masks
+            "observations": {k: [asdict(r) for r in v] for k, v in observations.items()},
+            "ambiguous_observations": {k: [asdict(r) for r in v] for k, v in ambiguity.items()}}, masks
 
 
 def oracle_map(ctx, protocol, tp_all, *, strict_routing=False):
