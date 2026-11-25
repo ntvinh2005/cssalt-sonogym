@@ -275,6 +275,20 @@ def main():
             report["sessions"].append(row)
             return row
 
+        def tuned_l5():
+            sap_rows, tp_rows, tp_amb = [], [], []
+            for i in valid:
+                f = frames[i]
+                prob = segmentation_probabilities(tuned, images[i:i+1])[0]
+                rows, masks["L5"][i] = extract_observations(prob.argmax(0), prob, thresholds, f, coords[i])
+                for observation in rows:
+                    if observation.semantic_class == "SAP":
+                        sap_rows.append(observation)
+                    elif ("L5" in f["level_hypotheses"] and f["tp_eligible_for_mapping"]
+                          and observation.semantic_class == "TP"):
+                        (tp_rows if len(f["level_hypotheses"]) == 1 else tp_amb).append(observation)
+            return sap_rows, tp_rows, tp_amb
+
         if category == "E0":
             row = results("E0", 54, actor_obs, amb, lambda _f: True, do_surface=True, sensitivity=True)
             if row["point"]["UNet"]["mapping"] != actor["landmarks"]:
@@ -282,17 +296,7 @@ def main():
                 if json.dumps(row["point"]["UNet"]["mapping"], sort_keys=True) != json.dumps(actor["landmarks"], sort_keys=True):
                     raise ValueError(f"point mapper did not reproduce the baseline at {session}")
             if args.fine_tuned:
-                sap_rows, tp_rows, tp_amb = [], [], []
-                for i in valid:
-                    f = frames[i]
-                    prob = segmentation_probabilities(tuned, images[i:i+1])[0]
-                    rows, masks["L5"][i] = extract_observations(prob.argmax(0), prob, thresholds, f, coords[i])
-                    for observation in rows:
-                        if observation.semantic_class == "SAP":
-                            sap_rows.append(observation)
-                        elif ("L5" in f["level_hypotheses"] and f["tp_eligible_for_mapping"]
-                              and observation.semantic_class == "TP"):
-                            (tp_rows if len(f["level_hypotheses"]) == 1 else tp_amb).append(observation)
+                sap_rows, tp_rows, tp_amb = tuned_l5()
                 retain = {k: v for k, v in actor_obs.items() if k.startswith("RIGHT_L4")}
                 keep_ambiguity = {k: v for k, v in amb.items() if k.startswith("RIGHT_L4")}
                 accept, uncertain, _ = route_sap({"L5": sap_rows}, set(valid), frames, region, protocol)
@@ -312,6 +316,8 @@ def main():
             for row in actor["sap_routing"]:
                 proposal = SemanticObservation(**{k:v for k,v in row.items() if k in SemanticObservation.__dataclass_fields__})
                 proposals[row["checkpoint_level"]].append(proposal)
+            if args.fine_tuned:
+                tuned_sap, tuned_tp, tuned_tp_amb = tuned_l5()
             tp_extended, amb_extended = defaultdict(list), defaultdict(list)
             if args.extended_tp:
                 for i in valid:
@@ -340,6 +346,15 @@ def main():
                         f["waypoint_index"] < len(old) and f["frame_sha256"] == old[f["waypoint_index"]]["frame_sha256"]
                         for f in frames if f["waypoint_index"] < size
                     )
+                if args.fine_tuned and size > 54:
+                    fit_rows = {"L4": proposals["L4"], "L5": tuned_sap}
+                    add_sap, add_amb, _ = route_sap(fit_rows, available, frames, region, protocol)
+                    fine_obs = dict(filter_rows(actor_obs, available, kind="TP"), **add_sap,
+                                    RIGHT_L5_TP=[r for r in tuned_tp if r.frame_sequence in available])
+                    fine_ambiguous = dict(filter_rows(amb, available, kind="TP"), **add_amb,
+                                          RIGHT_L5_TP=[r for r in tuned_tp_amb if r.frame_sequence in available])
+                    results(tag + "+E3", size, fine_obs, fine_ambiguous,
+                            lambda f: f["tp_eligible_for_mapping"], sensitivity=True)
                 if args.extended_tp and size > 54:
                     more, more_amb = dict(obs), dict(uncertain)
                     for dest, source in ((more, tp_extended), (more_amb, amb_extended)):
