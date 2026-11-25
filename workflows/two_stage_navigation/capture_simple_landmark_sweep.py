@@ -31,6 +31,8 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--evaluator-segmentation", type=Path)
     parser.add_argument("--revision", type=Path)
+    parser.add_argument("--robustness-arm", choices=("E1", "E2"))
+    parser.add_argument("--robustness-profile", type=Path)
     parser.add_argument("--record-robot", action="store_true")
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
@@ -47,7 +49,7 @@ def main():
     import spinal_surgery  # noqa: F401
     from isaaclab_tasks.utils import parse_env_cfg
     from stage2_sim import (
-        current_realized_pose, move_proportional_target, surface_proxy_ok, tensor_row,
+        current_realized_pose, move_proportional_target, surface_proxy_ok, tensor_row, tracking_errors,
     )
     from spinal_surgery.evaluation.two_stage_navigation.acquisition_integrity import (
         validate_actor_6dof_record, validate_waypoint_bank,
@@ -72,6 +74,14 @@ def main():
     from spinal_surgery.evaluation.two_stage_navigation.ultrasound_plane_geometry import (
         rotation_columns_from_quaternion_wxyz, sample_label_image,
     )
+
+    from robust_sweep import append_transverse_lanes, hold_probe, nominal_probe_transform, transform_error
+
+    if bool(args.robustness_profile) != bool(args.robustness_arm) or (args.robustness_arm and not args.revision):
+        parser.error("robustness requires a profile, arm and sealed SAP revision")
+    robustness = yaml.safe_load(args.robustness_profile.read_text()) if args.robustness_profile else None
+    if robustness and args.seed not in robustness["development_seeds"]:
+        parser.error("seed is outside the predeclared development comparison")
 
     started = time.monotonic()
     out = args.output
@@ -167,6 +177,17 @@ def main():
                 waypoints, region, scan["reference_offsets_index"],
                 minimum_separation_index=2 * position_tolerance / protocol["geometry"]["label_resolution_mm"],
             )
+        if args.robustness_arm == "E1":
+            density = robustness["E1"]
+            waypoints = append_transverse_lanes(
+                waypoints, region, density["medium_lateral_offsets_index"] + density["dense_lateral_offsets_index"],
+            )
+            if len(waypoints) != density["dense"]:
+                raise ValueError("dense waypoint count differs from the profile")
+        stabilization = robustness["E2"] if args.robustness_arm == "E2" else None
+        if stabilization:
+            position_tolerance = stabilization["position_tolerance_mm"]
+            orientation_tolerance = stabilization["orientation_tolerance_deg"]
         validate_waypoint_bank(
             [pose for _, pose in waypoints], command_minimum=limits[0], command_maximum=limits[1],
             label_resolution_mm=protocol["geometry"]["label_resolution_mm"],
@@ -176,8 +197,11 @@ def main():
         (out / "waypoints.json").write_text(json.dumps(waypoints, indent=2) + "\n")
         prior_producer = int(simulator.num_step)
         prior_plane = None
+        sweep_started = time.monotonic()
         for waypoint_index, (plane, pose) in enumerate(waypoints):
             target = np.asarray(pose)
+            waypoint_started = time.monotonic()
+            probes_samples = []
             start_action = len(actions)
             intermediates = ()
             if plane != prior_plane:
@@ -197,6 +221,30 @@ def main():
                         maximum_orientation_error_deg=orientation_tolerance,
                         ratio=tuple(motion["controller_ratio"]), trajectory_sink=actions,
                     )
+                if stabilization:
+                    steps = stabilization["hold_action_steps"]
+                    for attempt in range(stabilization["maximum_retries"] + 1):
+                        if len(actions) + steps >= motion["maximum_total_action_steps"]:
+                            raise TimeoutError("action budget exceeded during stabilization")
+                        before = sensor.copy_latest_acquisition_snapshot()
+                        hold_probe(env, sensor, actions, steps)
+                        after = sensor.copy_latest_acquisition_snapshot()
+                        probes_samples.append(transform_error(
+                            tensor_row(before["human_to_ee_pos"]), tensor_row(before["human_to_ee_quat"]),
+                            tensor_row(after["human_to_ee_pos"]), tensor_row(after["human_to_ee_quat"]),
+                        ))
+                        pos_error, angle_error = tracking_errors(simulator, target)
+                        if pos_error <= position_tolerance and angle_error <= orientation_tolerance:
+                            break
+                        if attempt == stabilization["maximum_retries"]:
+                            raise TimeoutError("did not retain pose tolerance after bounded hold")
+                        move_proportional_target(
+                            env, target, target, maximum_steps=min(
+                                motion["maximum_steps_per_move"], motion["maximum_total_action_steps"] - len(actions),
+                            ), maximum_position_error_mm=position_tolerance,
+                            maximum_orientation_error_deg=orientation_tolerance,
+                            ratio=tuple(motion["controller_ratio"]), trajectory_sink=actions,
+                        )
             except TimeoutError as failure:
                 failed_moves.append({"waypoint": waypoint_index, "reason": str(failure)})
                 continue
@@ -233,6 +281,25 @@ def main():
                 "contact_ok": contact_ok, "producer_advanced": producer_advanced,
                 "transition_valid": transition_valid, "image_valid": image_valid,
             }
+            if robustness:
+                nominal_position, nominal_quaternion = nominal_probe_transform(sensor, pose)
+                pos_error, rot_error = transform_error(
+                    tensor_row(nominal_position), tensor_row(nominal_quaternion),
+                    tensor_row(snapshot["human_to_ee_pos"]), tensor_row(snapshot["human_to_ee_quat"]),
+                )
+                frame.update(
+                    robustness_arm=args.robustness_arm,
+                    commanded_nominal_position_m=tensor_row(nominal_position).tolist(),
+                    commanded_nominal_rotation_columns=rotation_columns_from_quaternion_wxyz(
+                        tensor_row(nominal_quaternion),
+                    ).tolist(),
+                    full_nominal_position_error_mm=pos_error, full_nominal_rotation_error_deg=rot_error,
+                    reduced_tracking_error=tracking_errors(simulator, target),
+                    stabilization_deltas_mm_deg=probes_samples,
+                    sweep_elapsed_seconds=time.monotonic() - sweep_started,
+                    waypoint_elapsed_seconds=time.monotonic() - waypoint_started,
+                    action_steps_at_capture=len(actions),
+                )
             if volume is not None:
                 private_coordinates = np.asarray(
                     snapshot["human_img_coords"][0].detach().cpu(), dtype=np.float32,
@@ -332,6 +399,9 @@ def main():
             "cranial_coordinate": asdict(calibration) if calibration else None,
             "sap_routing": sap_routing,
             "mapping_seconds": mapping_seconds,
+            **({"robustness_arm": args.robustness_arm,
+                "robustness_profile_sha256": hashlib.sha256(args.robustness_profile.read_bytes()).hexdigest()}
+               if robustness else {}),
             "landmarks": mapping,
         }
         (out / "actor_result.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
