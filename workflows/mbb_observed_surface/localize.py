@@ -37,7 +37,7 @@ def public_axes(frames, rules):
     return right, superior, cranial_fit.maximum_fit_residual_index
 
 
-def view_groups(frames, rules):
+def distinct_poses(frames, rules):
     ids = np.asarray([f["frame_sequence"] for f in frames], dtype=int)
     if not np.array_equal(ids, np.arange(len(frames))):
         raise ValueError("public frame sequence must be contiguous and ordered")
@@ -46,9 +46,12 @@ def view_groups(frames, rules):
     angle = np.rad2deg(np.arccos(np.clip((attitude @ attitude.T - 1) / 2, -1, 1)))
     distance = np.linalg.norm(positions[:, None] - positions, axis=-1)
     hashes = np.asarray([f["frame_sha256"] for f in frames])
-    distinct = (((distance >= rules["min_view_translation_mm"]) |
-                 (angle >= rules["min_view_rotation_deg"])) &
-                (hashes[:, None] != hashes))
+    return (((distance >= rules["min_view_translation_mm"]) |
+             (angle >= rules["min_view_rotation_deg"])) &
+            (hashes[:, None] != hashes))
+
+
+def assign_views(ids, distinct):
     representatives, assignments = [], []
     for index in ids:
         if all(distinct[index, other] for other in representatives):
@@ -64,7 +67,7 @@ def component_labels(xyz, width):
     return connected_components(graph, directed=False, return_labels=True)[1]
 
 
-def patch(surface, neighbors, seed, groups, probe, rules, minimum_views):
+def patch(surface, neighbors, seed, distinct, probe, rules, minimum_views):
     if len(neighbors) < 3:
         return None, "too_few_surface_samples"
     xyz = surface.xyz[neighbors]
@@ -74,7 +77,8 @@ def patch(surface, neighbors, seed, groups, probe, rules, minimum_views):
     if len(neighbors) < 3:
         return None, "disconnected_local_samples"
     sources = surface.frame[neighbors]
-    group = groups[sources]
+    local_frames, source_index = np.unique(sources, return_inverse=True)
+    group = assign_views(local_frames, distinct)[source_index]
     independent, inverse = np.unique(group, return_inverse=True)
     if len(independent) < minimum_views:
         return None, "insufficient_distinct_views"
@@ -92,7 +96,7 @@ def patch(surface, neighbors, seed, groups, probe, rules, minimum_views):
     return (neighbors, normal), None
 
 
-def transition(tp, sap, right, superior, groups, probe, rules, minimum_views):
+def transition(tp, sap, right, superior, groups, distinct, probe, rules, minimum_views):
     evidence = {"tp_points": len(tp.xyz), "sap_points": len(sap.xyz), "support": {},
                 "within_gap_pairs": 0, "patch_pair_count": 0, "oriented_pair_count": 0,
                 "directional_pair_count": 0, "components": []}
@@ -103,8 +107,8 @@ def transition(tp, sap, right, superior, groups, probe, rules, minimum_views):
     sap_index = int(np.argmin(distances))
     evidence["nearest_gap_mm"] = float(distances[sap_index])
     nearest_tp = int(tp_tree.query(sap.xyz[sap_index])[1])
-    evidence["nearest_pair_observations"] = {"TP": observations(tp, [nearest_tp], groups),
-                                             "SAP": observations(sap, [sap_index], groups)}
+    evidence["nearest_pair_observations"] = {"TP": observations(tp, [nearest_tp], groups, distinct),
+                                             "SAP": observations(sap, [sap_index], groups, distinct)}
     pairs = [(i, j) for j, indices in enumerate(sap_tree.query_ball_tree(tp_tree, rules["max_gap_mm"]))
              for i in indices]
     evidence["within_gap_pairs"] = len(pairs)
@@ -116,7 +120,7 @@ def transition(tp, sap, right, superior, groups, probe, rules, minimum_views):
         accepted, failures = {}, Counter()
         for seed in sorted({row[slot] for row in pairs}):
             indices = np.asarray(sorted(tree.query_ball_point(surface.xyz[seed], rules["fit_radius_mm"])))
-            geometry, reason = patch(surface, indices, seed, groups, probe, rules, minimum_views)
+            geometry, reason = patch(surface, indices, seed, distinct, probe, rules, minimum_views)
             if geometry is None:
                 failures[reason] += 1
             else:
@@ -155,8 +159,9 @@ def transition(tp, sap, right, superior, groups, probe, rules, minimum_views):
         diameter = np.linalg.norm(xyz[:, None] - xyz, axis=2).max()
         evidence["components"].append({
             "observed_region_mm": xyz.tolist(), "inferred_points_mm": [], "diameter_mm": float(diameter),
-            "support": {"TP": observations(tp, tp_indices, groups), "SAP": observations(sap, sap_indices, groups)},
-            "region_samples": observations(sap, region, groups),
+            "support": {"TP": observations(tp, tp_indices, groups, distinct),
+                        "SAP": observations(sap, sap_indices, groups, distinct)},
+            "region_samples": observations(sap, region, groups, distinct),
         })
     if len(evidence["components"]) != 1:
         return evidence, "competing_surface_regions"
@@ -166,10 +171,12 @@ def transition(tp, sap, right, superior, groups, probe, rules, minimum_views):
     return evidence, None
 
 
-def observations(surface, indices, groups):
+def observations(surface, indices, groups, distinct):
     indices = np.asarray(indices, dtype=int)
     frames = surface.frame[indices]
-    return {"frames": np.unique(frames).tolist(), "view_groups": np.unique(groups[frames]).tolist(),
+    unique = np.unique(frames)
+    return {"frames": unique.tolist(), "view_groups": np.unique(groups[frames]).tolist(),
+            "distinct_frames": np.unique(assign_views(unique, distinct)).tolist(),
             "points": [{"frame": int(f), "pixel_row_col": pixel.tolist(), "xyz_mm": xyz.tolist(),
                         "confidence": float(prob)}
                        for f, pixel, xyz, prob in zip(frames, surface.pixels[indices],
@@ -190,9 +197,10 @@ def localize(tp, sap, frames, rules):
         return {"status": "UNRESOLVED", "reason": "missing_actor_visible_anatomical_axes", "candidate": None,
                 "runtime_ms": (perf_counter() - start) * 1000}
     right, superior, residual = axes
-    groups = view_groups(frames, rules)
+    distinct = distinct_poses(frames, rules)
+    groups = assign_views(np.arange(len(frames)), distinct)
     probe = np.asarray([project_image(f, (1, 1), rules["pixel_mm"])[0, 0] for f in frames])
-    evidence, reason = transition(tp, sap, right, superior, groups, probe, rules, rules["min_views"])
+    evidence, reason = transition(tp, sap, right, superior, groups, distinct, probe, rules, rules["min_views"])
     result = {"observed_coverage": evidence, "holdouts": {}, "candidate": None,
               "public_axes": {"right": right.tolist(), "superior": superior.tolist(),
                               "fit_residual_index": residual}}
@@ -204,7 +212,7 @@ def localize(tp, sap, frames, rules):
         masks.update({f"view_{group}": groups == group for group in used})
     for name, mask in masks.items():
         held, held_reason = transition(tp.subset(~mask[tp.frame]), sap.subset(~mask[sap.frame]),
-                                       right, superior, groups, probe, rules, 1)
+                                       right, superior, groups, distinct, probe, rules, 1)
         check = {k: held[k] for k in ("tp_points", "sap_points", "within_gap_pairs", "directional_pair_count")}
         check.update(reason=held_reason, nearest_gap_mm=held.get("nearest_gap_mm"))
         if reason is None and held_reason is None:

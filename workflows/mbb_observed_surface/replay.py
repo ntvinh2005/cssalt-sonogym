@@ -7,9 +7,10 @@ import subprocess
 import sys
 
 import numpy as np
+from scipy.spatial import cKDTree
 
 from run_simple_landmark_mapping import load_public, read_jsonl, sha256
-from workflows.mbb_observed_surface.localize import distance_both_ways
+from workflows.mbb_observed_surface.localize import assign_views, distance_both_ways, distinct_poses
 
 
 MODES = {"Oracle-visible": "B0", "U-Net": "B1"}
@@ -91,6 +92,24 @@ def historical_controls(frozen, manifest, seed):
             "old_target_output": "NO_TARGET_OUTPUT_FOR_THIS_SESSION"}
 
 
+def surface_support(entry, frames, rules):
+    with np.load(checked(entry), allow_pickle=False) as arrays:
+        xyz, identities, sequences = (arrays[k] for k in ("xyz_mm", "identity", "frame_sequence"))
+    distinct = distinct_poses(frames, rules)
+    surfaces, support = {}, {}
+    for label in ("TP", "SAP"):
+        mask = identities == f"RIGHT_L5_{label}"
+        views = np.unique(sequences[mask])
+        surfaces[label] = xyz[mask]
+        support[label] = {"points": int(mask.sum()), "source_frames": views.tolist(),
+                          "distinct_frames": np.unique(assign_views(views, distinct)).tolist()}
+    if all(len(points) for points in surfaces.values()):
+        tp, sap = cKDTree(surfaces["TP"]), cKDTree(surfaces["SAP"])
+        support["nearest_gap_mm"] = float(tp.query(surfaces["SAP"])[0].min())
+        support["within_gap_pairs"] = int(tp.count_neighbors(sap, rules["max_gap_mm"]))
+    return support
+
+
 def draw_replay(output, manifest, sessions, references):
     import matplotlib
     matplotlib.use("Agg")
@@ -151,20 +170,24 @@ def run(args):
     if seeds != frozen["development_seeds"] or set(seeds) & set(manifest["reserved_seeds"]):
         raise ValueError("development inputs differ from the frozen cohort or use a reserved seed")
     args.output.mkdir(parents=True, exist_ok=False)
-    seals = predict_cohort(manifest, json.loads(args.rules.read_text()), args.rules, args.output)
+    rules = json.loads(args.rules.read_text())
+    seals = predict_cohort(manifest, rules, args.rules, args.output)
     midpoint_ras = json.loads(audit.read_text())["point sets"]["Historical midpoint"]["coordinates_ras_mm"]
     affine = nib.load(checked(manifest["target"]["segmentation"])).affine
     results, references = [], {}
     for session in manifest["sessions"]:
         seed = str(session["seed"])
         directory = Path(session["path"])
-        record = read_jsonl(directory / "public/frames.jsonl")[0]
+        frames = read_jsonl(directory / "public/frames.jsonl")[:session["eligible_waypoint_count"]]
+        record = frames[0]
         key = "privileged/full_pose_replay.jsonl"
         native = read_jsonl(checked({"path": str(directory / key), "sha256": session["files"][key]}))[0]
         reference = ras_to_actor(midpoint_ras, affine, record, native)
         references[seed] = reference
         controls = historical_controls(frozen, manifest, seed)
         row = {"seed": seed, "frames": session["eligible_waypoint_count"], "historical": controls,
+               "all_oracle_visible_before_actor_eligibility": surface_support(
+                   manifest["clouds"][seed]["references"]["evaluator_visible.npz"], frames, rules),
                "replay": {}}
         for mode, entry in seals[seed].items():
             prediction = json.loads(checked({"path": str(args.output / entry["path"]),
@@ -173,7 +196,9 @@ def run(args):
             if prediction["candidate"]:
                 region = prediction["candidate"]["observed_region_mm"]
                 comparison = bidirectional_score(region, reference, frozen["legacy_diagnostic_tolerance_mm"])
+            support = surface_support(manifest["clouds"][seed][MODES[mode]]["cloud.npz"], frames, rules)
             row["replay"][mode] = {"prediction": prediction, "legacy_comparison_only": comparison,
+                                   "whole_surface_support": support,
                                    "reference_specific_correctness": "TARGET_LOCALIZATION_NOT_EVALUABLE"}
         results.append(row)
     aggregate = {}

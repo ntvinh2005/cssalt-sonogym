@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from workflows.mbb_observed_surface.localize import Surface, transition, view_groups
+from workflows.mbb_observed_surface.localize import Surface, assign_views, distinct_poses, transition
 from workflows.mbb_observed_surface.replay import bidirectional_score
 
 
@@ -32,7 +32,9 @@ class ObservedSurfaceTests(unittest.TestCase):
     def evaluate(self, copies=3, independent=True, **case):
         tp, sap = surfaces(copies, **case)
         groups = np.arange(copies) if independent else np.zeros(copies, dtype=int)
-        return transition(tp, sap, RIGHT, SUPERIOR, groups, np.tile([9., 30., 7.], (copies, 1)), RULES, 2)
+        distinct = groups[:, None] != groups
+        return transition(tp, sap, RIGHT, SUPERIOR, groups, distinct,
+                          np.tile([9., 30., 7.], (copies, 1)), RULES, 2)
 
     def test_region_retains_observed_samples_and_no_extension(self):
         evidence, why = self.evaluate()
@@ -57,9 +59,25 @@ class ObservedSurfaceTests(unittest.TestCase):
         def frame(index, x, image):
             return {"frame_sequence": index, "actor_base_to_ee_position_m": [x, 0, 0],
                     "actor_base_to_ee_rotation_columns": np.eye(3).tolist(), "frame_sha256": image}
-        np.testing.assert_array_equal(view_groups([frame(0, 0, "A"), frame(1, 0, "B"),
-                                                   frame(2, .003, "C"), frame(3, .006, "C")], RULES), [0, 0, 2, 2])
+        frames = [frame(0, 0, "A"), frame(1, 0, "B"), frame(2, .003, "C"), frame(3, .006, "C")]
+        np.testing.assert_array_equal(assign_views(np.arange(4), distinct_poses(frames, RULES)), [0, 0, 2, 2])
         evidence, why = self.evaluate(independent=False)
+        self.assertEqual(why, "no_supported_root_and_lateral_neck_transition")
+        self.assertEqual(evidence["patch_pair_count"], 0)
+
+    def test_neighboring_global_view_groups_cannot_inflate_patch_support(self):
+        def frame(i, millimeters):
+            return {"frame_sequence": i, "actor_base_to_ee_position_m": [millimeters / 1000, 0, 0],
+                    "actor_base_to_ee_rotation_columns": np.eye(3).tolist(), "frame_sha256": str(i)}
+
+        distinct = distinct_poses([frame(i, x) for i, x in enumerate([0., 3.8, 1.9, 2.1])], RULES)
+        groups = assign_views(np.arange(4), distinct)
+        self.assertNotEqual(groups[2], groups[3])
+        tp, sap = surfaces(copies=2)
+        tp = Surface(tp.xyz, tp.frame + 2, tp.confidence, tp.pixels)
+        sap = Surface(sap.xyz, sap.frame + 2, sap.confidence, sap.pixels)
+        evidence, why = transition(tp, sap, RIGHT, SUPERIOR, groups, distinct,
+                                   np.tile([9., 30., 7.], (4, 1)), RULES, 2)
         self.assertEqual(why, "no_supported_root_and_lateral_neck_transition")
         self.assertEqual(evidence["patch_pair_count"], 0)
 
