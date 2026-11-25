@@ -183,7 +183,7 @@ def actual_gap(root, output):
             ways = 126 if session.endswith("-126") else 102
             n_fits = sum(m["status"] == "INFERRED" for m in record["methods"].values())
             mode_name = "Oracle" if mode == "oracle" else ARM_LABELS[mode]
-            ax.set_title(f"{session.split('-')[0]} · {ways} frames\\n"
+            ax.set_title(f"{session.split('-')[0]} · {ways} frames\n"
                          f"{mode_name} · {hits}/7 trace · {n_fits}/2 fits", fontsize=10, pad=3)
             ax.set(xlim=(-11, 11), ylim=(-11, 11), zlim=(-11, 11),
                    xticks=(-10, 0, 10), yticks=(-10, 0, 10), zticks=(-10, 0, 10))
