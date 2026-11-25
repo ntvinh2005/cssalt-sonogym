@@ -21,7 +21,8 @@ def cloud_panel(ax, cloud, center, title, result=None, legacy=None, references=N
     kinds = cloud["identity"]
     for name, color in DISPLAY.items():
         points = xyz[keep & (kinds == name)]
-        ax.scatter(*points.T, c=color, s=4 if name == "OTHER_BONE" else 7, depthshade=False, alpha=.65)
+        opacity = .23 if name == "UNCERTAIN_BONE" else .8
+        ax.scatter(*points.T, c=color, s=4 if name == "OTHER_BONE" else 7, depthshade=False, alpha=opacity)
     if legacy is not None:
         ax.scatter(*legacy.T, c="#bd2e20", marker="x", s=21, depthshade=False)
     if trace is not None:
@@ -177,11 +178,12 @@ def fresh_video(args):
             ax = right.subplots(subplot_kw={"projection":"3d"})
             final = i == len(valid) - 1
             status = output["status"] if final else "acquiring"
-            cloud_panel(ax, cloud, center, f"Observed cortical surfaces · {status}",
+            cloud_panel(ax, cloud, center, f"Learned surface samples · {status}",
                         result=output if final else None, prefix=seq)
             xyz = 1000 * np.asarray(frame["actor_base_to_ee_position_m"])
             fig.suptitle(f"Fresh matched development sweep · waypoint {frame['waypoint_index'] + 1}"
                          f" · {frame['phase']} · pose ({xyz[0]:.1f}, {xyz[1]:.1f}, {xyz[2]:.1f}) mm")
+            legend(fig, candidate=bool(final and output.get("candidate")))
             fig.canvas.draw()
             image = cv2.cvtColor(np.asarray(fig.canvas.buffer_rgba()), cv2.COLOR_RGBA2BGR)
             writer.write(image)
