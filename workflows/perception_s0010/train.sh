@@ -8,6 +8,9 @@ if [[ "$mode" == mining ]]; then
 elif [[ -n "${CAMPAIGN_MINING:-}" ]]; then
     extra+=(--mining "$CAMPAIGN_MINING/fit")
 fi
+if [[ -n "${CAMPAIGN_PILOT:-}" ]]; then
+    extra+=(--pilot "$CAMPAIGN_PILOT")
+fi
 capture_run_context "$out"
 cp "$CAMPAIGN_PROFILE" "$out/context/campaign.yaml"
 trap 'kill "$telemetry" 2>/dev/null || true' EXIT

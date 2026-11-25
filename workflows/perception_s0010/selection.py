@@ -118,6 +118,7 @@ def main():
     for key in ("protocol","profile","previous","historical","development","data","training","output","frozen"):
         parser.add_argument("--"+key,required=True,type=Path)
     parser.add_argument("--device",default="cuda:0")
+    parser.add_argument("--pilot",type=Path)
     args=parser.parse_args()
     args.output.mkdir(exist_ok=False,parents=True)
     campaign=yaml.safe_load(args.profile.read_text())
@@ -131,6 +132,9 @@ def main():
     for path in sorted(args.training.glob("L*/*/result.json")):
         receipt=json.loads(path.read_text())
         if receipt["status"] == "completed":
+            if args.pilot and (receipt["provenance"]["pilot_profile_sha256"] != sha256(args.pilot)
+                               or receipt["training_examples"] != 2000):
+                raise ValueError("evaluation refuses weights outside the 2000-image pilot")
             specs[path.parent.parent.name][path.parent.name] = {
                 "path":receipt["checkpoint"],"sha256":receipt["checkpoint_sha256"]}
     if len(specs["L5"])<=2:

@@ -102,6 +102,7 @@ def main():
     parser.add_argument("--device",default="cuda:0")
     parser.add_argument("--mine-only",action="store_true")
     parser.add_argument("--mining",type=Path)
+    parser.add_argument("--pilot",type=Path)
     args=parser.parse_args()
     args.output.mkdir(exist_ok=False,parents=True)
     cfg=yaml.safe_load(args.profile.read_text())
@@ -137,9 +138,38 @@ def main():
     dev_splits=("unseen_speckle","unseen_geometry")
     forbidden=[r["position_m"] for n in ("combined","unseen_geometry") for r in grouped[n]]
     train_records=grouped["train"]
+    selected_indices=list(range(len(train_records)))
+    pilot=None
+    if args.pilot:
+        pilot=yaml.safe_load(args.pilot.read_text())
+        cap=pilot["maximum_unique_training_images"]
+        if cap != 2000 or pilot["allow_legacy_training_images"]:
+            raise ValueError("the scoped pilot reserves exactly 2000 generated images across both levels")
+        rng=np.random.default_rng(pilot["selection_seed"])
+        by_pose=defaultdict(list)
+        for i,row in enumerate(train_records):
+            by_pose[row["geometry_sha256"]].append(i)
+        rounds=[list(rng.permutation(group)) for group in by_pose.values()]
+        selected_indices=[]
+        for depth in range(max(map(len,rounds))):
+            batch=[int(group[depth]) for group in rounds if len(group)>depth]
+            selected_indices.extend(rng.permutation(batch).tolist()[:cap-len(selected_indices)])
+            if len(selected_indices)==cap:
+                break
+        selected_indices.sort()
+        train_records=[train_records[i] for i in selected_indices]
+        if len({r["image_sha256"] for r in train_records}) != cap:
+            raise ValueError("the training manifest does not contain 2000 distinct images")
+    write_json(args.output/"training_split.json",{
+        "pilot_profile_sha256":sha256(args.pilot) if args.pilot else None,
+        "unique_training_images":len(train_records),
+        "distinct_rendered_poses":len({r["geometry_sha256"] for r in train_records}),
+        "original_examples_allowed":not bool(pilot),
+        "records":train_records,
+    })
     with verified_archive(args.data,"train",receipt) as source:
-        train_new = source["images"]
-        new_labels = {level:source[level] for level in levels}
+        train_new = source["images"][selected_indices]
+        new_labels = {level:source[level][selected_indices] for level in levels}
     eval_images, eval_labels = {}, {}
     for split in dev_splits:
         with verified_archive(args.data,split,receipt) as source:
@@ -155,7 +185,9 @@ def main():
             mined=json.loads((args.mining/level/"mining.json").read_text())
             if mined["inputs"]!=provenance_seal:
                 raise ValueError(f"mining inputs do not match {level} training")
-            mine=mined["candidates"]
+            mine=[dict(mined["candidates"][i],index=j) for j,i in enumerate(selected_indices)]
+            if not all(m["pose_group"]==r["pose_group"] for m,r in zip(mine,train_records)):
+                raise ValueError("mining records do not match the chosen pilot images")
         else:
             probs=list(infer(model,train_new,args.device,settings["batch_size"]))
             training_metrics,cases=eval_fixed(probs,new_labels[level],train_records,level,rules)
@@ -169,13 +201,19 @@ def main():
             make_mining_examples(train_new,new_labels[level],cases,level,out/"mining.png")
         if args.mine_only:
             continue
-        images_old,labels_old,source_old=original_examples(
-            args.legacy_dataset,args.legacy_training,level,forbidden,
-            cfg["data"]["legacy_and_split_buffer_mm"]/1000,settings["seed"],
-        )
+        if pilot:
+            source_old=[]
+            labels_old=[]
+            images,labels=train_new,new_labels[level]
+            write_json(out/"mining_used.json",{"candidates":mine,"pilot_image_count":len(labels)})
+        else:
+            images_old,labels_old,source_old=original_examples(
+                args.legacy_dataset,args.legacy_training,level,forbidden,
+                cfg["data"]["legacy_and_split_buffer_mm"]/1000,settings["seed"],
+            )
+            images=np.concatenate((train_new,images_old))
+            labels=np.concatenate((new_labels[level],labels_old))
         write_json(out/"legacy_selection.json",source_old)
-        images=np.concatenate((train_new,images_old))
-        labels=np.concatenate((new_labels[level],labels_old))
         natural = np.arange(len(labels))
         positive=[i for i,r in enumerate(mine) if r["positive"]]
         negative=[i for i,r in enumerate(mine) if r["negative"]]
@@ -209,7 +247,9 @@ def main():
             optimizer=torch.optim.AdamW(model.parameters(),lr=settings["learning_rate"],weight_decay=settings["weight_decay"])
             provenance={"level":level,"arm":arm,"initial_sha256":spec[level]["sha256"],
                         "data_manifest_sha256":sha256(args.data/"manifest.jsonl"),
-                        "settings":settings,"effective_seed":seed,"num_training":len(labels)}
+                        "settings":settings,"effective_seed":seed,"num_training":len(labels),
+                        "training_split_sha256":sha256(args.output/"training_split.json"),
+                        "pilot_profile_sha256":sha256(args.pilot) if args.pilot else None}
             history=[]
             best=-np.inf
             stale=0

@@ -1,0 +1,7 @@
+base: s0010_perception_campaign_v1.yaml
+maximum_unique_training_images: 2000
+selection_seed: 394412
+selection: equalize_draws_per_rendered_pose_before_filling
+allow_legacy_training_images: false
+initialize_from: original_checkpoints_only
+preserve_existing_dataset_split_and_readiness_gate: true
