@@ -181,7 +181,8 @@ def main():
         checkpoint = Path(receipt["checkpoint"])
         if sha256(checkpoint) != receipt["checkpoint_sha256"]:
             raise ValueError("fine-tuned checkpoint checksum mismatch")
-        tuned, thresholds = load_segmentation_checkpoint(checkpoint, expected_level="L5")
+        tuned, bundle = load_segmentation_checkpoint(checkpoint, expected_level="L5")
+        thresholds = bundle["thresholds"]
 
     report = {"input_hashes": {"protocol": sha256(args.protocol), "profile": sha256(args.profile)},
               "sessions": [], "acquisition_attempts": []}
