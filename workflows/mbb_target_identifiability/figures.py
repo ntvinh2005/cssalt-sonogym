@@ -55,13 +55,15 @@ def coverage_plot(summary, out):
     finish(figure,out/"coverage.png")
 
 
-def set_axes(ax, center, radius, frame="Base"):
+def set_axes(ax, center, radius):
     ax.set_box_aspect((1,1,1))
     ax.set_xlim(*(center[0] + np.array([-radius,radius])))
     ax.set_ylim(*(center[1] + np.array([-radius,radius])))
     ax.set_zlim(*(center[2] + np.array([-radius,radius])))
     ax.view_init(22,-59)
-    ax.set(xlabel=f"{frame} X (mm)",ylabel=f"{frame} Y (mm)",zlabel=f"{frame} Z (mm)")
+    ax.set_xlabel("X", labelpad=1)
+    ax.set_ylabel("Y", labelpad=1)
+    ax.set_zlabel("Z", labelpad=1)
     ax.tick_params(labelsize=7,pad=1)
 
 
@@ -74,6 +76,7 @@ def scatter_cloud(ax, points, codes):
 
 def geometry_plot(data, methods, seed, out, title):
     figure, axes = plt.subplots(2,2,figsize=(11,9),subplot_kw={"projection":"3d"},layout="constrained")
+    figure.get_layout_engine().set(h_pad=.32, w_pad=.27)
     points = data["midpoint"]
     tree = cKDTree(points)
     center = points.mean(0)
@@ -85,12 +88,13 @@ def geometry_plot(data, methods, seed, out, title):
         ax.set_title(f"{METHOD_LABELS[m]} · {int(local.sum())} local points")
     figure.legend(handles=[Line2D([0],[0],color=color,label=k.replace("_"," "),marker="o",ls="")
                            for k,color in zip(IDENTITIES,COLORS)],loc="outside lower center",ncols=4,frameon=False)
-    figure.suptitle(f"{title} · seed {seed} · 20 mm")
+    figure.suptitle(f"{title} · seed {seed} · 20 mm\nRobot base coordinates (mm)")
     finish(figure,out)
 
 
 def reference_plot(data, seed, out):
     figure, axes = plt.subplots(1,2,figsize=(11,5.8),subplot_kw={"projection":"3d"},layout="constrained")
+    figure.get_layout_engine().set(w_pad=.27)
     tree = cKDTree(data["midpoint"])
     center = data["midpoint"].mean(0)
     visible, codes = data["visible_xyz"], data["visible_code"]
@@ -111,7 +115,7 @@ def reference_plot(data, seed, out):
                               "Observed Oracle interface points")):
         set_axes(ax,center,22)
         ax.set_title(title)
-    figure.suptitle(f"Observed and unobserved parts of the reference · seed {seed}")
+    figure.suptitle(f"Observed and unobserved parts of the reference · seed {seed}\nRobot base coordinates (mm)")
     finish(figure,out/"reference_visibility.png")
 
 
@@ -171,19 +175,28 @@ def annotation_plot(d, out):
     if not variants:
         return
     fig, axes=plt.subplots(1,1+min(2,len(variants)),figsize=(13,5),subplot_kw={"projection":"3d"},layout="constrained")
+    fig.get_layout_engine().set(w_pad=.26)
     named=[("sap_original","reference")]
     for k in tuple(v for v in variants if "_2_voxel" in v) or tuple(variants[:2]):
         named.append((k,k[4:]))
     axes=np.atleast_1d(axes)
     center=d["reference"].mean(0)
+    radius=16
     for (sap,key), ax in zip(named,axes):
-        ax.scatter(*d["tp_original"].T,s=4,color=COLORS[2],alpha=.35)
-        ax.scatter(*d[sap].T,s=4,color=COLORS[3],alpha=.35)
-        ax.scatter(*d["protected_local_first_bone"].T,s=3,color="#626b73",alpha=.2)
+        for name,color in (("tp_original",COLORS[2]), (sap,COLORS[3]),
+                           ("protected_local_first_bone","#626b73")):
+            points=d[name]
+            local=np.all(np.abs(points-center) <= radius, axis=1)
+            ax.scatter(*points[local].T,s=4,color=color,alpha=.35)
         ax.scatter(*d[key].T,s=28,color="#b33240",marker="x")
-        set_axes(ax,center,16,"RAS")
+        set_axes(ax,center,radius)
         ax.set_title(key.replace("_"," ").title())
-    fig.suptitle("Evaluator-only semantic annotation sensitivity · red crosses mark provisional midpoint samples")
+    legend=(("TP label",COLORS[2],"o"), ("SAP label",COLORS[3],"o"),
+            ("Protected first-hit voxel","#626b73","o"),
+            ("Provisional midpoint","#b33240","x"))
+    fig.legend(handles=[Line2D([0],[0],color=color,label=label,marker=marker,ls="")
+                        for label,color,marker in legend],loc="outside lower center",ncols=4,frameon=False)
+    fig.suptitle("Evaluator-only semantic annotation sensitivity · CT RAS coordinates (mm)")
     finish(fig,out/"annotation_sensitivity.png")
 
 
