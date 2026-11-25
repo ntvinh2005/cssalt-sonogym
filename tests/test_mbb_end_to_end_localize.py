@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 from workflows.mbb_end_to_end.localize import (
-    Cloud, OTHER, RULES, SAP, TP, cloud_integrity, find_region, localize,
+    Cloud, OTHER, RULES, SAP, TP, UNCERTAIN, cloud_integrity, find_region, localize, sensitivity_trials,
 )
 from two_stage_navigation.simple_landmark_mapping import project_image
 
@@ -14,17 +14,18 @@ from two_stage_navigation.simple_landmark_mapping import project_image
 RIGHT, SUPERIOR = np.eye(3)[[0, 2]]
 
 
-def case(*, connector=True, duplicate=False, parallel=False):
-    horizontal = np.array([[x, y, 0.] for x in (1.5, 2., 2.5, 3., 3.5)
+def case(*, connector=True, duplicate=False, parallel=False, anchor_start=1.5):
+    anchor_positions = anchor_start + np.arange(5) * .5
+    horizontal = np.array([[x, y, 0.] for x in anchor_positions
                            for y in (-1., -.5, 0., .5, 1.)])
-    vertical = np.array([[0., y, z] for z in (1.5, 2., 2.5, 3., 3.5)
+    vertical = np.array([[0., y, z] for z in anchor_positions
                          for y in (-1., -.5, 0., .5, 1.)])
     if parallel:
         vertical = vertical[:, [2, 1, 0]] + [0., 0., 1.5]
     pieces = [(TP, horizontal), (SAP, vertical)]
     if connector:
-        lower = [[x, y, 0.] for x in (0., .5, 1.) for y in (-1., -.5, 0., .5, 1.)]
-        upper = [[0., y, z] for z in (.5, 1.) for y in (-1., -.5, 0., .5, 1.)]
+        lower = [[x, y, 0.] for x in np.arange(0, anchor_start, .5) for y in (-1., -.5, 0., .5, 1.)]
+        upper = [[0., y, z] for z in np.arange(.5, anchor_start, .5) for y in (-1., -.5, 0., .5, 1.)]
         pieces.append((OTHER, np.array(lower + upper)))
 
     xyz = np.concatenate([p for _, p in pieces])
@@ -82,9 +83,20 @@ class ObservedGeometryTests(unittest.TestCase):
             self.assertLessEqual(np.linalg.norm(endpoint - idx, axis=1).min(), .75)
 
     def test_missing_connector_cannot_bridge_unobserved_gap(self):
-        result, why, _ = self.solve(case(connector=False))
+        result, why, diag = self.solve(case(connector=False))
         self.assertIsNone(result)
         self.assertEqual(why, "no_supported_cortical_transition")
+        self.assertEqual(diag["bounded_connector_route_count"], 0)
+
+    def test_connected_cortex_can_join_anchors_over_eight_millimetres_apart(self):
+        result, why, diag = self.solve(case(anchor_start=5.75))
+        self.assertIsNone(why)
+        self.assertGreater(diag["nearest_tp_sap_mm"], 8.)
+        self.assertGreater(diag["bounded_connector_route_count"], 0)
+        self.assertLessEqual(result["route_length_range_mm"][-1], 12.)
+        removed, _, missing = self.solve(case(anchor_start=5.75, connector=False))
+        self.assertIsNone(removed)
+        self.assertEqual(missing["bounded_connector_route_count"], 0)
 
     def test_two_parallel_interfaces_are_not_a_transition(self):
         result, why, _ = self.solve(case(connector=False, parallel=True))
@@ -133,6 +145,18 @@ class ObservedGeometryTests(unittest.TestCase):
         self.assertEqual(cloud_integrity(cloud, frames)["public_reprojection_max_mm"], 0.)
         with self.assertRaisesRegex(ValueError, "public reprojection mismatch"):
             cloud_integrity(replace(cloud, xyz=cloud.xyz + .1), frames)
+
+    def test_zero_confidence_uncertain_rows_are_retained_only_for_diagnostic(self):
+        frames = actor_frames()
+        xyz = project_image(frames[0], tuple(RULES["image_shape"]), RULES["pixel_mm"])[[5], [7]]
+        uncertain = Cloud(xyz, np.array([UNCERTAIN]), np.array(["AMBIGUOUS"]), np.array([0]),
+                          np.array([[5, 7]]), np.zeros(1), np.full((1, 4), .25), np.array([0]))
+        self.assertEqual(cloud_integrity(uncertain, frames)["cloud_rows"], 1)
+        with self.assertRaisesRegex(ValueError, "malformed actor cloud"):
+            cloud_integrity(replace(uncertain, role=np.array([TP])), frames)
+        trials = dict((name, c) for name, c, _ in sensitivity_trials(uncertain, frames, np.eye(3, dtype=bool), None))
+        promoted = trials["ambiguous_bone_as_l5_cortex"]
+        self.assertEqual((promoted.role[0], promoted.level[0], promoted.confidence[0]), (OTHER, "L5", .25))
 
 
 if __name__ == "__main__":

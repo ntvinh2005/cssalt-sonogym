@@ -27,6 +27,7 @@ UNCERTAIN = "UNCERTAIN_BONE"
 # Samples are spaced at 0.5 mm in the image and the prior geometry uses a 1.5 mm thickness scale.
 CELL_MM = RULES["pixel_mm"]
 EDGE_MM = RULES["max_fit_thickness_mm"]
+FLANK_LENGTH_MM = RULES["max_region_diameter_mm"]
 ACQUISITION_KEYS = ("image_valid", "contact_ok", "producer_advanced", "transition_valid")
 
 
@@ -64,7 +65,8 @@ def cloud_integrity(cloud, frames):
     if (cloud.xyz.shape != (n, 3) or cloud.pixel.shape != (n, 2) or
             any(a.shape != (n,) for a in arrays) or cloud.probabilities.shape != (n, 4) or
             not np.isfinite(cloud.xyz).all() or not np.isfinite(cloud.confidence).all() or
-            not np.isfinite(cloud.probabilities).all() or np.any((cloud.confidence <= 0) | (cloud.confidence > 1)) or
+            not np.isfinite(cloud.probabilities).all() or np.any((cloud.confidence < 0) | (cloud.confidence > 1)) or
+            np.any((cloud.confidence == 0) & (cloud.role != UNCERTAIN)) or
             not np.issubdtype(cloud.frame.dtype, np.integer) or
             not np.issubdtype(cloud.pixel.dtype, np.integer) or
             np.any((cloud.frame < 0) | (cloud.frame >= len(frames))) or
@@ -122,21 +124,16 @@ def representatives(cloud):
     return cloud.take(order[at])
 
 
-def supported_flank(anchor, tree, pivot, axis, distinct, probe, minimum_views):
-    neighbors = np.asarray(sorted(tree.query_ball_point(pivot, RULES["fit_radius_mm"])), dtype=int)
+def fit_flank(anchor, tree, endpoint, distinct, probe, minimum_views):
+    neighbors = np.asarray(sorted(tree.query_ball_point(endpoint, RULES["fit_radius_mm"])), dtype=int)
     if len(neighbors) < 3:
         return None
-    seed = int(neighbors[np.argmin(np.linalg.norm(anchor.xyz[neighbors] - pivot, axis=1))])
+    seed = int(neighbors[np.argmin(np.linalg.norm(anchor.xyz[neighbors] - endpoint, axis=1))])
     fitted, _ = patch(anchor.surface(), neighbors, seed, distinct, probe, RULES, minimum_views)
     if fitted is None:
         return None
     source, normal = fitted
-    surface = anchor.take(source)
-    if max((surface.xyz - pivot) @ axis) < RULES["min_directional_span_mm"]:
-        return None
-    if abs((surface.xyz.mean(axis=0) - pivot) @ normal) > EDGE_MM:
-        return None
-    return surface, normal
+    return anchor.take(source), normal
 
 
 def joined_cortex(node, graph, cap, tp_nodes, sap_nodes):
@@ -151,7 +148,7 @@ def joined_cortex(node, graph, cap, tp_nodes, sap_nodes):
         while route[-1] != node:
             route.append(int(predecessor[route[-1]]))
         paths.append(route)
-    return np.unique(np.concatenate(paths))
+    return ends, np.unique(np.concatenate(paths)), float(distance[ends].sum())
 
 
 def unstable_levels(controversial_tree, point, distinct):
@@ -172,7 +169,10 @@ def find_region(cloud, distinct, probe, axes, minimum_views):
         "tp_observations": len(anchors[0].xyz), "sap_observations": len(anchors[1].xyz),
         "tp_distinct_views": len(views(anchors[0], distinct)), "sap_distinct_views": len(views(anchors[1], distinct)),
         "eligible_other_bone_observations": int(np.count_nonzero((cloud.role == OTHER) & (cloud.level == "L5"))),
-        "nearest_tp_sap_mm": None, "local_route_seed_count": 0, "supported_route_count": 0,
+        "nearest_tp_sap_mm": None, "local_route_seed_count": 0, "bounded_connector_route_count": 0,
+        "multi_view_route_count": 0, "fitted_flank_route_count": 0, "oriented_flank_route_count": 0,
+        "supported_route_count": 0, "maximum_flank_path_mm": FLANK_LENGTH_MM,
+        "maximum_combined_path_mm": 2 * FLANK_LENGTH_MM,
         "competing_region_count": 0, "ambiguous_level_seed_count": 0,
     }
     if not all(len(anchor.xyz) for anchor in anchors):
@@ -183,50 +183,61 @@ def find_region(cloud, distinct, probe, axes, minimum_views):
     eligible = (cloud.level == "L5") & np.isin(cloud.role, (TP, SAP, OTHER))
     cortex = cloud.take(eligible)
     cortex_tree = cKDTree(cortex.xyz)
-    candidate = np.logical_and.reduce([tree.query(cortex.xyz)[0] <= RULES["fit_radius_mm"]
+    candidate = np.logical_and.reduce([tree.query(cortex.xyz)[0] <= FLANK_LENGTH_MM
                                       for tree in anchor_trees])
     if not np.any(candidate):
         return None, "no_shared_local_support", evidence
 
     # Include the neighborhood of each possible junction, with no route through adjacent vertebrae.
     seed_tree = cKDTree(cortex.xyz[candidate])
-    nodes = representatives(cortex.take(seed_tree.query(cortex.xyz)[0] <= RULES["fit_radius_mm"]))
+    nodes = representatives(cortex.take(seed_tree.query(cortex.xyz)[0] <= FLANK_LENGTH_MM))
     anchor_node_ids = [np.flatnonzero(nodes.role == name) for name in (TP, SAP)]
     if any(len(ids) == 0 for ids in anchor_node_ids):
         return None, "missing_tp_or_sap_in_local_cortex", evidence
-    anchor_node_trees = [cKDTree(nodes.xyz[ids]) for ids in anchor_node_ids]
     graph = cortex_graph(nodes, cortex_tree)
-    seeds = np.flatnonzero(np.logical_and.reduce([tree.query(nodes.xyz)[0] <= RULES["fit_radius_mm"]
+    seeds = np.flatnonzero(np.logical_and.reduce([tree.query(nodes.xyz)[0] <= FLANK_LENGTH_MM
                                                 for tree in anchor_trees]))
     evidence["local_route_seed_count"] = len(seeds)
     uncertain = cloud.take(np.isin(cloud.level, ("L4", "AMBIGUOUS")))
     controversial = (uncertain, cKDTree(uncertain.xyz)) if len(uncertain.xyz) else None
+    fits = [{}, {}]
     passed = {}
     for node in seeds:
         center = nodes.xyz[node]
+        connection = joined_cortex(node, graph, FLANK_LENGTH_MM, *anchor_node_ids)
+        if connection is None:
+            continue
+        evidence["bounded_connector_route_count"] += 1
+        endpoints, route, path_length = connection
         nearby = np.asarray(cortex_tree.query_ball_point(center, EDGE_MM), dtype=int)
         if not len(nearby) or len(views(cortex.take(nearby), distinct)) < minimum_views:
             continue
-        flank = [supported_flank(anchor, tree, center, axis, distinct, probe, minimum_views)
-                 for anchor, tree, axis in zip(anchors, anchor_trees, (right, superior))]
+        evidence["multi_view_route_count"] += 1
+        flank = []
+        for endpoint, anchor, tree, cache in zip(endpoints, anchors, anchor_trees, fits):
+            if endpoint not in cache:
+                cache[endpoint] = fit_flank(anchor, tree, nodes.xyz[endpoint], distinct, probe, minimum_views)
+            flank.append(cache[endpoint])
         if any(f is None for f in flank):
             continue
+        evidence["fitted_flank_route_count"] += 1
         (tp, n_tp), (sap, n_sap) = flank
         if (n_sap @ right < RULES["min_right_component"] or abs(n_tp @ right) > RULES["max_tp_right_component"]
                 or abs(n_tp @ n_sap) > RULES["max_absolute_normal_dot"]):
             continue
-        if ((tp.xyz.mean(0) - center) @ right < -RULES["side_tolerance_mm"] or
-                (sap.xyz.mean(0) - center) @ superior < -RULES["side_tolerance_mm"]):
-            continue
-        tp_nodes, sap_nodes = [np.unique(ids[tree.query(s.xyz)[1]])
-                              for s, tree, ids in zip((tp, sap), anchor_node_trees, anchor_node_ids)]
-        route = joined_cortex(node, graph, RULES["fit_radius_mm"], tp_nodes, sap_nodes)
-        if route is None:
+        evidence["oriented_flank_route_count"] += 1
+        tp_continuation, sap_continuation = tp.xyz - center, sap.xyz - center
+        if (np.max(tp_continuation @ right) < RULES["min_directional_span_mm"] or
+                np.max(sap_continuation @ superior) < RULES["min_directional_span_mm"] or
+                tp_continuation.mean(0) @ right < -RULES["side_tolerance_mm"] or
+                sap_continuation.mean(0) @ superior < -RULES["side_tolerance_mm"] or
+                abs(tp_continuation.mean(0) @ n_tp) > EDGE_MM or
+                abs(sap_continuation.mean(0) @ n_sap) > EDGE_MM):
             continue
         if unstable_levels(controversial, center, distinct):
             evidence["ambiguous_level_seed_count"] += 1
             continue
-        passed[int(node)] = (tp, sap, nodes.take(route), cortex.take(nearby))
+        passed[int(node)] = (tp, sap, nodes.take(route), cortex.take(nearby), path_length)
     evidence["supported_route_count"] = len(passed)
     if not passed:
         reason = "competing_level_near_transition" if evidence["ambiguous_level_seed_count"] else "no_supported_cortical_transition"
@@ -257,6 +268,7 @@ def find_region(cloud, distinct, probe, axes, minimum_views):
         "observed_region_mm": observed.tolist(), "inferred_region_mm": np.unique(infer, axis=0).tolist(),
         "inference": "Midpoints of observed local surface pairs at most 1.5 mm apart, at most 0.75 mm from a measured endpoint.",
         "diameter_mm": diameter, "observed_region_samples": provenance(nodes.take(selected), distinct),
+        "route_length_range_mm": [min(p[-1] for p in passed.values()), max(p[-1] for p in passed.values())],
         "support": support,
     }, None, evidence
 
@@ -276,9 +288,12 @@ def sensitivity_trials(cloud, frames, distinct, candidate):
     near_tie = (probs[:, -1] - probs[:, -2]) < 0.10
     yield "omit_semantic_near_ties", cloud.take(~near_tie), RULES["min_views"]
     unassigned = (cloud.level == "AMBIGUOUS") & (cloud.role == UNCERTAIN)
+    # This sensitivity trial uses the quarantined probability as a placeholder weight.
+    stress_weight = np.where(unassigned & (cloud.confidence == 0),
+                             cloud.probabilities.max(axis=1), cloud.confidence)
     yield "ambiguous_bone_as_l5_cortex", replace(
         cloud, level=np.where(unassigned, "L5", cloud.level),
-        role=np.where(unassigned, OTHER, cloud.role)), RULES["min_views"]
+        role=np.where(unassigned, OTHER, cloud.role), confidence=stress_weight), RULES["min_views"]
 
     origin = 1000 * np.asarray([f["actor_base_to_ee_position_m"] for f in frames])[cloud.frame]
     t = cloud.frame.astype(float)
