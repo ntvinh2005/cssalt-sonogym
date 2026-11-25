@@ -1,0 +1,94 @@
+{
+  "anatomy": "s0010",
+  "identity": {
+    "nerve": "right L4 medial branch",
+    "reference_vertebra": "L5",
+    "bones": [
+      "right TP root",
+      "lateral neck of right SAP"
+    ]
+  },
+  "reference_decision": "C_UNRESOLVED",
+  "reference_basis": {
+    "frozen_before_first_surface_replay": true,
+    "anatomy_audit_job": "52790788",
+    "anatomy_audit_revision": "08aea14de4abe405845ecd2bb46a99fb8d1337e5",
+    "interpretation": "The historical cores face the expected region, but their anatomical role is unresolved. Five of 11 SAP core voxels are deeper than half a source voxel from external L5 faces and three of 13 midpoint samples lie in L5 label 3 (lamina). The core criterion measures subregion-mask separation. No revised reference contour is accepted without independent external-cortex review.",
+    "historical_target_policy": "preserve version 1 reference and historical decisions as diagnostics",
+    "historical_midpoint_represents": "uncertain geometric proxy samples, not an accepted-set contour",
+    "clinical_criterion": null
+  },
+  "anatomy_audit_sha256": "13f0ef9b6cfa8bc39e8ed60e152a3ca43bf5a159e68dd578d6365a749fbc64ea",
+  "legacy_diagnostic_tolerance_mm": 3.0,
+  "evaluation": {
+    "new_anatomical_correctness": "TARGET_LOCALIZATION_NOT_EVALUABLE",
+    "distance_diagnostic": "both directed nearest distances (median, p95, maximum, fraction within 3 mm) to the full historical sample set, if a candidate exists",
+    "region_width": "maximum distance between any two predicted samples",
+    "wrong_acceptance": "no anatomical score without an independent reference; do not mark unresolved as a correct decision",
+    "readiness": "requires an independent reviewed bone reference and four bounded repeatable candidates on matched development in both arms, with no wrong decisions or unresolved integrity issues"
+  },
+  "sources": [
+    "https://pubmed.ncbi.nlm.nih.gov/156249/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC5291620/",
+    "https://pubmed.ncbi.nlm.nih.gov/35589133/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC11372964/",
+    "https://pubmed.ncbi.nlm.nih.gov/15505456/",
+    "https://asra.com/news-publications/asra-updates/blog-landing/legacy-b-blog-posts/2019/08/06/ultrasound-guided-lumbar-medial-branch-and-intra-articular-facet-injections"
+  ],
+  "source_manifest_sha256": "805ad43aba2fc99a26cb586fdee84a6de9cf0bd95dc1857260f6e55c8a4c670c",
+  "actor_rules_sha256": "d8a39aeef231b03b2718d0447b444da9a8412bc7074da74c4b9e6cba495578b3",
+  "development_seeds": [
+    2026121700,
+    2026121702,
+    2026121900,
+    2026121901
+  ],
+  "reserved_seeds_unused": [
+    2026121800,
+    2026121801,
+    2026121802,
+    2026121803
+  ],
+  "four_landmark_controls": {
+    "2026121700": {
+      "Oracle-visible": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121700/A0/map.json",
+        "sha256": "52f73f6f81a3e441dbb95fda9588d62770447df60c3c99b6ed5294fcb17ad373"
+      },
+      "U-Net": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121700/A1/map.json",
+        "sha256": "245cb6dc14338df4c617502db991e1fed86b5d2eb59eb1e19e1c90caad15d9dd"
+      }
+    },
+    "2026121702": {
+      "Oracle-visible": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121702/A0/map.json",
+        "sha256": "a35e256e39ab16ca18454bbfc0506629fe185ff70a77ae8c123b926d7b5beb72"
+      },
+      "U-Net": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121702/A1/map.json",
+        "sha256": "9fc9f7f1edf3c3f127bd00161d676fe7ebe876a6a857440af1f9d806fd79a787"
+      }
+    },
+    "2026121900": {
+      "Oracle-visible": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121900/A0/map.json",
+        "sha256": "b213a99690b9cb224571bd9893cc622b0a697054d5851d3955faeaff33e8c1f6"
+      },
+      "U-Net": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121900/A1/map.json",
+        "sha256": "7d1f440bb1752a2dcb592e9fbd63eb664bfc028006c0b3b947bb6a862632b739"
+      }
+    },
+    "2026121901": {
+      "Oracle-visible": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121901/A0/map.json",
+        "sha256": "e7ec9288b4ca0fffd3e15128623a34e113db7af9a6adb12e9390bc8bb23157f5"
+      },
+      "U-Net": {
+        "path": "/blue/lampotan/share/vinhnguyen1/cssalt-sonogym/artifacts/reconstruction-103750/sparse/run-52739322/results/2026121901/A1/map.json",
+        "sha256": "ff8cee0068e2fff2c2e43d6fbee714bada53903cc02084c5fa04798e6db4d23a"
+      }
+    }
+  }
+}

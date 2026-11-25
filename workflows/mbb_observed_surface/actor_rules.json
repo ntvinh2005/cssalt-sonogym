@@ -1,0 +1,22 @@
+{
+  "image_shape": [200, 150],
+  "pixel_mm": 0.5,
+  "index_spacing_mm": 1.5,
+  "max_axis_fit_residual_index": 1.5,
+  "max_projection_parity_mm": 0.0015,
+  "min_view_translation_mm": 2.0,
+  "min_view_rotation_deg": 1.0,
+  "min_views": 2,
+  "fit_radius_mm": 4.0,
+  "connection_mm": 2.0,
+  "max_gap_mm": 3.0,
+  "min_spread_mm": 0.5,
+  "max_fit_thickness_mm": 1.5,
+  "min_right_component": 0.55,
+  "max_tp_right_component": 0.75,
+  "max_absolute_normal_dot": 0.8660254037844386,
+  "side_tolerance_mm": 1.5,
+  "min_directional_span_mm": 2.0,
+  "max_region_diameter_mm": 6.0,
+  "stability_mm": 3.0
+}

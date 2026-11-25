@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import nibabel as nib
 import numpy as np
@@ -19,6 +20,7 @@ from run_s0010_l4_medial_branch_target import load_target_geometry, sha256
 
 COLORS = {"SAP": "#d87816", "TP": "#18856d", "SAP core": "#ae3a66",
           "TP core": "#1666a3", "Historical midpoint": "#c71928"}
+BANDS = {"SAP band": "#9b65a0", "TP band": "#567da6"}
 
 
 def exposed_faces(mask):
@@ -73,7 +75,11 @@ def draw_ct(output, ct, l5, labeled, points, affine):
             reference_index[axis] = index
             position = nib.affines.apply_affine(affine, reference_index)[axis]
             panel.set_title(f"{name} · {'RAS'[axis]} {position:.1f} mm")
-            panel.set(xlabel=f"{'RAS'[h]} increases →", ylabel=f"{'RAS'[v]} increases ↑",
+            panel.xaxis.set_major_formatter(FuncFormatter(
+                lambda x, _, dim=h: f"{x * affine[dim, dim] + affine[dim, 3]:.0f}"))
+            panel.yaxis.set_major_formatter(FuncFormatter(
+                lambda y, _, dim=v: f"{y * affine[dim, dim] + affine[dim, 3]:.0f}"))
+            panel.set(xlabel=f"{'RAS'[h]} (mm) →", ylabel=f"{'RAS'[v]} (mm) ↑",
                       xlim=grid[:2], ylim=grid[2:])
     legend = [Line2D([0], [0], color="#777777", label="Full L5 boundary")]
     legend += [Line2D([0], [0], color=c, label=k) for k, c in COLORS.items()]
@@ -103,6 +109,11 @@ def draw_3d(output, faces, axes, masks, points, affine, pairs):
         for key, xyz in world.items():
             if key in masks and panel == 2:
                 xyz = xyz[np.linalg.norm(xyz - center, axis=1) < 21]
+            if key in BANDS:
+                if panel == 2:
+                    ax.scatter(*xyz.T, facecolors="none", edgecolors=BANDS[key], s=32, linewidths=.9,
+                               label=f"Historical {key}", depthshade=False)
+                continue
             ax.scatter(*xyz.T, c=COLORS[key], label=key, depthshade=False,
                        alpha=.35 if key in masks else .94, s=6 if key in masks else 26,
                        marker="x" if key == "Historical midpoint" else "o")
@@ -115,8 +126,7 @@ def draw_3d(output, faces, axes, masks, points, affine, pairs):
         ax.view_init(elev=elev, azim=azim)
         ax.set(xlabel="R (mm)", ylabel="A (mm)", zlabel="S (mm)",
                title="Full L5 in RAS" if panel == 1 else "Local L5 cortex and nearest-core segments")
-        if panel == 1:
-            ax.legend(loc="upper left", fontsize=8, frameon=False)
+        ax.legend(loc="upper left", fontsize=8, frameon=False)
     fig.savefig(output / "l5_review_3d.png", dpi=160)
     plt.close(fig)
 
@@ -183,7 +193,10 @@ def report(manifest, ct_path, ct_sha, output):
                          "endpoints_ras_mm": nib.affines.apply_affine(affine, endpoints).tolist()})
     output.mkdir(parents=True, exist_ok=False)
     draw_ct(output, ct, l5, labeled, points, affine)
-    draw_3d(output, faces, axes, labeled, points, affine, nib.affines.apply_affine(affine, pairs_voxel))
+    bands = {"SAP band": np.argwhere(contract.sap_uncertain & ~contract.sap_core),
+             "TP band": np.argwhere(contract.tp_uncertain & ~contract.tp_core)}
+    draw_3d(output, faces, axes, labeled, points | bands, affine,
+            nib.affines.apply_affine(affine, pairs_voxel))
     result = {"anatomy": data["anatomy"], "method": "historical core comparison against full L5",
               "input_sha256": {"ct": ct_sha, "segmentation": target["segmentation"]["sha256"],
                                "prediction": target["prediction"]["sha256"], "input_manifest": sha256(manifest)},
