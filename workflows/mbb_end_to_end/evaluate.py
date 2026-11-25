@@ -81,6 +81,18 @@ def reconstructed_file(cloud_dir, name, public_frames_digest):
     return checked({"path": str(path), "sha256": metadata["sha256"]})
 
 
+def write_public_prefix(source, destination):
+    rows = []
+    with source.open() as stream:
+        for line in stream:
+            if json.loads(line)["waypoint_index"] >= 102:
+                break
+            rows.append(line)
+    with destination.open("x") as stream:
+        stream.writelines(rows)
+    return len(rows)
+
+
 def seal_predictions(source, cloud_dir, output, expected_seeds):
     if [s["seed"] for s in source["sessions"]] != expected_seeds:
         raise ValueError("cohort does not match frozen seed ordering")
@@ -94,6 +106,10 @@ def seal_predictions(source, cloud_dir, output, expected_seeds):
         frames = checked({"path": str(Path(session["path"]) / "public/frames.jsonl"),
                           "sha256": session["files"]["public/frames.jsonl"]})
         frame_digest = digest(frames)
+        supplied = folder / "public-102.jsonl"
+        if write_public_prefix(frames, supplied) != session["eligible_waypoint_count"]:
+            raise ValueError("matched public ledger does not contain the expected observations")
+        supplied_sha = digest(supplied)
         seals[seed] = {}
         for arm, name in ARMS.items():
             cloud = reconstructed_file(cloud_dir / seed, name, frame_digest)
@@ -109,11 +125,12 @@ def seal_predictions(source, cloud_dir, output, expected_seeds):
             })
             for variant, point_file in ((arm, cloud), (f"{arm}_anchors_only", anchors)):
                 path = folder / f"{variant}.json"
-                invoke_actor(point_file, frames, path)
+                invoke_actor(point_file, supplied, path)
                 seals[seed][variant] = {
                     "result": {"path": str(path), "sha256": digest(path)},
                     "input_cloud": {"path": str(point_file), "sha256": digest(point_file)},
-                    "public_frames_sha256": frame_digest,
+                    "source_frames_sha256": frame_digest,
+                    "supplied_frames_sha256": supplied_sha,
                 }
     write(output / "actor_prediction_seals.json", seals)
     return seals

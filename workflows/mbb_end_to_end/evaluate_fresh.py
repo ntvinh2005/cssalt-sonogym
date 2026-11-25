@@ -9,7 +9,7 @@ import numpy as np
 
 from workflows.mbb_end_to_end.evaluate import (
     ARMS, array_file, checked, cortex_diagnostic, digest, invoke_actor, load_protocol,
-    ras_to_base, read, reconstructed_file, reference_data, score, visible_coverage, write,
+    ras_to_base, read, reconstructed_file, reference_data, score, visible_coverage, write, write_public_prefix,
 )
 
 
@@ -62,6 +62,9 @@ def evaluate(opts):
     write(opts.output / "input_freeze.json", {"reference_receipt_sha256": reference_seal,
                                              "actor_capture_sha256": digest(receipt), "protocol_sha256": seal})
     seals = {}
+    public = opts.session / "public/frames.jsonl"
+    prefix_ledger = opts.output / "public-prefix.jsonl"
+    write_public_prefix(public, prefix_ledger)
     frames_digest = digest(opts.session / "public/frames.jsonl")
     for arm, label in ARMS.items():
         full = reconstructed_file(opts.reconstruction / str(seed), label, frames_digest)
@@ -69,11 +72,12 @@ def evaluate(opts):
         keep = np.isin(arrays["frame_sequence"], prefix)
         first = opts.output / f"{arm}_prefix_cloud.npz"
         np.savez_compressed(first, **{k: arr[keep] if arr.shape[:1] == keep.shape else arr for k, arr in arrays.items()})
-        for name, path in ((f"{arm}_prefix", first), (f"{arm}_full", full)):
+        for name, path, ledger in ((f"{arm}_prefix", first, prefix_ledger), (f"{arm}_full", full, public)):
             prediction = opts.output / f"{name}.json"
-            invoke_actor(path, opts.session / "public/frames.jsonl", prediction)
+            invoke_actor(path, ledger, prediction)
             seals[name] = {"prediction": {"path": str(prediction), "sha256": digest(prediction)},
-                           "cloud": {"path": str(path), "sha256": digest(path)}}
+                           "cloud": {"path": str(path), "sha256": digest(path)},
+                           "supplied_frames_sha256": digest(ledger)}
     write(opts.output / "prediction_seals.json", seals)
     if digest(opts.reference / "checksums.sha256") != reference_seal:
         raise ValueError("reference changed during fresh localization")
