@@ -1,0 +1,79 @@
+anatomy: s0010
+implementation_revision: 9009900be0d7c3238b45cff485237dbe42fbd988
+successful_development_job: 52694480
+successful_execution_revision: a53cf7be668a7aa47918511eaefeae5fc8d3bfb3
+development_profile_sha256: 3fa38f95921c506cdb683eef6d550a68ec91d06dc61c0eaca595a45d8b03c91b
+source_protocol_sha256: c26802d61f211c62acd16fe12208183e3442ebf776e9188d867a77126c6a114e
+stage1:
+  mode: reuse_recorded_actor_output
+  session: cf7_00
+  sha256: 1fcfd37760034feaf5eccca586a687713a04181fcb943df293d5b1c213a1f4a8
+  home_x: 133.0
+  l4_z: 141.4252695461295
+  l5_z: 122.83054178391173
+  frame_center_ambiguity_z: [130.62790566502062, 133.79457233168728]
+seeds: [2026121700, 2026121701, 2026121702, 2026121703]
+seed_inventory:
+  repository_and_runtime_matches: 0
+  runtime_manifests_and_actor_records_checked: 668
+  development_seeds_excluded: [2026120500, 2026120501, 2026120502]
+acquisition:
+  mode: outer_transverse_midpoints_near_l4
+  camera: all_sessions_same_as_successful_development
+  ordered_waypoint_sha256: ea2920539d80ed3c79b553edbf284aaa697985e57b6b9789657e22f9a6cde16e
+  waypoint_count: 54
+  per_plane: {longitudinal: 14, transverse: 40}
+  longitudinal_angle_rad: 1.5707963267948966
+  transverse_angle_rad: 2.95
+  longitudinal_offsets_index: [2, 5, 8, 11, 14, 17, 20]
+  transverse_lateral_offsets_index: [5, 11, 17]
+  transverse_bounds_from_level_references_index: [-6, 6]
+  maximum_spacing_index: 3.0
+  supplemental_outer_transverse_waypoints_zero_based: [46, 48, 50, 52]
+  motion: {position_tolerance_mm: 1.0, angle_tolerance_deg: 1.0, maximum_orientation_step_rad: 0.35}
+  evidence: {TP: original_50_waypoints_and_existing_frame_center_routing, SAP: all_54_waypoints}
+geometry:
+  ultrasound_pixel_resolution_mm: 0.5
+  image_origin_mm: 133.0
+  command_scale_mm_per_index: 1.5
+  sap_assignment:
+    mode: projected_position_with_stage1_reference_bands
+    fit: public_calibrated_transverse_image_origins_and_executed_x_z
+    maximum_fit_residual_index: 1.5
+    ambiguity_margin: half_original_ambiguity_band_plus_maximum_fit_residual
+    L5: unique_position_between_L5_and_L4_reference_bands_and_L5_checkpoint
+    L4: unique_position_cranial_to_L4_reference_band_and_L4_checkpoint
+checkpoints:
+  training_job: 52498821
+  L4:
+    sha256: c6b7ecc9bc245a88ccc0a5db31dbfd919b57407988dde5ea8211dd7eea2c1b2a
+    thresholds_and_minimum_component_pixels: {TP: [0.90, 5], SAP: [0.90, 3], OTHER_BONE: [0.60, 2]}
+  L5:
+    sha256: ca13c8fb6bf99bd363dd87c5e30dc1eeb5b22da5cf3f87e991893fad96b41acf
+    thresholds_and_minimum_component_pixels: {TP: [0.80, 8], SAP: [0.90, 2], OTHER_BONE: [0.90, 8]}
+mapper:
+  association_radius_mm: 4.0
+  minimum_distinct_views: 2
+  distinct_view_translation_mm: 2.0
+  distinct_view_rotation_deg: 1.0
+  minimum_semantic_confidence: 0.5
+  equal_support_confidence_margin: 0.01
+evaluation:
+  subregion_prediction_sha256: a78daeae9159f0df28ba6fffcb8e8d7ef6c2e87f490c9598acfcb82efad1677f
+  source_segmentation_sha256: 0d435584ed7851736f044c0a9c906231ef3f139b7cda16770d3066773992a1ed
+  label_conversion_sha256: 4ce73c412ef26f69fefe0caf003a531f4fd0928ac24f2248af0a019c4d76ff9a
+  identity: strict_majority_of_selected_views_within_3_pixels_of_provisional_visible_interface
+  maximum_projection_error_mm: 0.0015
+  localization_error: nearest_session_visible_interface_for_same_landmark_mm
+  session_pass: all_54_frames_valid_and_4_correct_0_wrong_0_unresolved
+  campaign_pass: 4_complete_maps_16_correct_0_wrong_0_unresolved_and_distinct_realized_starts
+  scoring_follows_actor_sha256_seal: true
+replay:
+  recorded_job: 52626449
+  historical_regression_job: 52640447
+  valid_frames: 816
+  exact_arms: [oracle_plus_simple, historical_unet_plus_simple, historical_unet_plus_existing]
+  compatible_revision: revised_SAP_on_all_valid_frames_with_historical_TP_evidence
+  fit_rows: valid_frames_with_recorded_transverse_trajectory_tag_and_executed_angle_within_frozen_tracking_tolerance
+  tp_subset_limit: historical_active_trajectories_have_no_frozen_50_plus_4_waypoint_partition
+demonstration: first_failed_scored_session_else_first_scored_session
