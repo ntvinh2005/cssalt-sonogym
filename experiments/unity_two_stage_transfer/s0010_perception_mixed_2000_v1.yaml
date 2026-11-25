@@ -1,0 +1,37 @@
+base_commit: 200d7585e24dea2f792238cc6f8d4607a2cdd0a5
+source_protocol_sha256: c26802d61f211c62acd16fe12208183e3442ebf776e9188d867a77126c6a114e
+previous_pilot_l5_sha256: 26b648777b88873a5b7a22aa6727d56f06e305151eba42e40ee36b52f0c5ed63
+medium_waypoints_sha256: b325d3c5df65ca17bda3584374d3fd6d784c246ae931b7d63c5629fb45d653e9
+maximum_unique_training_images: 2000
+inputs:
+  legacy_images: 400
+  B_robustness_images: 1600
+  C_representative_images: 1000
+  C_hard_positive_images: 300
+  C_hard_negative_images: 300
+  group_buffer_mm: 3.0
+  minimum_geometry_validation_positive_frames_per_class: 10
+  hard_candidate_probability: 0.60
+  hard_candidate_minimum_pixels: 4
+  selection_seed: 395501
+  diagnosed_medium_source_groups_excluded: [6, 33, 71, 85, 94]
+training:
+  sampler: one_pass_over_manifest_per_epoch
+  base_objective: weighted_cross_entropy_tversky_and_negative_presence
+  seed: 394406
+  epochs: 22
+  minimum_epochs: 14
+  patience: 5
+  learning_rate: 0.00012
+  batch_size: 12
+  weight_decay: 0.0001
+  negative_presence_weight: 0.25
+  foreground_tversky_false_positive_weight: 0.35
+readiness:
+  correct_landmarks: 14
+  complete_maps: 3
+  wrong_landmarks: 0
+  historical_sap_correct_each: 4
+  evaluation_99_l5_tp_recall_loss_frames: 1
+  evaluation_99_l5_tp_precision_loss_absolute: 0.05
+reserved_seeds: [2026121800, 2026121801, 2026121802, 2026121803]
