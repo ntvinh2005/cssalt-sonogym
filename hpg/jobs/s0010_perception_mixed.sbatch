@@ -18,15 +18,22 @@ export PYTHONPATH="$checkout/source/spinal_surgery:$SONOGYM_RUNTIME_DIR/envs/sta
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export MPLCONFIGDIR="${TMPDIR:-/tmp}/sonogym-mixed-$SLURM_JOB_ID"
 [[ -z "$(git status --short)" && "$(git rev-parse HEAD)" == "$MIXED_COMMIT" ]]
-out="$MIXED_OUTPUT/training-$SLURM_JOB_ID"
+out="$MIXED_OUTPUT/${MIXED_PHASE:-training}-$SLURM_JOB_ID"
 capture_run_context "$out"
 cp "$MIXED_PROFILE" "$out/context/campaign.yaml"
 nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used,power.draw --format=csv --loop=10 >"$out/gpu.csv" &
 telemetry=$!
 trap 'kill "$telemetry" 2>/dev/null || true' EXIT
-"$PYTHON" workflows/perception_mixed_s0010/train.py --protocol "$MIXED_PROTOCOL" --profile "$MIXED_PROFILE" \
-    --previous "$MIXED_PREVIOUS" --data "$MIXED_DATA" --legacy-dataset "$MIXED_LEGACY_DATASET" \
-    --legacy-training "$MIXED_LEGACY_TRAINING" --pilot-manifest "$MIXED_PILOT_MANIFEST" \
-    --diagnosis "$MIXED_DIAGNOSIS/diagnosis.json" --source-hashes "$MIXED_DIAGNOSIS/evaluation_image_hashes.json" \
-    --output "$out/fit"
+if [[ "${MIXED_PHASE:-training}" == boundary ]]; then
+    cp "$MIXED_BOUNDARY_PROFILE" "$out/context/boundary.yaml"
+    "$PYTHON" workflows/perception_mixed_s0010/boundary.py --protocol "$MIXED_PROTOCOL" --profile "$MIXED_PROFILE" \
+        --boundary-profile "$MIXED_BOUNDARY_PROFILE" --selection "$MIXED_PARENT_SELECTION" --fit "$MIXED_PARENT_FIT" \
+        --data "$MIXED_DATA" --legacy-archive "$MIXED_LEGACY_DATASET/dataset.npz" --output "$out/fit"
+else
+    "$PYTHON" workflows/perception_mixed_s0010/train.py --protocol "$MIXED_PROTOCOL" --profile "$MIXED_PROFILE" \
+        --previous "$MIXED_PREVIOUS" --data "$MIXED_DATA" --legacy-dataset "$MIXED_LEGACY_DATASET" \
+        --legacy-training "$MIXED_LEGACY_TRAINING" --pilot-manifest "$MIXED_PILOT_MANIFEST" \
+        --diagnosis "$MIXED_DIAGNOSIS/diagnosis.json" --source-hashes "$MIXED_DIAGNOSIS/evaluation_image_hashes.json" \
+        --output "$out/fit"
+fi
 capture_run_end "$out"

@@ -1,0 +1,8 @@
+parent_profile_sha256: b4a83c17a765db0d9c53276894f84344a4c4aa52f4b3268204fde8db762c5db2
+dataset_selection: highest_ranked_completed_matched_arm_from_primary_replay
+maximum_unique_training_images: 2000
+auxiliary_weight: 0.20
+zero_cost_interface_distance_px: 3
+maximum_interface_distance_px: 12
+foreground_probability_power: 2
+scope: visible_tp_in_training_images

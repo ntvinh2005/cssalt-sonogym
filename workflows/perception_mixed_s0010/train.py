@@ -56,7 +56,7 @@ def read_inputs(args, cfg):
     return grouped, arrays
 
 
-def train_arm(out, images, labels, validation, records, model_spec, rules, settings, device, weights):
+def train_arm(out, images, labels, validation, records, model_spec, rules, settings, device, weights, auxiliary=None):
     seed = settings["seed"]
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
@@ -72,6 +72,8 @@ def train_arm(out, images, labels, validation, records, model_spec, rules, setti
                   "validation_split_sha256":sha256(out.parent/"validation_manifest.json"),
                   "num_training":len(labels),"class_pixel_counts":counts.astype(int).tolist(),
                   "common_class_weights":weights.tolist()}
+    if auxiliary is not None:
+        provenance["auxiliary_loss"] = auxiliary.settings
     history = []
     best = -np.inf
     stale = 0
@@ -88,6 +90,8 @@ def train_arm(out, images, labels, validation, records, model_spec, rules, setti
             pred = model(normalized_ultrasound(x)[:,None])
             loss = tversky_interface_loss(pred,y,weights,settings["foreground_tversky_false_positive_weight"])
             loss += settings["negative_presence_weight"]*negative_presence_loss(pred,y)
+            if auxiliary is not None:
+                loss += auxiliary(pred,batch)
             loss.backward()
             optimizer.step()
             train_loss.append(float(loss.detach()))
