@@ -58,7 +58,7 @@ def diagnosis_case(name, ctx, support, arms, targets, model_specs, output, class
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     support = sorted(support)
-    models=models_for(model_specs)
+    models={name:models_for({"L5":spec})["L5"] for name,spec in model_specs.items()}
     if base_batch != 1:
         predicted = {m:{i:p for i,p in zip(ctx["old_valid"],infer(model,ctx["images"][ctx["old_valid"]],
                         batch_size=base_batch)) if i in support} for m,(model,rules) in models.items()}
@@ -134,7 +134,8 @@ def historical_context(source, stored, stage1, protocol, model_specs):
     indices=[i for i in valid if "L5" in region.levels_at(frames[i]["executed_relative_pose_index"][1])]
     config=IncrementalLandmarkMapConfig(**protocol["landmark_map"])
     maps={}
-    for name,(model,rules) in models_for(model_specs).items():
+    for name,spec in model_specs.items():
+        model,rules=models_for({"L5":spec})["L5"]
         obs,uncertain=defaultdict(list),defaultdict(list)
         for i,prob in zip(indices,infer(model,images[indices],batch_size=8)):
             rows,_=extract_observations(prob.argmax(0),prob,rules,frames[i],coords[i])
@@ -195,6 +196,15 @@ def main():
                       "frames":diagnosis_case(name,ctx,ids,support,target,model_specs,args.output,2,8)}
         print("Diagnosed",name,flush=True)
     write_json(args.output/"diagnosis.json",result)
+    # Hash the exact input imagery for the development and both historical replays.
+    from composition import array_hash
+    sources = {Path(c["source"]) for c in retained["cases"]}
+    sources.update(Path(row["source"]) for row in old["sessions"])
+    hashes = set()
+    for source in sorted(sources):
+        _,images,valid,_,_,_ = load_public(source,protocol["geometry"]["ultrasound_pixel_resolution_mm"])
+        hashes.update(array_hash(images[i]) for i in valid)
+    write_json(args.output/"evaluation_image_hashes.json",sorted(hashes))
 
 
 if __name__=="__main__":

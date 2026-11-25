@@ -4,6 +4,8 @@ previous_pilot_l5_sha256: 26b648777b88873a5b7a22aa6727d56f06e305151eba42e40ee36b
 medium_waypoints_sha256: b325d3c5df65ca17bda3584374d3fd6d784c246ae931b7d63c5629fb45d653e9
 maximum_unique_training_images: 2000
 inputs:
+  legacy_archive_sha256: 881115c242927d8ff108d224b2fcbc9869137bf7d1eaa28dedac9bc91538dc2f
+  legacy_index_sha256: 176ae5f7081178fc45d5ddc16e73e40e44998f96c1ff19645079d2b603814554
   legacy_images: 400
   B_robustness_images: 1600
   C_representative_images: 1000
