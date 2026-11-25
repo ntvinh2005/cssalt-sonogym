@@ -37,6 +37,10 @@ else
       --expected-frames "$valid"
     "$py" -m workflows.mbb_end_to_end.evaluate_fresh --protocol "$profile" --reference "$reference" \
       --session "$session" --reconstruction "$reconstruction" --output "$study/fresh-evaluation"
+    if [[ -s "$study/replay/results.json" ]]; then
+        "$py" -m workflows.mbb_end_to_end.review recorded --protocol "$profile" --replay "$study/replay" \
+          --reconstruction "$study/reconstruction" --output "$study/figures-review"
+    fi
     "$py" -m workflows.mbb_end_to_end.review fresh-video --session "$session" \
       --cloud "$reconstruction/2026121700/learned.npz" --prediction "$study/fresh-evaluation/E2_full.json" \
       --output "$study/video"

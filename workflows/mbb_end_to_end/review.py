@@ -43,8 +43,10 @@ def cloud_panel(ax, cloud, center, title, result=None, legacy=None, references=N
     ax.view_init(elev=28, azim=-66)
 
 
-def legend(fig, add_reference=False):
-    labels = {**DISPLAY, "Observed candidate": "#1976d2", "Inferred candidate": "#141414"}
+def legend(fig, add_reference=False, candidate=False):
+    labels = dict(DISPLAY)
+    if candidate:
+        labels.update({"Observed candidate": "#1976d2", "Inferred candidate": "#141414"})
     if add_reference:
         labels["Historical midpoint · evaluator only"] = "#bd2e20"
         labels["CT cortical trace · evaluator only"] = "#572d70"
@@ -66,6 +68,23 @@ def annotate_image(ax, image, cloud, sequence, title):
     ax.axis("off")
 
 
+def semantic_examples(output, images, cloud, seed):
+    fig, axes = plt.subplots(1, 3, figsize=(10, 4.2), layout="constrained")
+    for ax, label, title in zip(axes, ("RIGHT_L5_TP", "RIGHT_L5_SAP", "OTHER_BONE"),
+                                ("Right L5 TP", "Right L5 SAP", "Other bone")):
+        mask = (cloud["identity"] == label) & (cloud["level_hint"] == "L5")
+        if np.any(mask):
+            seq = int(np.bincount(cloud["frame_sequence"][mask]).argmax())
+            annotate_image(ax, images[seq], cloud, seq, f"{title} · frame {seq}")
+        else:
+            ax.set_title(f"{title} · no eligible frame")
+            ax.axis("off")
+    legend(fig)
+    fig.suptitle(f"Recorded seed {seed} · image-supported learned interfaces")
+    fig.savefig(output / "recorded_semantic_examples.png", dpi=155)
+    plt.close(fig)
+
+
 def recorded(args):
     protocol = json.loads(args.protocol.read_text())
     source = json.loads(checked(protocol["source_manifest"]).read_text())
@@ -73,6 +92,7 @@ def recorded(args):
     args.output.mkdir(parents=True, exist_ok=False)
     fig = plt.figure(figsize=(15, 15), layout="constrained")
     image_fig, panels = plt.subplots(len(metrics["sessions"]), 3, figsize=(9, 13), layout="constrained")
+    has_candidate = False
     for i, s in enumerate(metrics["sessions"]):
         seed = s["seed"]
         geometry = s["evaluator_geometry_for_review"]
@@ -90,6 +110,7 @@ def recorded(args):
         )):
             panel = fig.add_subplot(len(metrics["sessions"]), 3, i * 3 + j + 1, projection="3d")
             result = s["arms"][entry]["prediction"] if entry in ARMS else None
+            has_candidate |= bool(result and result.get("candidate"))
             status = result["status"] if result else s["E0"]["U-Net"]["status"]
             cloud_panel(panel, cloud, center, f"{seed}  {label}\n{status}",
                         result=result, legacy=legacy, references=references, trace=trace)
@@ -97,6 +118,8 @@ def recorded(args):
         parent = Path(session["path"])
         with np.load(parent / "public/ultrasound.npz", allow_pickle=False) as frames:
             images = frames["ultrasound"]
+        if i == 0:
+            semantic_examples(args.output, images, learned, seed)
         extra = np.isin(oracle["identity"], ("OTHER_BONE", "UNCERTAIN_BONE"))
         if np.any(extra):
             distance = np.where(extra, nearest(oracle["xyz_mm"], trace), np.inf)
@@ -109,7 +132,7 @@ def recorded(args):
         panels[i, 0].axis("off")
         annotate_image(panels[i, 1], images[sequence], oracle, sequence, "Oracle-visible")
         annotate_image(panels[i, 2], images[sequence], learned, sequence, "Learned projection")
-    legend(fig, add_reference=True)
+    legend(fig, add_reference=True, candidate=has_candidate)
     legend(image_fig)
     fig.suptitle("Matched observed surfaces in robot-base coordinates")
     image_fig.suptitle("Recorded ultrasound and projected interface samples")
