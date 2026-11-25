@@ -13,7 +13,7 @@ import numpy as np
 from workflows.mbb_end_to_end.evaluate import ARMS, DISPLAY, array_file, checked, nearest
 
 
-def cloud_panel(ax, cloud, center, title, result=None, legacy=None, references=None, prefix=None):
+def cloud_panel(ax, cloud, center, title, result=None, legacy=None, references=None, trace=None, prefix=None):
     xyz = cloud["xyz_mm"]
     keep = np.linalg.norm(xyz - center, axis=1) <= 32
     if prefix is not None:
@@ -24,6 +24,8 @@ def cloud_panel(ax, cloud, center, title, result=None, legacy=None, references=N
         ax.scatter(*points.T, c=color, s=4 if name == "OTHER_BONE" else 7, depthshade=False, alpha=.65)
     if legacy is not None:
         ax.scatter(*legacy.T, c="#bd2e20", marker="x", s=21, depthshade=False)
+    if trace is not None:
+        ax.plot(*trace.T, color="#572d70", linewidth=1., linestyle="--", marker=".", markersize=4)
     if references:
         for shape in references.values():
             ax.scatter(*shape.T, c="#161717", marker="o", s=17, depthshade=False)
@@ -45,6 +47,7 @@ def legend(fig, add_reference=False):
     labels = {**DISPLAY, "Observed candidate": "#1976d2", "Inferred candidate": "#141414"}
     if add_reference:
         labels["Historical midpoint · evaluator only"] = "#bd2e20"
+        labels["CT cortical trace · evaluator only"] = "#572d70"
     names = {"RIGHT_L5_TP":"Right L5 TP", "RIGHT_L5_SAP":"Right L5 SAP", "RIGHT_L4_TP":"Right L4 TP",
              "RIGHT_L4_SAP":"Right L4 SAP", "OTHER_BONE":"Other bone", "UNCERTAIN_BONE":"Uncertain bone"}
     handles = [Line2D([], [], marker="o", color=color, linestyle="none", label=names.get(k, k))
@@ -74,6 +77,7 @@ def recorded(args):
         seed = s["seed"]
         geometry = s["evaluator_geometry_for_review"]
         legacy = np.asarray(geometry["historical_midpoint_mm"])
+        trace = np.asarray(geometry["diagnostic_cortical_trace_mm"])
         center = legacy.mean(0)
         references = {k: np.asarray(v) for k, v in geometry["anatomical_regions_mm"].items()}
         learned = array_file(args.reconstruction / seed / "learned.npz")
@@ -87,14 +91,15 @@ def recorded(args):
             panel = fig.add_subplot(len(metrics["sessions"]), 3, i * 3 + j + 1, projection="3d")
             result = s["arms"][entry]["prediction"] if entry in ARMS else None
             status = result["status"] if result else s["E0"]["U-Net"]["status"]
-            cloud_panel(panel, cloud, center, f"{seed}  {label}\n{status}", result, legacy, references)
+            cloud_panel(panel, cloud, center, f"{seed}  {label}\n{status}",
+                        result=result, legacy=legacy, references=references, trace=trace)
         session = next(item for item in source["sessions"] if str(item["seed"]) == seed)
         parent = Path(session["path"])
         with np.load(parent / "public/ultrasound.npz", allow_pickle=False) as frames:
             images = frames["ultrasound"]
         extra = np.isin(oracle["identity"], ("OTHER_BONE", "UNCERTAIN_BONE"))
         if np.any(extra):
-            distance = np.where(extra, nearest(oracle["xyz_mm"], legacy), np.inf)
+            distance = np.where(extra, nearest(oracle["xyz_mm"], trace), np.inf)
             sequence = int(oracle["frame_sequence"][int(distance.argmin())])
         else:
             sequence = 0

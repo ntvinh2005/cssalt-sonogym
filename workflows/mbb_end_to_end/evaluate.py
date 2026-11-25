@@ -70,6 +70,17 @@ def invoke_actor(cloud, frames, output):
     ], check=True)
 
 
+def reconstructed_file(cloud_dir, name, public_frames_digest):
+    receipt_path = cloud_dir / "receipt.json"
+    receipt = read(checked({"path": str(receipt_path),
+                            "sha256": receipt_path.with_suffix(".json.sha256").read_text().split()[0]}))
+    if receipt["actor_pose_source"]["sha256"] != public_frames_digest:
+        raise ValueError("reconstruction uses a different executed pose record")
+    path = cloud_dir / (name + ".npz")
+    metadata = receipt[name]["output"]["npz"]
+    return checked({"path": str(path), "sha256": metadata["sha256"]})
+
+
 def seal_predictions(source, cloud_dir, output, expected_seeds):
     if [s["seed"] for s in source["sessions"]] != expected_seeds:
         raise ValueError("cohort does not match frozen seed ordering")
@@ -82,9 +93,10 @@ def seal_predictions(source, cloud_dir, output, expected_seeds):
         folder.mkdir()
         frames = checked({"path": str(Path(session["path"]) / "public/frames.jsonl"),
                           "sha256": session["files"]["public/frames.jsonl"]})
+        frame_digest = digest(frames)
         seals[seed] = {}
         for arm, name in ARMS.items():
-            cloud = cloud_dir / seed / (name + ".npz")
+            cloud = reconstructed_file(cloud_dir / seed, name, frame_digest)
             values = array_file(cloud)
             sequence = values["frame_sequence"]
             if np.any((sequence < 0) | (sequence >= session["eligible_waypoint_count"])):
@@ -101,7 +113,7 @@ def seal_predictions(source, cloud_dir, output, expected_seeds):
                 seals[seed][variant] = {
                     "result": {"path": str(path), "sha256": digest(path)},
                     "input_cloud": {"path": str(point_file), "sha256": digest(point_file)},
-                    "public_frames_sha256": digest(frames),
+                    "public_frames_sha256": frame_digest,
                 }
     write(output / "actor_prediction_seals.json", seals)
     return seals
