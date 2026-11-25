@@ -1,0 +1,7 @@
+scope: s0010
+source_protocol_sha256: c26802d61f211c62acd16fe12208183e3442ebf776e9188d867a77126c6a114e
+stage1_session: cf7_00
+seeds: [2026120500, 2026120501, 2026120502]
+demo_seed: 2026120500
+acquisition: outer_transverse_midpoints_near_l4
+sap_level_assignment: projected_position_with_stage1_reference_bands

@@ -30,12 +30,15 @@ def main():
     parser.add_argument("--seed", required=True, type=int)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--evaluator-segmentation", type=Path)
+    parser.add_argument("--revision", type=Path)
+    parser.add_argument("--record-robot", action="store_true")
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
     os.environ.setdefault("WANDB_MODE", "disabled")
     launcher = AppLauncher(args)
     app = launcher.app
 
+    import cv2
     import gymnasium as gym
     import nibabel as nib
     import numpy as np
@@ -54,7 +57,8 @@ def main():
         IncrementalLandmarkMapConfig,
     )
     from spinal_surgery.evaluation.two_stage_navigation.simple_landmark_mapping import (
-        LEVELS, extract_observations, project_image, simple_map, stage1_region, systematic_sweep,
+        LEVELS, add_outer_transverse_samples, extract_observations, project_image, sap_level_at,
+        simple_map, stage1_region, systematic_sweep, transverse_cranial_coordinate,
     )
     from spinal_surgery.evaluation.two_stage_navigation.sonoanatomy_active_scan import (
         staged_orientation_targets,
@@ -79,6 +83,17 @@ def main():
         for path in (args.protocol, args.stage1_actor)
     )
     protocol = yaml.safe_load(args.protocol.read_text())
+    revision_hash = None
+    if args.revision:
+        revision_hash = checked_sha256(args.revision, args.revision.with_suffix(".sha256").read_text().split()[0])
+        revision = yaml.safe_load(args.revision.read_text())
+        if (revision["source_protocol_sha256"] != protocol_hash
+                or revision["scope"] != protocol["scope"]["patient_id"]
+                or args.stage1_session != revision["stage1_session"] or args.seed not in revision["seeds"]
+                or revision["acquisition"] != "outer_transverse_midpoints_near_l4"
+                or revision["sap_level_assignment"] != "projected_position_with_stage1_reference_bands"
+                or args.record_robot != (args.seed == revision["demo_seed"])):
+            raise ValueError("execution does not match the sealed SAP revision")
     stage1 = json.loads(args.stage1_actor.read_text())
     region = stage1_region(stage1, args.stage1_session, protocol)
     models, model_seals = {}, {}
@@ -96,6 +111,24 @@ def main():
     frames, images, failed_moves = [], [], []
     observations, ambiguities, masks = defaultdict(list), defaultdict(list), defaultdict(list)
     actions = []
+    sap_proposals, sap_routing = defaultdict(list), []
+    calibration, camera_error, initial_pose = None, None, None
+    camera_dir = public / "robot"
+    if args.record_robot:
+        camera_dir.mkdir()
+
+    def capture_camera(name):
+        nonlocal camera_error
+        if not args.record_robot or camera_error:
+            return
+        try:
+            view = np.asarray(env.render())
+            rgb = cv2.cvtColor(view[:, :, :3].astype(np.uint8), cv2.COLOR_RGB2BGR)
+            if not cv2.imwrite(str(camera_dir / name), rgb):
+                raise RuntimeError("could not write robot camera frame")
+        except (AttributeError, IndexError, TypeError, ValueError, RuntimeError, cv2.error) as error:
+            camera_error = f"{type(error).__name__}: {error}"
+
     scan = protocol["sonoanatomy_scan"]
     motion = protocol["motion"]
     validate_episode_horizon(motion["maximum_total_action_steps"], motion["episode_length_s"])
@@ -104,19 +137,31 @@ def main():
     try:
         cfg = parse_env_cfg(protocol["scope"]["task"], device=args.device or "cuda:0", num_envs=1)
         cfg.seed, cfg.episode_length_s = args.seed, motion["episode_length_s"]
-        env = gym.make(protocol["scope"]["task"], cfg=cfg)
+        env = gym.make(protocol["scope"]["task"], cfg=cfg,
+                       render_mode="rgb_array" if args.record_robot else None)
         simulator = env.unwrapped
         sensor = simulator.US_slicer
         sensor.capture_snapshot_enabled = True
         session = out.name
         sensor.capture_session_id = sensor.capture_reset_id = session
         env.reset(seed=args.seed)
+        initial_pose = current_realized_pose(simulator).tolist()
+        if args.record_robot:
+            visual = protocol["visualization"]
+            simulator.sim.set_camera_view(eye=tuple(visual["camera_eye_world_m"]),
+                                          target=tuple(visual["camera_target_world_m"]))
+            capture_camera("reset.jpg")
         if sensor.sim_mode != "conv":
             raise RuntimeError("systematic sweep requires conv SonoGym ultrasound")
         limits = sensor.x_z_range.detach().cpu().numpy()
         waypoints = systematic_sweep(region, scan, limits[0], limits[1])
         position_tolerance = motion["coarse_position_tolerance_mm"]
         orientation_tolerance = motion["coarse_orientation_tolerance_deg"]
+        if args.revision:
+            waypoints = add_outer_transverse_samples(
+                waypoints, region, scan["reference_offsets_index"],
+                minimum_separation_index=2 * position_tolerance / protocol["geometry"]["label_resolution_mm"],
+            )
         validate_waypoint_bank(
             [pose for _, pose in waypoints], command_minimum=limits[0], command_maximum=limits[1],
             label_resolution_mm=protocol["geometry"]["label_resolution_mm"],
@@ -203,20 +248,45 @@ def main():
                 })
             frames.append(frame)
             images.append(image.copy())
+            capture_camera(f"{frame['frame_sequence']:03d}.jpg")
             if image_valid:
                 validate_actor_6dof_record(frame)
                 coordinates = project_image(frame, image.shape, protocol["geometry"]["ultrasound_pixel_resolution_mm"])
             for level in LEVELS:
                 mask = np.full(image.shape, 255, dtype=np.uint8)
-                if image_valid and level in levels:
+                if image_valid and (level in levels or args.revision):
                     model, thresholds = models[level]
                     probability = segmentation_probabilities(model, image[None])[0]
                     rows, mask = extract_observations(probability.argmax(axis=0), probability,
                                                       thresholds, frame, coordinates)
                     destination = observations if len(levels) == 1 else ambiguities
                     for row in rows:
-                        destination[f"RIGHT_{level}_{row.semantic_class}"].append(row)
+                        if args.revision and row.semantic_class == "SAP":
+                            sap_proposals[level].append(row)
+                        elif level in levels:
+                            destination[f"RIGHT_{level}_{row.semantic_class}"].append(row)
                 masks[level].append(mask)
+        if args.revision:
+            calibration = transverse_cranial_coordinate(
+                frames, protocol["geometry"]["label_resolution_mm"], scan["translation_step_index"] / 2,
+            )
+            for level, rows in sap_proposals.items():
+                identity = f"RIGHT_{level}_SAP"
+                for row in rows:
+                    index, candidates = sap_level_at(row.coordinate_mm, region, calibration)
+                    status = "LEVEL_MISMATCH"
+                    if candidates == (level,):
+                        observations[identity].append(row)
+                        status = "ELIGIBLE"
+                    elif len(candidates) > 1:
+                        ambiguities[identity].append(row)
+                        status = "AMBIGUOUS_LEVEL"
+                    elif not candidates:
+                        status = "OUTSIDE_L4_L5"
+                    sap_routing.append({
+                        "checkpoint_level": level, "projected_craniocaudal_index": index,
+                        "candidate_levels": candidates, "status": status, **asdict(row),
+                    })
         completed = True
     finally:
         (public / "frames.jsonl").write_text("".join(json.dumps(row) + "\n" for row in frames))
@@ -231,6 +301,12 @@ def main():
             np.savez_compressed(private / "raw_labels.npz", raw_labels=np.asarray(raw_labels))
             np.savez_compressed(private / "pixel_to_volume_coordinates.npz",
                                 human_img_coords=np.asarray(native_coordinates))
+        started_mapping = time.monotonic()
+        mapping = (
+            simple_map(observations, ambiguities, IncrementalLandmarkMapConfig(**protocol["landmark_map"]))
+            if completed else None
+        )
+        mapping_seconds = time.monotonic() - started_mapping
         result = {
             "label": "FRESH SYSTEMATIC SWEEP — DEVELOPMENT",
             "seed": args.seed, "anatomy": protocol["scope"]["patient_id"],
@@ -242,8 +318,12 @@ def main():
             "protocol_sha256": protocol_hash, "checkpoint_sha256": model_seals,
             "observations": {key: [asdict(row) for row in rows] for key, rows in observations.items()},
             "ambiguous_observations": {key: [asdict(row) for row in rows] for key, rows in ambiguities.items()},
-            "landmarks": simple_map(observations, ambiguities, IncrementalLandmarkMapConfig(**protocol["landmark_map"]))
-            if completed else None,
+            "initial_executed_pose_index": initial_pose,
+            "revision_sha256": revision_hash, "robot_camera_error": camera_error,
+            "cranial_coordinate": asdict(calibration) if calibration else None,
+            "sap_routing": sap_routing,
+            "mapping_seconds": mapping_seconds,
+            "landmarks": mapping,
         }
         (out / "actor_result.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
         if env is not None:

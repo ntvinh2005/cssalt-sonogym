@@ -96,6 +96,82 @@ def systematic_sweep(
     return waypoints
 
 
+def add_outer_transverse_samples(
+    waypoints: Sequence[tuple[str, tuple[float, float, float]]],
+    region: Stage1Region,
+    reference_offsets: Sequence[float],
+    minimum_separation_index: float,
+) -> list[tuple[str, tuple[float, float, float]]]:
+    outer_x = max(pose[0] for phase, pose in waypoints if phase == "transverse")
+    low = region.l4_z + min(reference_offsets)
+    high = region.l4_z + max(reference_offsets)
+    result = []
+    for left, right in zip(waypoints, waypoints[1:]):
+        phase, (x, z, angle) = left
+        next_phase, (other_x, other_z, _) = right
+        result.append(left)
+        midpoint = (z + other_z) / 2
+        if (phase == next_phase == "transverse" and x == other_x == outer_x
+                and low <= midpoint <= high
+                and abs(other_z - z) / 2 > minimum_separation_index):
+            result.append((phase, (x, midpoint, angle)))
+    result.append(waypoints[-1])
+    return result
+
+
+@dataclass(frozen=True)
+class CranialCoordinate:
+    direction: tuple[float, float, float]
+    intercept_index: float
+    maximum_fit_residual_index: float
+    resolution_mm: float
+
+    def index_at(self, point_mm: Sequence[float]) -> float:
+        return float(np.dot(self.direction, point_mm) / self.resolution_mm + self.intercept_index)
+
+
+def transverse_cranial_coordinate(
+    frames: Sequence[Mapping], resolution_mm: float, maximum_residual_index: float,
+) -> CranialCoordinate | None:
+    public = [frame for frame in frames if frame["image_valid"] and frame["phase"] == "transverse"]
+    if len(public) < 3:
+        return None
+    commands = np.asarray([frame["executed_relative_pose_index"][:2] for frame in public])
+    origins = np.asarray([project_image(frame, (1, 1), 1.0)[0, 0] for frame in public])
+    directions, _, rank, _ = np.linalg.lstsq(commands - commands.mean(0), origins - origins.mean(0), rcond=None)
+    if rank < 2 or np.linalg.norm(directions[0]) <= np.finfo(float).eps:
+        return None
+    lateral = directions[0] / np.linalg.norm(directions[0])
+    cranial = directions[1] - np.dot(directions[1], lateral) * lateral
+    magnitude = np.linalg.norm(cranial)
+    if magnitude <= np.finfo(float).eps:
+        return None
+    cranial /= magnitude
+    intercept = commands[:, 1].mean() - np.dot(origins.mean(0), cranial) / resolution_mm
+    residual = float(np.max(np.abs(origins @ cranial / resolution_mm + intercept - commands[:, 1])))
+    if residual > maximum_residual_index:
+        return None
+    return CranialCoordinate(tuple(cranial), float(intercept), residual, resolution_mm)
+
+
+def sap_level_at(
+    coordinate_mm: Sequence[float], region: Stage1Region, calibration: CranialCoordinate | None,
+) -> tuple[float | None, tuple[str, ...]]:
+    if calibration is None:
+        return None, LEVELS
+    index = calibration.index_at(coordinate_mm)
+    margin = (region.ambiguous_z[1] - region.ambiguous_z[0]) / 2 + calibration.maximum_fit_residual_index
+    if index < region.l5_z - margin:
+        return index, ()
+    if index <= region.l5_z + margin:
+        return index, LEVELS
+    if index < region.l4_z - margin:
+        return index, ("L5",)
+    if index <= region.l4_z + margin:
+        return index, LEVELS
+    return index, ("L4",)
+
+
 def project_image(frame: Mapping, shape: tuple[int, int], pixel_mm: float) -> np.ndarray:
     rotation = np.asarray(frame["actor_base_to_ee_rotation_columns"])
     return calibrated_image_coordinates_mm(

@@ -2,6 +2,7 @@
 """Score the sealed actor map from one development sweep against visible interfaces."""
 
 import argparse
+from collections import Counter, defaultdict
 import json
 from pathlib import Path
 
@@ -12,9 +13,39 @@ from run_simple_landmark_mapping import (
 )
 from two_stage_navigation.sonoanatomy_multiview import SemanticObservation
 from two_stage_navigation.incremental_landmark_map import IncrementalLandmarkMapConfig
-from two_stage_navigation.simple_landmark_mapping import simple_map
+from two_stage_navigation.simple_landmark_mapping import CLASSES, simple_map
 
 import numpy as np
+
+
+def revised_sap_visibility(visible, labels, masks, rows, maximum_pixels):
+    by_frame = defaultdict(list)
+    for row in rows:
+        by_frame[(row["checkpoint_level"], row["frame_sequence"])].append(row)
+    totals, frames = {}, {}
+    for level in ("L4", "L5"):
+        identity = f"RIGHT_{level}_SAP"
+        count, accounting = Counter(), []
+        for (name, sequence), surface in visible.items():
+            if name != identity:
+                continue
+            matching = [
+                row for row in by_frame[level, sequence]
+                if surface.query([row["row"], row["column"]])[0] <= maximum_pixels
+            ]
+            count["oracle_visible_frames"] += 1
+            reasons = sorted({row["status"] for row in matching})
+            if any(row["status"] == "ELIGIBLE" for row in matching):
+                reason = "usable_correct_prediction"
+            elif matching:
+                reason = "routing_" + "+".join(reasons)
+            else:
+                observed = masks[level][sequence][labels[level][sequence] == 2]
+                reason = "miss_dominant_mask_class_" + CLASSES[int(np.bincount(observed).argmax())]
+            count[reason] += 1
+            accounting.append({"frame_sequence": sequence, "reason": reason, "matching_rows": matching})
+        totals[identity], frames[identity] = dict(count), accounting
+    return totals, frames
 
 
 def main():
@@ -59,13 +90,21 @@ def main():
     status = "PASS" if valid_capture and score["complete_map"] else (
         "PARTIAL" if projection["passes"] and score["correct_mapped_landmarks"] else "FAIL"
     )
+    visibility_diagnostics = diagnose_visibility(
+        visible, labels, observations, ambiguities, masks, route, gate,
+    )
+    revised_frames = None
+    if actor.get("revision_sha256"):
+        sap_diagnostics, revised_frames = revised_sap_visibility(
+            visible, labels, masks, actor["sap_routing"], gate,
+        )
+        visibility_diagnostics.update(sap_diagnostics)
     write_json(output, {
         "label": actor["label"], "status": status, "actor_result_sha256": sha256(actor_path),
         "valid_frames_by_plane": valid_by_plane, "dropped_frames_by_flags": dropped,
         "projection_check": projection, "score": score,
-        "visible_interface_diagnostics": diagnose_visibility(
-            visible, labels, observations, ambiguities, masks, route, gate,
-        ),
+        "visible_interface_diagnostics": visibility_diagnostics,
+        **({"revised_sap_frames": revised_frames} if revised_frames is not None else {}),
         "oracle_observation_counts": {identity: len(rows) for identity, rows in oracle.items()},
     })
 

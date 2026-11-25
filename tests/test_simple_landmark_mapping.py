@@ -7,7 +7,8 @@ import numpy as np
 
 from two_stage_navigation.incremental_landmark_map import IncrementalLandmarkMapConfig
 from two_stage_navigation.simple_landmark_mapping import (
-    Stage1Region, extract_observations, project_image, simple_map, systematic_sweep,
+    Stage1Region, add_outer_transverse_samples, extract_observations, project_image, sap_level_at,
+    simple_map, systematic_sweep, transverse_cranial_coordinate,
 )
 from two_stage_navigation.sonoanatomy_multiview import SemanticObservation
 
@@ -71,6 +72,45 @@ class SimpleLandmarkMappingTests(unittest.TestCase):
         self.assertEqual(region.levels_at(128), ("L5",))
         with self.assertRaisesRegex(ValueError, "workspace"):
             systematic_sweep(region, scan, (100, 70, 1), (150, 200, 3))
+
+    def test_midpoints_are_only_added_to_outer_l4_transverse_segment(self):
+        region = Stage1Region(133, 141.425, 122.830, (130.628, 133.795))
+        scan = {
+            "translation_step_index": 3., "longitudinal_angle_rad": np.pi / 2,
+            "transverse_angle_rad": 2.95, "reference_offsets_index": [-6., 6.],
+        }
+        original = systematic_sweep(region, scan, (100, 70, 1), (180, 200, 3))
+        revised = add_outer_transverse_samples(original, region, [-6, 6], 2 / 1.5)
+        changes = [row for row in revised if row not in original]
+        self.assertEqual(len(original), 50)
+        self.assertEqual(len(changes), 4)
+        self.assertEqual([row for row in revised if row in original], original)
+        for phase, pose in changes:
+            self.assertEqual(phase, "transverse")
+            self.assertEqual(pose[0], 150.)
+            self.assertLessEqual(abs(pose[1] - region.l4_z), 6.)
+        self.assertEqual(add_outer_transverse_samples(original, region, [-6, 6], 2.0), original)
+
+    def test_sap_levels_use_projected_location_and_keep_uncertainty(self):
+        region = Stage1Region(133, 141, 123, (130.5, 133.5))
+        frames = [
+            {
+                "image_valid": True, "phase": "transverse",
+                "executed_relative_pose_index": [x, z, 2.95],
+                "actor_base_to_ee_position_m": [-.0015 * z, .0015 * x, -.133],
+                "actor_base_to_ee_rotation_columns": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            }
+            for x in (137, 149) for z in (120, 135, 146)
+        ]
+        fit = transverse_cranial_coordinate(frames, 1.5, 1.5)
+        self.assertIsNotNone(fit)
+        np.testing.assert_allclose(fit.direction, [-1., 0., 0.], atol=1e-10)
+        self.assertEqual(sap_level_at((-201., 500., 375.), region, fit)[1], ("L5",))
+        self.assertEqual(sap_level_at((-211.5, 500., 375.), region, fit)[1], ("L4", "L5"))
+        self.assertEqual(sap_level_at((-219., 500., 375.), region, fit)[1], ("L4",))
+        self.assertEqual(sap_level_at((-172.5, 500., 375.), region, fit)[1], ())
+        self.assertIsNone(transverse_cranial_coordinate(frames[:3], 1.5, 1.5))
+        self.assertEqual(sap_level_at((-201., 500., 375.), region, None)[1], ("L4", "L5"))
 
     def test_surface_representative_is_an_observed_pixel(self):
         frame = {
