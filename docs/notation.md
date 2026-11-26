@@ -809,3 +809,15 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Kind:** method
 - **Definition:** A mean surface and principal displacement modes estimated from corresponding L5 vertices in independent external anatomies. The meshes retain physical size. Inference fits rigid pose and a bounded set of mode coefficients to observed surface points.
 - **Source:** approved multi-anatomy statistical-shape campaign, protocol mbb_ssm_v1.
+
+### Anatomically constrained rigid registration
+
+- **Kind:** method
+- **Definition:** Fit the fixed population mean with three translation and three rotation parameters, using TP and SAP to construct pose hypotheses and confidence-weighted compatible surface observations to score poses.
+- **Source:** approved final Stage 2 protocol, mbb_final_registration_v1.
+
+### Local bidirectional P95
+
+- **Kind:** metric
+- **Definition:** The larger of the two directed 95th-percentile surface distances after restricting the reference and prediction to the same evaluator-only anatomical neighborhood.
+- **Source:** G2, approved final Stage 2 protocol, mbb_final_registration_v1.

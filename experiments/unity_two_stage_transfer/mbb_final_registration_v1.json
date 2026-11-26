@@ -1,0 +1,83 @@
+{
+  "name": "Final L5 anatomical rigid registration",
+  "source_revision": "24ca351a9207d31c8bb91cc4feb5c206a749b2c6",
+  "model_sha256": "c5a9a568960cbc4b48154e7ef344c37ec2244ec974aecf8fb40cf78a6de70f6b",
+  "source_cohort_sha256": "7e662dc899d1e4c81a87c82bb40864995e8e2f71f25f11f5228f76616b6cfa74",
+  "old_fit_freeze_sha256": "4904ac6ffe56bdbda120a9e0410bcae94428b99e13f20d90acc5a6485c8a9564",
+  "external_reserve_candidates": [
+    "s0004",
+    "s0006",
+    "s0012",
+    "s0024",
+    "s0028",
+    "s0029",
+    "s0030",
+    "s0034",
+    "s0038"
+  ],
+  "external_reserve_excluded_configured_simulator_ids": [
+    "s0010",
+    "s0014",
+    "s0015"
+  ],
+  "external_development": "All six previously scored external broad-holdout cases, no s0010 used for tuning.",
+  "external_semantics": "Observed-coordinate-only left TP and SAP geometric proxies; old all-bone A0 unchanged. Only synthetic previous broad partial-geometry pattern, no simulated US.",
+  "reserved_simulator_seeds": [
+    2026121800,
+    2026121801,
+    2026121802,
+    2026121803
+  ],
+  "preprocess": {
+    "voxel_mm": 1.0,
+    "anchor_min_views": 2,
+    "anchor_min_points": 8,
+    "anchor_connectivity_mm": 4.0,
+    "anchor_min_separation_mm": 3.0,
+    "anchor_max_separation_mm": 32.0,
+    "other_anchor_radius_mm": 13.0,
+    "other_compatibility_mm": 6.0,
+    "other_min_views": 2
+  },
+  "fit": {
+    "iterations": 22,
+    "max_public_rotation_deg": 26.0,
+    "roll_hypotheses_deg": [
+      -12.0,
+      0.0,
+      12.0
+    ],
+    "huber_mm": 2.0,
+    "objective_delta_mm2": 0.35,
+    "max_observed_p95_mm": 5.0,
+    "max_class_observed_p95_mm": 5.0,
+    "max_alternative_hidden_p95_mm": 2.0,
+    "max_subset_hidden_p95_mm": 2.0,
+    "other_weights_grid": [
+      0.15,
+      0.3
+    ],
+    "selection": "Tune A2 OTHER_BONE weight on the six external development cases. Rank A1 and best A2 by all-case hidden coverage within 1.5 mm, then lower union P95, then prefer A1. Within A2 exact ties favor smaller weight. Freeze before evaluation.",
+    "subset_protocol": [
+      "drop_one_strongest_anchor_view",
+      "drop_every_fifth_view_if_both_anchors_still_supported"
+    ]
+  },
+  "evaluation": {
+    "local_trace_neighborhood_mm": 9.5,
+    "tolerances_mm": [
+      1.0,
+      1.5,
+      2.0
+    ],
+    "diagnostic_tolerance_mm": 1.5,
+    "local_error_measure": "P95 maximum of CT-local-to-fit-local and fit-local-to-CT-local. Clip both face sets by triangle centroid within the frozen ROI. Report medians separately. Use corresponding inferred vertices across sessions in evaluator CT RAS and union local ROI support.",
+    "external_pass_rule": "On reserved anatomies, require higher pooled all-case coverage within 1.5 mm and lower all-case hidden forward P95 than A0, with observations retained after abstention.",
+    "minimum_unet_accepted": 4,
+    "maximum_median_bidirectional_p95_mm": 2.0,
+    "maximum_median_pairwise_p95_mm": 2.0,
+    "target_status": "TARGET_LOCALIZATION_NOT_EVALUABLE",
+    "decision": "PASS if all gates pass. PARTIAL requires more accepted U-Net fits than A0 and improved U-Net cortical path coverage but remaining failed or unavailable gates. FAIL otherwise.",
+    "consistency_gate_cohort": "Accepted distinct 102-waypoint sessions only; report all 126-waypoint pairs and the shared original prefix separately."
+  }
+}
