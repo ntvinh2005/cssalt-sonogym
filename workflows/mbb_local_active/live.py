@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import itertools
 from pathlib import Path
 from time import monotonic
 
@@ -10,7 +9,7 @@ import numpy as np
 
 from workflows.mbb_adaptive_cortical.tracker import adaptive_frame, anchor_brackets, candidates_for, echo_fields, track_path
 from workflows.mbb_direct_sonographic.actor_pixels import visible_pixels
-from workflows.mbb_direct_sonographic.localize import acquisition_views, audit_frame, distinct_poses, observed_profiles, project_image, select_views, verify_session
+from workflows.mbb_direct_sonographic.localize import acquisition_views, audit_frame, distinct_poses, observed_profiles, select_views, verify_session
 from workflows.mbb_direct_sonographic.prepare import POSE_FIELDS, digest, read_json, verify, write_json
 from workflows.mbb_direct_sonographic.public_geometry import sweep_axes
 from workflows.mbb_direct_sonographic.replay import NAMES
