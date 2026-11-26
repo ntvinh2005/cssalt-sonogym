@@ -1,0 +1,9 @@
+{
+  "development_seed": 2026121700,
+  "stage1": "cf7_00",
+  "initial_waypoints": 102,
+  "max_additional_frames": 16,
+  "offsets_index_index_deg": [[0,2,0],[0,-2,0],[2,0,0],[-2,0,0],[0,0,-6],[0,0,6],[0,2,-6],[0,-2,6],[2,0,-6],[-2,0,6],[0,3,0],[0,-3,0],[0,0,-10],[0,0,10],[2,2,0],[-2,-2,0]],
+  "direct_config_sha256": "e5a004be64ab2bf4fe1b0a905c0eda48fa2c0ac7e4f6a9fdad4d6f69e5cecf8d",
+  "adaptive_config_sha256": "4a69e9d4a8c0f43d4572a09bec43a28853086665cb3afa13be63bd3d421f9ff1"
+}

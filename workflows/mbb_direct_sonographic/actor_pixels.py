@@ -15,9 +15,10 @@ from .public_geometry import sweep_axes
 CONNECTIVITY = np.ones((3, 3), dtype=bool)
 
 
-def visible_pixels(frames, images, probabilities, stage1, thresholds, rules):
+def visible_pixels(frames, images, probabilities, stage1, thresholds, rules, *, cranial=None):
     region = Stage1Region(**stage1)
-    _, cranial = sweep_axes(frames, rules)
+    if cranial is None:
+        _, cranial = sweep_axes(frames, rules)
     items = []
     for i, frame in enumerate(frames):
         image = images[i]

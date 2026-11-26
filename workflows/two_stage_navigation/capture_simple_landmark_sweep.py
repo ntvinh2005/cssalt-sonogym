@@ -36,6 +36,8 @@ def main():
     parser.add_argument("--additional-sweep", type=Path,
                         help="Sealed Stage 1-relative oblique survey for a matched development run")
     parser.add_argument("--record-robot", action="store_true")
+    parser.add_argument("--local-verification", type=Path)
+    parser.add_argument("--verification-inputs", type=Path)
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
     os.environ.setdefault("WANDB_MODE", "disabled")
@@ -133,7 +135,14 @@ def main():
         model, bundle = load_segmentation_checkpoint(path, expected_level=level)
         models[level] = model, bundle["thresholds"]
 
-    volume = None if args.evaluator_segmentation is None else np.asarray(
+    active = None
+    active_probabilities = {level: [] for level in LEVELS}
+    if args.local_verification:
+        from workflows.mbb_local_active.live import LiveVerification
+
+        active = LiveVerification(args.local_verification, args.verification_inputs,
+                                  asdict(region), args.seed, args.stage1_session)
+    volume = None if args.evaluator_segmentation is None or active else np.asarray(
         nib.load(args.evaluator_segmentation).dataobj, dtype=np.uint8,
     )
     evaluator_poses, native_coordinates, raw_labels = [], [], []
@@ -220,7 +229,15 @@ def main():
         prior_producer = int(simulator.num_step)
         prior_plane = None
         sweep_started = time.monotonic()
-        for waypoint_index, (plane, pose) in enumerate(waypoints):
+        initial_waypoint_count = len(waypoints)
+
+        def trajectory():
+            yield from waypoints
+            if active is not None:
+                yield from active.start_local(frames, images, active_probabilities, limits,
+                                              initial_waypoint_count)
+
+        for waypoint_index, (plane, pose) in enumerate(trajectory()):
             target = np.asarray(pose)
             waypoint_started = time.monotonic()
             probes_samples = []
@@ -268,7 +285,8 @@ def main():
                             ratio=tuple(motion["controller_ratio"]), trajectory_sink=actions,
                         )
             except TimeoutError as failure:
-                failed_moves.append({"waypoint": waypoint_index, "reason": str(failure)})
+                failed_moves.append({"waypoint": waypoint_index, "reason": str(failure),
+                                     "requested": list(pose), "phase": plane, "action_steps": len(actions)})
                 continue
             prior_plane = plane
             snapshot = sensor.copy_latest_acquisition_snapshot()
@@ -322,14 +340,15 @@ def main():
                     waypoint_elapsed_seconds=time.monotonic() - waypoint_started,
                     action_steps_at_capture=len(actions),
                 )
-            if volume is not None:
+            if volume is not None or (active and args.evaluator_segmentation):
                 private_coordinates = np.asarray(
                     snapshot["human_img_coords"][0].detach().cpu(), dtype=np.float32,
                 ).copy()
-                raw_labels.append(sample_label_image(
-                    volume=volume, coordinates_index=private_coordinates,
-                    width=image.shape[1], depth=image.shape[0],
-                ).astype(np.uint8))
+                if volume is not None:
+                    raw_labels.append(sample_label_image(
+                        volume=volume, coordinates_index=private_coordinates,
+                        width=image.shape[1], depth=image.shape[0],
+                    ).astype(np.uint8))
                 native_coordinates.append(private_coordinates)
                 evaluator_poses.append({
                     key: frame[key] for key in ("frame_sequence", "frame_sha256",
@@ -351,6 +370,7 @@ def main():
                 coordinates = project_image(frame, image.shape, protocol["geometry"]["ultrasound_pixel_resolution_mm"])
             for level in LEVELS:
                 mask = np.full(image.shape, 255, dtype=np.uint8)
+                probability = None
                 if image_valid and (level in levels or args.revision):
                     model, thresholds = models[level]
                     probability = segmentation_probabilities(model, image[None])[0]
@@ -363,6 +383,13 @@ def main():
                         elif level in levels and (row.semantic_class != "TP" or tp_eligible):
                             destination[f"RIGHT_{level}_{row.semantic_class}"].append(row)
                 masks[level].append(mask)
+                if active is not None:
+                    active_probabilities[level].append(probability if probability is not None
+                                                       else np.zeros((4, *image.shape), dtype=np.float32))
+            if active is not None and waypoint_index >= initial_waypoint_count:
+                current = {level: active_probabilities[level][-1:] for level in LEVELS}
+                if active.add_view(frame, image, current):
+                    break
         if args.revision:
             calibration = transverse_cranial_coordinate(
                 frames, protocol["geometry"]["label_resolution_mm"], scan["translation_step_index"] / 2,
@@ -389,13 +416,16 @@ def main():
         (public / "frames.jsonl").write_text("".join(json.dumps(row) + "\n" for row in frames))
         np.savez_compressed(public / "ultrasound.npz", ultrasound=np.asarray(images, dtype=np.float32))
         np.savez_compressed(public / "unet_masks.npz", **{level: np.asarray(masks[level]) for level in LEVELS})
-        if volume is not None:
+        if active is not None:
+            active.seal(out, failed_moves)
+        if evaluator_poses:
             private = out / "privileged"
             private.mkdir()
             (private / "full_pose_replay.jsonl").write_text(
                 "".join(json.dumps(row) + "\n" for row in evaluator_poses)
             )
-            np.savez_compressed(private / "raw_labels.npz", raw_labels=np.asarray(raw_labels))
+            if volume is not None:
+                np.savez_compressed(private / "raw_labels.npz", raw_labels=np.asarray(raw_labels))
             np.savez_compressed(private / "pixel_to_volume_coordinates.npz",
                                 human_img_coords=np.asarray(native_coordinates))
         started_mapping = time.monotonic()
