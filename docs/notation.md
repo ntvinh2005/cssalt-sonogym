@@ -803,3 +803,9 @@ This is the single registry for project-specific methods, metrics, states, and n
 - **Definition:** The maximum minus the minimum supported fitted height at a query location across declared removal, neighborhood, chart, pose and smoothing variants.
 - **Intuition:** A sensitivity diagnostic. Its fraction of withheld heights enclosed is measured separately.
 - **Source:** s0010_mbb_shape_completion_v1 and the controlled held-out surface benchmark.
+
+### Statistical shape model
+
+- **Kind:** method
+- **Definition:** A mean surface and principal displacement modes estimated from corresponding L5 vertices in independent external anatomies. The meshes retain physical size. Inference fits rigid pose and a bounded set of mode coefficients to observed surface points.
+- **Source:** approved multi-anatomy statistical-shape campaign, protocol mbb_ssm_v1.
