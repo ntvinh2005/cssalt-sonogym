@@ -150,6 +150,8 @@ def run(inputs: Path, config: Path, output: Path) -> None:
                 "region_diameter_mm": prediction["diameter_mm"],
                 "within_session_max_agreement_p95_mm": prediction["max_disagreement_mm"],
                 "bmode_track_seconds": tracking_runtime,
+                "learned_interface_preparation_seconds": count_source["public_learned_pixel_extraction_seconds"],
+                "supplemental_cpu_inference_seconds": count_source["supplemental_cpu_inference_seconds"],
                 "frame_audit_seconds": sum(row["runtime_seconds"] for row in rows),
                 "selection_seconds": selection_runtime if arm != "A0" else 0.,
                 "projection_and_verification_seconds": prediction["projection_and_verification_seconds"],
@@ -176,7 +178,7 @@ def run(inputs: Path, config: Path, output: Path) -> None:
         "configuration_sha256": digest(config),
         "public_input_manifest_sha256": digest(inputs / "manifest.json"),
         "source_sha256": {name: digest(Path(__file__).with_name(name))
-                          for name in ("localize.py", "prepare.py", "replay.py")},
+                          for name in ("actor_pixels.py", "localize.py", "prepare.py", "public_geometry.py", "replay.py")},
         "output_sha256": {name: digest(output / name) for name in sealed},
         "independent_reference_opened": False,
     })

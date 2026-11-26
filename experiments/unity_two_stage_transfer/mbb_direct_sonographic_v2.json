@@ -1,5 +1,5 @@
 {
-  "version": "s0010-direct-sonographic-v1",
+  "version": "s0010-direct-sonographic-v2",
   "base_commit": "2ca873cd5fb93d8fbcae6faa8f5e7ddbc0df8467",
   "anatomy": "s0010",
   "stage1_session_id": "cf7_00",
@@ -21,6 +21,7 @@
   "pixel_mm": 0.5,
   "index_spacing_mm": 1.5,
   "max_axis_fit_residual_index": 1.5,
+  "level_routing": "Projected robot-base observations and Stage 1 command-index reference, without simulator realized relative indices",
   "max_transverse_angle_deg": 40.0,
   "max_longitudinal_angle_deg": 30.0,
   "track_row_radius_px": 2,

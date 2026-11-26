@@ -11,17 +11,17 @@ from scipy.spatial.distance import cdist, pdist
 
 from two_stage_navigation.simple_landmark_mapping import project_image
 from two_stage_navigation.stage1_interfaces import track_bright_interfaces
-from workflows.mbb_observed_surface.localize import distinct_poses, public_axes
+from workflows.mbb_observed_surface.localize import distinct_poses
+
+from .public_geometry import sweep_axes
 
 TP, SAP = "RIGHT_L5_TP", "RIGHT_L5_SAP"
 COMPETING = ("RIGHT_L4_TP", "RIGHT_L4_SAP")
 
 
 def acquisition_views(frames, rules):
-    axes = public_axes(frames, rules)
-    if axes is None:
-        raise ValueError("cannot establish lateral and cranial axes from public sweep")
-    right, superior, residual = axes
+    right, cranial = sweep_axes(frames, rules)
+    superior = np.asarray(cranial.direction)
     result = []
     for frame in frames:
         column_direction = np.asarray(frame["actor_base_to_ee_rotation_columns"])[:, 0]
@@ -37,7 +37,7 @@ def acquisition_views(frames, rules):
         else:
             family = "incompatible"
         result.append((family, 1 if lateral >= 0 else -1))
-    return result, float(residual)
+    return result, cranial.maximum_fit_residual_index
 
 
 def observed_profiles(image, rules):
