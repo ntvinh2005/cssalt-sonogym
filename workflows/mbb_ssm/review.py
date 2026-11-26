@@ -10,7 +10,8 @@ from matplotlib.lines import Line2D
 import numpy as np
 from scipy.spatial import cKDTree
 
-from workflows.mbb_ssm.fit import read
+from workflows.mbb_ssm.fit import read, write
+from workflows.mbb_shape_completion.score import export_ply
 from workflows.mbb_ssm.geometry import Mesh, export_mesh, load_mesh
 
 
@@ -42,7 +43,7 @@ def legend(fig, entries, count=4):
 
 
 def training(study, output):
-    prior = study / "prior-expanded"
+    prior = study / "prior-guarded"
     receipt = read(prior / "model_receipt.json")
     frozen = read(study / "development/freeze.json")
     with np.load(prior / "model.npz", allow_pickle=False) as data:
@@ -113,6 +114,11 @@ def benchmark(study, output):
             data = dict(inp)
         with np.load(root / "predictions" / f"{key}.npz", allow_pickle=False) as inp:
             prediction = dict(inp)
+        with np.load(root / "reference" / f"{key}.npz", allow_pickle=False) as evaluator:
+            export_mesh(output / f"example-{row}-EVALUATOR_ONLY.ply",
+                        Mesh(evaluator["full_xyz"], evaluator["full_faces"]))
+        export_ply(output / f"example-{row}-OBSERVED.ply", data["observed"], (22, 132, 104))
+        export_ply(output / f"example-{row}-WITHHELD.ply", data["hidden"], (157, 163, 173))
         prefix = "5 mm" if row == 0 else "Broad posterior"
         origin = data["reference"].mean(axis=0)
         for col, method in enumerate(METHOD):
@@ -121,6 +127,8 @@ def benchmark(study, output):
             cloud(ax, data["hidden"] - origin, REFERENCE, .48, 2.)
             cloud(ax, data["observed"] - origin, OBSERVED, .8, 2.)
             cloud(ax, data[method] - origin, INFERRED if method != "P3" else POPULATION, .8, 3.)
+            if method in prediction and not len(data[method]) and method in ("P3", "P4"):
+                cloud(ax, prediction[method][::5] - origin, ERROR, .16, 1.8)
             if method == "P4":
                 candidates = [name for name in prediction if name.startswith("P4_alternative_")]
                 if candidates:
@@ -135,7 +143,7 @@ def benchmark(study, output):
                 export_mesh(output / f"example-{row}-{method}.ply", Mesh(data[method + "_full"], prediction["faces"]))
     legend(fig, [(OBSERVED, "Observed geometric samples"), (REFERENCE, "Evaluator-only withheld anatomy"),
                  (POPULATION, "Rigid mean"), (INFERRED, "Inferred samples"),
-                 ("#e6ae72", "Alternative PCA surface")], 5)
+                 ("#e6ae72", "Alternative PCA surface"), (ERROR, "Rejected fit")], 3)
     fig.suptitle("Same partial input across all methods")
     fig.savefig(output / "heldout-reconstruction.png", dpi=155)
     plt.close(fig)
@@ -197,6 +205,32 @@ def transfer(study, output):
     plt.close(fig)
 
 
+def evaluate_shape_envelope(study, output):
+    """Describe external size extrapolation and empirical stress coverage."""
+    cohort = read(study / "cohort-expanded/subjects.json")
+    model = read(study / "prior-guarded/model_receipt.json")
+    subjects = model["training_included"]
+    training = [cohort["subjects"][s]["extent_ras_mm"] for s in subjects]
+    lo, hi = np.min(training, axis=0), np.max(training, axis=0)
+    broad = {key.removesuffix("-broad"): value for key, value in
+             read(study / "heldout/heldout_results.json")["cases"].items() if key.endswith("-broad")}
+    result = {}
+    for key in cohort["split"]["held_out"]:
+        extent = np.asarray(cohort["subjects"][key]["extent_ras_mm"])
+        outside = np.maximum(np.maximum(extent - hi, lo - extent), 0.)
+        methods = {}
+        for method in ("P3", "P4"):
+            metrics = broad[key][method]
+            methods[method] = {"status": metrics["status"], "observed_p95_mm": metrics["observed_p95_mm"],
+                               "hidden_p95_mm": metrics["all_hidden_to_observed_or_inferred"]["p95_mm"],
+                               "stress_comparison": metrics.get("uncertainty_diagnostic")}
+        result[key] = {"out_of_training_size_envelope": bool(outside.max() > 0.),
+                       "extent_outside_train_max_mm": float(outside.max()), "methods": methods}
+    write(output / "heldout_size_and_uncertainty.json", {
+        "training_extent_RAS_min_mm": lo.tolist(), "training_extent_RAS_max_mm": hi.tolist(),
+        "subjects": result})
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--study", type=Path, required=True)
@@ -206,3 +240,4 @@ if __name__ == "__main__":
     training(a.study, a.output)
     benchmark(a.study, a.output)
     transfer(a.study, a.output)
+    evaluate_shape_envelope(a.study, a.output)

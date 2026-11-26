@@ -7,9 +7,9 @@ import numpy as np
 
 from workflows.mbb_ssm.benchmark import keep_mask
 from workflows.mbb_ssm.fit import Model, fit_arrays, read, weights
-from workflows.mbb_ssm.geometry import Mesh, nearest_points, rigid
+from workflows.mbb_ssm.geometry import Mesh, face_vectors, nearest_points, rigid
 from workflows.mbb_ssm.prepare import read_prior_splits
-from workflows.mbb_ssm.train import pca
+from workflows.mbb_ssm.train import guarded_update, pca
 
 
 PROTOCOL = read(Path(__file__).resolve().parents[1] /
@@ -53,6 +53,21 @@ class StatisticalShapeTests(unittest.TestCase):
         self.assertIn("b", results["development"])
         self.assertIn("c", results["held_out"])
         self.assertEqual(sorted(sum(results.values(), [])), list("abcdefgh"))
+
+    def test_fold_guard_backtracks_an_inverted_triangle(self):
+        ref = np.array([[0., 0., 0.], [1., 0., 0.], [0., 1., 0.],
+                        [7., 0., 0.], [8., 0., 0.], [7., 1., 0.]])
+        faces = np.array([[0, 1, 2], [3, 4, 5]])
+        nominal = face_vectors(Mesh(ref, faces))
+        moved = ref.copy()
+        moved[2, 1] = -2.
+        moved[3:, 2] = 1.5
+        fit = guarded_update(ref, moved, faces, nominal, .02)
+        after = face_vectors(Mesh(fit, faces))
+        np.testing.assert_array_less(.019 * np.sum(nominal * nominal, axis=1),
+                                     np.sum(nominal * after, axis=1))
+        np.testing.assert_array_equal(fit[3:], moved[3:])
+        self.assertFalse(np.array_equal(fit[:3], ref[:3]))
 
     def test_dense_view_cannot_outvote_others_and_repeated_pose_abstains(self):
         groups = np.array([0, 0, 0, 1])

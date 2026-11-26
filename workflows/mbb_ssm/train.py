@@ -47,10 +47,26 @@ def correspondence_solver(template, weights):
     return [factorized((identity + w * smoothness).tocsc()) for w in weights], pair
 
 
+
+def guarded_update(vertices, proposal, faces, original_normals, area_fraction, rounds=16):
+    """Backtrack only where a displacement would fold or collapse a face."""
+    area2 = np.einsum("ij,ij->i", original_normals, original_normals)
+    candidate = proposal.copy()
+    for _ in range(rounds):
+        current_normals = face_vectors(Mesh(candidate, faces))
+        bad = np.einsum("ij,ij->i", original_normals, current_normals) < area_fraction * area2
+        if not bad.any():
+            return candidate
+        affected = np.unique(faces[bad])
+        candidate[affected] = .5 * (candidate[affected] + vertices[affected])
+    # Preserve the last valid deformation if backtracking reaches the bound.
+    return vertices
+
 def deform(template, target, solvers, config):
     target_tree = cKDTree(target.points)
     target_normals = normals(target)
     v = template.points.copy()
+    template_normals = face_vectors(template)
     for i in range(config["nonrigid_iterations"]):
         model_normals = normals(Mesh(v, template.faces))
         dist, candidates = target_tree.query(v, k=10)
@@ -72,7 +88,12 @@ def deform(template, target, solvers, config):
         step = min(len(solvers) - 1, i * len(solvers) // config["nonrigid_iterations"])
         displacement = v + delta - template.points
         after = template.points + np.column_stack([solvers[step](column) for column in displacement.T])
-        v = .2 * v + .8 * after
+        step_vertex = .2 * v + .8 * after
+        if config.get("triangle_area_fraction") is None:
+            v = step_vertex
+        else:
+            v = guarded_update(v, step_vertex, template.faces, template_normals,
+                               config["triangle_area_fraction"])
     return Mesh(v, template.faces)
 
 

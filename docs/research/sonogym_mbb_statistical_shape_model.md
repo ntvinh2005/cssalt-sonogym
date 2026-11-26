@@ -25,7 +25,7 @@ The population model is learned from external TotalSegmentator L5 masks. The s00
 | Worktree base | 846e1d1c0fbc58dc84724e3cd4c1191c01e721e8 |
 | Protocol | experiments/unity_two_stage_transfer/mbb_ssm_v1.json and SHA-256 |
 | runtime | /blue/lampotan/share/vinhnguyen1/cssalt-sonogym-runtime/envs/sonogym |
-| jobs | 52833413 initial mask QC, 52833617 correspondence preflight, 52834740 expanded mask QC, 52834756 expanded training |
+| jobs | 52833413 initial mask QC, 52833617 correspondence preflight, 52834740 expanded mask QC, 52834756 expanded training preflight, 52836793 guarded correspondence |
 
 Use the experimental worktree and a new artifact root when reproducing the experiment. The official archive source and candidate selection salt are arguments in the acquisition command.
 
@@ -55,7 +55,7 @@ expanded=$(sbatch --parsable --dependency="afterok:$first" --cpus-per-task=2 --t
 prior=$(sbatch --parsable --dependency="afterok:$expanded" --cpus-per-task=2 --time=00:45:00 \
   --export=ALL,VTK_SMP_MAX_THREADS=2 --output="$study/expanded-train-%j.log" "$wrapper" "$runtime" \
   -m workflows.mbb_ssm.train --protocol "$protocol" --cohort "$study/cohort-expanded" \
-  --output "$study/prior-expanded")
+  --output "$study/prior-guarded")
 ```
 
 ### 1.3 Results
@@ -68,12 +68,14 @@ prior=$(sbatch --parsable --dependency="afterok:$expanded" --cpus-per-task=2 --t
 | Accepted at mask QC | 41 |
 | Training, development, held-out mask QC | 29 / 6 / 6 |
 | Preflight correspondence gate, initial training only | 6/12, below minimum |
+| Preflight correspondence gate, expanded training | 4/29, below minimum |
 
 ### 1.4 Interpretation
 
 - The official count includes empty, truncated and unusable masks. Counting entries alone overstates the eligible shape population.
 - The dataset provider uses subject identifiers in its release description. The downloadable table exposes one image ID per row and has no cross-visit patient keys. Subject-level alias independence is qualified accordingly.
 - The supplement improves mask availability by conditioning on scan type, which affects population representativeness.
+- The expanded preflight produced low geometric residuals with many template triangles folded by the update. This failed the original quality gates. Before either development or held-out scoring, the registration was repaired by raising graph smoothness, backtracking updates that invert or shrink the reference-oriented triangle area below 2%, and allowing 48 iterations. All original QC limits remained fixed. The initial configuration is archived alongside the repaired protocol.
 
 ### 1.5 Files
 
@@ -81,5 +83,92 @@ prior=$(sbatch --parsable --dependency="afterok:$expanded" --cpus-per-task=2 --t
 |---|---|
 | external-ct*/acquisition.json | Private acquisition provenance and per-entry SHA-256 |
 | cohort-expanded/subjects.json | Private split membership, exclusions and mask QC receipt |
-| prior-expanded/correspondence.json | Training correspondence geometry and strain checks |
-| prior-expanded/model.npz and model_receipt.json | Frozen physical template, vertex modes, variance and training manifest |
+| prior-guarded/correspondence.json | Training correspondence geometry and strain checks |
+| prior-guarded/model.npz and model_receipt.json | Frozen physical template, vertex modes, variance and training manifest |
+
+
+## 2. External geometric benchmark — Do PCA modes improve held-out completion?
+
+`workflows.mbb_ssm.benchmark` creates public synthetic observations and disjoint withheld geometry from each external anatomy. `workflows.mbb_ssm.fit` reads the observations, public frame and frozen population template.
+
+**Criterion.** Select the mode count and prior weight on the six external development IDs by the median of subject-level forward P95 hidden-surface distance in the broad posterior mask. A rejected fit contributes the frozen 20 mm loss. Compare the frozen PCA fit against a rigid mean and the three existing local baselines on the six held-out IDs.
+
+### 2.1 Method
+
+- Simulate three geometric first-visible sample families at 0° and ±25°. Replace angularly overlapping points with a single set and assign synthetic view groups in 2 mm lateral bands. Mask projected disks of diameter 2, 5 and 9 mm at the same site, deleting all depths across all families. The broad mask clears right posterior observations beyond the 58th percentile of lateral position. These observations approximate scanner geometry and carry no simulated acoustics.
+- Fit the population shape with orientation initialized from the public RAS axes. Alternate robust rigid matching and bounded standard-deviation coefficients. Normalize total influence per view. Named TP and SAP observations have permissive positional windows on the population mesh. Unlabelled bone uses the broader posterior window.
+- Use five initializations around the public orientation and observed centroid, then keep the lowest robust objective. Test alternative initializations, weakly constrained mode combinations, whole-view removal and 1 mm/0.5° perturbations. Report disagreement as a sensitivity diagnostic. An observed-residual, coefficient, mesh or alternative-shape gate may reject a fit. Preserve rejected proposals separately.
+- Compare P0 observation only, P1 linear completion, P2 regularized local completion, P3 rigid population mean, and P4 PCA with rigid pose. Score all subjects at 1, 1.5 and 3 mm. For point-sample coverage use original observations plus accepted inferred points in the masked region. For full-shape error score each direction against the closest point from the 12 nearest triangle centers. Report posterior and full mesh errors separately. Conditional errors describe admitted fits.
+
+### 2.2 Setup
+
+```bash
+previous="$project/artifacts/mbb-ultrasound-shape-completion-231044"
+export PYTHONPATH="$PWD:$PWD/source/spinal_surgery/spinal_surgery/evaluation:$PWD/workflows/two_stage_navigation:$PWD/workflows/perception_s0010:$runtime/envs/stage1-python"
+"$python_exe" -m workflows.mbb_ssm.transfer prepare --previous "$previous" \
+  --protocol "$protocol" --output "$study/transfer-inputs"
+development=$(sbatch --parsable --dependency="afterok:$prior" --kill-on-invalid-dep=yes \
+  --time=00:25:00 --output="$study/development-%j.log" hpg/jobs/mbb_ssm.sbatch "$runtime" "$study" development "$previous")
+heldout=$(sbatch --parsable --dependency="afterok:$development" --kill-on-invalid-dep=yes \
+  --time=00:30:00 --output="$study/heldout-%j.log" hpg/jobs/mbb_ssm.sbatch "$runtime" "$study" heldout "$previous")
+transfer=$(sbatch --parsable --dependency="afterok:$development" --kill-on-invalid-dep=yes \
+  --time=00:20:00 --output="$study/transfer-%j.log" hpg/jobs/mbb_ssm.sbatch "$runtime" "$study" transfer "$previous")
+sbatch --dependency="afterok:$heldout:$transfer" --kill-on-invalid-dep=yes \
+  --output="$study/review-%j.log" hpg/jobs/mbb_ssm.sbatch "$runtime" "$study" review "$previous"
+"$python_exe" -m unittest discover -s tests -p 'test_mbb*.py'
+```
+
+### 2.3 Results
+
+Pending scored results.
+
+### 2.4 Interpretation
+
+Pending scored results.
+
+### 2.5 Files
+
+| File | Contents |
+|---|---|
+| development/selection_experiment.json and freeze.json | Validation grid and selected immutable prior settings |
+| heldout/inputs, reference and predictions | Matched held-out cohort, withheld geometry and prediction hashes |
+| heldout/heldout_results.json | Per-case and aggregate errors, coverage, abstentions and uncertainty diagnostics |
+| figures/population-modes.png | Example anatomy correspondence and PCA variation at a common physical scale |
+| figures/heldout-{metrics,reconstruction,error}.png | Held-out measurement, geometry and error review |
+
+## 3. s0010 transfer — Does the inferred L5 surface recover the diagnostic cortex?
+
+**Criterion.** Apply the frozen external model to each of the five recorded scans with Oracle-visible and U-Net observations. Score the local 9.5 mm cortical region and contact with the seven archived diagnostic cortical-path samples within 1.5 mm. The anatomical bone reference of interest remains unresolved for the right L4 medial branch.
+
+### 3.1 Method
+
+- Reuse Stage 1 cf7_00, the original L4 and T4 L5 checkpoints, the public pose, and unchanged reconstructed cortical interfaces. Select L5-routed points and the original frame groups. Keep the raw observations separate from model surfaces. The old local-completion result is the paired P0–P2 baseline.
+- Verify all predictions and perturbation receipts before opening s0010 CT or any simulator transformation used for scoring. Apply the transform only to compare geometry in the evaluator. Compare s0010 with all included training meshes for near-identical geometry offline.
+- Measure both directed local distances, wider posterior and global surface error, forward coverage of previously unobserved local cortex, and the diagnostic cortical-path count. A discovery of a point near the path cannot establish an anatomically validated MBB region.
+
+### 3.2 Setup
+
+| Setting | Value |
+|---|---|
+| Five recorded scans | Seeds 2026121700, 2026121702, 2026121900, 2026121901 at 102 frames each, plus the 126-frame supplement of 2026121700 |
+| CT reference | The SHA-verified previous s0010 segmentation and frozen diagnostic cortical path |
+| Perception arms | Oracle-visible and cached U-Net, 10 arm-session pairs |
+| Reserved seeds | 2026121800–2026121803 excluded |
+
+### 3.3 Results
+
+Pending scored results.
+
+### 3.4 Interpretation
+
+Pending scored results.
+
+### 3.5 Files
+
+| File | Contents |
+|---|---|
+| transfer-predictions/seals.json | Prediction and prior receipts for ultrasound-only inference |
+| transfer/transfer_results.json | Both directed errors, diagnostic trace and cross-session disagreement |
+| transfer/s0010_identity_audit.json | Evaluator-only geometry duplicate screen |
+| transfer/clouds | Separate observations, inferred meshes, proposals, CT bounds and diagnostic trace in robot-base mm |
+| figures/s0010-transfer.png | Five-session, two-perception review |

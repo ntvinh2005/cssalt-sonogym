@@ -175,16 +175,17 @@ def fit_arrays(xyz, basis, labels, groups, confidence, model, prior, config, *, 
     class_id = np.array([LABELS.index(label) for label in labels], dtype=int)
     regions = model_regions(model.mean)
     translation = initial_translation(points, class_id, model.mean, regions)
-    starts = [(0., 0.)]
+    starts = [(0., 0., 0.)]
     if not single_start:
-        starts += [(d, 0.) for d in config["initial_y_offsets_mm"] if d]
-        starts += [(0., a) for a in config["initial_z_tilts_deg"] if a]
+        starts += [(0., d, 0.) for d in config["initial_y_offsets_mm"] if d]
+        starts += [(0., 0., a) for a in config["initial_z_tilts_deg"] if a]
+        starts += [(d, 0., 0.) for d in config.get("diagnostic_lateral_offsets_mm", ()) if d]
     trials = []
-    for shift, tilt in starts:
+    for lateral, shift, tilt in starts:
         surface, trial = _optimize(points, class_id, w, model, regions, config,
                                    Rotation.from_euler("z", tilt, degrees=True).as_matrix(),
-                                   translation + [0., shift, 0.], prior)
-        trial.update(initial_ap_shift_mm=shift, initial_z_tilt_deg=tilt)
+                                   translation + [lateral, shift, 0.], prior)
+        trial.update(initial_lateral_shift_mm=lateral, initial_ap_shift_mm=shift, initial_z_tilt_deg=tilt)
         trials.append((trial, surface))
     trials.sort(key=lambda pair: pair[0]["objective_mm2"])
     detail, best = trials[0]

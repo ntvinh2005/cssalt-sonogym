@@ -187,10 +187,12 @@ def score_external(work, prediction_dir, protocol, baseline_protocol):
         results = {"P0": np.empty((0, 3)), **local}
         details = {"P0": {"status": "OBSERVED_ONLY", "seconds": 0.}, **local_details, **read(meta)}
         arrays = {"observed": observed, "hidden": hidden, "reference": truth.points}
-        trials = {}
+        trials, proposals = {}, {}
         with np.load(ct_fits, allow_pickle=False) as fitted:
             faces = fitted["faces"]
             for method in ("P3", "P4"):
+                if method in fitted:
+                    proposals[method] = fitted[method]
                 if case["gap"] == "broad":
                     trials[method] = {name: fitted[name] for name in fitted.files if
                                       name.startswith(method + "_alternative_") or
@@ -219,16 +221,22 @@ def score_external(work, prediction_dir, protocol, baseline_protocol):
                 error = np.linalg.norm(total_truth - closest, axis=1)
                 back, _ = nearest_points(fitted_mesh.points, truth)
                 global_reverse = np.linalg.norm(fitted_mesh.points - back, axis=1)
-                h, _ = nearest_points(hidden, fitted_mesh)
+            else:
+                error = cKDTree(combined).query(total_truth)[0]
+                global_reverse = cKDTree(total_truth).query(combined)[0]
+            if method in proposals:
+                trial_shape = proposals[method]
+                h, _ = nearest_points(hidden, Mesh(trial_shape, faces))
                 base_error = np.linalg.norm(hidden - h, axis=1)
-                extra["hidden_to_full_fitted_surface"] = distance_metrics(base_error, tolerances)
+                field = ("hidden_to_full_fitted_surface" if method + "_full" in arrays
+                         else "hidden_to_rejected_proposal")
+                extra[field] = distance_metrics(base_error, tolerances)
                 if trials.get(method):
-                    approximate_spread = [
-                        np.linalg.norm(variant - fitted_mesh.points, axis=1) for variant in trials[method].values()
-                    ]
-                    approximate_spread = np.max(np.stack(approximate_spread), axis=0)
-                    linked = cKDTree(fitted_mesh.points).query(h)[1]
-                    span = np.maximum(approximate_spread[linked], 0.)
+                    spread = np.max(np.stack([
+                        np.linalg.norm(variant - trial_shape, axis=1) for variant in trials[method].values()
+                    ]), axis=0)
+                    linked = cKDTree(trial_shape).query(h)[1]
+                    span = spread[linked]
                     extra["uncertainty_diagnostic"] = {
                         "variant_count": len(trials[method]),
                         "heldout_points": len(base_error),
@@ -236,10 +244,8 @@ def score_external(work, prediction_dir, protocol, baseline_protocol):
                         "spread_p95_mm": float(np.quantile(span, .95)),
                         "observed_residual_p95_mm": details[method]["observed_p95_mm"],
                         "hidden_error_p95_mm": float(np.quantile(base_error, .95)),
+                        "conditional_fit_status": details[method]["status"],
                     }
-            else:
-                error = cKDTree(combined).query(total_truth)[0]
-                global_reverse = cKDTree(total_truth).query(combined)[0]
             rows[key][method] = {
                 **details[method], **extra, "hidden_count": len(hidden), "inferred_samples_in_mask": len(points),
                 "all_hidden_to_observed_or_inferred": distance_metrics(union, tolerances),
@@ -268,20 +274,54 @@ def score_external(work, prediction_dir, protocol, baseline_protocol):
     write(work / "heldout_results.json", {"cases": rows, "aggregate": aggregate})
 
 
+def debug_initialization(model_path, development, output, protocol):
+    """Development-only check for a lateral initialization failure."""
+    frozen = read(development / "freeze.json")
+    if frozen["model_sha256"] != digest(model_path):
+        raise ValueError("Frozen model hash mismatch")
+    model = Model.load(model_path, frozen["rank"])
+    no_modes = Model(model.mean, model.faces, model.modes[:0])
+    primary = protocol["fit"]
+    lateral = [-16., -8., 8., 16.]
+    extended = {**primary, "diagnostic_lateral_offsets_mm": lateral}
+    outcomes = {}
+    for key, req in read(development / "inputs/requests.json").items():
+        data = input_arrays(development / "inputs", req)
+        poses = [data[n] for n in ("xyz_mm", "basis", "identity", "view_group", "confidence")]
+        table = {}
+        for name, candidate, alpha in (("P3", no_modes, 0.), ("P4", model, frozen["prior_weight_mm2"])):
+            rows = {}
+            for policy, cfg in (("original", primary), ("extra_lateral_starts", extended)):
+                mesh, _, result = fit_arrays(*poses, candidate, alpha, cfg)
+                rows[policy] = (mesh, result)
+            _, hidden = reference(development / "reference", key)
+            for policy, (mesh, result) in rows.items():
+                nearest, _ = nearest_points(hidden, Mesh(mesh, candidate.faces))
+                result["hidden_to_proposed"] = distance_metrics(np.linalg.norm(nearest - hidden, axis=1),
+                                                                protocol["evaluation"]["technical_tolerances_mm"])
+                rows[policy] = result
+            table[name] = rows
+        outcomes[key] = table
+    write(output, {"development_only": True, "changed_lateral_starts_mm": lateral, "cases": outcomes})
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=("validate", "prepare-test", "score-test"))
-    parser.add_argument("--cohort", type=Path, required=True)
+    parser.add_argument("phase", choices=("validate", "prepare-test", "score-test", "diagnose-initialization"))
+    parser.add_argument("--cohort", type=Path)
     parser.add_argument("--model", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--baseline-protocol", type=Path)
     parser.add_argument("--predictions", type=Path)
+    parser.add_argument("--development", type=Path)
     a = parser.parse_args()
     config = read(a.protocol)
     if a.phase == "validate":
         validation(a.cohort, a.model, a.output, config)
     elif a.phase == "prepare-test":
         prepare(a.cohort, a.output, "held_out", config)
+    elif a.phase == "diagnose-initialization":
+        debug_initialization(a.model, a.development, a.output, config)
     else:
         score_external(a.output, a.predictions, config, read(a.baseline_protocol))

@@ -1,0 +1,45 @@
+{
+  "name": "mbb_ssm_v1",
+  "population": "TotalSegmentator 2.0.1",
+  "acquisition_salt": "ssml5-pilot-v1",
+  "split_salt": "ssm-heldout-v1",
+  "transfer_subject": "s0010",
+  "reserved_seeds": [2026121800, 2026121801, 2026121802, 2026121803],
+  "mesh_spacing_mm": 1.25,
+  "correspondence": {
+    "rigid_iterations": 14,
+    "nonrigid_iterations": 30,
+    "diffusion_weights": [8.0, 3.0, 1.25],
+    "maximum_step_mm": 1.1,
+    "posterior_p95_gate_mm": 3.8,
+    "global_p95_gate_mm": 3.5,
+    "maximum_distorted_edge_fraction": 0.12,
+    "maximum_flipped_face_fraction": 0.07
+  },
+  "fit": {
+    "candidate_modes": [2, 4, 7, 10],
+    "candidate_prior_weights_mm2": [0.05, 0.35, 1.5],
+    "iterations": 28,
+    "outlier_huber_mm": 2.0,
+    "max_rotation_from_public_deg": 26,
+    "initial_y_offsets_mm": [-7.0, 0.0, 7.0],
+    "initial_z_tilts_deg": [-8.0, 0.0, 8.0],
+    "coefficient_bound_sd": 2.5,
+    "minimum_distinct_groups": 3,
+    "maximum_observed_p95_mm": 5.0,
+    "acceptable_alternative_objective_delta_mm2": 0.35,
+    "maximum_alternative_p95_mm": 5.0,
+    "perturb_translation_mm": 1.0,
+    "perturb_rotation_deg": 0.5
+  },
+  "evaluation": {
+    "technical_tolerances_mm": [1, 1.5, 3],
+    "disk_diameters_mm": [2, 5, 9],
+    "local_context_mm": 10.0,
+    "posterior_broad_region": "posterior samples with rightward coordinate at or above 58th percentile",
+    "subject_site": "Fixed right posterior site at fraction 0.67 across RAS right direction and fraction 0.67 across superior direction, snapped to nearest simulated visible sample",
+    "pseudo_observation": "Posterior x/z rays and two oblique rays at +/-25 degrees in RAS, on 1.25 mm grids; synthesize 2 mm acquisition groups. Clear entire hidden x/z projection across all rays for disks, or right posterior region for large gap.",
+    "model_selection": "Median across the external development subjects of the forward hidden posterior P95 in the broad missing-posterior region. Include abstained predictions with 20 mm loss. Use fewer PCA modes and stronger prior on exact ties.",
+    "target_status": "TARGET_LOCALIZATION_NOT_EVALUABLE"
+  }
+}

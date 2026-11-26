@@ -22,7 +22,7 @@ python_exe="$runtime/envs/sonogym/bin/python"
 protocol=experiments/unity_two_stage_transfer/mbb_ssm_v1.json
 baseline=experiments/unity_two_stage_transfer/s0010_mbb_shape_completion_v1.json
 cohort="$study/cohort-expanded"
-prior="$study/prior-expanded"
+prior="$study/prior-guarded"
 model="$prior/model.npz"
 freeze="$study/development/freeze.json"
 sha256sum -c "${protocol%.json}.sha256"
