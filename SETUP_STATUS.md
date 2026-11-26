@@ -1,5 +1,21 @@
 # Setup status
 
+## 2026-11-26 UTC. L5 statistical shape completion on external anatomies
+
+The multi-anatomy cohort stages 41 complete masks. The final PCA model uses
+eight training correspondences after fixed orientation, deformation and
+posterior geometry checks. A frozen two-mode prior admits 2/6 broad held-out
+geometric reconstructions. Coverage is 9.3% within 1.5 mm, versus 9.4% for the
+rigid population mean.
+
+In ultrasound-only transfer to s0010, both population fits increase Oracle
+diagnostic cortical-path coverage from 2/35 to 23/35. Both abstain on all five
+U-Net runs. The PCA reconstruction retains local CT errors above 4 mm P95
+and varies across recording and view perturbations. Anatomical target
+localization remains unresolved. No reserved simulator seeds were opened.
+
+[Experimental protocol and results](docs/research/sonogym_mbb_statistical_shape_model.md)
+
 ## 2026-11-25 UTC. Ultrasound-only cortical shape completion
 
 At 5 mm, the regularized fit increased withheld-sample recovery within

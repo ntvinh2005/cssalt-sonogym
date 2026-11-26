@@ -53,7 +53,7 @@ def prepare(previous, output, config):
     write(output / "requests.json", manifest)
 
 
-def load_reference(previous, config, need_fresh=True):
+def load_reference(previous, config):
     previous_config = previous / "checkout/experiments/unity_two_stage_transfer/s0010_mbb_shape_completion_v1.json"
     sources = read(previous_config)["sources"]
     data = read(verify(Path(sources["recording_manifest"]["path"]), sources["recording_manifest"]["sha256"]))
@@ -69,10 +69,9 @@ def load_reference(previous, config, need_fresh=True):
     volume = nib.load(seg)
     faces, axes = exposed_faces(np.asanyarray(volume.dataobj) == 27)
     recording = {str(s["seed"]): s for s in data["sessions"]}
-    if need_fresh:
-        supplement = before / "capture-52801423/session"
-        receipt = read(previous / "actual/evaluator_privileged_input_receipt.json")
-        recording["2026121700-126"] = {"path": str(supplement), "files": receipt}
+    supplement = before / "capture-52801423/session"
+    receipt = read(previous / "actual/evaluator_privileged_input_receipt.json")
+    recording["2026121700-126"] = {"path": str(supplement), "files": receipt}
     return trace, seg, volume, faces, axes, recording, data["models"]
 
 
@@ -208,9 +207,47 @@ def evaluate(previous, inputs, predicted, output, config, cohort, prior):
            "s0010_geometry_duplicate_flag": audit["any_near_identical"]})
 
 
+def score_stress(previous, inputs, predicted, transfer, output, protocol):
+    """Score already sealed pose and semantic support stresses for diagnosis."""
+    provenance = read(transfer / "scoring_receipt.json")
+    verify(predicted / "seals.json", provenance["fit_seal_sha256"])
+    seal = read(predicted / "seals.json")["fits"]
+    requests = read(inputs / "requests.json")
+    trace_ras, _seg, volume, faces, axes, sessions, _models = load_reference(previous, protocol)
+    tolerances = protocol["evaluation"]["technical_tolerances_mm"]
+    results = {}
+    for case, request in requests.items():
+        session = sessions[request["recording"]]
+        ct = Cortex(faces, axes, volume.affine, session)
+        trace = ras_to_base(trace_ras, volume.affine, session)
+        local = ct.points[np.linalg.norm(ct.points - trace.mean(0), axis=1) <= 9.5]
+        file = verify(predicted / f"{case}.npz", seal[case]["points"])
+        info = read(verify(predicted / f"{case}.json", seal[case]["outcome"]))
+        rows = {}
+        with np.load(file, allow_pickle=False) as fitted:
+            for method in ("P3", "P4"):
+                rows[method] = {}
+                for stress in ("pose_stress", "semantic_anchors_only"):
+                    field = f"{method}_stress_{stress}"
+                    if field not in fitted:
+                        continue
+                    points = fitted[field]
+                    surface = Mesh(points, fitted["faces"])
+                    sampled, _ = nearest_points(np.concatenate((local, trace)), surface)
+                    distance = np.linalg.norm(sampled - np.concatenate((local, trace)), axis=1)
+                    cases = points[np.linalg.norm(points - trace.mean(0), axis=1) <= 9.5]
+                    rows[method][stress] = {"fit": info[method]["stresses"][stress],
+                        "local_reference_to_stressed_model": distance_metrics(distance[:len(local)], tolerances),
+                        "local_stressed_model_to_reference": distance_metrics(ct.distance(cases), tolerances),
+                        "diagnostic_path_to_stressed_model": distance_metrics(distance[len(local):], tolerances)}
+        results[case] = rows
+    write(output, {"comparison_only": True, "uses_original_prediction_seal": provenance["fit_seal_sha256"],
+                   "cases": results})
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=("prepare", "score"))
+    parser.add_argument("phase", choices=("prepare", "score", "score-stress"))
     parser.add_argument("--previous", type=Path, required=True)
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -218,9 +255,12 @@ if __name__ == "__main__":
     parser.add_argument("--predictions", type=Path)
     parser.add_argument("--cohort", type=Path)
     parser.add_argument("--prior", type=Path)
+    parser.add_argument("--transfer", type=Path)
     a = parser.parse_args()
     protocol = read(a.protocol)
     if a.phase == "prepare":
         prepare(a.previous, a.output, protocol)
+    elif a.phase == "score-stress":
+        score_stress(a.previous, a.inputs, a.predictions, a.transfer, a.output, protocol)
     else:
         evaluate(a.previous, a.inputs, a.predictions, a.output, protocol, a.cohort, a.prior)

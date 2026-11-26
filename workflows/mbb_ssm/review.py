@@ -6,13 +6,15 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgb
 from matplotlib.lines import Line2D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 from scipy.spatial import cKDTree
 
 from workflows.mbb_ssm.fit import read, write
 from workflows.mbb_shape_completion.score import export_ply
-from workflows.mbb_ssm.geometry import Mesh, export_mesh, load_mesh
+from workflows.mbb_ssm.geometry import Mesh, export_mesh, face_vectors, load_mesh
 
 
 OBSERVED = "#168468"
@@ -42,6 +44,17 @@ def legend(fig, entries, count=4):
     fig.legend(handles=items, loc="outside lower center", ncol=count, frameon=False)
 
 
+def lit_mesh(ax, mesh, color):
+    vector = face_vectors(mesh)
+    vector /= np.maximum(np.linalg.norm(vector, axis=1)[:, None], 1e-10)
+    lamp = np.asarray([-.32, -.46, .82])
+    shade = .49 + .48 * np.clip(vector @ lamp, 0, 1)
+    rgb = shade[:, None] * np.asarray(to_rgb(color))
+    patches = Poly3DCollection(mesh.points[mesh.faces], facecolors=rgb,
+                                linewidths=0, antialiased=False)
+    ax.add_collection3d(patches)
+
+
 def training(study, output):
     prior = study / "prior-guarded"
     receipt = read(prior / "model_receipt.json")
@@ -52,19 +65,20 @@ def training(study, output):
     for index, name in enumerate(receipt["training_included"][:4]):
         mesh = load_mesh(prior / "correspondences" / f"{name}.npz")
         ax = fig.add_subplot(3, 4, index + 1, projection="3d")
-        cloud(ax, mesh.points, REFERENCE, .68, 2.)
+        lit_mesh(ax, mesh, REFERENCE)
         setup_view(ax, f"Training anatomy {index + 1}")
         export_mesh(output / f"training-{index + 1}.ply", mesh)
     for index, m in enumerate(modes[:3]):
         for col, sign in enumerate((-1, 1)):
             v = mean + sign * 2 * (variances[index] ** .5) * m
             ax = fig.add_subplot(3, 4, 5 + 2 * index + col, projection="3d")
-            cloud(ax, v, POPULATION, .68, 2.)
+            lit_mesh(ax, Mesh(v, faces), POPULATION)
             setup_view(ax, f"Mode {index + 1} · {sign * 2:+d} SD")
     mean_ax = fig.add_subplot(3, 4, 11, projection="3d")
-    cloud(mean_ax, mean, POPULATION, .68, 2.)
+    lit_mesh(mean_ax, Mesh(mean, faces), POPULATION)
     setup_view(mean_ax, "Population mean")
     for view in fig.axes:
+        view.view_init(elev=36, azim=-65)
         view.set(xlim=(-51, 51), ylim=(-48, 48), zlim=(-31, 31))
     ax = fig.add_subplot(3, 4, 12)
     values = np.array(receipt["cumulative_explained_variance"]) * 100
@@ -107,7 +121,7 @@ def benchmark(study, output):
         broad_case = ranked[len(ranked) // 2]
     else:
         broad_case = sorted(broad)[0]
-    site = broad_case.removesuffix("-broad") + "-5.0"
+    site = broad_case.removesuffix("-broad") + "-5"
     fig = plt.figure(figsize=(14, 8.5), layout="constrained")
     for row, key in enumerate((site, broad_case)):
         with np.load(root / "reconstructed" / f"{key}.npz", allow_pickle=False) as inp:
