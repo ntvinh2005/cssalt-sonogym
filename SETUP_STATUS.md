@@ -1,5 +1,16 @@
 # Setup status
 
+## 2026-11-26 UTC. Adaptive cortical tracking
+
+The zero-gap dynamic-programming tracker joins two unique images per
+perception source and recovers all 20 missed columns on R03. It yields
+two distinct projected proposals per source. No session is accepted.
+At 2 mm bounded gaps the learned method proposes regions in two distinct
+Oracle negative controls. Target localization remains
+TARGET_LOCALIZATION_NOT_EVALUABLE.
+
+[Protocol and results](docs/research/sonogym_mbb_adaptive_cortical_tracking.md)
+
 ## 2026-11-26 UTC. Direct sonographic Stage 2 feasibility
 
 The final CPU-only replay returned 0/5 accepted regions in all three arms
