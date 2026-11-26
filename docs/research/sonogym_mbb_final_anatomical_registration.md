@@ -110,13 +110,75 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 VTK_SMP_MAX_THREADS=1 MPLBACKEND
 
 ### 2.3 Results
 
-Pending sealed evaluation.
+**PARTIAL.** A2 increases admitted U-Net registrations and diagnostic-path coverage.
+The frozen robustness, local error and external generalization gates remain unmet.
+
+All sixteen archived A0 replays match the historical rigid mean geometry, residuals and
+nominal disposition. Its five accepted Oracle fits cover 23/35 diagnostic points by
+inference alone, as in the previous campaign. The score below adds two points that have
+only observed support. The ten s0010 inputs remain recorded development evidence.
+
+| Arm | Perception | Accepted | Selected-input observed P95 (mm) | Local median (mm) | Local bidirectional P95 (mm) | Trace, observed or inferred | Inter-session P95, distinct 102 (mm) | Runtime with refits (s) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| A0 | Oracle | 5/5 | 3.48 | 1.52 | 5.85 | 25/35 | 7.61 | 2.83 |
+| A0 | U-Net | 0/5 | 6.63 | — | — | 0/35 | — | 2.75 |
+| A1 | Oracle | 0/5 | 3.81 | — | — | 2/35 | — | 1.25 |
+| A1 | U-Net | 2/5 | 3.68 | 2.40 | 5.71 | 8/35 | 1.56 | 0.99 |
+| A2 | Oracle | 0/5 | 3.60 | — | — | 2/35 | — | 1.65 |
+| A2 | U-Net | 3/5 | 3.52 | 2.38 | 5.30 | 12/35 | 0.74 | 1.62 |
+| A3 | Oracle | 0/5 | 2.60 | — | — | 2/35 | — | 1.22 |
+| A3 | U-Net | 1/5 | 1.84 | 2.26 | 5.38 | 1/35 | — | 1.03 |
+
+Values for local errors are medians across accepted cases of the larger directed statistic. Observed residual columns retain the arm's actual registration inputs. An additional comparable all-raw-observation P95 is retained for every proposal. Its median on U-Net is 6.00 mm for A0 and 22.58 mm for A2. Median runtime includes the diagnostic subset refits.
+
+| Learned recording | A0 | A1 | A2 | A3 |
+|---|---|---|---|---|
+| 2026121700, 102 | Residual | Admitted | Admitted, local P95 5.30 mm, 4/7 path | Ambiguous |
+| 2026121702, 102 | Residual | Admitted | Ambiguous, competing posterior differs 8.27 mm | Unstable |
+| 2026121900, 102 | Residual | Ambiguous | Admitted, local P95 5.32 mm, 4/7 path | Ambiguous |
+| 2026121901, 102 | Residual | Ambiguous | Admitted, local P95 5.12 mm, 4/7 path | Admitted |
+| 2026121700, 126 | Residual | Residual | Residual, SAP P95 6.06 mm | Ambiguous |
+
+The shared-prefix pair has 1.17 mm corresponding-vertex P95 for A0 Oracle.
+A2 has no admitted learned result for the 126-frame member of this pair.
+The three different 102-frame learned pairs admitted by A2 measure 0.30, 0.74 and 0.76 mm.
+The ten full arm-session rows for each arm, including Oracle rejection stages and proposal-only
+local errors, are available in the exported CSV and JSON.
+
+**Previously unused external anatomy.** All four arms reject all six reserved broad-mask
+geometry cases. The following all-case numbers pool 19,692 hidden sample points over six cases
+with abstentions included. Accepted-case bidirectional P95 has no samples in any arm.
+
+| Arm | Accepted | Hidden median (mm) | Hidden forward P95 (mm) | Coverage 1.0 mm | Coverage 1.5 mm | Coverage 2.0 mm | Runtime with refits (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| A0 | 0/6 | 17.45 | 38.56 | 0.16% | 0.95% | 1.56% | 2.94 |
+| A1 | 0/6 | 17.45 | 38.56 | 0.16% | 0.95% | 1.56% | 1.88 |
+| A2 | 0/6 | 17.45 | 38.56 | 0.16% | 0.95% | 1.56% | 2.34 |
+| A3 | 0/6 | 17.45 | 38.56 | 0.16% | 0.95% | 1.56% | 1.82 |
+
+| Gate | Result | Evidence for frozen A2 |
+|---|---|---|
+| G1 registration robustness | FAIL | 3/5 learned admitted against a minimum of 4/5 |
+| G2 local accuracy | FAIL | 5.30 mm median bidirectional local P95 against 2.0 mm |
+| G3 distinct recording consistency | PASS | 0.74 mm median over three pairs of accepted, different 102-frame recordings |
+| G4 anatomical-gap recovery | PASS | 12/35 learned versus A0 0/35. Previous TP/SAP-only rigid diagnostic reached 20/35 under its earlier rule. |
+| G5 previously untouched external IDs | FAIL | 0/6 admitted and the same all-case 0.95% coverage and 38.56 mm P95 as A0 |
+| G6 information boundary | PASS | Actor used fixed template and observed-only inputs. Both final prediction sets were verified before evaluation. |
 
 ### 2.4 Interpretation
 
-Pending sealed evaluation.
+- A1 versus A3 supports an effect of anatomical initialization on local registration robustness in this replay. A1 admits 2/5 learned scans and covers 8/35 points, compared with 1/5 and 1/35 under the original initialization policy. Adding compatible other-bone support at weight 0.30 raises those figures to 3/5 and 12/35 in the frozen A2.
+- On the three scans admitted by A2, the archived A0 rejected proposals score local bidirectional P95 errors of 9.15, 8.22 and 7.03 mm. A2 reaches 5.30, 5.32 and 5.12 mm on those same scans. The same-scene diagnostic supports a geometric improvement over the earlier proposals, while all three exceed G2.
+- The observed fitting residual decreases on selected observations. Raw observed points as a whole are farther from the fitted mean. Stability of the accepted A2 surface across scans does not guarantee its local anatomical accuracy.
+- Oracle A0 preserves its historical nominal acceptance. The three enhanced arms reject all five Oracle fits under the additional ambiguity, subset stability and per-anchor rules. Only one of the five A0 Oracle fits keeps both subset refits within 2 mm posterior P95. The original 5/5 count therefore describes the historical nominal rule.
+- The external evaluation uses geometric proxy semantics and six source IDs, with the available documented provenance. Its negative result sets the scope of this pilot. The absence of an independently validated anatomical target keeps `TARGET_LOCALIZATION_NOT_EVALUABLE` unchanged.
+- Close the current Stage 2 proof of concept at reconstruction of measured ultrasound interfaces. Preserve the fixed model, fitting study and separate unresolved hypotheses as research evidence. No further methods were evaluated.
 
 ### 2.5 Files
+
+The scientific jobs requested at most two CPU cores at once and used zero GPUs.
+Total measured Slurm CPU time was 315.561 seconds. Job 52841750 generated the four figures
+and CSV. The local MBB-focused suite passed 47 tests.
 
 | File | Contents |
 |---|---|

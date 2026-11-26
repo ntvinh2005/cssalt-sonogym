@@ -1,5 +1,19 @@
 # Setup status
 
+## 2026-11-26 UTC. Final Stage 2 rigid-registration campaign
+
+The frozen anatomical initialization and semantic-balanced rigid fit is
+PARTIAL. It admits 3/5 U-Net records, recovers 12/35 diagnostic-path points
+and has 0.74 mm pairwise P95 on the three admitted distinct 102-frame scans.
+Its median local bidirectional P95 is 5.30 mm. All four arms abstain on
+all six previously unused external geometric cases. Historical A0 geometry
+and nominal dispositions are reproduced exactly.
+
+Close this proof of concept at reconstruction of observed cortical interfaces.
+The anatomical target remains TARGET_LOCALIZATION_NOT_EVALUABLE.
+
+[Final experimental protocol and evidence](docs/research/sonogym_mbb_final_anatomical_registration.md)
+
 ## 2026-11-26 UTC. L5 statistical shape completion on external anatomies
 
 The multi-anatomy cohort stages 41 complete masks. The final PCA model uses
