@@ -17,7 +17,7 @@ from two_stage_navigation.simple_landmark_mapping import LEVELS
 from .actor_pixels import visible_pixels
 
 POSE_FIELDS = (
-    "frame_sequence", "waypoint_index", "frame_sha256", "phase", "stage1_session_id",
+    "frame_sequence", "waypoint_index", "frame_sha256", "phase", "stage1_session_id", "acquisition_id",
     "actor_base_to_ee_position_m", "actor_base_to_ee_rotation_columns",
     "requested_relative_pose_index", "image_valid",
 )
@@ -193,7 +193,10 @@ def stage(source: Path, cache: Path, config: Path, output: Path) -> None:
     left, right, stop = rules["shared_prefix"]
     lframes = read_json(output / left / "public_poses.json")
     rframes = read_json(output / right / "public_poses.json")
-    if lframes != rframes[:stop]:
+    prefix_fields = tuple(key for key in POSE_FIELDS if key != "acquisition_id")
+    if len(lframes) != stop or any(
+        a[key] != b[key] for a, b in zip(lframes, rframes[:stop]) for key in prefix_fields
+    ):
         raise ValueError("the declared shared image and executed pose prefix did not verify")
     write_json(output / "manifest.json", {
         "configuration_sha256": digest(config),
