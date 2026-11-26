@@ -1,0 +1,16 @@
+{
+  "base_commit": "a3af3d67c31ffcf831ce68314aef781a71841f0d",
+  "baseline_configuration_sha256": "e5a004be64ab2bf4fe1b0a905c0eda48fa2c0ac7e4f6a9fdad4d6f69e5cecf8d",
+  "corridor_half_width_mm": 4.0,
+  "step_cost_per_pixel": 0.07,
+  "gap_cost_per_column": 1.25,
+  "ambiguity_cost_margin": 0.30,
+  "ambiguity_depth_mm": 2.0,
+  "gap_diagnostics_mm": [1.0, 2.0],
+  "evaluation_pixel_tolerance_mm": 1.0,
+  "review_records": [
+    ["2026121700",33], ["2026121702",33], ["2026121900",33],
+    ["2026121901",33], ["2026121901",43], ["2026121901",84],
+    ["2026121901",95], ["2026121700-126",33], ["2026121700-126",107]
+  ]
+}
