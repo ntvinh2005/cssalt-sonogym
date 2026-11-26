@@ -1,5 +1,18 @@
 # Setup status
 
+## 2026-11-26 UTC. Direct sonographic Stage 2 feasibility
+
+The final CPU-only replay returned 0/5 accepted regions in all three arms
+on 534 recorded rows and 432 distinct s0010 images. The U-Net shortlist
+retained all nine Oracle frames with both B-mode-supported L5 interfaces.
+The six ordered Oracle brackets all contained unsupported cortex columns.
+No region was projected. Anatomy, view coverage and the explicit continuity
+rule remain possible contributors. Target localization remains
+TARGET_LOCALIZATION_NOT_EVALUABLE. Close the current proof of concept at
+reconstruction of observed cortical interfaces and partial bony context.
+
+[Protocol, image evidence and results](docs/research/sonogym_mbb_direct_sonographic_localization.md)
+
 ## 2026-11-26 UTC. Final Stage 2 rigid-registration campaign
 
 The frozen anatomical initialization and semantic-balanced rigid fit is
